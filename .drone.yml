@@ -1,5 +1,5 @@
 kind: pipeline
-name: default
+name: izpbx-16
 
 volumes:
   - name: docker
@@ -20,6 +20,50 @@ steps:
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
     - echo -e -n ",latest" >> .tags
+
+- name: publish
+  image: plugins/docker
+  environment:
+    <<: *setup_env
+  settings:
+    repo: izdock/izpbx-asterisk
+    dockerfile: izpbx-asterisk/Dockerfile
+    context: izpbx-asterisk
+    username:
+      from_secret: DOCKER_USERNAME
+    password:
+      from_secret: DOCKER_PASSWORD
+  volumes:
+  - name: docker
+    path: /var/lib/docker
+  when:
+    event: [push, tag]
+    branch: master
+
+---
+
+kind: pipeline
+name: izpbx-17
+
+volumes:
+  - name: docker
+    host:
+      path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
+    
+steps:
+- name: setup
+  image: alpine
+  environment: &setup_env
+    APP_VER_MAJOR: 17
+    APP_VER_MINOR: 3
+    APP_VER_PATCH: 0
+  commands:
+    - echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
+    - echo -e -n "$${APP_VER_MAJOR}" > .tags
+    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
+    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags
+    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
+    #- echo -e -n ",latest" >> .tags
 
 - name: publish
   image: plugins/docker

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # written by Ugo Viti <ugo.viti@initzero.it>
 # version: 20200315
 #set -ex
@@ -383,8 +383,11 @@ cfgService_freepbx() {
   #    --ampcgibin=AMPCGIBIN        Location of the Apache cgi-bin executables [default: "/var/www/cgi-bin"]
   #    --ampplayback=AMPPLAYBACK    Directory for FreePBX html5 playback files [default: "/var/lib/asterisk/playback"]
 
-  FREEPBX_DIRS="ASTMODDIR AMPWEBROOT ASTETCDIR ASTVARLIBDIR ASTAGIDIR ASTSPOOLDIR ASTRUNDIR ASTLOGDIR AMPBIN AMPSBIN AMPCGIBIN AMPPLAYBACK CERTKEYLOC FPBXDBUGFILE FPBX_LOG_FILE"
   
+  ASTERISK_DIRS="ASTMODDIR"
+  FREEPBX_DIRS="AMPWEBROOT ASTETCDIR ASTVARLIBDIR ASTAGIDIR ASTSPOOLDIR ASTRUNDIR ASTLOGDIR AMPBIN AMPSBIN AMPCGIBIN AMPPLAYBACK CERTKEYLOC"
+  FREEPBX_FILES="FPBXDBUGFILE FPBX_LOG_FILE"
+    
   # install only variable
   ASTMODDIR=/usr/lib64/asterisk/modules
   # freepbx install+database directory paths
@@ -401,7 +404,7 @@ cfgService_freepbx() {
   AMPPLAYBACK=/var/lib/asterisk/playback
   # database only variable
   CERTKEYLOC=/etc/asterisk/keys               
-  FPBXDBUGFILE=/var/log/asterisk/freepbx_dbug
+  FPBXDBUGFILE=/var/log/asterisk/freepbx-debug.log
   FPBX_LOG_FILE=/var/log/asterisk/freepbx.log
 
   # rebase directory paths, based on APP_DATA and create/chown missing directories
@@ -411,11 +414,22 @@ cfgService_freepbx() {
       dir="$(eval echo \$$var)"
       eval $var=${APP_DATA}${dir}
       dir="$(eval echo \$$var)"
-      if [ ! -e "$dir" ];then
-        echo mkdir -p "$dir"
-        echo chown ${APP_USR}:${APP_GRP} "$dir"
-     fi
+      [ ! -e "$dir" ] && mkdir -p "$dir"
+      if [ "$(stat -c "%U %G" "$dir")" != "${APP_USR} ${APP_GRP}" ];then
+      echo "---> Fixing "$dir" permissions..."
+      chown ${APP_USR}:${APP_GRP} "$dir"
+      fi
     done
+    for var in $FREEPBX_FILES; do
+      file="$(eval echo \$$var)"
+      eval $var=${APP_DATA}${file}
+      file="$(eval echo \$$var)"
+      [ ! -e "$file" ] && touch "$file"
+      if [ "$(stat -c "%U %G" "$file")" != "${APP_USR} ${APP_GRP}" ];then
+      echo "---> Fixing "$file" permissions..."
+      chown ${APP_USR}:${APP_GRP} "$file"
+      fi
+    done    
   fi
 
   echo "--> Configuring FreePBX ODBC"
@@ -438,6 +452,7 @@ Charset=utf8" > /etc/odbc.ini
     [ ! -e "/etc/freepbx.conf" ] && cfgService_freepbx_install
   fi
   
+  echo "--> Applying Workarounds for FreePBX and Asterisk..."
   # relink fwconsole and amportal if not exist
   [ ! -e "/usr/sbin/fwconsole" ] && ln -s /var/lib/asterisk/bin/fwconsole /usr/sbin/fwconsole
   [ ! -e "/usr/sbin/amportal" ] && ln -s /var/lib/asterisk/bin/amportal /usr/sbin/amportal
@@ -447,7 +462,7 @@ Charset=utf8" > /etc/odbc.ini
   sed 's/^enabled =.*/enabled = yes/' -i /etc/asterisk/hep.conf
   
   # reconfigure freepbx from env variables
-  echo "--> Reconfiguring FreePBX using env variables..."
+  echo "--> Reconfiguring FreePBX Advanced Settings..."
   set | grep ^IZPBX_ | sed -e 's/^IZPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
   
   # FIXME: for https://issues.freepbx.org/browse/FREEPBX-20559
@@ -499,13 +514,13 @@ cfgService_freepbx_install() {
   if [ $RETVAL = 0 ]; then
     # fix paths and relink fwconsole and amportal if not exist
     [ ! -e "/usr/sbin/fwconsole" ] && ln -s /var/lib/asterisk/bin/fwconsole /usr/sbin/fwconsole
-    [ ! -e "/usr/sbin/amportal" ] && ln -s /var/lib/asterisk/bin/amportal /usr/sbin/amportal
+    [ ! -e "/usr/sbin/amportal" ]  && ln -s /var/lib/asterisk/bin/amportal  /usr/sbin/amportal
     
     # fix freepbx config file permissions
     if [ ! -z "${APP_DATA}" ];then
       chown asterisk:asterisk ${APP_DATA}/etc/freepbx.conf ${APP_DATA}/etc/amportal.conf
       echo "--> Fixing directory system paths in db configuration..."
-      for var in $FREEPBX_DIRS; do
+      for var in $FREEPBX_DIRS $FREEPBX_FILES; do
         echo fwconsole setting ${var} $(eval echo \$$var)
       done
     fi
@@ -563,12 +578,9 @@ cfgService_freepbx_install() {
       weakpasswords \
       "
 
-    # fix permissions
+    # fix freepbx permissions
     fwconsole chown
 
-    # fix asterisk configs permissions
-    chown -R ${APP_USR}:${APP_GRP} "${ASTETCDIR}"
-        
     # reload asterisk
     echo "--> Reloading FreePBX..."
     su - ${APP_USR} -c "fwconsole reload"
