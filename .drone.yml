@@ -7,7 +7,7 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
 workspace:
-  path: /izpbx-asterisk
+  base: /izpbx-asterisk
       
 steps:
 - name: setup
