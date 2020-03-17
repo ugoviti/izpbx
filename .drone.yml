@@ -5,10 +5,7 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-
-workspace:
-  path: /drone/src/izpbx-asterisk
-      
+    
 steps:
 - name: setup
   image: alpine
@@ -31,6 +28,7 @@ steps:
   settings:
     repo: izdock/izpbx-asterisk
     #dockerfile: izpbx-asterisk/Dockerfile
+    context: izpbx-asterisk
     username:
       from_secret: DOCKER_USERNAME
     password:
