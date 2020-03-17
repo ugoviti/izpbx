@@ -7,7 +7,7 @@
 ## detect current operating system
 : ${OS_RELEASE:="$(cat /etc/os-release | grep ^"ID=" | sed 's/"//g' | awk -F"=" '{print $2}')"}
 
-## default root mail address
+## default root mail adrdess
 : ${ROOT_MAILTO:="root@localhost"} # default root mail address
 
 ## app specific variables
@@ -363,22 +363,61 @@ cfgService_asterisk() {
   
   # configure FreePBX
   cfgService_freepbx
-  
-  # relink fwconsole and amportal if not exist
-  [ ! -e "/usr/sbin/fwconsole" ] && ln -s /var/lib/asterisk/bin/fwconsole /usr/sbin/fwconsole
-  [ ! -e "/usr/sbin/amportal" ] && ln -s /var/lib/asterisk/bin/amportal /usr/sbin/amportal
-
-  # freepbx warnings workaround
-  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i /etc/asterisk/modules.conf
-  sed 's/^enabled =.*/enabled = yes/' -i /etc/asterisk/hep.conf
-  
-  # FIXME: for https://issues.freepbx.org/browse/FREEPBX-20559
-  fwconsole setting SIGNATURECHECK 0
 }
 
 ## asterisk service
 cfgService_freepbx() {
   echo "=> Verifing FreePBX configurations"
+  
+  # legend of freepbx install script:
+  #    --webroot=WEBROOT            Filesystem location from which FreePBX files will be served [default: "/var/www/html"]
+  #    --astetcdir=ASTETCDIR        Filesystem location from which Asterisk configuration files will be served [default: "/etc/asterisk"]
+  #    --astmoddir=ASTMODDIR        Filesystem location for Asterisk modules [default: "/usr/lib64/asterisk/modules"]
+  #    --astvarlibdir=ASTVARLIBDIR  Filesystem location for Asterisk lib files [default: "/var/lib/asterisk"]
+  #    --astagidir=ASTAGIDIR        Filesystem location for Asterisk agi files [default: "/var/lib/asterisk/agi-bin"]
+  #    --astspooldir=ASTSPOOLDIR    Location of the Asterisk spool directory [default: "/var/spool/asterisk"]
+  #    --astrundir=ASTRUNDIR        Location of the Asterisk run directory [default: "/var/run/asterisk"]
+  #    --astlogdir=ASTLOGDIR        Location of the Asterisk log files [default: "/var/log/asterisk"]
+  #    --ampbin=AMPBIN              Location of the FreePBX command line scripts [default: "/var/lib/asterisk/bin"]
+  #    --ampsbin=AMPSBIN            Location of the FreePBX (root) command line scripts [default: "/usr/sbin"]
+  #    --ampcgibin=AMPCGIBIN        Location of the Apache cgi-bin executables [default: "/var/www/cgi-bin"]
+  #    --ampplayback=AMPPLAYBACK    Directory for FreePBX html5 playback files [default: "/var/lib/asterisk/playback"]
+
+  FREEPBX_DIRS="ASTMODDIR AMPWEBROOT ASTETCDIR ASTVARLIBDIR ASTAGIDIR ASTSPOOLDIR ASTRUNDIR ASTLOGDIR AMPBIN AMPSBIN AMPCGIBIN AMPPLAYBACK CERTKEYLOC FPBXDBUGFILE FPBX_LOG_FILE"
+  
+  # install only variable
+  ASTMODDIR=/usr/lib64/asterisk/modules
+  # freepbx install+database directory paths
+  AMPWEBROOT=/var/www/html
+  ASTETCDIR=/etc/asterisk
+  ASTVARLIBDIR=/var/lib/asterisk
+  ASTAGIDIR=/var/lib/asterisk/agi-bin
+  ASTSPOOLDIR=/var/spool/asterisk
+  ASTRUNDIR=/var/run/asterisk
+  ASTLOGDIR=/var/log/asterisk
+  AMPBIN=/var/lib/asterisk/bin
+  AMPSBIN=/var/lib/asterisk/sbin
+  AMPCGIBIN=/var/www/cgi-bin
+  AMPPLAYBACK=/var/lib/asterisk/playback
+  # database only variable
+  CERTKEYLOC=/etc/asterisk/keys               
+  FPBXDBUGFILE=/var/log/asterisk/freepbx_dbug
+  FPBX_LOG_FILE=/var/log/asterisk/freepbx.log
+
+  # rebase directory paths, based on APP_DATA and create/chown missing directories
+  if [ ! -z "${APP_DATA}" ]; then
+    echo "--> Using '${APP_DATA}' as basedir for FreePBX install"
+    for var in $FREEPBX_DIRS; do
+      dir="$(eval echo \$$var)"
+      eval $var=${APP_DATA}${dir}
+      dir="$(eval echo \$$var)"
+      if [ ! -e "$dir" ];then
+        echo mkdir -p "$dir"
+        echo chown ${APP_USR}:${APP_GRP} "$dir"
+     fi
+    done
+  fi
+
   echo "--> Configuring FreePBX ODBC"
   # fix mysql odbc inst file path
   sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmaodbc.so/' /etc/odbcinst.ini
@@ -392,15 +431,30 @@ Port = 3306
 option = 3
 Charset=utf8" > /etc/odbc.ini
 
-  # install freepbx if this is the first time
+  # install freepbx if this is the first time we initialize the container
   if [ ! -z "${APP_DATA}" ]; then
-    [ ! -e "${APP_DATA}/etc/freepbx.conf" ] && install
+    [ ! -e "${APP_DATA}/etc/freepbx.conf" ] && cfgService_freepbx_install
    else 
-    [ ! -e "/etc/freepbx.conf" ] && install
+    [ ! -e "/etc/freepbx.conf" ] && cfgService_freepbx_install
   fi
+  
+  # relink fwconsole and amportal if not exist
+  [ ! -e "/usr/sbin/fwconsole" ] && ln -s /var/lib/asterisk/bin/fwconsole /usr/sbin/fwconsole
+  [ ! -e "/usr/sbin/amportal" ] && ln -s /var/lib/asterisk/bin/amportal /usr/sbin/amportal
+
+  # freepbx warnings workaround
+  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i /etc/asterisk/modules.conf
+  sed 's/^enabled =.*/enabled = yes/' -i /etc/asterisk/hep.conf
+  
+  # reconfigure freepbx from env variables
+  echo "--> Reconfiguring FreePBX using env variables..."
+  set | grep ^IZPBX_ | sed -e 's/^IZPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
+  
+  # FIXME: for https://issues.freepbx.org/browse/FREEPBX-20559
+  fwconsole setting SIGNATURECHECK 0
 }
 
-install() {
+cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
@@ -417,69 +471,21 @@ install() {
   mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS asteriskcdrdb"
   mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO 'asterisk'@'%' WITH GRANT OPTION;"
 
-  #    --webroot=WEBROOT            Filesystem location from which FreePBX files will be served [default: "/var/www/html"]
-  #    --astetcdir=ASTETCDIR        Filesystem location from which Asterisk configuration files will be served [default: "/etc/asterisk"]
-  #    --astmoddir=ASTMODDIR        Filesystem location for Asterisk modules [default: "/usr/lib64/asterisk/modules"]
-  #    --astvarlibdir=ASTVARLIBDIR  Filesystem location for Asterisk lib files [default: "/var/lib/asterisk"]
-  #    --astagidir=ASTAGIDIR        Filesystem location for Asterisk agi files [default: "/var/lib/asterisk/agi-bin"]
-  #    --astspooldir=ASTSPOOLDIR    Location of the Asterisk spool directory [default: "/var/spool/asterisk"]
-  #    --astrundir=ASTRUNDIR        Location of the Asterisk run directory [default: "/var/run/asterisk"]
-  #    --astlogdir=ASTLOGDIR        Location of the Asterisk log files [default: "/var/log/asterisk"]
-  #    --ampbin=AMPBIN              Location of the FreePBX command line scripts [default: "/var/lib/asterisk/bin"]
-  #    --ampsbin=AMPSBIN            Location of the FreePBX (root) command line scripts [default: "/usr/sbin"]
-  #    --ampcgibin=AMPCGIBIN        Location of the Apache cgi-bin executables [default: "/var/www/cgi-bin"]
-  #    --ampplayback=AMPPLAYBACK    Directory for FreePBX html5 playback files [default: "/var/lib/asterisk/playback"]
-  
-  # freepbx directory paths
-  webroot=/var/www/html
-  astetcdir=/etc/asterisk
-  astmoddir=/usr/lib64/asterisk/modules
-  astvarlibdir=/var/lib/asterisk
-  astagidir=/var/lib/asterisk/agi-bin
-  astspooldir=/var/spool/asterisk
-  astrundir=/var/run/asterisk
-  astlogdir=/var/log/asterisk
-  ampbin=/var/lib/asterisk/bin
-  ampsbin=/usr/sbin
-  ampcgibin=/var/www/cgi-bin
-  ampplayback=/var/lib/asterisk/playback
-  
-  if [ ! -z "${APP_DATA}" ]; then
-    echo "--> Using '${APP_DATA}' as basedir for FreePBX install"
-    webroot="${APP_DATA}${webroot}"
-    astetcdir="${APP_DATA}${astetcdir}"
-    astmoddir="${APP_DATA}${astmoddir}"
-    astvarlibdir="${APP_DATA}${astvarlibdir}"
-    astagidir="${APP_DATA}${astagidir}"
-    astspooldir="${APP_DATA}${astspooldir}"
-    astrundir="${APP_DATA}${astrundir}"
-    astlogdir="${APP_DATA}${astlogdir}"
-    ampbin="${APP_DATA}${ampbin}"
-    ampsbin="${APP_DATA}${ampsbin}"
-    ampcgibin="${APP_DATA}${ampcgibin}"
-    ampplayback="${APP_DATA}${ampplayback}"
-    
-    # make destination dirs if not exist
-    for dir in $webroot $astetcdir $astmoddir $astvarlibdir $astagidir $astspooldir $astrundir $astlogdir $ampbin $ampsbin $ampcgibin $ampplayback; do
-      mkdir -p "$dir"
-    done
-  fi
-
   # set default freepbx install options
-  FPBX_OPTS+=" --webroot=${webroot}"
-  FPBX_OPTS+=" --astetcdir=${astetcdir}"
-  FPBX_OPTS+=" --astmoddir=${astmoddir}"
-  FPBX_OPTS+=" --astvarlibdir=${astvarlibdir}"
-  FPBX_OPTS+=" --astagidir=${astagidir}"
-  FPBX_OPTS+=" --astspooldir=${astspooldir}"
-  FPBX_OPTS+=" --astrundir=${astrundir}"
-  FPBX_OPTS+=" --astlogdir=${astlogdir}"
-  FPBX_OPTS+=" --ampbin=${ampbin}"
-  FPBX_OPTS+=" --ampsbin=${ampsbin}"
-  FPBX_OPTS+=" --ampcgibin=${ampcgibin}"
-  FPBX_OPTS+=" --ampplayback=${ampplayback}"
+  FPBX_OPTS+=" --webroot=${AMPWEBROOT}"
+  FPBX_OPTS+=" --astetcdir=${ASTETCDIR}"
+  FPBX_OPTS+=" --astmoddir=${ASTMODDIR}"
+  FPBX_OPTS+=" --astvarlibdir=${ASTVARLIBDIR}"
+  FPBX_OPTS+=" --astagidir=${ASTAGIDIR}"
+  FPBX_OPTS+=" --astspooldir=${ASTSPOOLDIR}"
+  FPBX_OPTS+=" --astrundir=${ASTRUNDIR}"
+  FPBX_OPTS+=" --astlogdir=${ASTLOGDIR}"
+  FPBX_OPTS+=" --ampbin=${AMPBIN}"
+  FPBX_OPTS+=" --ampsbin=${AMPSBIN}"
+  FPBX_OPTS+=" --ampcgibin=${AMPCGIBIN}"
+  FPBX_OPTS+=" --ampplayback=${AMPPLAYBACK}"
 
-  echo "--> Installing FreePBX in '${webroot}'"
+  echo "--> Installing FreePBX in '${AMPWEBROOT}'"
   set -x
   ./install -n --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} ${FPBX_OPTS}
   RETVAL=$?
@@ -498,21 +504,10 @@ install() {
     # fix freepbx config file permissions
     if [ ! -z "${APP_DATA}" ];then
       chown asterisk:asterisk ${APP_DATA}/etc/freepbx.conf ${APP_DATA}/etc/amportal.conf
-      echo "--> Fixing directory system paths in db configuration..."  
-      fwconsole setting ASTETCDIR     ${APP_DATA}/etc/asterisk
-      fwconsole setting CERTKEYLOC    ${APP_DATA}/etc/asterisk/keys
-      fwconsole setting AMPSBIN       ${APP_DATA}/usr/sbin
-      fwconsole setting ASTVARLIBDIR  ${APP_DATA}/var/lib/asterisk
-      fwconsole setting ASTAGIDIR     ${APP_DATA}/var/lib/asterisk/agi-bin
-      fwconsole setting AMPBIN        ${APP_DATA}/var/lib/asterisk/bin
-      fwconsole setting AMPPLAYBACK   ${APP_DATA}/var/lib/asterisk/playback
-      fwconsole setting ASTLOGDIR     ${APP_DATA}/var/log/asterisk
-      fwconsole setting FPBXDBUGFILE  ${APP_DATA}/var/log/asterisk/freepbx_dbug
-      fwconsole setting FPBX_LOG_FILE ${APP_DATA}/var/log/asterisk/freepbx.log
-      fwconsole setting ASTRUNDIR     ${APP_DATA}/var/run/asterisk
-      fwconsole setting ASTSPOOLDIR   ${APP_DATA}/var/spool/asterisk
-      fwconsole setting AMPCGIBIN     ${APP_DATA}/var/www/cgi-bin
-      fwconsole setting AMPWEBROOT    ${APP_DATA}/var/www/html
+      echo "--> Fixing directory system paths in db configuration..."
+      for var in $FREEPBX_DIRS; do
+        echo fwconsole setting ${var} $(eval echo \$$var)
+      done
     fi
    
     echo "--> Installing core FreePBX modules..."
@@ -571,13 +566,9 @@ install() {
     # fix permissions
     fwconsole chown
 
-    # fix asterisk permissions
-    chown -R ${APP_USR}:${APP_GRP} /etc/asterisk/
-    
-    # reconfigure freepbx from env variables
-    echo "--> Reconfiguring FreePBX using env variables..."
-    set | grep ^IZPBX_ | sed -e 's/^IZPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
-    
+    # fix asterisk configs permissions
+    chown -R ${APP_USR}:${APP_GRP} "${ASTETCDIR}"
+        
     # reload asterisk
     echo "--> Reloading FreePBX..."
     su - ${APP_USR} -c "fwconsole reload"

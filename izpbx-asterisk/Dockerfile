@@ -4,11 +4,11 @@ FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
-# app name
+## app name
 ENV APP_NAME              "izpbx-asterisk"
-ENV APP_DESCRIPTION       "izPBX Telephony System - Asterisk engine"
+ENV APP_DESCRIPTION       "izPBX Telephony System - Asterisk/FreePBX Engine"
 
-# app ports
+## app ports
 ENV APP_PORT_HTTP         80
 ENV APP_PORT_HTTPS        443
 ENV APP_PORT_SIP          5060
@@ -17,11 +17,29 @@ ENV APP_PORT_FOP          4445
 ENV APP_PORT_RPT_START    19000
 ENV APP_PORT_RPT_END      20000
 
-# app users
+## app users
 ENV APP_UID               1000
 ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
+
+## app componets
+# https://downloads.asterisk.org/pub/telephony/asterisk/
+ARG ASTERISK_VER=16.9.0
+
+ARG FREEPBX_VER=15.0
+
+# http://sources.buildroot.net/spandsp/
+ARG SPANDSP_VER=20180108
+
+# https://github.com/BelledonneCommunications/bcg729/releases
+ARG BCG729_VER=1.0.4
+
+# https://www.fop2.com/download.php
+ARG FOP2_VER=2.31.27
+
+# https://github.com/irontec/sngrep/releases
+ARG SNGREP_VER=1.4.6
 
 ## install
 RUN set -xe && \
@@ -104,28 +122,18 @@ RUN set -xe && \
     uriparser \
   && \
   : "---------- clean temporary files ----------" && \
-  dnf clean all && \
-  rm -rf /var/cache/yum
+  echo TEST:
+#  dnf clean all && \
+#  rm -rf /var/cache/yum
 
 ## prep
 RUN set -xe && \
   groupadd -g ${APP_GID} ${APP_GRP} && \
-  useradd -u ${APP_UID} -c "Asterisk PBX" -g ${APP_GRP} ${APP_USR} && \
+  useradd -u ${APP_UID} -c "${APP_DESCRIPTION} User" -g ${APP_GRP} -s /sbin/nologin ${APP_USR} && \
   usermod -aG wheel ${APP_USR}
   
 ## build
-# https://downloads.asterisk.org/pub/telephony/asterisk/
-ARG ASTERISK_VER=16.9.0
-
-ARG FREEPBX_VER=15.0
-
-# http://sources.buildroot.net/spandsp/
-ARG SPANDSP_VER=20180108
-
-# https://github.com/BelledonneCommunications/bcg729/releases
-ARG BCG729_VER=1.0.4
-
-# copy external sources
+# copy external sources files
 ADD build/ /usr/src/
 
 RUN set -xe && \
@@ -193,7 +201,9 @@ RUN set -xe && \
   [[ $VERSION_ID -ge 8 ]] && ASTERISK_BUILD_DEPS+="mariadb-devel" ; \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
-  \
+  echo TEST:
+
+RUN set -xe && \
   : "---------- Build libresample ----------" && \
   cd /usr/src && \
   tar zxvf libresample-0.1.3.tgz && \
@@ -316,17 +326,43 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  \
-  : "---------- clean temporary files ----------" && \
-  rm -rf /usr/src && mkdir -p /usr/src && \
-  dnf -y remove $ASTERISK_BUILD_DEPS \
-    -x diffutils \
-    -x unzip \
-    -x zip \
-    -x uriparser \
-  && \
-  dnf clean all && \
-  rm -rf /var/cache/yum
+  echo TEST:
+
+RUN set -xe && \
+  : "---------- Build sngrep ----------" && \
+  cd /usr/src && \
+  curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/releases/download/v${SNGREP_VER}/sngrep-${SNGREP_VER}.tar.gz | tar xz -C /usr/src/ && \
+  cd sngrep-${SNGREP_VER} && \
+  dnf -y install libpcap libpcap-devel && \
+  ./bootstrap.sh && \
+  ./configure --prefix=/usr && \
+  make && \
+  make install && \
+  ldconfig && \
+  echo TEST:
+
+RUN set -xe && \
+  : "---------- Install FOP2 ----------" && \
+  cd /usr/src && \
+  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz -C /usr/src/ && \
+  cd fop2 && \
+  echo TEST:
+#  ./configure --prefix=/usr && \
+#  make && \
+#  make install && \
+#  ldconfig && \
+
+#   \
+#   : "---------- clean temporary files ----------" && \
+#   rm -rf /usr/src && mkdir -p /usr/src && \
+#   dnf -y remove $ASTERISK_BUILD_DEPS \
+#     -x diffutils \
+#     -x unzip \
+#     -x zip \
+#     -x uriparser \
+#   && \
+#   dnf clean all && \
+#   rm -rf /var/cache/yum
   
 # asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
