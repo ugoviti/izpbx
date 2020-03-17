@@ -372,7 +372,7 @@ cfgService_asterisk() {
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i /etc/asterisk/modules.conf
   sed 's/^enabled =.*/enabled = yes/' -i /etc/asterisk/hep.conf
   
-  # fix for https://issues.freepbx.org/browse/FREEPBX-20559
+  # FIXME: for https://issues.freepbx.org/browse/FREEPBX-20559
   fwconsole setting SIGNATURECHECK 0
 }
 
@@ -534,7 +534,8 @@ install() {
       "
  
     echo "--> Enabling extended FreePBX repo..."
-    su - ${APP_USR} -c "fwconsole ma enablerepo extended unsupported"
+    su - ${APP_USR} -c "fwconsole ma enablerepo extended"
+    su - ${APP_USR} -c "fwconsole ma enablerepo unsupported"
     
     echo "--> Installing extra FreePBX modules..."
     su - ${APP_USR} -c "fwconsole ma downloadinstall \
