@@ -6,6 +6,9 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
+workspace:
+  path: /izpbx-asterisk
+      
 steps:
 - name: setup
   image: alpine
