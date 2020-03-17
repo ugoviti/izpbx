@@ -27,7 +27,7 @@ steps:
     <<: *setup_env
   settings:
     repo: izdock/izpbx-asterisk
-    #dockerfile: izpbx-asterisk/Dockerfile
+    dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     username:
       from_secret: DOCKER_USERNAME
