@@ -51,28 +51,22 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
     
 steps:
-- name: setup
-  image: alpine
-  environment: &setup_env
-    APP_VER_MAJOR: 17
-    APP_VER_MINOR: 3
-    APP_VER_PATCH: 0
-  commands:
-    - echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
-    - echo -e -n "$${APP_VER_MAJOR}" > .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
-    #- echo -e -n ",latest" >> .tags
-
-- name: publish
+- name: build
   image: plugins/docker
+  commands:
+    - echo -e -n "17.3.0-$${DRONE_BUILD_NUMBER" > VERSION
   environment:
-    <<: *setup_env
+    ASTERISK_VER: 17.3.0
   settings:
+    tags:
+      - '17'
+      - '17.3'
+      - '17.3.0'
+      - '17.3.0-${DRONE_BUILD_NUMBER'
+      #- 'latest'
     repo: izdock/izpbx-asterisk
-    dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
+    dockerfile: izpbx-asterisk/Dockerfile
     username:
       from_secret: DOCKER_USERNAME
     password:

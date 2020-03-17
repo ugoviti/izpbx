@@ -2,7 +2,7 @@ version: '3'
 
 services:
   asterisk:
-    image: izpbx-asterisk
+    image: izdock/izpbx-asterisk:16
     restart: always
     depends_on:
       - db
