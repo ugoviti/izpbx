@@ -54,10 +54,15 @@ steps:
 - name: build
   image: plugins/docker
   commands:
-    - echo -e -n "17.3.0-$${DRONE_BUILD_NUMBER" > VERSION
+    - echo -e -n "17.3.0-$${DRONE_BUILD_NUMBER}" > VERSION
   environment:
     ASTERISK_VER: 17.3.0
   settings:
+    tags:
+      - '17'
+      - '17.3'
+      - '17.3.0'
+      #- 'latest'
     repo: izdock/izpbx-asterisk
     context: izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
