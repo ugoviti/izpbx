@@ -4,6 +4,11 @@ FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
+# default app versions used during build step
+ARG APP_VER_MAJOR=16
+ARG APP_VER_MINOR=9
+ARG APP_VER_PATCH=0
+
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
 ENV APP_DESCRIPTION       "izPBX Telephony System - Asterisk/FreePBX Engine"
@@ -23,9 +28,12 @@ ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
+# full app version
+ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+
 ## app componets
 # https://downloads.asterisk.org/pub/telephony/asterisk/
-ARG ASTERISK_VER=16.9.0
+ARG ASTERISK_VER=${APP_VER}
 
 ARG FREEPBX_VER=15.0
 

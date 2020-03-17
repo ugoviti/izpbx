@@ -10,11 +10,9 @@ steps:
 - name: setup
   image: alpine
   environment: &setup_env
-    ASTERISK_VER: 16.9.0
     APP_VER_MAJOR: 16
     APP_VER_MINOR: 9
     APP_VER_PATCH: 0
-    ASTERISK_VER: 16.9.0
   commands:
     - echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
     - echo -e -n "$${APP_VER_MAJOR}" > .tags
@@ -31,6 +29,10 @@ steps:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
+    build_args_from_env:
+    - APP_VER_MAJOR
+    - APP_VER_MINOR
+    - APP_VER_PATCH
     username:
       from_secret: DOCKER_USERNAME
     password:
@@ -56,7 +58,6 @@ steps:
 - name: setup
   image: alpine
   environment: &setup_env
-    ASTERISK_VER: 17.3.0
     APP_VER_MAJOR: 17
     APP_VER_MINOR: 3
     APP_VER_PATCH: 0
@@ -76,6 +77,10 @@ steps:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
+    build_args_from_env:
+    - APP_VER_MAJOR
+    - APP_VER_MINOR
+    - APP_VER_PATCH
     username:
       from_secret: DOCKER_USERNAME
     password:
