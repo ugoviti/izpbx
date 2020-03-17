@@ -3,44 +3,67 @@
 # version: 20200315
 #set -ex
 
-# default variables
-## detect current operating system
-: ${OS_RELEASE:="$(cat /etc/os-release | grep ^"ID=" | sed 's/"//g' | awk -F"=" '{print $2}')"}
-
 ## default root mail adrdess
 : ${ROOT_MAILTO:="root@localhost"} # default root mail address
 
 ## app specific variables
-: ${APP_DESCRIPTION:="izPBX Cloud Asterisk PBX"}
+: ${APP_DESCRIPTION:="izPBX Cloud Telephony System"}
 : ${APP_CHART:=""}
 : ${APP_RELEASE:=""}
 : ${APP_NAMESPACE:=""}
 
+# override default data directory used by container apps (used for statefll aps)
 : ${APP_DATA:=""}
 
-# directory and config files arrays
-dataDirs=(
-  "/var/spool/cron"
-  "/home/asterisk"
-  "/etc/asterisk"
-  "/var/lib/asterisk"
-  "/var/spool/asterisk"
-  "/var/log/asterisk"
-  "/var/www"
+# default directory and config files paths arrays
+declare -A appDataDirs=(
+  [CRONDIR]=/var/spool/cron
+  [USERSHOME]=/home
+  [ASTETCDIR]=/etc/asterisk
+  [ASTVARLIBDIR]=/var/lib/asterisk
+  [ASTSPOOLDIR]=/var/spool/asterisk
+  [ASTLOGDIR]=/var/log/asterisk
+  [F2BLOGDIR]=/var/log/fail2ban
+  [HTTPDHOME]=/var/www
 )
 
-configFiles=(
-  "/etc/freepbx.conf"
-  "/etc/amportal.conf"
+declare -A appFilesConf=(
+  [FPBXCFGFILE]=/etc/freepbx.conf
+  [AMPCFGFILE]=/etc/amportal.conf
 )
 
-cacheDirs=(
-  "/var/lib/php/session"
-  "/var/run/asterisk"
-  "/var/lib/php/opcache"
-  "/var/lib/php/wsdlcache"
+declare -A appCacheDirs=(
+  [ASTRUNDIR]=/var/run/asterisk
+  [PHPOPCACHEDIR]=/var/lib/php/opcache
+  [PHPSESSDIR]=/var/lib/php/session
+  [PHPWSDLDIR]=/var/lib/php/wsdlcache
 )
 
+declare -A freepbxDirs=(
+  [AMPWEBROOT]=/var/www/html
+  [ASTETCDIR]=/etc/asterisk
+  [ASTVARLIBDIR]=/var/lib/asterisk
+  [ASTAGIDIR]=/var/lib/asterisk/agi-bin
+  [ASTSPOOLDIR]=/var/spool/asterisk
+  [ASTRUNDIR]=/var/run/asterisk
+  [ASTLOGDIR]=/var/log/asterisk
+  [AMPBIN]=/var/lib/asterisk/bin
+  [AMPSBIN]=/var/lib/asterisk/sbin
+  [AMPCGIBIN]=/var/www/cgi-bin
+  [AMPPLAYBACK]=/var/lib/asterisk/playback
+  [CERTKEYLOC]=/etc/asterisk/keys               
+)
+
+declare -A freepbxDirsExtra=(
+  [ASTMODDIR]=/usr/lib64/asterisk/modules
+)
+
+declare -A freepbxFilesLog=(
+  [FPBXDBUGFILE]=/var/log/asterisk/freepbx-debug.log
+  [FPBX_LOG_FILE]=/var/log/asterisk/freepbx.log
+)
+
+## other variables
 # mysql configuration
 : ${MYSQL_SERVER:="db"}
 : ${MYSQL_ROOT_PASSWORD:=""}
@@ -65,6 +88,9 @@ cacheDirs=(
 : ${ALLOWED_SENDER_DOMAINS:=""}
 
 # operating system specific variables
+## detect current operating system
+: ${OS_RELEASE:="$(cat /etc/os-release | grep ^"ID=" | sed 's/"//g' | awk -F"=" '{print $2}')"}
+
 # debian paths
 if   [ "$OS_RELEASE" = "debian" ]; then
 : ${SUPERVISOR_DIR:="/etc/supervisor/conf.d/"}
@@ -121,8 +147,6 @@ symlinkDir() {
 
   echo "=> DIRECTORY data override detected: original:[$dirOriginal] custom:[$dirCustom]"
 
-  # make destination dir if not exist
-  
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
     echo "--> INFO: Detected empty dir '$dirCustom'. Copying '$dirOriginal' to '$dirCustom'..."
@@ -133,7 +157,9 @@ symlinkDir() {
       echo "--> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
       mv "$dirOriginal" "$dirOriginal".dist
     else
-      echo "--> WARNING: original data directory '$dirOriginal' doesn't exist"
+      # make destination dir if not exist
+      echo "--> WARNING: original data directory '$dirOriginal' doesn't exist... creating empty directory"
+      mkdir -p "$dirOriginal"
   fi
   
   echo "--> symlinking '$dirCustom' to '$dirOriginal'"
@@ -155,7 +181,8 @@ symlinkFile() {
       echo "--> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
-      echo "--> WARNING: original data file '$fileOriginal' doesn't exist"
+      echo "--> WARNING: original data file '$fileOriginal' doesn't exist... creating symlink from a not existing source"
+      #touch "$fileOriginal"
   fi
 
   echo "--> symlinking '$fileCustom' to '$fileOriginal'"
@@ -325,7 +352,7 @@ cfgService_asterisk() {
   
   # check and create missing container directory
   if [ ! -z "${APP_DATA}" ]; then  
-    for dir in ${dataDirs[@]}
+    for dir in ${appDataDirs[@]}
       do
         dir="${APP_DATA}${dir}"
         if [ ! -e "${dir}" ];then
@@ -333,15 +360,13 @@ cfgService_asterisk() {
           mkdir -p "${dir}"
         fi
       done
-  fi
-  
-  # link to custom data directory if required
-  if [[ ! -z "${APP_DATA}" ]]; then
-    for dir in ${dataDirs[@]}; do
+
+    # link to custom data directory if required
+    for dir in ${appDataDirs[@]}; do
       symlinkDir "${dir}" "${APP_DATA}${dir}"
     done
     
-    for file in ${configFiles[@]}; do
+    for file in ${appFilesConf[@]}; do
       # echo FILE=$file
       symlinkFile "${file}" "${APP_DATA}${file}"
     done
@@ -349,14 +374,14 @@ cfgService_asterisk() {
 
   # check files and directory permissions
   echo "---> Verifing files permissions"
-  for dir in ${dataDirs[@]}; do
+  for dir in ${appDataDirs[@]}; do
     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
     [ -e "${dir}" ] && fixOwner "${dir}" || echo "WARNING: the directory '${dir}' doesn't exist"
   done
-  for dir in ${cacheDirs[@]}; do
+  for dir in ${appCacheDirs[@]}; do
     fixOwner "${dir}"
   done
-  for file in ${configFiles[@]}; do
+  for file in ${appFilesConf[@]}; do
     [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
     [ -e "${file}" ] && fixOwner "${file}" || echo "WARNING: the file '${file}' doesn't exist"
   done
@@ -368,69 +393,6 @@ cfgService_asterisk() {
 ## asterisk service
 cfgService_freepbx() {
   echo "=> Verifing FreePBX configurations"
-  
-  # legend of freepbx install script:
-  #    --webroot=WEBROOT            Filesystem location from which FreePBX files will be served [default: "/var/www/html"]
-  #    --astetcdir=ASTETCDIR        Filesystem location from which Asterisk configuration files will be served [default: "/etc/asterisk"]
-  #    --astmoddir=ASTMODDIR        Filesystem location for Asterisk modules [default: "/usr/lib64/asterisk/modules"]
-  #    --astvarlibdir=ASTVARLIBDIR  Filesystem location for Asterisk lib files [default: "/var/lib/asterisk"]
-  #    --astagidir=ASTAGIDIR        Filesystem location for Asterisk agi files [default: "/var/lib/asterisk/agi-bin"]
-  #    --astspooldir=ASTSPOOLDIR    Location of the Asterisk spool directory [default: "/var/spool/asterisk"]
-  #    --astrundir=ASTRUNDIR        Location of the Asterisk run directory [default: "/var/run/asterisk"]
-  #    --astlogdir=ASTLOGDIR        Location of the Asterisk log files [default: "/var/log/asterisk"]
-  #    --ampbin=AMPBIN              Location of the FreePBX command line scripts [default: "/var/lib/asterisk/bin"]
-  #    --ampsbin=AMPSBIN            Location of the FreePBX (root) command line scripts [default: "/usr/sbin"]
-  #    --ampcgibin=AMPCGIBIN        Location of the Apache cgi-bin executables [default: "/var/www/cgi-bin"]
-  #    --ampplayback=AMPPLAYBACK    Directory for FreePBX html5 playback files [default: "/var/lib/asterisk/playback"]
-
-  
-  ASTERISK_DIRS="ASTMODDIR"
-  FREEPBX_DIRS="AMPWEBROOT ASTETCDIR ASTVARLIBDIR ASTAGIDIR ASTSPOOLDIR ASTRUNDIR ASTLOGDIR AMPBIN AMPSBIN AMPCGIBIN AMPPLAYBACK CERTKEYLOC"
-  FREEPBX_FILES="FPBXDBUGFILE FPBX_LOG_FILE"
-    
-  # install only variable
-  ASTMODDIR=/usr/lib64/asterisk/modules
-  # freepbx install+database directory paths
-  AMPWEBROOT=/var/www/html
-  ASTETCDIR=/etc/asterisk
-  ASTVARLIBDIR=/var/lib/asterisk
-  ASTAGIDIR=/var/lib/asterisk/agi-bin
-  ASTSPOOLDIR=/var/spool/asterisk
-  ASTRUNDIR=/var/run/asterisk
-  ASTLOGDIR=/var/log/asterisk
-  AMPBIN=/var/lib/asterisk/bin
-  AMPSBIN=/var/lib/asterisk/sbin
-  AMPCGIBIN=/var/www/cgi-bin
-  AMPPLAYBACK=/var/lib/asterisk/playback
-  # database only variable
-  CERTKEYLOC=/etc/asterisk/keys               
-  FPBXDBUGFILE=/var/log/asterisk/freepbx-debug.log
-  FPBX_LOG_FILE=/var/log/asterisk/freepbx.log
-
-  # rebase directory paths, based on APP_DATA and create/chown missing directories
-  if [ ! -z "${APP_DATA}" ]; then
-    echo "--> Using '${APP_DATA}' as basedir for FreePBX install"
-    for var in $FREEPBX_DIRS; do
-      dir="$(eval echo \$$var)"
-      eval $var=${APP_DATA}${dir}
-      dir="$(eval echo \$$var)"
-      [ ! -e "$dir" ] && mkdir -p "$dir"
-      if [ "$(stat -c "%U %G" "$dir")" != "${APP_USR} ${APP_GRP}" ];then
-      echo "---> Fixing "$dir" permissions..."
-      chown ${APP_USR}:${APP_GRP} "$dir"
-      fi
-    done
-    for var in $FREEPBX_FILES; do
-      file="$(eval echo \$$var)"
-      eval $var=${APP_DATA}${file}
-      file="$(eval echo \$$var)"
-      [ ! -e "$file" ] && touch "$file"
-      if [ "$(stat -c "%U %G" "$file")" != "${APP_USR} ${APP_GRP}" ];then
-      echo "---> Fixing "$file" permissions..."
-      chown ${APP_USR}:${APP_GRP} "$file"
-      fi
-    done    
-  fi
 
   echo "--> Configuring FreePBX ODBC"
   # fix mysql odbc inst file path
@@ -445,13 +407,54 @@ Port = 3306
 option = 3
 Charset=utf8" > /etc/odbc.ini
 
-  # install freepbx if this is the first time we initialize the container
+  # legend of freepbx install script:
+  #    --webroot=WEBROOT            Filesystem location from which FreePBX files will be served [default: "/var/www/html"]
+  #    --astetcdir=ASTETCDIR        Filesystem location from which Asterisk configuration files will be served [default: "/etc/asterisk"]
+  #    --astmoddir=ASTMODDIR        Filesystem location for Asterisk modules [default: "/usr/lib64/asterisk/modules"]
+  #    --astvarlibdir=ASTVARLIBDIR  Filesystem location for Asterisk lib files [default: "/var/lib/asterisk"]
+  #    --astagidir=ASTAGIDIR        Filesystem location for Asterisk agi files [default: "/var/lib/asterisk/agi-bin"]
+  #    --astspooldir=ASTSPOOLDIR    Location of the Asterisk spool directory [default: "/var/spool/asterisk"]
+  #    --astrundir=ASTRUNDIR        Location of the Asterisk run directory [default: "/var/run/asterisk"]
+  #    --astlogdir=ASTLOGDIR        Location of the Asterisk log files [default: "/var/log/asterisk"]
+  #    --ampbin=AMPBIN              Location of the FreePBX command line scripts [default: "/var/lib/asterisk/bin"]
+  #    --ampsbin=AMPSBIN            Location of the FreePBX (root) command line scripts [default: "/usr/sbin"]
+  #    --ampcgibin=AMPCGIBIN        Location of the Apache cgi-bin executables [default: "/var/www/cgi-bin"]
+  #    --ampplayback=AMPPLAYBACK    Directory for FreePBX html5 playback files [default: "/var/lib/asterisk/playback"]
+
+  ## rebase directory paths, based on APP_DATA and create/chown missing directories
   if [ ! -z "${APP_DATA}" ]; then
-    [ ! -e "${APP_DATA}/etc/freepbx.conf" ] && cfgService_freepbx_install
-   else 
-    [ ! -e "/etc/freepbx.conf" ] && cfgService_freepbx_install
+    echo "--> Using '${APP_DATA}' as basedir for FreePBX install"
+    # process directories
+    for k in ${!freepbxDirs[@]}; do
+      v="${freepbxDirs[$k]}"
+      eval freepbxDirs[$k]=${APP_DATA}$v
+      [ ! -e "$v" ] && mkdir -p "$v"
+      if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
+      echo "---> Fixing permissions for: $k=$v"
+      chown ${APP_USR}:${APP_GRP} "$v"
+      fi
+    done
+    
+    # process logs files
+    for k in ${!freepbxFilesLog[@]}; do
+      v="${freepbxFilesLog[$k]}"
+      eval freepbxFilesLog[$k]=${APP_DATA}$v
+      [ ! -e "$v" ] && mkdir -p "$v"
+      if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
+      echo "---> Fixing permissions for: $k=$v"
+      chown ${APP_USR}:${APP_GRP} "$v"
+      fi
+    done
   fi
-  
+
+  # transform associative array to variable=paths, ex. AMPWEBROOT=/var/www/html
+  for k in ${!freepbxDirs[@]}      ; do eval $k=${freepbxDirs[$k]}     ;done
+  for k in ${!freepbxDirsExtra[@]} ; do eval $k=${freepbxDirsExtra[$k]}     ;done
+  for k in ${!freepbxFilesLog[@]}  ; do eval $k=${freepbxFilesLog[$k]} ;done    
+
+  # OneTime: install freepbx if this is the first time we initialize the container
+  [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && cfgService_freepbx_install
+
   echo "--> Applying Workarounds for FreePBX and Asterisk..."
   # relink fwconsole and amportal if not exist
   [ ! -e "/usr/sbin/fwconsole" ] && ln -s /var/lib/asterisk/bin/fwconsole /usr/sbin/fwconsole
@@ -460,13 +463,10 @@ Charset=utf8" > /etc/odbc.ini
   # freepbx warnings workaround
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i /etc/asterisk/modules.conf
   sed 's/^enabled =.*/enabled = yes/' -i /etc/asterisk/hep.conf
-  
+
   # reconfigure freepbx from env variables
   echo "--> Reconfiguring FreePBX Advanced Settings..."
   set | grep ^IZPBX_ | sed -e 's/^IZPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
-  
-  # FIXME: for https://issues.freepbx.org/browse/FREEPBX-20559
-  fwconsole setting SIGNATURECHECK 0
 }
 
 cfgService_freepbx_install() {
@@ -517,11 +517,13 @@ cfgService_freepbx_install() {
     [ ! -e "/usr/sbin/amportal" ]  && ln -s /var/lib/asterisk/bin/amportal  /usr/sbin/amportal
     
     # fix freepbx config file permissions
-    if [ ! -z "${APP_DATA}" ];then
-      chown asterisk:asterisk ${APP_DATA}/etc/freepbx.conf ${APP_DATA}/etc/amportal.conf
+    if [ ! -z "${APP_DATA}" ]; then
+      for file in ${appFilesConf[@]}; do
+        chown ${APP_USR}:${APP_GRP} "${file}"
+      done
       echo "--> Fixing directory system paths in db configuration..."
-      for var in $FREEPBX_DIRS $FREEPBX_FILES; do
-        echo fwconsole setting ${var} $(eval echo \$$var)
+      for k in ${!freepbxDirs[@]} ${!freepbxFilesLog[@]}; do
+        fwconsole setting ${k} ${freepbxDirs[$k]}
       done
     fi
    
@@ -603,42 +605,35 @@ cfgService_freepbx_install() {
   fi
 }
 
-hooks_always() {
-# configure supervisord
-echo "=> Fixing supervisord config file..."
-if   [ "$OS_RELEASE" = "debian" ]; then
-  echo "--> Debian Linux detected"
-  sed 's|^files = .*|files = /etc/supervisor/conf.d/*.ini|' -i /etc/supervisor/supervisord.conf
-  mkdir -p /var/log/supervisor /var/log/proftpd /var/log/dbconfig-common /var/log/apt/ /var/log/apache2/ /var/run/nagios/
-  touch /var/log/wtmp /var/log/lastlog
-  [ ! -e /sbin/nologin ] && ln -s /usr/sbin/nologin /sbin/nologin
-elif [ "$OS_RELEASE" = "centos" ]; then
-  echo "--> CentOS Linux detected"
-  mkdir -p /run/supervisor
-  sed 's/\[supervisord\]/\[supervisord\]\nuser=root/' -i /etc/supervisord.conf
-  sed 's|^file=.*|file=/run/supervisor/supervisor.sock|' -i /etc/supervisord.conf
-  sed 's|^pidfile=.*|pidfile=/run/supervisor/supervisord.pid|' -i /etc/supervisord.conf
-  sed 's|^nodaemon=.*|nodaemon=true|' -i /etc/supervisord.conf
-fi
+runHooks() {
+  echo "=> Executing $APP_DESCRIPTION container hooks..."
+  # configure supervisord
+  echo "--> Fixing supervisord config file..."
+  if   [ "$OS_RELEASE" = "debian" ]; then
+    echo "---> Debian Linux detected"
+    sed 's|^files = .*|files = /etc/supervisor/conf.d/*.ini|' -i /etc/supervisor/supervisord.conf
+    mkdir -p /var/log/supervisor /var/log/proftpd /var/log/dbconfig-common /var/log/apt/ /var/log/apache2/ /var/run/nagios/
+    touch /var/log/wtmp /var/log/lastlog
+    [ ! -e /sbin/nologin ] && ln -s /usr/sbin/nologin /sbin/nologin
+  elif [ "$OS_RELEASE" = "centos" ]; then
+    echo "---> CentOS Linux detected"
+    mkdir -p /run/supervisor
+    sed 's/\[supervisord\]/\[supervisord\]\nuser=root/' -i /etc/supervisord.conf
+    sed 's|^file=.*|file=/run/supervisor/supervisor.sock|' -i /etc/supervisord.conf
+    sed 's|^pidfile=.*|pidfile=/run/supervisor/supervisord.pid|' -i /etc/supervisord.conf
+    sed 's|^nodaemon=.*|nodaemon=true|' -i /etc/supervisord.conf
+  fi
 
-# configure /etc/aliases
-[ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
-[ ${ROOT_MAILTO} ] && echo "root: ${ROOT_MAILTO}" >> /etc/aliases && newaliases
+  # configure /etc/aliases
+  [ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
+  [ ${ROOT_MAILTO} ] && echo "root: ${ROOT_MAILTO}" >> /etc/aliases && newaliases
 
-# enable/disable and configure services
-#chkService SYSLOG_ENABLED
-#chkService POSTFIX_ENABLED
-chkService CRON_ENABLED
-chkService HTTPD_ENABLED
-chkService ASTERISK_ENABLED
+  # enable/disable and configure services
+  #chkService SYSLOG_ENABLED
+  #chkService POSTFIX_ENABLED
+  chkService CRON_ENABLED
+  chkService HTTPD_ENABLED
+  chkService ASTERISK_ENABLED
 }
 
-hooks_oneshot() {
-echo "=> Executing $APP_DESCRIPTION configuration hooks 'oneshot'..."
-
-# save the configuration status for later usage with persistent volumes
-touch "${CONF_DEFAULT}/.configured"
-}
-
-hooks_always
-#[ ! -f "${CONF_DEFAULT}/.configured" ] && hooks_oneshot || echo "=> Detected $APP_DESCRIPTION configuration files already present in ${CONF_DEFAULT}... skipping automatic configuration"
+runHooks
