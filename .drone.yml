@@ -40,3 +40,38 @@ steps:
     event: [push, tag]
     branch: master
 
+---
+
+kind: pipeline
+name: izpbx-17
+
+volumes:
+  - name: docker
+    host:
+      path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
+    
+steps:
+- name: build
+  image: plugins/docker
+  environment:
+    ASTERISK_VER: 17.3.0
+  settings:
+    tags:
+      - '17'
+      - '17.3'
+      - '17.3.0'
+      - '17.3.0-${DRONE_BUILD_NUMBER'
+      #- 'latest'
+    repo: izdock/izpbx-asterisk
+    context: izpbx-asterisk
+    dockerfile: izpbx-asterisk/Dockerfile
+    username:
+      from_secret: DOCKER_USERNAME
+    password:
+      from_secret: DOCKER_PASSWORD
+  volumes:
+  - name: docker
+    path: /var/lib/docker
+  when:
+    event: [push, tag]
+    branch: master
