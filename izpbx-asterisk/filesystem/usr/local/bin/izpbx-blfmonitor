@@ -1,0 +1,260 @@
+#!/bin/bash
+# description: izblfmonitor
+# chkconfig: 35 99 9
+#
+# written by Luca Mafucci <luca.mafucci@initzero.it>
+# please visit http://www.initzero.it for commercial support
+# For README, HowTo, ChangeLog, Contributors and License go to the end of this script
+NAME="izblfmonitor"
+VERSION=20140120
+ 
+# Variabili predefinite
+ 
+REFRESH_TIME=5
+TRUNK=terra
+LINEE_TOT=4
+LINEE_ATTIVE=0
+LINEE_INATTIVE=$LINEE_TOT
+ 
+# default variables
+# 0=run izping in foreground, 1=run izping in background 
+DAEMON="0"
+DAEMON_RESTART="0"
+DAEMON_STOP="0"
+ 
+LOG="/tmp/$NAME.log"
+ 
+####
+## funzioni predefinite
+ 
+blf_monitor() {
+while true
+do
+	LINEE_ATTIVE=`asterisk -rvx "CORE SHOW CHANNELS" | grep ^"SIP/$TRUNK" | wc -l`
+ 
+	if [ $LINEE_ATTIVE -gt $LINEE_TOT ]; then
+		LINEE_ATTIVE="$LINEE_TOT"
+        fi
+ 
+	LINEE_INATTIVE=`expr "$LINEE_TOT" - "$LINEE_ATTIVE"` 
+ 
+	if [[ $DEBUG = 1 ]] 
+	  then
+	    echo "  attive: $LINEE_ATTIVE"	
+	    echo "inattive: $LINEE_INATTIVE"
+	fi
+ 
+	for ((i = 1 ; i <= $LINEE_ATTIVE ; i++ )); do
+       		asterisk -rvx "DEVSTATE CHANGE Custom:linea"$i" BUSY" >/dev/null
+        done
+ 
+	for ((i = 0 ; i < $LINEE_INATTIVE ; i++ )); do
+		ESIMA=`expr "$LINEE_TOT" - "$i"`
+                asterisk -rvx "DEVSTATE CHANGE Custom:linea"$ESIMA" NOT_INUSE" >/dev/null
+        done
+ 
+	sleep $REFRESH_TIME
+done
+}
+ 
+ 
+# __proc_pids {program} [pidfile]
+# Set $pid to pids from /var/run* for {program}.  $pid should be declared
+# local in the caller.
+# Returns LSB exit code for the 'status' action.
+__pids_var_run() {
+        local base=${1##*/}
+        local pid_file=${2:-/var/run/$base.pid}
+ 
+        pid=
+        if [ -f "$pid_file" ] ; then
+                local line p
+ 
+                [ ! -r "$pid_file" ] && return 4 # "user had insufficient privilege"
+                while : ; do
+                        read line
+                        [ -z "$line" ] && break
+                        for p in $line ; do
+                                [ -z "${p//[0-9]/}" ] && [ -d "/proc/$p" ] && pid="$pid $p"
+                        done
+                done < "$pid_file"
+ 
+                if [ -n "$pid" ]; then
+                        return 0
+                fi
+                return 1 # "Program is dead and /var/run pid file exists"
+        fi
+        return 3 # "Program is not running"
+}
+ 
+ 
+# Output PIDs of matching processes, found using pidof
+__pids_pidof() {
+        pidof -c -o $$ -o $PPID -o %PPID -x "$1" || \
+                pidof -c -o $$ -o $PPID -o %PPID -x "${1##*/}"
+}
+ 
+ 
+# A function to find the pid of a program.
+pidofproc() {
+        local RC pid pid_file=
+ 
+        # Test syntax.
+        if [ "$#" = 0 ]; then
+                echo $"Usage: pidofproc [-p pidfile] {program}"
+                return 1
+        fi
+        if [ "$1" = "-p" ]; then
+                pid_file=$2
+                shift 2
+        fi
+        fail_code=3 # "Program is not running"
+ 
+        # First try "/var/run/*.pid" files
+        __pids_var_run "$1" "$pid_file"
+        RC=$?
+        if [ -n "$pid" ]; then
+                echo $pid
+                return 0
+        fi
+ 
+        [ -n "$pid_file" ] && return $RC
+        __pids_pidof "$1" || return $RC
+}
+ 
+ 
+ 
+ 
+status_daemon() {
+        PID="$(pidofproc $0)"
+        if [ -n "$PID" ]
+          then
+            echo "INFO: $(basename $0) daemon is already running with pid ($PID)"
+        fi
+}
+ 
+start_daemon() {
+        status_daemon
+        if [ -z "$PID" ]
+          then
+            #echo running in background mode
+            [ ! -e $LOG ] && touch $LOG
+            blf_monitor >>$LOG 2>&1 &
+          else
+            exit 0;
+        fi
+}
+ 
+ 
+stop_daemon() {
+        PID="$(pidofproc $0)"
+        if [ -z "$PID" ]
+          then
+            echo "INFO: the $(basename $0) daemon is not running right now"
+          else
+            for LPID in $PID ; do kill $PID; done
+            echo "$(date +"%Y-%m-%d %H:%M:%S") INFO: stopping $(basename $0) daemon running with pid ($PID)" 2>&1 | tee -a $LOG
+        fi
+}
+ 
+# command prompt menu
+usage(){
+  local progname=$0
+  echo "$NAME - $VERSION
+Written by Luca Mafucci <luca.mafucci@initzero.it>
+version: $VERSION
+ 
+usage: $NAME [options]
+ 
+Option:  Argument:          Description:
+-----------------------------------------------
+  -t     <trunk name>       name of asterisk trunk
+  -l     <total lines>      total available lines
+  -D                        enable verbose output (display OK status messages)
+  -h                        display this help menu
+  -V                        display current version
+ 
+example: $progname -t terra -l 4"
+}
+ 
+ 
+ 
+###################################################################
+#################### default program menu and arguments validations
+NO_ARGS=0
+_OPTERROR=65
+command="$0"
+command_args="$@"
+ 
+if [ $# -eq "$NO_ARGS" ]  # Script invoked with no command-line args?
+then
+  usage
+  exit $E_OPTERROR        # Exit and explain usage, if no argument(s) given.
+fi
+# Usage: scriptname -options
+# Note: dash (-) necessary
+ 
+# SystemV init script args management
+case $1 in
+    stop)
+        DAEMON="1"
+        DAEMON_STOP="1"
+        ;;
+    start)
+        DAEMON="1"
+        ;;
+    restart)
+        DAEMON="1"
+        DAEMON_RESTART="1"
+        ;;
+    status)
+        status_daemon
+        exit $?
+        ;;
+esac
+ 
+# command line args management
+while getopts ":t:l:DhV" option
+# Initial declaration.
+# a, b, c, d, e, f, and g are the options (flags) expected.
+# The : after option 'e' shows it will have an argument passed with it.
+do
+  case $option in
+    t ) TRUNK="${OPTARG}" ;;
+    l ) LINEE_TOT="${OPTARG}" ;;
+    D ) DEBUG="1" ;;
+    h ) usage ; exit 0 ;;
+    V ) #echo $NAME version: $VERSION released: $VERSION_DATE ; exit 0 ;;
+        echo $VERSION ; exit 0 ;;
+    * ) usage
+        echo $"Usage: $0 {start|stop|restart|condrestart|status}"
+        exit 1 ;;
+  esac
+done
+# Move argument pointer to next.
+shift $(($OPTIND - 1))
+ 
+# kill the daemon
+[ $DAEMON_STOP -eq 1 ] && stop_daemon && exit 0
+ 
+if [ $DAEMON -ne 1 ]
+  then
+        #echo running in foreground mode
+        status_daemon
+        [[ ! -z "$PID" ]] && exit 0
+        blf_monitor
+  else
+        #echo running in background mode
+        if [ $DAEMON_RESTART -ne 1 ]
+          then
+            if [ $DAEMON_STOP -ne 1 ]
+              then
+                start_daemon
+              else
+                stop_daemon
+            fi
+          else
+            stop_daemon
+            start_daemon
+        fi
+fi

@@ -1,0 +1,2 @@
+#!/bin/sh
+echo -e -n "izPBX 13-20160526 (IP: $(/sbin/ip a | grep -w inet | grep -v 127.0.0.1 | awk '{print $2}'))\n" > /etc/issue

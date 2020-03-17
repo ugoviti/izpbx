@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# default line:
+# $enums = Array('e164.org','e164.arpa','e164.info');
+
+# managed on following files:
+# /var/lib/asterisk/agi-bin/enumlookup.agi
+# /var/www/html/admin/modules/core/agi-bin/enumlookup.agi
+
+sed -i "s/Array('e164.org',/Array('e164.rtrt.it','e164.org',/g" /var/lib/asterisk/agi-bin/enumlookup.agi
+sed -i "s/Array('e164.org',/Array('e164.rtrt.it','e164.org',/g" /var/www/html/admin/modules/core/agi-bin/enumlookup.agi
+

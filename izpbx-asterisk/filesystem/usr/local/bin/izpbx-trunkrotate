@@ -1,0 +1,94 @@
+#!/bin/sh
+# questo script ruota in automatico le rotte specificate ogni volta che viene eseguito
+# è utile ad esempio per ruotare le sim di un gsm box in modo che le chiamate vengano
+# distribuite giorno dopo giorno, in modo uguale fra le due sim
+# writter: Ugo Viti <ugo.viti@initzero.it>
+# release: 2013/06/11
+ 
+ 
+ROUTE_NAME="gsm"
+TRUNK_NAME="portech1-sim1 portech1-sim2"
+ 
+run_query() {
+ mysql -u asterisk --password=pbxizpwd --batch --skip-column-names --execute="$(eval $@)" asterisk
+}
+ 
+ 
+reorder_trunks() {
+SEQ_TOT="$(count_args $TRUNK_NAME)"
+for TRUNK in $TRUNK_NAME
+  do
+    TRUNK_ID=$(run_query query_trunk_id)
+    ROUTE_ID=$(run_query query_route_id)
+    SEQ_CUR=$(run_query query_seq)
+    #let SEQ_TOT="$SEQ_TOT-1"
+    SEQ_NEW="$(calc_seq_new $SEQ_CUR $SEQ_TOT)"
+    echo -e -n "\nUPDATE outbound_route_trunks SET seq = '$SEQ_NEW' WHERE trunk_id = '$TRUNK_ID' AND route_id = '$ROUTE_ID';"
+  done
+}
+ 
+ 
+# caclcola il numero totale di trunk da switchare in round robin
+count_args() {
+args=0
+for arg in $@
+  do
+    let args=$args+1
+  done
+let args=$args-1
+echo $args
+}
+ 
+# se l'ordine di sequenza corrente è uguale a 0, allora imposta questo trunk come ultima posizione nella sequenza
+calc_seq_new() {
+  if [ "$1" -eq 0 ]
+    then
+     echo $2
+    else
+     let cnt=$1-1
+     echo $cnt
+  fi
+}
+ 
+# stampa l'attuale posizione del trunk dentro l'outbound route
+query_seq() {
+echo "SELECT seq FROM outbound_route_trunks WHERE route_id = '$ROUTE_ID' and trunk_id = '$TRUNK_ID'"
+}
+ 
+# stampa l'id della rotta
+query_route_id() {
+echo "SELECT route_id FROM outbound_routes WHERE name = '$ROUTE_NAME'"
+}
+ 
+# stampa l'id del trunk
+query_trunk_id() {
+echo "SELECT trunkid FROM trunks WHERE name = '$TRUNK'"
+}
+ 
+# stampa la versione di freepbx
+query_freepbx_version() {
+echo "SELECT value FROM admin WHERE variable = 'version'"
+}
+ 
+# stampa il nome del contesto in cui è associata la rotta
+print_context() {
+ROUTE_ID=$(run_query query_route_id)
+echo "outrt-$(seq --format="%03.f" $ROUTE_ID $ROUTE_ID)-$ROUTE_NAME"
+}
+ 
+ 
+# main
+### for freepbx 2.8 and highter
+#VERSION="$(extract_freepbx_version)"
+#CONTEXT="$(print_context)"
+ 
+# to debug the query uncomment the following line
+#set -x ; reorder_trunks ; exit $? ; set +x
+ 
+# roundrobin current query
+run_query reorder_trunks
+ 
+[ $?  = 0 ] && /var/lib/asterisk/bin/retrieve_conf 1>/dev/null
+[ $?  = 0 ] && /var/lib/asterisk/bin/module_admin reload 1>/dev/null
+#[ $?  = 0 ] && asterisk -rx "module reload"
+[ $? != 0 ] && echo "errore nella configurazione di asterisk"

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+rsync -a --progress -e "ssh -p32" /root/rpmbuild/SRPMS/ jin@repo.initzero.it:/srv/repo/centos/7/SRPMS/
+
+rsync -a --progress -e "ssh -p32" /root/rpmbuild/RPMS/x86_64/ jin@repo.initzero.it:/srv/repo/centos/7/RPMS/x86_64/
+
+rsync -a --progress -e "ssh -p32" /root/rpmbuild/RPMS/noarch/ jin@repo.initzero.it:/srv/repo/centos/7/RPMS/noarch/
+
+

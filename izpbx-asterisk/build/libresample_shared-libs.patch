@@ -1,0 +1,19 @@
+diff --git a/Makefile.in b/Makefile.in
+index febf70a..2d47523 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -23,6 +23,8 @@ DIRS=tests
+ all: $(TARGETS)
+ 
+ libresample.a: $(OBJS) Makefile
++	$(CC) -shared -o libresample.so ${CFLAGS} -fPIC ${OBJS} -lsamplerate -lsndfile
++	ln -s libresample.so libresample.so.0
+ 	$(AR) ruv libresample.a $(OBJS)
+ 	ranlib libresample.a
+ 
+@@ -54,4 +56,4 @@ dist: clean
+ 
+ $(OBJS): %.c.o: $(srcdir)/%.c Makefile $(srcdir)/include/libresample.h \
+ 	$(srcdir)/src/resample_defs.h $(srcdir)/src/filterkit.h $(srcdir)/src/config.h
+-	$(CC) -c $(CFLAGS) $< -o $@
++	$(CC) -c $(CFLAGS) -fPIC $< -o $@

@@ -1,0 +1,47 @@
+#!/bin/sh
+size="1"
+ 
+make_swap() {
+  dd if=/dev/zero of=/.swap bs=1G count=$size
+  mkswap /.swap
+  chown root:root /.swap
+  chmod 0600 /.swap
+  add_replace_line "/etc/fstab" "/.swap" "/.swap swap swap defaults 0 0"
+  swapon /.swap
+}
+ 
+add_replace_line() {
+ file="$1"
+ shift
+ match="$1"
+ match_sed="$(echo $match | sed 's/\//\\\//g')"
+ shift
+ string="$@"
+ string_sed="$(echo $string | sed 's/\//\\\//g')"
+ 
+ grep -q "^$match" $file && sed -i "s/^$match_sed.*/$string_sed/" $file || echo "$string" >> $file
+}
+ 
+confirm () {
+    # call with a prompt string or use a default
+    read -r -p "${1:-Are you sure? [y/N]} " -n 1 response
+    case $response in
+        [yY][eE][sS]|[yY])
+            echo
+            true
+            ;;
+        *)
+            false
+            ;;
+    esac
+}
+ 
+echo -e -n "Inserire la dimensione dello swap file che si vuole creare in GigaBytes: " ; read -p "(default: $size) " -n 1 size_usr
+ 
+[ ! -z "$size_usr" ] && echo && size=$size_usr
+ 
+case ${size#[-+]} in
+  *[!0-9]* ) echo "ERRORE: Non è stato inserito un numero valido" ; exit 1 ;;
+esac
+ 
+confirm "ATTENZIONE: Vuoi creare una swap su disco di dimensione $size GB? [y/N]" && make_swap

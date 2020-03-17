@@ -1,0 +1,89 @@
+#!/bin/sh
+# autoprovisiong of ldap addressbook from asterisk freepbx mysql database
+# release 20111129
+# author: ugo.viti@initzero.it
+ 
+export_dir="/var/lib/asterisk/pbx2ldap"
+export_file="$export_dir/pbx2ldap-$(date +"%Y%m%d-%H%M%S").ldif"
+export_file_imported="$export_dir/pbx2ldap-imported.ldif"
+ 
+mysql_host="localhost"
+mysql_database="asterisk"
+mysql_username="asterisk"
+mysql_password="pbxizpwd"
+ 
+ldap_host="ldap.voip.rtrt.it"
+ldap_username="o=Lab Test,l=Toscana,c=IT"
+ldap_password="ldaptest"
+ldap_basedn="l=Toscana,c=IT"
+ldap_ou="Lab Test"
+ 
+run_query() {
+ mysql -h $mysql_host -u $mysql_username --password=$mysql_password --batch --skip-column-names $mysql_database --execute="$@"
+}
+ 
+ 
+export_extensions() {
+run_query "SELECT extension,name,sipname FROM users;" | tr "\011" ";" | while read line
+  do
+    #cn=$(run_query "SELECT name FROM users where extension='$EXTENTION';")
+    #givenName=$(echo $cn | awk '{print $1}')
+    #sn=$(echo $cn | awk '{print $2}')
+    #telephoneNumber=$(run_query "SELECT sipname FROM users where extension='$EXTENTION';")
+    uid="$(echo $line | awk -F";" '{print $1}')"
+    cn="$(echo $line | awk -F";" '{print $2}')"
+    givenName=$(echo $cn | awk '{print $1}')
+    sn=$(echo $cn | awk '{print $2}') ; [ -z "$sn" ] && sn="$uid"
+    telephoneNumber="$(echo $line | awk -F";" '{print $3}')" ; [ -z "$telephoneNumber" ] && telephoneNumber="$uid"
+ 
+    echo -e -n "
+dn: uid=$uid,o=$ldap_ou,$ldap_basedn
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: $cn
+givenName: $givenName
+sn: $sn
+ou: $ldap_ou
+telephoneNumber: $telephoneNumber
+uid: $uid
+"
+  done
+ 
+[ $? != 0 ] && exit $?
+return 0
+}
+ 
+# main
+pbx2ldap(){
+export_extensions > "$export_file"
+RETVAL="$?"
+ 
+[ ! -f "$export_file_imported" ] && touch "$export_file_imported"
+if [ -n "$(diff "$export_file_imported" "$export_file")" ]
+  then
+   #ldapdelete -r -h $ldap_host -x -D "$ldap_username" -w "$ldap_password" "o=$ldap_ou,$ldap_basedn"
+   ldapsearch -x -h $ldap_host -D "$ldap_username" -b "o=$ldap_ou,$ldap_basedn" -w "$ldap_password" dn | grep ^"dn: uid" | sed 's/dn: //' | while read dn
+     do
+       ldapdelete -h $ldap_host -x -D "$ldap_username" -w "$ldap_password" "$dn"
+     done
+   ldapadd -x -h $ldap_host -D "$ldap_username" -w "$ldap_password" -c -f "$export_file"
+   [ $? = 0 ] && mv "$export_file" "$export_file_imported"
+fi
+ 
+[[ $RETVAL -eq 0 && -f "$export_file" ]] && rm -f "$export_file"
+}
+ 
+pbx2ldap_test(){
+export_extensions
+}
+ 
+pbx2ldap
+#pbx2ldap_test
+exit $RETVAL;
+ 
+#[ $?  = 0 ] && /var/lib/asterisk/bin/retrieve_conf 1>/dev/null
+#[ $?  = 0 ] && /var/lib/asterisk/bin/module_admin reload 1>/dev/null
+#[ $?  = 0 ] && asterisk -rx "module reload"
+#[ $? != 0 ] && echo "errore nella configurazione di asterisk"

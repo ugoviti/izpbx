@@ -1,0 +1,35 @@
+#!/bin/sh
+
+show_result(){
+  [[ $? -eq 0 ]] && echo OK || echo ERROR
+}
+
+echo -n "Installo l'MBR in /dev/sda e /dev/sdb: "
+echo "device (hd0) /dev/sda
+root (hd0,0)
+setup (hd0)
+
+device (hd1) /dev/sdb
+root (hd1,0)
+setup (hd1)
+
+quit" | grub >/dev/null 2>&1 
+show_result
+
+root_fs=$(df / | grep ^"/dev/" | awk '{print $1}')
+raid_uuid=$(mdadm --detail $root_fs | grep "UUID" | awk '{print $3}')
+raid_uuid_old="$(cat /etc/mdadm.conf | grep UUID | awk -F"UUID=" '{print $2}')"
+echo "Configurazione RAID: DEVICE:[$root_fs] UUID:[$raid_uuid]"
+echo -n "Sostituisco UUID ROOT device RAID in /etc/mdadm.conf: "
+sed -i".bak" -e "s/$raid_uuid_old/$raid_uuid/g" /etc/mdadm.conf #>/dev/null 2>&1
+show_result
+echo -n "Sostituisco UUID ROOT device RAID in /etc/grub.conf: "
+sed -i".bak" -e "s/$raid_uuid_old/$raid_uuid/g" /boot/grub/grub.conf #>/dev/null 2>&1
+show_result
+
+initrd_file="$(cat /etc/grub.conf | grep -v ^"#" | grep "initrd /" | head -n1 | awk '{print $2}')"
+kernel_ver="$(basename $initrd_file .img | sed "s/initramfs-//")"
+echo -n "Aggiorno initrd: FILE:[$initrd_file] KERNEL_VERSION:[$kernel_ver]: "
+dracut -f $initrd_file $kernel_ver
+show_result
+

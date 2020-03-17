@@ -1,0 +1,6 @@
+setfacl       -m user:apache:rw-,user:asterisk:rw-,other::--- /etc/amportal.conf /etc/freepbx.conf
+setfacl -R    -m user:apache:rwx,user:asterisk:rwx,other::--- /etc/asterisk/
+setfacl -R -d -m user:apache:rwx,user:asterisk:rwx,other::--- /etc/asterisk/
+setfacl -R    -m user:apache:rwx,user:asterisk:rwx,other::--- /var/lib/php/session/ /var/lib/asterisk/ /var/spool/asterisk/ /var/www/html/
+setfacl -R -d -m user:apache:rwx,user:asterisk:rwx,other::--- /var/lib/php/session/ /var/lib/asterisk/ /var/spool/asterisk/ /var/www/html/
+chown -R asterisk /var/lib/asterisk/agi-bin/

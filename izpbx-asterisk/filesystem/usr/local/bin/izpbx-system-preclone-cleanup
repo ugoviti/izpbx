@@ -1,0 +1,49 @@
+#!/bin/sh
+
+export HISTFILE=/dev/null
+
+yum clean all 1>/dev/null
+
+# remove old logs
+service asterisk stop
+rm -f /var/log/*-20*
+rm -f /var/log/httpd/*-20*
+rm -f /var/log/asterisk/*-20*
+rm -f /var/spool/asterisk/tmp/*
+
+# remove all backups
+rm -f /var/spool/asterisk/backup/Default_backup/*
+
+# remove all unused data
+rm -f /var/www/html/admin/modules/_cache/*
+
+# empty logs
+echo "" > /var/log/asterisk/freepbx_debug.log
+echo "" > /var/log/asterisk/freepbx.log
+echo "" > /var/log/asterisk/full
+
+# empty postfix queue
+postsuper -d ALL >/dev/null 2>&1
+
+# reset hardware database
+rm -f /etc/udev/rules.d/*persistent*.rules
+rm -f /etc/sysconfig/network-scripts/ifcfg-eth?.bak /etc/sysconfig/networking/profiles/default/ifcfg-eth?.bak /etc/sysconfig/networking/devices/ifcfg-eth?.bak
+
+# reset system config
+#rm -f /etc/sysconfig/network-scripts/ifcfg-*
+sed -i".bak" "/^HWADDR/d" /etc/sysconfig/network-scripts/ifcfg-eth?
+#rm -f /root/.*_history
+rm -rf /root/.ssh
+rm -rf /root/rpmbuild/BUILD/* /root/rpmbuild/RPMS/*/* /root/rpmbuild/SRPMS/*
+rm -f /etc/ssh/*host*
+
+# clean tmp directories
+find /tmp /var/tmp -mindepth 1 -maxdepth 1 -exec rm -rf {} \;
+
+# force fsck on next reboot
+touch /forcefsck
+
+#zerofree -v /dev/md1
+
+echo "system cleaned before cloning... please reboot now!"
+

@@ -1,0 +1,43 @@
+version: '3'
+
+services:
+  asterisk:
+    image: izpbx-asterisk
+    restart: always
+    depends_on:
+      - db
+    ports:
+    - ${PORT_HTTP}:80
+    - ${PORT_HTTPS}:443
+    - ${PORT_SIP}:5060
+    - ${PORT_PJSIP}:5160
+    - ${PORT_RTP_START}-${PORT_RTP_END}:${PORT_RTP_START}-${PORT_RTP_END}/udp
+    - ${PORT_FOP}:4445
+    volumes:
+    - ./data/asterisk:/data
+    env_file:
+    - .env
+    networks:
+    - izpbx
+    ### fail2ban need privileged mode
+    cap_add:
+    - NET_ADMIN
+    privileged: true
+
+  db:
+    image: mariadb:10.4
+    restart: always
+    ports:
+    - ${PORT_MYSQL}:3306
+    volumes:
+    - ./data/db:/var/lib/mysql
+    environment:
+    - MYSQL_ROOT_PASSWORD
+    - MYSQL_DATABASE
+    - MYSQL_USER
+    - MYSQL_PASSWORD
+    networks:
+    - izpbx
+
+networks:
+  izpbx:

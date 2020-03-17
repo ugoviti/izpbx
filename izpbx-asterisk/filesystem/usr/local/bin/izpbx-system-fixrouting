@@ -1,0 +1,70 @@
+#! /bin/sh -e
+set -e
+ 
+LAN=eth0
+WAN=eth1
+ 
+ 
+#######################################################
+# autodetect ip number of specified network interface
+find_primary_ip() {
+  if [ -n $1 ]
+    then
+      echo $(ip addr show $1 | grep 'inet' | grep -v ":" | awk '{print $2}' | sed -e 's/\/.*//' | head -n1)
+  fi
+}
+ 
+ 
+find_broadcast() {
+  if [ -n $1 ]
+    then
+      echo -n "$(ip addr show $1 | grep 'inet' | grep -v ":" | awk '{print $4}' | head -n1)"
+  fi
+}
+ 
+find_network() {
+  if [ -n $1 ]
+    then
+      #echo "$(find_primary_ip $1)/$(find_netmask $1)"
+      echo -n "$(ipcalc --silent --network $(ip addr show $1 | grep 'inet' | grep -v ":" | awk '{print $2}') | awk -F = '{print $2}' | head -n1)/"
+      echo -n "$(ipcalc --silent --prefix $(ip addr show $1 | grep 'inet' | grep -v ":" | awk '{print $2}') | awk -F = '{print $2}' | head -n1)"
+  fi
+}
+ 
+find_netmask() {
+  if [ -n $1 ]
+    then
+      #echo "$(ip addr show $1 | grep 'inet' | grep -v ":" | awk '{print $2}' | sed -e 's/.*\///')"
+      echo -n "$(ipcalc --silent --netmask $(ip addr show $1 | grep 'inet' | grep -v ":" | awk '{print $2}')| awk -F = '{print $2}' | head -n1)"
+  fi
+}
+ 
+find_secondary_ip() {
+  if [ -n $1 ]
+    then
+      echo $(ip addr show $1 | grep 'inet' | grep "$1:" | awk '{print $2}' | sed -e 's/\/.*//' | head -n1)
+  fi
+}
+ 
+ 
+ 
+case "$1" in
+	start)
+		echo ip route change $(find_network $LAN) src $(find_secondary_ip $LAN) dev $LAN
+		echo ip route change $(find_network $WAN) src $(find_secondary_ip $WAN) dev $WAN
+		;;
+	stop)
+		echo ip route change $(find_network $LAN) src $(find_primary_ip $LAN) dev $LAN
+		echo ip route change $(find_network $WAN) src $(find_primary_ip $WAN) dev $WAN
+		;;
+	force-reload|restart)
+		$0 stop
+		$0 start
+		;;
+	*)
+		echo "Usage: /etc/init.d/fixrouting {start|stop|restart|force-reload}"
+		exit 1
+		;;
+esac
+ 
+exit 0

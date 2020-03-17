@@ -1,0 +1,6 @@
+#!/bin/bash
+
+duration=5400
+
+asterisk -r -x "core show channels concise" | while read call ; do call_channel=$(echo $call | awk -F'!' '{print $1}') ; call_duration=$(echo $call | awk -F'!' '{print $12}') ; [ $call_duration -gt $duration ] && asterisk -r -x "channel request hangup $call_channel"; done
+

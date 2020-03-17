@@ -1,0 +1,7 @@
+prefix=/usr
+
+Name: libresample
+Description: A real-time library for audio sampling rate conversion
+Version: 0.1.3
+Cflags:
+Libs: -Wl,-z,relro   -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld -lresample -lm

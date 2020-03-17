@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if [[ $(asterisk -r -x "iax2 show peers" | grep UNREACHABLE | wc -l) -ge 5 ]]
+	then
+		#/etc/init.d/asterisk restart
+		echo
+		echo "...unloading module chan_iax2"
+		asterisk -r -x "module unload chan_iax2"
+		echo "...loading module chan_iax2"
+		asterisk -r -x "module load chan_iax2"
+		#echo "...done"
+fi
+

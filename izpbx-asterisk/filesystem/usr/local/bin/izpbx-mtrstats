@@ -1,0 +1,14 @@
+#!/bin/sh
+mtr_stats() {
+host="$1"
+while true ; do
+  date +"%Y-%m-%d %H:%M:%S %Z"
+  #set -x
+  mtr $host -r -c 5000 -n -4
+  #set +x
+  echo
+  sleep 1
+done
+}
+ 
+[ ! -z "$1" ] && mtr_stats "$1" 2>&1 >~/izmtrstats-$1-$(date +"%Y%m%d-%H%M%S").log || exit 1
