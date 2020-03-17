@@ -10,9 +10,11 @@ steps:
 - name: setup
   image: alpine
   environment: &setup_env
+    ASTERISK_VER: 16.9.0
     APP_VER_MAJOR: 16
     APP_VER_MINOR: 9
     APP_VER_PATCH: 0
+    ASTERISK_VER: 16.9.0
   commands:
     - echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
     - echo -e -n "$${APP_VER_MAJOR}" > .tags
@@ -51,20 +53,29 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
     
 steps:
-- name: build
+- name: setup
+  image: alpine
+  environment: &setup_env
+    ASTERISK_VER: 17.3.0
+    APP_VER_MAJOR: 17
+    APP_VER_MINOR: 3
+    APP_VER_PATCH: 0
+  commands:
+    - echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
+    - echo -e -n "$${APP_VER_MAJOR}" > .tags
+    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
+    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags
+    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
+    #- echo -e -n ",latest" >> .tags
+
+- name: publish
   image: plugins/docker
   environment:
-    ASTERISK_VER: 17.3.0
+    <<: *setup_env
   settings:
-    tags:
-      - '17'
-      - '17.3'
-      - '17.3.0'
-      - '17.3.0-$${DRONE_BUILD_NUMBER'
-      #- 'latest'
     repo: izdock/izpbx-asterisk
-    context: izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
+    context: izpbx-asterisk
     username:
       from_secret: DOCKER_USERNAME
     password:
