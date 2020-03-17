@@ -7,7 +7,7 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
 workspace:
-  base: /drone/izpbx-asterisk
+  path: /drone/src/izpbx-asterisk
       
 steps:
 - name: setup
@@ -30,6 +30,7 @@ steps:
     <<: *setup_env
   settings:
     repo: izdock/izpbx-asterisk
+    #dockerfile: izpbx-asterisk/Dockerfile
     username:
       from_secret: DOCKER_USERNAME
     password:
