@@ -62,7 +62,7 @@ steps:
       - '17'
       - '17.3'
       - '17.3.0'
-      - '17.3.0-${DRONE_BUILD_NUMBER'
+      #- '17.3.0-${DRONE_BUILD_NUMBER'
       #- 'latest'
     repo: izdock/izpbx-asterisk
     context: izpbx-asterisk
