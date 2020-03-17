@@ -126,7 +126,7 @@ ARG SPANDSP_VER=20180108
 ARG BCG729_VER=1.0.4
 
 # copy external sources
-COPY build/ /usr/src/
+ADD build/ /usr/src/
 
 RUN set -xe && \
   . /etc/os-release && \
