@@ -11,7 +11,7 @@ ARG APP_VER_PATCH=0
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
-ENV APP_DESCRIPTION       "izPBX Telephony System - Asterisk/FreePBX Engine"
+ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System :: Asterisk/FreePBX Engine"
 
 ## app ports
 ENV APP_PORT_HTTP         80

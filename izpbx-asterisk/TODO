@@ -1,3 +1,7 @@
 fail2ban
 fop2
 soundlang it
+
+Problemi da risolvere:
+======================
+errore ALSALib in avvio
