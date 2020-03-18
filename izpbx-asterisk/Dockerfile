@@ -130,7 +130,7 @@ RUN set -xe && \
     uriparser \
   && \
   : "---------- clean temporary files ----------" && \
-  echo TEST:
+  echo TEST;
 #  dnf clean all && \
 #  rm -rf /var/cache/yum
 
@@ -209,7 +209,7 @@ RUN set -xe && \
   [[ $VERSION_ID -ge 8 ]] && ASTERISK_BUILD_DEPS+="mariadb-devel" ; \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
-  echo TEST:
+  echo TEST;
 
 RUN set -xe && \
   : "---------- Build libresample ----------" && \
@@ -324,7 +324,9 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  \
+  echo TEST;
+
+RUN set -xe && \
   [[ $APP_VER_MAJOR -le 16 ]] && \
   : "---------- Build asterisk-g72x ----------" && \
   cd /usr/src && \
@@ -334,8 +336,7 @@ RUN set -xe && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
   make && \
   make install && \
-  ldconfig && \
-  echo TEST: ;
+  ldconfig;
 
 RUN set -xe && \
   : "---------- Build sngrep ----------" && \
@@ -348,14 +349,14 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  echo TEST:
+  echo TEST;
 
 RUN set -xe && \
   : "---------- Install FOP2 ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz -C /usr/src/ && \
   cd fop2 && \
-  echo TEST:
+  echo TEST;
 #  ./configure --prefix=/usr && \
 #  make && \
 #  make install && \
