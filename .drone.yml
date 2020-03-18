@@ -21,7 +21,7 @@ steps:
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
     - echo -e -n ",latest" >> .tags
 
-- name: publish
+- name: build
   image: plugins/docker
   environment:
     <<: *setup_env
@@ -69,7 +69,7 @@ steps:
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
     #- echo -e -n ",latest" >> .tags
 
-- name: publish
+- name: build
   image: plugins/docker
   environment:
     <<: *setup_env
