@@ -212,7 +212,7 @@ RUN set -xe && \
   echo TEST;
 
 RUN set -xe && \
-  : "---------- Build libresample ----------" && \
+  : "---------- START Build libresample ----------" && \
   cd /usr/src && \
   tar zxvf libresample-0.1.3.tgz && \
   cd libresample-0.1.3 && \
@@ -227,8 +227,9 @@ RUN set -xe && \
   cp libresample.so /usr/lib64/ && \
   cp pkgconfig/libresample.pc /usr/lib64/pkgconfig/ && \
   ldconfig && \
+  : "---------- END Build ----------" && \
   \
-  : "---------- Build spandsp ----------" && \
+  : "---------- START Build spandsp ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 http://sources.buildroot.net/spandsp/spandsp-${SPANDSP_VER}.tar.gz | tar xz -C /usr/src/ && \
   cd spandsp-* && \
@@ -236,8 +237,9 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
+  : "---------- END Build ----------" && \
   \
-  : "---------- Build ASTERISK ----------" && \
+  : "---------- START Build ASTERISK ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-${ASTERISK_VER}.tar.gz | tar xz -C /usr/src/ && \
   cd asterisk-* && \
@@ -315,7 +317,9 @@ RUN set -xe && \
   make install && \
   make samples && \
   ldconfig && \
-  : "---------- Build bcg729 ----------" && \
+  : "---------- END Build ----------" && \
+  \
+  : "---------- START Build bcg729 ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 https://github.com/BelledonneCommunications/bcg729/archive/${BCG729_VER}.tar.gz | tar xz -C /usr/src/ && \
   cd bcg729-${BCG729_VER} && \
@@ -324,11 +328,10 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  echo TEST;
-
-RUN set -xe && \
+  : "---------- END Build ----------" && \
+  \
+  : "---------- START Build asterisk-g72x ----------" && \
   [[ $APP_VER_MAJOR -le 16 ]] && \
-  : "---------- Build asterisk-g72x ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 https://bitbucket.org/arkadi/asterisk-g72x/get/master.tar.gz | tar xz -C /usr/src/ && \
   cd arkadi-asterisk* && \
@@ -337,10 +340,9 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig ; \
-  echo test
-
-RUN set -xe && \
-  : "---------- Build sngrep ----------" && \
+  : "---------- END Build ----------" && \
+  \
+  : "---------- START Build sngrep ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/releases/download/v${SNGREP_VER}/sngrep-${SNGREP_VER}.tar.gz | tar xz -C /usr/src/ && \
   cd sngrep-${SNGREP_VER} && \
@@ -350,20 +352,8 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  echo TEST;
-
-RUN set -xe && \
-  : "---------- Install FOP2 ----------" && \
-  cd /usr/src && \
-  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz -C /usr/src/ && \
-  cd fop2 && \
-  echo TEST;
-#  ./configure --prefix=/usr && \
-#  make && \
-#  make install && \
-#  ldconfig && \
-
-#   \
+  : "---------- END Build ----------" && \
+  \
 #   : "---------- clean temporary files ----------" && \
 #   rm -rf /usr/src && mkdir -p /usr/src && \
 #   dnf -y remove $ASTERISK_BUILD_DEPS \
@@ -373,11 +363,25 @@ RUN set -xe && \
 #     -x uriparser \
 #   && \
 #   dnf clean all && \
-#   rm -rf /var/cache/yum
-  
-# asterisk build
+#   rm -rf /var/cache/yum && \
+  : "---------- ALL Builds Finished ----------"
+
+# NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
-  
+
+RUN set -xe && \
+  : "---------- Install FOP2 ----------" && \
+  cd /usr/src && \
+  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz -C /usr/src/ && \
+  cd fop2 && \
+  echo TEST && \
+#  ./configure --prefix=/usr && \
+#  make && \
+#  make install && \
+#  ldconfig && \
+  : "---------- END Install ----------"
+
+
 # set pemissions
 RUN set -xe && \
   chown -R ${APP_USR}:${APP_GRP} \
