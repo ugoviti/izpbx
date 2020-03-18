@@ -325,7 +325,7 @@ RUN set -xe && \
   make install && \
   ldconfig && \
   \
-  [[ $APP_VER_MAJOR -ge 17 ]] && \
+  [[ $APP_VER_MAJOR -le 16 ]] && \
   : "---------- Build asterisk-g72x ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 https://bitbucket.org/arkadi/asterisk-g72x/get/master.tar.gz | tar xz -C /usr/src/ && \
@@ -335,7 +335,7 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  echo TEST:
+  echo TEST: ;
 
 RUN set -xe && \
   : "---------- Build sngrep ----------" && \
