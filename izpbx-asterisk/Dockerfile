@@ -336,8 +336,8 @@ RUN set -xe && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
   make && \
   make install && \
-  ldconfig ;
-  echo
+  ldconfig ; \
+  echo test
 
 RUN set -xe && \
   : "---------- Build sngrep ----------" && \
