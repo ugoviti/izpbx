@@ -527,34 +527,37 @@ cfgService_freepbx_install() {
       done
     fi
    
-    echo "--> Installing core FreePBX modules..."
-    su - ${APP_USR} -c "fwconsole ma install \
-      framework \
+    echo "--> Installing CORE FreePBX modules..."
+    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install \
       core \
-      voicemail \
-      sipsettings \
-      infoservices \
-      featurecodeadmin \
-      logfiles \
+      framework \
       callrecording \
       cdr \
-      dashboard \
-      music \
-      soundlang \
-      recordings \
       conferences \
+      customappsreg \
+      dashboard \
+      featurecodeadmin \
+      infoservices \
+      logfiles \
+      music \
+      pm2 \
+      recordings \
+      sipsettings \
+      voicemail \
+      soundlang \
       "
  
-    echo "--> Enabling extended FreePBX repo..."
-    su - ${APP_USR} -c "fwconsole ma enablerepo extended"
-    su - ${APP_USR} -c "fwconsole ma enablerepo unsupported"
+    echo "--> Enabling EXTENDED FreePBX repo..."
+    su - ${APP_USR} -c -s /bin/bash "fwconsole ma enablerepo extended"
+    su - ${APP_USR} -c -s /bin/bash "fwconsole ma enablerepo unsupported"
+    
+    # https://github.com/FreePBX/announcement/archive/release/15.0.zip
     
     echo "--> Installing extra FreePBX modules..."
-    su - ${APP_USR} -c "fwconsole ma downloadinstall \
+    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install \
       announcement \
       asteriskinfo \
       backup \
-      bulkhandler \
       callforward \
       callwaiting \
       daynight \
@@ -573,13 +576,15 @@ cfgService_freepbx_install() {
       parking \
       phonebook \
       presencestate \
-      printextensions \
       queues \
-      speeddial \
       timeconditions \
-      weakpasswords \
       "
-
+      # FIXME: 20200318 disabled because still not 15.0 released
+      #bulkhandler \
+      #printextensions \
+      #speeddial \
+      #weakpasswords \
+      
     # fix freepbx permissions
     fwconsole chown
 

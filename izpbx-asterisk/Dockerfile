@@ -11,7 +11,7 @@ ARG APP_VER_PATCH=0
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
-ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System :: Asterisk/FreePBX Engine"
+ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System"
 
 ## app ports
 ENV APP_PORT_HTTP         80
@@ -381,7 +381,6 @@ RUN set -xe && \
 #  ldconfig && \
   : "---------- END Install ----------"
 
-
 # set pemissions
 RUN set -xe && \
   chown -R ${APP_USR}:${APP_GRP} \
@@ -393,7 +392,36 @@ RUN set -xe && \
 RUN set -xe && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz -C /usr/src/ && \
-  cd freepbx
+  cd /usr/src/freepbx && \
+  for MODULE in \
+      announcement \
+      asteriskinfo \
+      backup \
+      callforward \
+      callwaiting \
+      daynight \
+      calendar \
+      certman \
+      cidlookup \
+      contactmanager \
+      donotdisturb \
+      fax \
+      findmefollow \
+      iaxsettings \
+      miscapps \
+      miscdests \
+      userman \
+      ivr \
+      parking \
+      phonebook \
+      presencestate \
+      queues \
+      timeconditions \
+      ; do \
+  mkdir -p /usr/src/freepbx/amp_conf/htdocs/admin/modules/$MODULE/ && \
+  echo "---> Downloading module: $MODULE" && \
+  curl -sfSL --connect-timeout 30 https://github.com/FreePBX/$MODULE/archive/release/${FREEPBX_VER}.tar.gz | tar xz -C /usr/src/freepbx/amp_conf/htdocs/admin/modules/$MODULE/ --strip-components=1 \
+  ; done
 
 # exposed ports
 EXPOSE ${APP_PORT_HTTP}/tcp ${APP_PORT_HTTPS}/tcp ${APP_PORT_SIP}/tcp ${APP_PORT_PJSIP}/tcp ${APP_PORT_FOP}/tcp ${APP_PORT_RPT_START}/tcp ${APP_PORT_RPT_END}/tcp
