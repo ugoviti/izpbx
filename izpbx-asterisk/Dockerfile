@@ -75,9 +75,14 @@ RUN set -xe && \
   \
   dnf upgrade -y && \
   dnf -y install \
-    rsync \
     ffmpeg \
     lame \
+    rsync \
+    net-tools \
+    iftop \
+    lsof \
+    strace \
+    tcpdump \
     supervisor \
     curl \
     opus \
