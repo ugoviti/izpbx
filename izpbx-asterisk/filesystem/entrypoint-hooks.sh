@@ -18,7 +18,7 @@
 # default directory and config files paths arrays
 declare -A appDataDirs=(
   [CRONDIR]=/var/spool/cron
-  [USERSHOME]=/home
+  [USERSHOME]=/home/asterisk
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTSPOOLDIR]=/var/spool/asterisk
@@ -422,6 +422,7 @@ Charset=utf8" > /etc/odbc.ini
   #    --ampplayback=AMPPLAYBACK    Directory for FreePBX html5 playback files [default: "/var/lib/asterisk/playback"]
 
   ## rebase directory paths, based on APP_DATA and create/chown missing directories
+  # process directories
   if [ ! -z "${APP_DATA}" ]; then
     echo "--> Using '${APP_DATA}' as basedir for FreePBX install"
     # process directories
@@ -439,7 +440,7 @@ Charset=utf8" > /etc/odbc.ini
     for k in ${!freepbxFilesLog[@]}; do
       v="${freepbxFilesLog[$k]}"
       eval freepbxFilesLog[$k]=${APP_DATA}$v
-      [ ! -e "$v" ] && mkdir -p "$v"
+      [ ! -e "$v" ] && touch "$v"
       if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
       echo "---> Fixing permissions for: $k=$v"
       chown ${APP_USR}:${APP_GRP} "$v"
@@ -448,9 +449,9 @@ Charset=utf8" > /etc/odbc.ini
   fi
 
   # transform associative array to variable=paths, ex. AMPWEBROOT=/var/www/html
-  for k in ${!freepbxDirs[@]}      ; do eval $k=${freepbxDirs[$k]}     ;done
-  for k in ${!freepbxDirsExtra[@]} ; do eval $k=${freepbxDirsExtra[$k]}     ;done
-  for k in ${!freepbxFilesLog[@]}  ; do eval $k=${freepbxFilesLog[$k]} ;done    
+  for k in ${!freepbxDirs[@]}      ; do eval $k=${freepbxDirs[$k]}      ;done
+  for k in ${!freepbxDirsExtra[@]} ; do eval $k=${freepbxDirsExtra[$k]} ;done
+  for k in ${!freepbxFilesLog[@]}  ; do eval $k=${freepbxFilesLog[$k]}  ;done    
 
   # OneTime: install freepbx if this is the first time we initialize the container
   [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && cfgService_freepbx_install
