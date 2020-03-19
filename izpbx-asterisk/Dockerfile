@@ -138,9 +138,8 @@ RUN set -xe && \
     uriparser \
   && \
   : "---------- clean temporary files ----------" && \
-  echo TEST;
-#  dnf clean all && \
-#  rm -rf /var/cache/yum
+  dnf clean all && \
+  rm -rf /var/cache/yum
 
 ## prep
 RUN set -xe && \
@@ -217,9 +216,6 @@ RUN set -xe && \
   [[ $VERSION_ID -ge 8 ]] && ASTERISK_BUILD_DEPS+="mariadb-devel" ; \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
-  echo TEST;
-
-RUN set -xe && \
   : "---------- START Build libresample ----------" && \
   cd /usr/src && \
   mkdir libresample && \
@@ -366,23 +362,28 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  echo TEST && \
-  : "---------- ALL Builds Finished ----------"
-
-#   : "---------- clean temporary files ----------" && \
-#   rm -rf /usr/src && mkdir -p /usr/src && \
-#   dnf -y remove $ASTERISK_BUILD_DEPS \
-#     -x diffutils \
-#     -x unzip \
-#     -x zip \
-#     -x uriparser \
-#   && \
-#   dnf clean all && \
-#   rm -rf /var/cache/yum && \
-
+  : "---------- ALL builds finished ----------" && \
+  \
+  : "---------- Clean temporary files ----------" && \
+  dnf -y remove $ASTERISK_BUILD_DEPS \
+    -x diffutils \
+    -x unzip \
+    -x zip \
+    -x uriparser \
+   && \
+   dnf clean all && \
+   rm -rf /var/cache/yum /tmp /usr/src && \
+   mkdir -p /usr/src /tmp && chmod 1777 /tmp
 
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
+
+# set pemissions
+RUN set -xe && \
+  chown -R ${APP_USR}:${APP_GRP} \
+    /etc/asterisk \
+    /var/lib/asterisk \
+    /var/spool/asterisk
 
 RUN set -xe && \
   : "---------- Install FOP2 ----------" && \
@@ -395,13 +396,6 @@ RUN set -xe && \
 #  make install && \
 #  ldconfig && \
   : "---------- END Install ----------"
-
-# set pemissions
-RUN set -xe && \
-  chown -R ${APP_USR}:${APP_GRP} \
-    /etc/asterisk \
-    /var/lib/asterisk \
-    /var/spool/asterisk
 
 # download freepbx
 ## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
@@ -439,7 +433,11 @@ RUN set -xe && \
   : "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
   curl -sfSL --connect-timeout 30 https://github.com/FreePBX/$MODULE/archive/release/${FREEPBX_VER}.tar.gz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ \
-  ; done
+  ; done && \
+  su - asterisk -s /bin/bash -c "gpg --refresh-keys --keyserver hkp://keyserver.ubuntu.com:80" && \
+  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key" && \
+  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/3DDB2122FE6D84F7.key" && \
+  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key"
 
 # exposed ports
 EXPOSE ${APP_PORT_HTTP}/tcp ${APP_PORT_HTTPS}/tcp ${APP_PORT_SIP}/tcp ${APP_PORT_PJSIP}/tcp ${APP_PORT_FOP}/tcp ${APP_PORT_RPT_START}/tcp ${APP_PORT_RPT_END}/tcp

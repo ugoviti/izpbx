@@ -20,9 +20,9 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
   - izpbx-asterisk (Asterisk+FreePBX Frontend)
   - mariadb (Database Backend)
 
-# Install
+# How to use this image
 
-Suggested use docker-compose:
+Using docker-compose is the suggested method:
 
 copy **default.env** in **.env** and edit the variables inside:
 
@@ -36,3 +36,22 @@ Start containers with:
 docker-compose up -d
 ```
 
+# Environment default variables
+TODO:
+
+# Quick reference
+
+- **Where to get help**:
+  [InitZero Corporate Support](https://www.initzero.it/)
+
+- **Where to file issues**:
+  [https://github.com/ugoviti](https://github.com/ugoviti)
+
+- **Maintained by**:
+  [Ugo Viti](https://github.com/ugoviti)
+
+- **Supported architectures**:
+  [`amd64`]
+
+- **Supported Docker versions**:
+  [the latest release](https://github.com/docker/docker-ce/releases/latest) (down to 1.6 on a best-effort basis)

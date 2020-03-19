@@ -25,6 +25,7 @@ declare -A appDataDirs=(
   [HTTPDHOME]=/var/www
   [ASTLOGDIR]=/var/log/asterisk
   [F2BLOGDIR]=/var/log/fail2ban
+  [F2BLIBDIR]=/var/lib/fail2ban
   [FOP2LOGDIR]=/var/log/fop
 )
 
@@ -80,7 +81,10 @@ declare -A freepbxFilesLog=(
 #: ${POSTFIX_ENABLED:="true"}
 : ${CRON_ENABLED:="true"}
 : ${HTTPD_ENABLED:="true"}
-: ${ASTERISK_ENABLED:="true"}
+: ${ASTERISK_ENABLED:="false"}
+: ${IZPBX_ENABLED:="true"}
+: ${FAIL2BAN_ENABLED:="true"}
+: ${POSTFIX_ENABLED:="true"}
 
 ## daemons configs
 : ${RELAYHOST:=""}
@@ -221,6 +225,9 @@ chkService() {
 
 ## postfix service
 cfgService_postfix() {
+# fix inet_protocols ipv6 problem
+postconf -e inet_protocols=ipv4
+
 # Set up host name
 if [ ! -z "$HOSTNAME" ]; then
 	postconf -e myhostname="$HOSTNAME"
@@ -292,6 +299,10 @@ fi
 
 # Use 587 (submission)
 sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
+
+# configure /etc/aliases
+[ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
+[ ${ROOT_MAILTO} ] && echo "root: ${ROOT_MAILTO}" >> /etc/aliases && newaliases
 }
 
 ## cron service
@@ -310,6 +321,38 @@ cfgService_cron() {
       chmod u=rwx,g=wx,o=t "$cronDir"
     fi
   fi
+}
+
+## parse and edit ini config files based on SECTION and KEY=VALUE
+
+# input stream format: SECTION_KEY=VALUE
+#   echo RECIDIVE_ENABLED=false | iniParseEdit /etc/fail2ban/jail.d/99-local.conf
+
+# example for multple values in global env:
+#    FAIL2BAN_DEFAULT_FINDTIME=3600
+#    FAIL2BAN_DEFAULT_MAXRETRY=10
+#    FAIL2BAN_RECIDIVE_ENABLED=false
+#    FAIL2BAN_RECIDIVE_BANTIME=1814400
+#  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | iniParseEdit /etc/fail2ban/jail.d/99-local.conf
+iniParser() {
+  ini="$@"
+  while read setting ; do
+    section="$(echo $setting | awk -F"_" '{print $1}')"
+    k=$(echo $setting | sed -e "s/^${section}_//" | awk -F"=" '{print $1}' | tr '[:upper:]' '[:lower:]')
+    v=$(echo $setting | awk -F"=" '{print $2}')
+    sed -i "/^\[${section}\]$/I,/^\[/ s|^${k}.*=.*|${k} = ${v}|I" "${ini}"
+  done
+}
+
+## fail2ban service
+cfgService_fail2ban() {
+  echo "--> Reconfiguring Fail2ban Settings..."
+  # ini config file parse function
+  # fix default log path
+  echo "DEFAULT_LOGTARGET=/var/log/fail2ban/fail2ban.log" | iniParser /etc/fail2ban/fail2ban.conf
+  touch /var/log/fail2ban/fail2ban.log
+  # configure all settings
+  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | iniParser "/etc/fail2ban/jail.d/99-local.conf"
 }
 
 ## apache service
@@ -337,67 +380,12 @@ cfgService_httpd() {
   fi
 }
 
-## asterisk service
-cfgService_asterisk() {
-  fixOwner() {
-    dir="$1"
-    if [ "$(stat -c "%U %G" "$dir")" != "${APP_USR} ${APP_GRP}" ];then
-        echo "---> Fixing owner: '$dir'"
-        chown ${APP_USR}:${APP_GRP} "$dir"
-        #chmod 0770 "$dir"
-    fi
-  }
-
-  fixPermission() {
-    dir="$1"
-    if [ "$(stat -c "%a" "$dir")" != "770" ];then
-        echo "---> Fixing permission: '$dir'"
-        chmod 0770 "$dir"
-    fi
-  }
-  
-  # check and create missing container directory
-  if [ ! -z "${APP_DATA}" ]; then  
-    for dir in ${appDataDirs[@]}
-      do
-        dir="${APP_DATA}${dir}"
-        if [ ! -e "${dir}" ];then
-          echo "---> Creating missing dir: '$dir'"
-          mkdir -p "${dir}"
-        fi
-      done
-
-    # link to custom data directory if required
-    for dir in ${appDataDirs[@]}; do
-      symlinkDir "${dir}" "${APP_DATA}${dir}"
-    done
-    
-    for file in ${appFilesConf[@]}; do
-      # echo FILE=$file
-      symlinkFile "${file}" "${APP_DATA}${file}"
-    done
-  fi
-
-  # check files and directory permissions
-  echo "---> Verifing files permissions"
-  for dir in ${appDataDirs[@]}; do
-    [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
-    [ -e "${dir}" ] && fixOwner "${dir}" || echo "WARNING: the directory doesn't exist: '${dir}'"
-  done
-  for dir in ${appCacheDirs[@]}; do
-    fixOwner "${dir}"
-  done
-  for file in ${appFilesConf[@]}; do
-    [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
-    [ -e "${file}" ] && fixOwner "${file}" || echo "WARNING: the file doesn't exist: '${file}'"
-  done
-  
-  # configure FreePBX
-  cfgService_freepbx
+cfgService_izpbx() {
+  echo "=> Starting Asterisk"
 }
 
-## asterisk service
-cfgService_freepbx() {
+## freepbx+asterisk service
+cfgService_izpbx() {
   echo "=> Verifing FreePBX configurations"
 
   echo "--> Configuring FreePBX ODBC"
@@ -473,7 +461,7 @@ Charset=utf8" > /etc/odbc.ini
 
   # reconfigure freepbx from env variables
   echo "--> Reconfiguring FreePBX Advanced Settings..."
-  set | grep ^IZPBX_ | sed -e 's/^IZPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
+  set | grep ^FREEPBX_ | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
 }
 
 cfgService_freepbx_install() {
@@ -617,6 +605,23 @@ cfgService_freepbx_install() {
   fi
 }
 
+fixOwner() {
+  dir="$1"
+  if [ "$(stat -c "%U %G" "$dir")" != "${APP_USR} ${APP_GRP}" ];then
+      echo "---> Fixing owner: '$dir'"
+      chown ${APP_USR}:${APP_GRP} "$dir"
+      #chmod 0770 "$dir"
+  fi
+}
+
+fixPermission() {
+  dir="$1"
+  if [ "$(stat -c "%a" "$dir")" != "770" ];then
+      echo "---> Fixing permission: '$dir'"
+      chmod 0770 "$dir"
+  fi
+}
+
 runHooks() {
   echo "=> Executing $APP_DESCRIPTION container hooks..."
   # configure supervisord
@@ -636,16 +641,50 @@ runHooks() {
     sed 's|^nodaemon=.*|nodaemon=true|' -i /etc/supervisord.conf
   fi
 
-  # configure /etc/aliases
-  [ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
-  [ ${ROOT_MAILTO} ] && echo "root: ${ROOT_MAILTO}" >> /etc/aliases && newaliases
+  # check and create missing container directory
+  if [ ! -z "${APP_DATA}" ]; then  
+    for dir in ${appDataDirs[@]}
+      do
+        dir="${APP_DATA}${dir}"
+        if [ ! -e "${dir}" ];then
+          echo "---> Creating missing dir: '$dir'"
+          mkdir -p "${dir}"
+        fi
+      done
+
+    # link to custom data directory if required
+    for dir in ${appDataDirs[@]}; do
+      symlinkDir "${dir}" "${APP_DATA}${dir}"
+    done
+    
+    for file in ${appFilesConf[@]}; do
+      # echo FILE=$file
+      symlinkFile "${file}" "${APP_DATA}${file}"
+    done
+  fi
+
+  # check files and directory permissions
+  echo "---> Verifing files permissions"
+  for dir in ${appDataDirs[@]}; do
+    [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
+    [ -e "${dir}" ] && fixOwner "${dir}" || echo "WARNING: the directory doesn't exist: '${dir}'"
+  done
+  for dir in ${appCacheDirs[@]}; do
+    fixOwner "${dir}"
+  done
+  for file in ${appFilesConf[@]}; do
+    [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
+    [ -e "${file}" ] && fixOwner "${file}" || echo "WARNING: the file doesn't exist: '${file}'"
+  done
 
   # enable/disable and configure services
   #chkService SYSLOG_ENABLED
-  #chkService POSTFIX_ENABLED
+  chkService POSTFIX_ENABLED
   chkService CRON_ENABLED
+  chkService FAIL2BAN_ENABLED
   chkService HTTPD_ENABLED
   chkService ASTERISK_ENABLED
+  chkService IZPBX_ENABLED
 }
 
 runHooks
