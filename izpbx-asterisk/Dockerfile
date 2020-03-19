@@ -219,6 +219,7 @@ RUN set -xe && \
 RUN set -xe && \
   : "---------- START Build libresample ----------" && \
   cd /usr/src && \
+  mkdir libresample && \
   tar zxf libresample-0.1.3.tgz --strip 1 -C /usr/src/libresample/ && \
   cd libresample && \
   patch -s --fuzz=0 --no-backup-if-mismatch < ../libresample_shared-libs.patch && \
@@ -236,6 +237,7 @@ RUN set -xe && \
   \
   : "---------- START Build spandsp ----------" && \
   cd /usr/src && \
+  mkdir spandsp && \
   curl -fSL --connect-timeout 30 http://sources.buildroot.net/spandsp/spandsp-${SPANDSP_VER}.tar.gz | tar xz --strip 1 -C /usr/src/spandsp/ && \
   cd spandsp && \
   ./configure --prefix=/usr && \
@@ -246,6 +248,7 @@ RUN set -xe && \
   \
   : "---------- START Build ASTERISK ----------" && \
   cd /usr/src && \
+  mkdir asterisk && \
   curl -fSL --connect-timeout 30 https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-${ASTERISK_VER}.tar.gz | tar xz -C /usr/src/asterisk && \
   cd asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
@@ -328,6 +331,7 @@ RUN set -xe && \
   \
   : "---------- START Build bcg729 ----------" && \
   cd /usr/src && \
+  mkdir bcg729 && \
   curl -fSL --connect-timeout 30 https://github.com/BelledonneCommunications/bcg729/archive/${BCG729_VER}.tar.gz | tar xz --strip 1 -C /usr/src/bcg729 && \
   cd bcg729 && \
   ./autogen.sh && \
@@ -340,17 +344,19 @@ RUN set -xe && \
   : "---------- START Build asterisk-g72x ----------" && \
   [[ $APP_VER_MAJOR -le 17 ]] && \
   cd /usr/src && \
+  mkdir asterisk-g72x && \
   curl -fSL --connect-timeout 30 https://bitbucket.org/arkadi/asterisk-g72x/get/master.tar.gz | tar xz --strip 1 -C /usr/src/asterisk-g72x && \
   cd asterisk-g72x && \
   ./autogen.sh && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
   make && \
   make install && \
-  ldconfig ; \
+  ldconfig && \
   : "---------- END Build ----------" && \
   \
   : "---------- START Build sngrep ----------" && \
   cd /usr/src && \
+  mkdir sngrep && \
   curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/releases/download/v${SNGREP_VER}/sngrep-${SNGREP_VER}.tar.gz | tar xz --strip 1 -C /usr/src/sngrep && \
   cd sngrep && \
   dnf -y install libpcap libpcap-devel && \
@@ -359,8 +365,9 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  : "---------- END Build ----------" && \
-  \
+  echo TEST && \
+  : "---------- ALL Builds Finished ----------"
+
 #   : "---------- clean temporary files ----------" && \
 #   rm -rf /usr/src && mkdir -p /usr/src && \
 #   dnf -y remove $ASTERISK_BUILD_DEPS \
@@ -371,7 +378,7 @@ RUN set -xe && \
 #   && \
 #   dnf clean all && \
 #   rm -rf /var/cache/yum && \
-  : "---------- ALL Builds Finished ----------"
+
 
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
@@ -379,6 +386,7 @@ RUN set -xe && \
 RUN set -xe && \
   : "---------- Install FOP2 ----------" && \
   cd /usr/src && \
+  mkdir fop2 && \
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz --strip 1 -C /usr/src/fop2 && \
   cd fop2 && \
 #  ./configure --prefix=/usr && \
