@@ -22,9 +22,10 @@ declare -A appDataDirs=(
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTSPOOLDIR]=/var/spool/asterisk
+  [HTTPDHOME]=/var/www
   [ASTLOGDIR]=/var/log/asterisk
   [F2BLOGDIR]=/var/log/fail2ban
-  [HTTPDHOME]=/var/www
+  [FOP2LOGDIR]=/var/log/fop
 )
 
 declare -A appFilesConf=(
@@ -153,15 +154,20 @@ symlinkDir() {
     rsync -a -q "$dirOriginal/" "$dirCustom/"
   fi
 
-  if [ -e "$dirOriginal" ]; then
-      echo "--> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
-      mv "$dirOriginal" "$dirOriginal".dist
-    else
+  # make directory if not exist
+  if [ ! -e "$dirOriginal" ]; then
       # make destination dir if not exist
       echo "--> WARNING: original data directory '$dirOriginal' doesn't exist... creating empty directory"
       mkdir -p "$dirOriginal"
   fi
   
+  # rename directory
+  if [ -e "$dirOriginal" ]; then
+      echo "--> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
+      mv "$dirOriginal" "$dirOriginal".dist
+  fi
+  
+  # symlink directory
   echo "--> symlinking '$dirCustom' to '$dirOriginal'"
   ln -s "$dirCustom" "$dirOriginal"
 }
@@ -299,7 +305,7 @@ cfgService_cron() {
   
   if [ -e "$cronDir" ]; then
     if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 0700" ];then
-      echo "---> Fixing "$cronDir" permissions..."
+      echo "---> Fixing permissions: '$cronDir'"
       chown root:root "$cronDir"
       chmod u=rwx,g=wx,o=t "$cronDir"
     fi
@@ -336,7 +342,7 @@ cfgService_asterisk() {
   fixOwner() {
     dir="$1"
     if [ "$(stat -c "%U %G" "$dir")" != "${APP_USR} ${APP_GRP}" ];then
-        echo "---> Fixing '$dir' owner..."
+        echo "---> Fixing owner: '$dir'"
         chown ${APP_USR}:${APP_GRP} "$dir"
         #chmod 0770 "$dir"
     fi
@@ -345,7 +351,7 @@ cfgService_asterisk() {
   fixPermission() {
     dir="$1"
     if [ "$(stat -c "%a" "$dir")" != "770" ];then
-        echo "---> Fixing '$dir' permission..."
+        echo "---> Fixing permission: '$dir'"
         chmod 0770 "$dir"
     fi
   }
@@ -356,7 +362,7 @@ cfgService_asterisk() {
       do
         dir="${APP_DATA}${dir}"
         if [ ! -e "${dir}" ];then
-          echo "---> Creating missing dir: '$dir'..."
+          echo "---> Creating missing dir: '$dir'"
           mkdir -p "${dir}"
         fi
       done
@@ -376,14 +382,14 @@ cfgService_asterisk() {
   echo "---> Verifing files permissions"
   for dir in ${appDataDirs[@]}; do
     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
-    [ -e "${dir}" ] && fixOwner "${dir}" || echo "WARNING: the directory '${dir}' doesn't exist"
+    [ -e "${dir}" ] && fixOwner "${dir}" || echo "WARNING: the directory doesn't exist: '${dir}'"
   done
   for dir in ${appCacheDirs[@]}; do
     fixOwner "${dir}"
   done
   for file in ${appFilesConf[@]}; do
     [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
-    [ -e "${file}" ] && fixOwner "${file}" || echo "WARNING: the file '${file}' doesn't exist"
+    [ -e "${file}" ] && fixOwner "${file}" || echo "WARNING: the file doesn't exist: '${file}'"
   done
   
   # configure FreePBX

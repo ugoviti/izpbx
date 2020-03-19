@@ -1,0 +1,14 @@
+/var/log/fail2ban/fail2ban.log {
+    monthly
+    ifempty
+    rotate 12
+    missingok
+    compress
+    dateext
+    missingok
+    notifempty
+    postrotate
+      /usr/bin/fail2ban-client flushlogs >/dev/null || true
+    endscript
+}
+ 

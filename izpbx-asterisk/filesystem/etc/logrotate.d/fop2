@@ -1,0 +1,9 @@
+/var/log/fop/fop2_debug.log {
+    daily
+    rotate 7
+    compress
+    dateext
+    ifempty
+    missingok
+    copytruncate
+}

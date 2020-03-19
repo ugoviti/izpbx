@@ -9,8 +9,9 @@ services:
     ports:
     - ${PORT_HTTP}:80
     - ${PORT_HTTPS}:443
-    - ${PORT_SIP}:5060
-    - ${PORT_PJSIP}:5160
+    - ${PORT_PJSIP}:5060
+    - ${PORT_SIP}:5160
+    - ${PORT_IAX}:4569
     - ${PORT_RTP_START}-${PORT_RTP_END}:${PORT_RTP_START}-${PORT_RTP_END}/udp
     - ${PORT_FOP}:4445
     volumes:

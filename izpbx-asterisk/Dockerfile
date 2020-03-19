@@ -16,6 +16,7 @@ ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System"
 ## app ports
 ENV APP_PORT_HTTP         80
 ENV APP_PORT_HTTPS        443
+ENV APP_PORT_IAX          4569
 ENV APP_PORT_SIP          5060
 ENV APP_PORT_PJSIP        5160
 ENV APP_PORT_FOP          4445
@@ -36,6 +37,7 @@ ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 ARG ASTERISK_VER=${APP_VER}
 
 ARG FREEPBX_VER=15.0
+#ARG FREEPBX_VER_FRAMEWORK=15.0.16.46
 
 # http://sources.buildroot.net/spandsp/
 ARG SPANDSP_VER=20180108
@@ -87,6 +89,7 @@ RUN set -xe && \
     curl \
     opus \
     whois \
+    logrotate \
     fail2ban-server \
     fail2ban-mail \
     fail2ban-sendmail \
@@ -401,6 +404,8 @@ RUN set -xe && \
     /var/spool/asterisk
 
 # download freepbx
+## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
+## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 RUN set -xe && \
   cd /usr/src && \
   mkdir freepbx && \

@@ -1,0 +1,15 @@
+/var/log/httpd/*log {
+  daily
+  ifempty
+  rotate 7
+  missingok
+  compress
+  dateext
+  copytruncate
+  sharedscripts
+  postrotate
+    if /usr/bin/supervisorctl status httpd > /dev/null 2>/dev/null ; then \
+      /usr/bin/supervisorctl restart httpd > /dev/null 2>/dev/null; \
+    fi;
+  endscript
+} 

@@ -1,6 +1,7 @@
 fail2ban
 fop2
 soundlang it
+logrotate
 
 Problemi da risolvere:
 ======================
