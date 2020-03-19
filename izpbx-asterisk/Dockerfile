@@ -431,7 +431,7 @@ RUN set -xe && \
       queues \
       timeconditions \
       ; do \
-  echo "---> PreDownloading module for offline install: $MODULE" && \
+  : "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
   curl -sfSL --connect-timeout 30 https://github.com/FreePBX/$MODULE/archive/release/${FREEPBX_VER}.tar.gz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ \
   ; done
