@@ -249,7 +249,7 @@ RUN set -xe && \
   : "---------- START Build ASTERISK ----------" && \
   cd /usr/src && \
   mkdir asterisk && \
-  curl -fSL --connect-timeout 30 https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-${ASTERISK_VER}.tar.gz | tar xz -C /usr/src/asterisk && \
+  curl -fSL --connect-timeout 30 https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C /usr/src/asterisk && \
   cd asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
