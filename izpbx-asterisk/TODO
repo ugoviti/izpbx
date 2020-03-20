@@ -6,3 +6,4 @@ logrotate
 Problemi da risolvere:
 ======================
 errore ALSALib in avvio
+capire come mai c'è la persistenza nei restart di docker

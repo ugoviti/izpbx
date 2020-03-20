@@ -451,7 +451,7 @@ RUN set -xe && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
 
 # exposed ports
-EXPOSE ${APP_PORT_HTTP}/tcp ${APP_PORT_HTTPS}/tcp ${APP_PORT_SIP}/tcp ${APP_PORT_PJSIP}/tcp ${APP_PORT_FOP}/tcp ${APP_PORT_RPT_START}/tcp ${APP_PORT_RPT_END}/tcp
+EXPOSE ${APP_PORT_HTTP}/tcp ${APP_PORT_HTTPS}/tcp ${APP_PORT_FOP}/tcp ${APP_PORT_SIP} ${APP_PORT_PJSIP} ${APP_PORT_RPT_START}-${APP_PORT_RPT_END}
 
 # define volumes
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
