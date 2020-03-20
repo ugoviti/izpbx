@@ -329,10 +329,10 @@ cfgService_cron() {
 #   echo RECIDIVE_ENABLED=false | iniParseEdit /etc/fail2ban/jail.d/99-local.conf
 
 # example for multple values in global env:
-#    FAIL2BAN_DEFAULT_FINDTIME=3600
-#    FAIL2BAN_DEFAULT_MAXRETRY=10
-#    FAIL2BAN_RECIDIVE_ENABLED=false
-#    FAIL2BAN_RECIDIVE_BANTIME=1814400
+#  set FAIL2BAN_DEFAULT_FINDTIME=3600
+#  set FAIL2BAN_DEFAULT_MAXRETRY=10
+#  set FAIL2BAN_RECIDIVE_ENABLED=false
+#  set FAIL2BAN_RECIDIVE_BANTIME=1814400
 #  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | iniParseEdit /etc/fail2ban/jail.d/99-local.conf
 iniParser() {
   ini="$@"
@@ -380,7 +380,7 @@ cfgService_httpd() {
   fi
 }
 
-cfgService_izpbx() {
+cfgService_asterisk() {
   echo "=> Starting Asterisk"
 }
 
@@ -451,13 +451,16 @@ Charset=utf8" > /etc/odbc.ini
   [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && cfgService_freepbx_install
 
   echo "--> Applying Workarounds for FreePBX and Asterisk..."
+  # make missing log files
+  [ ! -e "${freepbxDirs[ASTLOGDIR]}/full" ] && touch "${freepbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${freepbxDirs[ASTLOGDIR]}/full"
+  
   # relink fwconsole and amportal if not exist
-  [ ! -e "/usr/sbin/fwconsole" ] && ln -s /var/lib/asterisk/bin/fwconsole /usr/sbin/fwconsole
-  [ ! -e "/usr/sbin/amportal" ] && ln -s /var/lib/asterisk/bin/amportal /usr/sbin/amportal
+  [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
+  [ ! -e "/usr/sbin/amportal" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/amportal /usr/sbin/amportal
 
   # freepbx warnings workaround
-  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i /etc/asterisk/modules.conf
-  sed 's/^enabled =.*/enabled = yes/' -i /etc/asterisk/hep.conf
+  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${freepbxDirs[ASTETCDIR]}/modules.conf
+  sed 's/^enabled =.*/enabled = yes/' -i ${freepbxDirs[ASTETCDIR]}/hep.conf
 
   # reconfigure freepbx from env variables
   echo "--> Reconfiguring FreePBX Advanced Settings..."
