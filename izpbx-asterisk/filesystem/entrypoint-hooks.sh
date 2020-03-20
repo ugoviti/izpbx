@@ -546,8 +546,8 @@ cfgService_freepbx_install() {
       "
  
     echo "--> Enabling EXTENDED FreePBX repo..."
-    su - ${APP_USR} -c -s /bin/bash "fwconsole ma enablerepo extended"
-    su - ${APP_USR} -c -s /bin/bash "fwconsole ma enablerepo unsupported"
+    su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
+    su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
     # https://github.com/FreePBX/announcement/archive/release/15.0.zip
     
