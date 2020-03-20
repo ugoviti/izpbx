@@ -1,11 +1,15 @@
 version: '3'
 
 services:
-  asterisk:
+  izpbx:
+    container_name: izpbx
     image: izdock/izpbx-asterisk:16
+    #network_mode: bridge
     restart: always
     depends_on:
-      - db
+    - db
+    links: 
+    - db
     ports:
     - ${APP_PORT_HTTP}:80
     - ${APP_PORT_HTTPS}:443
@@ -21,16 +25,19 @@ services:
     - ./data/asterisk:/data
     env_file:
     - .env
-    networks:
-    - izpbx
     ### fail2ban need privileged mode
     cap_add:
     - NET_ADMIN
     privileged: true
-
+    #network_mode: "host"
+    networks:
+    - izpbx
+    
   db:
+    container_name: izpbx-db
     image: mariadb:10.4
     restart: always
+    #network_mode: bridge
     ports:
     - ${APP_PORT_MYSQL}:3306
     volumes:
@@ -40,6 +47,7 @@ services:
     - MYSQL_DATABASE
     - MYSQL_USER
     - MYSQL_PASSWORD
+    #network_mode: "host"
     networks:
     - izpbx
 

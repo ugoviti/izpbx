@@ -20,8 +20,8 @@ ENV APP_PORT_IAX          4569
 ENV APP_PORT_SIP          5060
 ENV APP_PORT_PJSIP        5160
 ENV APP_PORT_FOP          4445
-ENV APP_PORT_RPT_START    19000
-ENV APP_PORT_RPT_END      20000
+ENV APP_PORT_RTP_START    19000
+ENV APP_PORT_RTP_END      20000
 
 ## app users
 ENV APP_UID               1000
@@ -461,7 +461,7 @@ EXPOSE \
   ${APP_PORT_IAX}/udp \
   ${APP_PORT_SIP}/udp \
   ${APP_PORT_PJSIP}/udp \
-  ${APP_PORT_RPT_START}-${APP_PORT_RPT_END}/udp
+  ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
 
 # define volumes
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
