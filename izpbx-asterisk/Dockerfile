@@ -128,6 +128,7 @@ RUN set -xe && \
     php-pear \
     php-mbstring \
     php-xml \
+    php-json \
     php-gd \
     php-curl \
     mariadb \
@@ -136,6 +137,7 @@ RUN set -xe && \
     unzip \
     zip \
     uriparser \
+    jq \
   && \
   : "---------- clean temporary files ----------" && \
   dnf clean all && \
@@ -397,7 +399,11 @@ RUN set -xe && \
 #  ldconfig && \
   : "---------- END Install ----------"
 
-# download freepbx
+# download freepbx and modules for offline install
+# modules xml url: http://mirror1.freepbx.org/modules-15.0.xml
+# php -r 'echo json_encode(simplexml_load_file("modules-15.0.xml"));' | jq
+
+
 ## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
 ## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 RUN set -xe && \
@@ -405,6 +411,8 @@ RUN set -xe && \
   mkdir freepbx && \
   curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
+  curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml && \
+  mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
       announcement \
       asteriskinfo \
@@ -430,14 +438,17 @@ RUN set -xe && \
       queues \
       timeconditions \
       ; do \
-  : "---------- PreDownloading module for offline install: $MODULE ----------" && \
+  echo "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
-  curl -sfSL --connect-timeout 30 https://github.com/FreePBX/$MODULE/archive/release/${FREEPBX_VER}.tar.gz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ \
+  MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
+  curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ && \
+  curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz.gpg -o amp_conf/htdocs/admin/modules/_cache/$MODULE-${MODULE_VER}.tgz.gpg \
   ; done && \
   su - asterisk -s /bin/bash -c "gpg --refresh-keys --keyserver hkp://keyserver.ubuntu.com:80" && \
-  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key" && \
+  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/1588A7366BD35B34.key" && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/3DDB2122FE6D84F7.key" && \
-  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key"
+  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key" && \
+  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
 
 # exposed ports
 EXPOSE ${APP_PORT_HTTP}/tcp ${APP_PORT_HTTPS}/tcp ${APP_PORT_SIP}/tcp ${APP_PORT_PJSIP}/tcp ${APP_PORT_FOP}/tcp ${APP_PORT_RPT_START}/tcp ${APP_PORT_RPT_END}/tcp
