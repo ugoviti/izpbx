@@ -1,5 +1,8 @@
 version: '3'
 
+networks:
+  izpbx:
+
 services:
   izpbx:
     container_name: izpbx
@@ -50,6 +53,3 @@ services:
     #network_mode: "host"
     networks:
     - izpbx
-
-networks:
-  izpbx:

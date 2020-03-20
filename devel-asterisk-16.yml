@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  asterisk:
+  izpbx:
     image: izpbx-asterisk
     #image: izdock/izpbx-asterisk:17
 

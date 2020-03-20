@@ -448,7 +448,10 @@ Charset=utf8" > /etc/odbc.ini
   for k in ${!freepbxFilesLog[@]}  ; do eval $k=${freepbxFilesLog[$k]}  ;done    
 
   # OneTime: install freepbx if this is the first time we initialize the container
-  [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && cfgService_freepbx_install
+  if [ ! -e "${appFilesConf[FPBXCFGFILE]}" ]; then
+    echo "---> Missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
+    cfgService_freepbx_install
+  fi
 
   echo "--> Applying Workarounds for FreePBX and Asterisk..."
   # make missing log files
