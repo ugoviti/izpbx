@@ -581,7 +581,7 @@ Charset=utf8" > /etc/odbc.ini
     cfgService_freepbx_install
   fi
 
-  echo "---> applying Workarounds for FreePBX and Asterisk..."
+  echo "--> Applying Workarounds for FreePBX and Asterisk..."
   # make missing log files
   [ ! -e "${freepbxDirs[ASTLOGDIR]}/full" ] && touch "${freepbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${freepbxDirs[ASTLOGDIR]}/full"
   
@@ -594,15 +594,26 @@ Charset=utf8" > /etc/odbc.ini
   sed 's/^enabled =.*/enabled = yes/' -i ${freepbxDirs[ASTETCDIR]}/hep.conf
 
   # reconfigure freepbx from env variables
-  echo "---> reconfiguring FreePBX Advanced Settings..."
-  set | grep ^FREEPBX_ | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
+  echo "--> Reconfiguring FreePBX Advanced Settings if needed..."
+  set | grep ^FREEPBX_ | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
+    k="$(echo $setting | awk '{print $1}')"
+    v="$(echo $setting | awk '{print $2}')"
+    currentVal=$(fwconsole setting $k | awk -F"[][{}]" '{print $2}')
+    [ "$currentVal" = "true" ] && currentVal="1"
+    [ "$currentVal" = "false" ] && currentVal="0"
+    if [ "$currentVal" != "$v" ]; then
+      echo "---> reconfiguring advanced setting: ${k}=${v}"
+      fwconsole setting $k $v
+    fi
+  done
 
-  # reconfigure freepbx settings based on docker variables content using FreePBX API boostrap
+  # reconfigure freepbx settings based on docker variables content using FreePBX API bootstrap
+  echo "--> Reconfiguring FreePBX SIP Settings if needed..."
   for k in ${!freepbxSipSettings[@]}; do
     v="${freepbxSipSettings[$k]}"
     cVal=$(echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); echo \$FreePBX->sipsettings->getConfig('${k}');?>" | php)
     if [ "$cVal" != "${v}" ];then
-      echo "---> configuring sipsettings: ${k}=${v}"
+      echo "---> reconfiguring sip setting: ${k}=${v}"
       echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->sipsettings->setConfig('${k}',${v}); needreload();?>" | php
     fi
   done
