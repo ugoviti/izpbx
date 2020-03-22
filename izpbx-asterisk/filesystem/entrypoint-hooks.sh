@@ -15,7 +15,7 @@
 # override default data directory used by container apps (used for statefll aps)
 : ${APP_DATA:=""}
 
-# default directory and config files paths arrays
+# default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
   [CRONDIR]=/var/spool/cron
   [USERSHOME]=/home/asterisk
@@ -23,10 +23,12 @@ declare -A appDataDirs=(
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTSPOOLDIR]=/var/spool/asterisk
   [HTTPDHOME]=/var/www
+  [HTTPDLOGDIR]=/var/log/httpd
+  [CERTBOTETCDIR]=/etc/letsencrypt
   [ASTLOGDIR]=/var/log/asterisk
   [F2BLOGDIR]=/var/log/fail2ban
   [F2BLIBDIR]=/var/lib/fail2ban
-  [FOP2LOGDIR]=/var/log/fop
+  [FOP2LOGDIR]=/var/log/fop2
 )
 
 declare -A appFilesConf=(
@@ -74,6 +76,7 @@ declare -A freepbxFilesLog=(
 : ${MYSQL_PASSWORD:=""}
 
 ## hostname configuration
+[ ! -z ${APP_FQDN} ] && HOSTNAME="${APP_FQDN}" # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
 
 ## supervisord services
@@ -81,6 +84,8 @@ declare -A freepbxFilesLog=(
 #: ${POSTFIX_ENABLED:="true"}
 : ${CRON_ENABLED:="true"}
 : ${HTTPD_ENABLED:="true"}
+: ${HTTPS_ENABLED:="true"}
+: ${HTTP_REDIRECT_TO_HTTPS:="false"}
 : ${ASTERISK_ENABLED:="false"}
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
@@ -323,6 +328,18 @@ cfgService_cron() {
   fi
 }
 
+## cron service
+cfgService_letsencrypt() {
+  if [ -e "/etc/letsencrypt/live/${APP_FQDN}/privkey.pem" ] ; then
+    echo "---> Let's Encrypt certificate already exist... tring to renew"
+    certbot renew --standalone
+  else
+    echo "---> Generating HTTPS Let's Encrypt certificate"
+    certbot certonly --standalone --expand -n --agree-tos --email ${ROOT_MAILTO} -d ${APP_FQDN}
+  fi
+}
+
+
 ## parse and edit ini config files based on SECTION and KEY=VALUE
 
 # input stream format: SECTION_KEY=VALUE
@@ -370,13 +387,90 @@ cfgService_httpd() {
     sed 's/User apache/User asterisk/'               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     sed 's/Group apache/Group asterisk/'             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
+    # disable mod_ssl if HTTPS_ENABLED=false
+    [ "${HTTPS_ENABLED}" = "true" ] && echo mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/ssl.conf-dist
+
     echo "
-    <VirtualHost *:80>
-    <Directory /var/www/html>
-      AllowOverride All
-    </Directory>
-    </VirtualHost>
-    " > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+<VirtualHost *:80>
+  DocumentRoot /var/www/html
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+  </Directory>
+$(if [ "${HTTP_REDIRECT_TO_HTTPS}" = "true" ]; then
+echo "<IfModule mod_rewrite.c>
+  RewriteEngine on
+  RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
+  RewriteCond %{HTTPS} off
+  #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+  RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>"
+fi)
+</VirtualHost>
+
+$(if [ "${HTTPS_ENABLED}" = "true" ]; then
+echo "
+<VirtualHost _default_:443>
+  ErrorLog logs/ssl_error_log
+  TransferLog logs/ssl_access_log
+  LogLevel warn
+  SSLEngine on
+  SSLHonorCipherOrder on
+  SSLCipherSuite PROFILE=SYSTEM
+  SSLProxyCipherSuite PROFILE=SYSTEM
+  SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+  SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+  </Directory>
+</VirtualHost>
+"
+fi)
+
+$(if [ ! -z "${APP_FQDN}" ]; then
+echo "
+<VirtualHost *:80>
+  ServerName ${APP_FQDN}
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+  </Directory>
+$(if [ "${HTTP_REDIRECT_TO_HTTPS}" = "true" ]; then
+echo "<IfModule mod_rewrite.c>
+  RewriteEngine on
+  RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
+  RewriteCond %{HTTPS} off
+  #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+  RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>"
+fi)
+</VirtualHost>"
+fi
+
+if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
+echo "
+<VirtualHost *:443>
+  ServerName ${APP_FQDN}
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+  </Directory>
+  SSLEngine on
+  SSLHonorCipherOrder on
+  SSLCipherSuite PROFILE=SYSTEM
+  SSLProxyCipherSuite PROFILE=SYSTEM
+  SSLCertificateChainFile /etc/letsencrypt/live/${APP_FQDN}/chain.pem
+  SSLCertificateFile      /etc/letsencrypt/live/${APP_FQDN}/cert.pem
+  SSLCertificateKeyFile   /etc/letsencrypt/live/${APP_FQDN}/privkey.pem
+</VirtualHost>
+"
+fi)
+" > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
   fi
 }
 
@@ -673,14 +767,14 @@ runHooks() {
   echo "---> Verifing files permissions"
   for dir in ${appDataDirs[@]}; do
     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
-    [ -e "${dir}" ] && fixOwner "${dir}" || echo "WARNING: the directory doesn't exist: '${dir}'"
+    [ -e "${dir}" ] && fixOwner "${dir}" || echo "---> WARNING: the directory doesn't exist: '${dir}'"
   done
   for dir in ${appCacheDirs[@]}; do
     fixOwner "${dir}"
   done
   for file in ${appFilesConf[@]}; do
     [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
-    [ -e "${file}" ] && fixOwner "${file}" || echo "WARNING: the file doesn't exist: '${file}'"
+    [ -e "${file}" ] && fixOwner "${file}" || echo "---> WARNING: the file doesn't exist: '${file}'"
   done
 
   # enable/disable and configure services
@@ -691,6 +785,9 @@ runHooks() {
   chkService HTTPD_ENABLED
   chkService ASTERISK_ENABLED
   chkService IZPBX_ENABLED
+  
+  # generate SSL Certificates used for HTTPS
+  [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
 }
 
 runHooks

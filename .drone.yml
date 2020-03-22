@@ -13,8 +13,9 @@ steps:
     APP_VER_MAJOR: 16
     APP_VER_MINOR: 9
     APP_VER_PATCH: 0
+    APP_VER_BUILD: ${DRONE_BUILD_NUMBER}
   commands:
-    - echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
+    #- echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
     - echo -e -n "$${APP_VER_MAJOR}" > .tags
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags

@@ -8,6 +8,7 @@ MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 ARG APP_VER_MAJOR=16
 ARG APP_VER_MINOR=9
 ARG APP_VER_PATCH=0
+ARG APP_VER_BUILD
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
@@ -30,7 +31,8 @@ ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
 # full app version
-ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+ENV APP_VER_BUILD=${APP_VER_BUILD}
 
 ## app componets
 # https://downloads.asterisk.org/pub/telephony/asterisk/
@@ -62,7 +64,7 @@ RUN set -xe && \
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     yum-config-manager --enable remi 1>/dev/null && \
-    yum-config-manager --enable remi-php72 1>/dev/null ; \
+    yum-config-manager --enable remi-php73 1>/dev/null ; \
   \
   [[ $VERSION_ID -ge 8 ]] && \
     # install external repositories
@@ -70,15 +72,16 @@ RUN set -xe && \
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
     rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
     \
-    dnf -y install dnf-plugins-core && \
+    dnf -y install dnf-plugins-core lame && \
     dnf config-manager --set-enabled PowerTools remi && \
+    # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
+    dnf config-manager --set-disabled forensics && \
     dnf -y module disable php && \
     dnf -y module enable php:remi-7.3  && \
   \
   dnf upgrade -y && \
   dnf -y install \
     ffmpeg \
-    lame \
     rsync \
     net-tools \
     iftop \
@@ -121,7 +124,9 @@ RUN set -xe && \
     nodejs \
     libtiff-tools \
     cronie \
-    httpd \ 
+    httpd \
+    certbot \
+    mod_ssl \
     php \
     php-mysqlnd \
     php-process \
@@ -139,6 +144,9 @@ RUN set -xe && \
     uriparser \
     jq \
   && \
+  \
+  : "---------- generate selfsigned certificate ----------" && \
+  openssl req -subj '/CN=izpbx/O=InitZero/C=IT' -new -newkey rsa:2048 -sha256 -days 36500 -nodes -x509 -keyout /etc/pki/tls/private/localhost.key -out /etc/pki/tls/certs/localhost.crt && \
   : "---------- clean temporary files ----------" && \
   dnf clean all && \
   rm -rf /var/cache/yum
@@ -467,7 +475,9 @@ EXPOSE \
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
 
 # add files to container
-ADD Dockerfile filesystem VERSION README.md /
+ADD Dockerfile filesystem README.md /
+
+ENV APP_FQDN ""
 
 # start the container process
 ENTRYPOINT ["/entrypoint.sh"]
