@@ -430,9 +430,20 @@ echo "<IfModule mod_rewrite.c>
 </IfModule>"
 fi)
 </VirtualHost>"
-fi
+fi)
 
-if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
+$(if [ "${HTTPS_ENABLED}" = "true" ]; then
+echo "
+# Enable HTTPS listening on 443
+Listen 443 https
+SSLPassPhraseDialog    exec:/usr/libexec/httpd-ssl-pass-dialog
+SSLSessionCache        shmcb:/run/httpd/sslcache(512000)
+SSLSessionCacheTimeout 300
+SSLCryptoDevice        builtin
+"
+fi)
+
+$(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
 echo "
 # HTTPS virtualhost
 <VirtualHost *:443>
@@ -456,12 +467,6 @@ fi)
 $(if [ "${HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]; then
 echo "
 # enable default ssl virtualhost with self signed certificate
-Listen 443 https
-SSLPassPhraseDialog    exec:/usr/libexec/httpd-ssl-pass-dialog
-SSLSessionCache        shmcb:/run/httpd/sslcache(512000)
-SSLSessionCacheTimeout 300
-SSLCryptoDevice        builtin
-
 <VirtualHost _default_:443>
   ErrorLog logs/ssl_error_log
   TransferLog logs/ssl_access_log
