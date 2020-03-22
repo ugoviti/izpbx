@@ -387,10 +387,11 @@ cfgService_httpd() {
     sed 's/User apache/User asterisk/'               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     sed 's/Group apache/Group asterisk/'             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
-    # disable mod_ssl if HTTPS_ENABLED=false
-    [ "${HTTPS_ENABLED}" = "true" ] && mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/ssl.conf-dist
+    # disable default ssl.conf and use virtual.conf instead if HTTPS_ENABLED=false
+    [ "${HTTPS_ENABLED}" = "true" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
 
     echo "
+# default HTTP virtualhost
 <VirtualHost *:80>
   DocumentRoot /var/www/html
   <Directory /var/www/html>
@@ -409,29 +410,9 @@ echo "<IfModule mod_rewrite.c>
 fi)
 </VirtualHost>
 
-$(if [ "${HTTPS_ENABLED}" = "true" ]; then
-echo "
-<VirtualHost _default_:443>
-  ErrorLog logs/ssl_error_log
-  TransferLog logs/ssl_access_log
-  LogLevel warn
-  SSLEngine on
-  SSLHonorCipherOrder on
-  SSLCipherSuite PROFILE=SYSTEM
-  SSLProxyCipherSuite PROFILE=SYSTEM
-  SSLCertificateFile /etc/pki/tls/certs/localhost.crt
-  SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
-  <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
-    AllowOverride All
-    Require all granted
-  </Directory>
-</VirtualHost>
-"
-fi)
-
 $(if [ ! -z "${APP_FQDN}" ]; then
 echo "
+# HTTP virtualhost
 <VirtualHost *:80>
   ServerName ${APP_FQDN}
   <Directory /var/www/html>
@@ -453,6 +434,7 @@ fi
 
 if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
 echo "
+# HTTPS virtualhost
 <VirtualHost *:443>
   ServerName ${APP_FQDN}
   <Directory /var/www/html>
@@ -470,6 +452,35 @@ echo "
 </VirtualHost>
 "
 fi)
+
+$(if [ "${HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]; then
+echo "
+# enable default ssl virtualhost with self signed certificate
+Listen 443 https
+SSLPassPhraseDialog    exec:/usr/libexec/httpd-ssl-pass-dialog
+SSLSessionCache        shmcb:/run/httpd/sslcache(512000)
+SSLSessionCacheTimeout 300
+SSLCryptoDevice        builtin
+
+<VirtualHost _default_:443>
+  ErrorLog logs/ssl_error_log
+  TransferLog logs/ssl_access_log
+  LogLevel warn
+  SSLEngine on
+  SSLHonorCipherOrder on
+  SSLCipherSuite PROFILE=SYSTEM
+  SSLProxyCipherSuite PROFILE=SYSTEM
+  SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+  SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+  </Directory>
+</VirtualHost>
+"
+fi)
+
 " > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
   fi
 }
