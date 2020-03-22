@@ -155,29 +155,29 @@ symlinkDir() {
   local dirOriginal="$1"
   local dirCustom="$2"
 
-  echo "=> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
+  echo "--> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
-    echo "--> INFO: Detected empty dir '$dirCustom'. Copying '$dirOriginal' to '$dirCustom'..."
+    echo "---> INFO: Detected empty dir '$dirCustom'. Copying '$dirOriginal' to '$dirCustom'..."
     rsync -a -q "$dirOriginal/" "$dirCustom/"
   fi
 
   # make directory if not exist
   if [ ! -e "$dirOriginal" ]; then
       # make destination dir if not exist
-      echo "--> WARNING: original data directory '$dirOriginal' doesn't exist... creating empty directory"
+      echo "---> WARNING: original data directory '$dirOriginal' doesn't exist... creating empty directory"
       mkdir -p "$dirOriginal"
   fi
   
   # rename directory
   if [ -e "$dirOriginal" ]; then
-      echo "--> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
+      echo "---> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
       mv "$dirOriginal" "$dirOriginal".dist
   fi
   
   # symlink directory
-  echo "--> symlinking '$dirCustom' to '$dirOriginal'"
+  echo "---> symlinking '$dirCustom' to '$dirOriginal'"
   ln -s "$dirCustom" "$dirOriginal"
 }
 
@@ -185,22 +185,22 @@ symlinkFile() {
   local fileOriginal="$1"
   local fileCustom="$2"
 
-  echo "=> FILE data override detected: original:[$fileOriginal] custom:[$fileCustom]"
+  echo "--> FILE data override detected: original:[$fileOriginal] custom:[$fileCustom]"
 
   if [ -e "$fileOriginal" ]; then
       # copy data files form original directory if destination is empty
       if [ ! -e "$fileCustom" ]; then
-        echo "--> INFO: Detected not existing file '$fileCustom'. Copying '$fileOriginal' to '$fileCustom'..."
+        echo "---> INFO: Detected not existing file '$fileCustom'. Copying '$fileOriginal' to '$fileCustom'..."
         rsync -a -q "$fileOriginal" "$fileCustom"
       fi
-      echo "--> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
+      echo "---> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
-      echo "--> WARNING: original data file '$fileOriginal' doesn't exist... creating symlink from a not existing source"
+      echo "---> WARNING: original data file '$fileOriginal' doesn't exist... creating symlink from a not existing source"
       #touch "$fileOriginal"
   fi
 
-  echo "--> symlinking '$fileCustom' to '$fileOriginal'"
+  echo "---> symlinking '$fileCustom' to '$fileOriginal'"
   # create parent dir if not exist
   [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
   ln -s "$fileCustom" "$fileOriginal"
@@ -256,7 +256,7 @@ if [ ! -z "$RELAYHOST" ]; then
 		echo " without any authentication. Make sure your server is configured to accept emails coming from this IP."
 	fi
 else
-	echo "- Will try to deliver emails directly to the final server. Make sure your DNS is setup properly!"
+	echo "---> Will try to deliver emails directly to the final server. Make sure your DNS is setup properly!"
 	postconf -# relayhost
 	postconf -# smtp_sasl_auth_enable
 	postconf -# smtp_sasl_password_maps
@@ -312,7 +312,7 @@ sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 
 ## cron service
 cfgService_cron() {
-  echo "---> Configuring Cron service"
+  echo "--> Configuring Cron service"
   if   [ "$OS_RELEASE" = "debian" ]; then
     cronDir="/var/spool/cron/ing supervisord config fbs"
   elif [ "$OS_RELEASE" = "centos" ]; then
@@ -320,8 +320,8 @@ cfgService_cron() {
   fi
   
   if [ -e "$cronDir" ]; then
-    if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 0700" ];then
-      echo "---> Fixing permissions: '$cronDir'"
+    if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 0700" ];tcfgService_$SERVICEhen
+      echo "--> Fixing permissions: '$cronDir'"
       chown root:root "$cronDir"
       chmod u=rwx,g=wx,o=t "$cronDir"
     fi
@@ -331,10 +331,10 @@ cfgService_cron() {
 ## cron service
 cfgService_letsencrypt() {
   if [ -e "/etc/letsencrypt/live/${APP_FQDN}/privkey.pem" ] ; then
-    echo "---> Let's Encrypt certificate already exist... tring to renew"
+    echo "--> Let's Encrypt certificate already exist... tring to renew"
     certbot renew --standalone
   else
-    echo "---> Generating HTTPS Let's Encrypt certificate"
+    echo "--> Generating HTTPS Let's Encrypt certificate"
     certbot certonly --standalone --expand -n --agree-tos --email ${ROOT_MAILTO} -d ${APP_FQDN}
   fi
 }
@@ -759,6 +759,8 @@ runHooks() {
 
   # check and create missing container directory
   if [ ! -z "${APP_DATA}" ]; then  
+    echo "=> Persistent storage detected: ${APP_DATA}"
+    echo "--> Relocating and reconfiguring system data and configuration paths"
     for dir in ${appDataDirs[@]}
       do
         dir="${APP_DATA}${dir}"
