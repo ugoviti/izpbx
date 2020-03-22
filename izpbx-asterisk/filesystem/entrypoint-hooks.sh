@@ -155,7 +155,7 @@ symlinkDir() {
   local dirOriginal="$1"
   local dirCustom="$2"
 
-  echo "=> DIRECTORY data override detected: original:[$dirOriginal] custom:[$dirCustom]"
+  echo "=> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
@@ -464,7 +464,7 @@ echo "
 "
 fi)
 
-$(if [ "${HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]; then
+$(if [[ "${HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]]; then
 echo "
 # enable default ssl virtualhost with self signed certificate
 <VirtualHost _default_:443>
