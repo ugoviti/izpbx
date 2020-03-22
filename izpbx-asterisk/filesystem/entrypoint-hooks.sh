@@ -337,6 +337,11 @@ cfgService_letsencrypt() {
     echo "--> Generating HTTPS Let's Encrypt certificate"
     certbot certonly --standalone --expand -n --agree-tos --email ${ROOT_MAILTO} -d ${APP_FQDN}
   fi
+  
+  # create certbot renew cron and apache restart
+  echo '#!/bin/bash
+/usr/bin/certbot renew --noninteractive --no-random-sleep-on-renew --deploy-hook "/usr/bin/supervisorctl restart httpd"
+exit $?' > /etc/cron.daily/certbot && chmod 755 /etc/cron.daily/certbot
 }
 
 
