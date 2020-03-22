@@ -47,6 +47,8 @@ services:
     #- ${APP_PORT_MYSQL}:3306
     volumes:
     - ./data/db:/var/lib/mysql
+    env_file:
+    - .env
     environment:
     - MYSQL_ROOT_PASSWORD
     - MYSQL_DATABASE

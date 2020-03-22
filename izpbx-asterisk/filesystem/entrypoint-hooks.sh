@@ -185,7 +185,7 @@ symlinkFile() {
   local fileOriginal="$1"
   local fileCustom="$2"
 
-  echo "--> FILE data override detected: original:[$fileOriginal] custom:[$fileCustom]"
+  echo "--> file data override detected: original:[$fileOriginal] custom:[$fileCustom]"
 
   if [ -e "$fileOriginal" ]; then
       # copy data files form original directory if destination is empty
@@ -217,7 +217,7 @@ chkService() {
   if [ "$SERVICE_ENABLED" = "true" ]; then
     autostart=true
     echo "=> Enabling $SERVICE_DAEMON service... because $SERVICE_VAR=$SERVICE_ENABLED"
-    echo "--> Configuring $SERVICE_DAEMON service..."
+    echo "--> configuring $SERVICE_DAEMON service..."
     cfgService_$SERVICE
    else
     autostart=false
@@ -312,7 +312,6 @@ sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 
 ## cron service
 cfgService_cron() {
-  echo "--> Configuring Cron service"
   if   [ "$OS_RELEASE" = "debian" ]; then
     cronDir="/var/spool/cron/ing supervisord config fbs"
   elif [ "$OS_RELEASE" = "centos" ]; then
@@ -321,7 +320,7 @@ cfgService_cron() {
   
   if [ -e "$cronDir" ]; then
     if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 0700" ];then
-      echo "--> Fixing permissions: '$cronDir'"
+      echo "---> fixing permissions: '$cronDir'"
       chown root:root "$cronDir"
       chmod u=rwx,g=wx,o=t "$cronDir"
     fi
@@ -540,7 +539,7 @@ Charset=utf8" > /etc/odbc.ini
       eval freepbxDirs[$k]=${APP_DATA}$v
       [ ! -e "$v" ] && mkdir -p "$v"
       if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
-      echo "---> Fixing permissions for: $k=$v"
+      echo "---> fixing permissions for: $k=$v"
       chown ${APP_USR}:${APP_GRP} "$v"
       fi
     done
@@ -551,7 +550,7 @@ Charset=utf8" > /etc/odbc.ini
       eval freepbxFilesLog[$k]=${APP_DATA}$v
       [ ! -e "$v" ] && touch "$v"
       if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
-      echo "---> Fixing permissions for: $k=$v"
+      echo "---> fixing permissions for: $k=$v"
       chown ${APP_USR}:${APP_GRP} "$v"
       fi
     done
@@ -568,7 +567,7 @@ Charset=utf8" > /etc/odbc.ini
     cfgService_freepbx_install
   fi
 
-  echo "--> Applying Workarounds for FreePBX and Asterisk..."
+  echo "---> applying Workarounds for FreePBX and Asterisk..."
   # make missing log files
   [ ! -e "${freepbxDirs[ASTLOGDIR]}/full" ] && touch "${freepbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${freepbxDirs[ASTLOGDIR]}/full"
   
@@ -581,7 +580,7 @@ Charset=utf8" > /etc/odbc.ini
   sed 's/^enabled =.*/enabled = yes/' -i ${freepbxDirs[ASTETCDIR]}/hep.conf
 
   # reconfigure freepbx from env variables
-  echo "--> Reconfiguring FreePBX Advanced Settings..."
+  echo "---> reconfiguring FreePBX Advanced Settings..."
   set | grep ^FREEPBX_ | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
 }
 
@@ -729,7 +728,7 @@ cfgService_freepbx_install() {
 fixOwner() {
   dir="$1"
   if [ "$(stat -c "%U %G" "$dir")" != "${APP_USR} ${APP_GRP}" ];then
-      echo "---> Fixing owner: '$dir'"
+      echo "---> fixing owner: '$dir'"
       chown ${APP_USR}:${APP_GRP} "$dir"
       #chmod 0770 "$dir"
   fi
@@ -738,7 +737,7 @@ fixOwner() {
 fixPermission() {
   dir="$1"
   if [ "$(stat -c "%a" "$dir")" != "770" ];then
-      echo "---> Fixing permission: '$dir'"
+      echo "---> fixing permission: '$dir'"
       chmod 0770 "$dir"
   fi
 }
