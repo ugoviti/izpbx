@@ -320,7 +320,7 @@ cfgService_cron() {
   fi
   
   if [ -e "$cronDir" ]; then
-    if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 0700" ];tcfgService_$SERVICEhen
+    if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 0700" ];then
       echo "--> Fixing permissions: '$cronDir'"
       chown root:root "$cronDir"
       chmod u=rwx,g=wx,o=t "$cronDir"
@@ -589,14 +589,14 @@ cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> INFO: New installation detected! installing FreePBX in 20 seconds... try:[$n/$t]"
+  echo "=> INFO: New installation detected! installing FreePBX in 30 seconds... try:[$n/$t]"
   
   cd /usr/src/freepbx
   
   # start asterisk if it's not running
   if ! asterisk -r -x "core show version" 2>/dev/null ; then ./start_asterisk start ; fi
   
-  sleep 20
+  sleep 30
   
   # FIXME: allow asterisk user to manage asteriskcdrdb database
   mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS asteriskcdrdb"

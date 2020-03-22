@@ -40,6 +40,7 @@ services:
   db:
     container_name: izpbx-db
     image: mariadb:10.4
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: always
     #network_mode: bridge
     #ports:

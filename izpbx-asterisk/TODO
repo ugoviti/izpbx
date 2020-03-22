@@ -1,9 +1,18 @@
-fail2ban
+TODO:
+======================
 fop2
 soundlang it
+backup non funziona (aperto ticket)
+backup restore incrista tutto e floodda i log con questo: (provare con mariadb 10.3)
+ob_end_clean(): failed to discard buffer of zlib output compression
+
+DONE:
+======================
 logrotate
+fail2ban
+certbot
+
 
 Problemi da risolvere:
 ======================
 errore ALSALib in avvio
-capire come mai c'è la persistenza nei restart di docker
