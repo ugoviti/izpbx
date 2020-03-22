@@ -597,10 +597,14 @@ Charset=utf8" > /etc/odbc.ini
   echo "---> reconfiguring FreePBX Advanced Settings..."
   set | grep ^FREEPBX_ | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
 
-  # reconfigure freepbx settings based on docker variables content
+  # reconfigure freepbx settings based on docker variables content using FreePBX API boostrap
   for k in ${!freepbxSipSettings[@]}; do
     v="${freepbxSipSettings[$k]}"
-    echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->sipsettings->setConfig('${k}',${v}); needreload();?>" | php
+    cVal=$(echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); echo \$FreePBX->sipsettings->getConfig('${k}');?>" | php)
+    if [ "$cVal" != "${v}" ];then
+      echo "---> configuring sipsettings: ${k}=${v}"
+      echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->sipsettings->setConfig('${k}',${v}); needreload();?>" | php
+    fi
   done
 
   # FIXME: iaxsettings doesn't works right now
@@ -610,8 +614,8 @@ Charset=utf8" > /etc/odbc.ini
   #done
   
   # reload asterisk
-  echo "--> Reloading FreePBX..."
-  su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+  #echo "--> Reloading FreePBX..."
+  #su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
 }
 
 cfgService_freepbx_install() {
