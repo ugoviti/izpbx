@@ -67,6 +67,19 @@ declare -A freepbxFilesLog=(
   [FPBX_LOG_FILE]=/var/log/asterisk/freepbx.log
 )
 
+declare -A freepbxSipSettings=(
+  [rtpstart]=${APP_PORT_RTP_START}
+  [rtpend]=${APP_PORT_RTP_END}
+  [udpport-0.0.0.0]=${APP_PORT_PJSIP}
+  [tcpport-0.0.0.0]=${APP_PORT_PJSIP}
+  [bindport]=${APP_PORT_SIP}
+)
+
+# 20200318 still not used
+declare -A freepbxIaxSettings=(
+  [bindport]=${APP_PORT_IAX}
+)
+
 ## other variables
 # mysql configuration
 : ${MYSQL_SERVER:="db"}
@@ -385,18 +398,19 @@ cfgService_httpd() {
   elif [ "$OS_RELEASE" = "alpine" ]; then
     sed "s/^#ServerName.*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/httpd.conf"
   elif [ "$OS_RELEASE" = "centos" ]; then
-    sed 's/#LoadModule mpm_prefork_module/LoadModule mpm_prefork_module/' -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
-    sed 's/LoadModule mpm_event_module/#LoadModule mpm_event_module/'     -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
+    sed "s/#LoadModule mpm_prefork_module/LoadModule mpm_prefork_module/" -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
+    sed "s/LoadModule mpm_event_module/#LoadModule mpm_event_module/"     -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
     sed "s/^#ServerName.*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    sed 's/User apache/User asterisk/'               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    sed 's/Group apache/Group asterisk/'             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+    sed "s/User apache/User asterisk/"               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+    sed "s/Group apache/Group asterisk/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+    sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
     # disable default ssl.conf and use virtual.conf instead if HTTPS_ENABLED=false
     [ "${HTTPS_ENABLED}" = "true" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
 
     echo "
 # default HTTP virtualhost
-<VirtualHost *:80>
+<VirtualHost *:${APP_PORT_HTTP}>
   DocumentRoot /var/www/html
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
@@ -417,7 +431,7 @@ fi)
 $(if [ ! -z "${APP_FQDN}" ]; then
 echo "
 # HTTP virtualhost
-<VirtualHost *:80>
+<VirtualHost *:${APP_PORT_HTTP}>
   ServerName ${APP_FQDN}
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
@@ -438,8 +452,8 @@ fi)
 
 $(if [ "${HTTPS_ENABLED}" = "true" ]; then
 echo "
-# Enable HTTPS listening on 443
-Listen 443 https
+# Enable HTTPS listening
+Listen ${APP_PORT_HTTPS} https
 SSLPassPhraseDialog    exec:/usr/libexec/httpd-ssl-pass-dialog
 SSLSessionCache        shmcb:/run/httpd/sslcache(512000)
 SSLSessionCacheTimeout 300
@@ -450,7 +464,7 @@ fi)
 $(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
 echo "
 # HTTPS virtualhost
-<VirtualHost *:443>
+<VirtualHost *:${APP_PORT_HTTPS}>
   ServerName ${APP_FQDN}
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
@@ -471,7 +485,7 @@ fi)
 $(if [[ "${HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]]; then
 echo "
 # enable default ssl virtualhost with self signed certificate
-<VirtualHost _default_:443>
+<VirtualHost _default_:${APP_PORT_HTTPS}>
   ErrorLog logs/ssl_error_log
   TransferLog logs/ssl_access_log
   LogLevel warn
@@ -573,15 +587,31 @@ Charset=utf8" > /etc/odbc.ini
   
   # relink fwconsole and amportal if not exist
   [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
-  [ ! -e "/usr/sbin/amportal" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/amportal /usr/sbin/amportal
+  [ ! -e "/usr/sbin/amportal" ]  && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/amportal  /usr/sbin/amportal
 
-  # freepbx warnings workaround
+  # FIXME: 20200318 freep 15 warnings workaround
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${freepbxDirs[ASTETCDIR]}/modules.conf
   sed 's/^enabled =.*/enabled = yes/' -i ${freepbxDirs[ASTETCDIR]}/hep.conf
 
   # reconfigure freepbx from env variables
   echo "---> reconfiguring FreePBX Advanced Settings..."
   set | grep ^FREEPBX_ | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do fwconsole setting $setting ; done
+
+  # reconfigure freepbx settings based on docker variables content
+  for k in ${!freepbxSipSettings[@]}; do
+    v="${freepbxSipSettings[$k]}"
+    echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->sipsettings->setConfig('${k}',${v}); needreload();?>" | php
+  done
+
+  # FIXME: iaxsettings doesn't works right now
+  #for k in ${!freepbxIaxSettings[@]}; do
+  #  v="${freepbxIaxSettings[$k]}"
+  #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
+  #done
+  
+  # reload asterisk
+  echo "--> Reloading FreePBX..."
+  su - ${APP_USR} -c "fwconsole reload"
 }
 
 cfgService_freepbx_install() {
@@ -702,10 +732,6 @@ cfgService_freepbx_install() {
       
     # fix freepbx permissions
     fwconsole chown
-
-    # reload asterisk
-    echo "--> Reloading FreePBX..."
-    su - ${APP_USR} -c "fwconsole reload"
   fi
 
   if [ $RETVAL = 0 ]; then

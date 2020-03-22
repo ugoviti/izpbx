@@ -1,18 +1,44 @@
 TODO:
 ======================
 fop2
-soundlang it
-backup non funziona (aperto ticket)
-backup restore incrista tutto e floodda i log con questo: (provare con mariadb 10.3)
-ob_end_clean(): failed to discard buffer of zlib output compression
+soundlang it iz
+reload si pianta: causato da: /usr/bin/gpg --keyserver pool.sks-keyservers.net
+
 
 DONE:
 ======================
-logrotate
-fail2ban
-certbot
-
-
+- logrotate
+- fail2ban
+- certbot
+- backup non funziona (aperto ticket)
+- backup restore incrista tutto e floodda i log con questo: (provare con mariadb 10.3)
+  ob_end_clean(): failed to discard buffer of zlib output compression
+- modificare sipsettings in fase di startup usando variabili esterne
+  
+  
 Problemi da risolvere:
 ======================
 errore ALSALib in avvio
+
+
+# configurazione freepbx da commandline
+
+https://wiki.freepbx.org/display/FOP/Bootstrap
+
+sipsettings.rtpstart
+sipsettings.stpend
+
+<?php
+include '/etc/freepbx.conf';
+defined('FREEPBX_IS_AUTH') OR die('No direct script access allowed');
+
+$FreePBX = FreePBX::Create();
+
+$FreePBX->sipsettings->setConfig('allowanon','No');
+$FreePBX->sipsettings->setConfig('allowguest','No');
+$FreePBX->sipsettings->setConfig('rtpstart',15000);
+$FreePBX->sipsettings->setConfig('rtpend',19100);
+
+//needreload();
+do_reload();
+?>
