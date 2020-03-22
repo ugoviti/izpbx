@@ -388,7 +388,7 @@ cfgService_httpd() {
     sed 's/Group apache/Group asterisk/'             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
     # disable mod_ssl if HTTPS_ENABLED=false
-    [ "${HTTPS_ENABLED}" = "true" ] && echo mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/ssl.conf-dist
+    [ "${HTTPS_ENABLED}" = "true" ] && mv /etc/httpd/conf.d/ssl.conf /etc/httpd/conf.d/ssl.conf-dist
 
     echo "
 <VirtualHost *:80>

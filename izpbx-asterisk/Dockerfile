@@ -477,6 +477,7 @@ EXPOSE \
 # add files to container
 ADD Dockerfile filesystem README.md /
 
+# other variables
 ENV APP_FQDN ""
 
 # start the container process
