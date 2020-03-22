@@ -611,7 +611,7 @@ Charset=utf8" > /etc/odbc.ini
   
   # reload asterisk
   echo "--> Reloading FreePBX..."
-  su - ${APP_USR} -c "fwconsole reload"
+  su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
 }
 
 cfgService_freepbx_install() {
