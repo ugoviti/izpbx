@@ -395,7 +395,7 @@ RUN set -xe && \
   ldconfig && \
   : "---------- ALL builds finished ----------" && \
   \
-  [[ $APP_DEBUG -ne 1 ]] && \
+  [[ "$APP_DEBUG" -ne 1 ]] && \
   : "---------- Clean temporary files ----------" && \
   dnf -y remove $ASTERISK_BUILD_DEPS \
     -x diffutils \
@@ -405,7 +405,7 @@ RUN set -xe && \
    && \
    dnf clean all && \
    rm -rf /var/cache/yum /tmp /usr/src && \
-   mkdir -p /usr/src /tmp && chmod 1777 /tmp
+   mkdir -p /usr/src /tmp && chmod 1777 /tmp ;
 
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
@@ -429,13 +429,12 @@ RUN set -xe && \
 #  ldconfig && \
   : "---------- END Install ----------"
 
-# download freepbx and modules for offline install
+## download freepbx and modules for offline install
 # modules xml url: http://mirror1.freepbx.org/modules-15.0.xml
 # php -r 'echo json_encode(simplexml_load_file("modules-15.0.xml"));' | jq
+# curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
+# curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
-
-## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
-## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 RUN set -xe && \
   cd /usr/src && \
   mkdir freepbx && \
