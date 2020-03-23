@@ -30,13 +30,13 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 
 Using docker-compose is the suggested method:
 
-1) Clone GIT repository:
+- Clone GIT repository:
 
 ```
 git clone https://github.com/ugoviti/izdock-izpbx.git
 ```
 
-2) Create file: `/etc/docker/daemon.json`
+- Create file: `/etc/docker/daemon.json`
 
 ```
 {
@@ -44,15 +44,15 @@ git clone https://github.com/ugoviti/izdock-izpbx.git
 }
 ```
 
-3) Restart Docker Engine: `systemctl restart docker`
+- Restart Docker Engine: `systemctl restart docker`
 
-4) Copy **default.env** in **.env** and edit the variables inside:
+- Copy **default.env** in **.env** and edit the variables inside:
 
 ```
 cp default.env .env
 ```
 
-5) Start izpbx deploy with:
+- Start izpbx deploy with:
 
 ```
 docker-compose up -d
