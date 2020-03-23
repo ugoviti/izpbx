@@ -15,15 +15,15 @@ services:
     links: 
     - db
     ports:
-    - ${APP_PORT_HTTP}:80
-    - ${APP_PORT_HTTPS}:443
-    - ${APP_PORT_FOP}:4445
-    - ${APP_PORT_IAX}:4569
-    - ${APP_PORT_PJSIP}:5060
-    - ${APP_PORT_SIP}:5160
-    - ${APP_PORT_IAX}:4569/udp
-    - ${APP_PORT_PJSIP}:5060/udp
-    - ${APP_PORT_SIP}:5160/udp
+    - ${APP_PORT_HTTP}:${APP_PORT_HTTP}
+    - ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
+    - ${APP_PORT_FOP}:${APP_PORT_FOP}
+    - ${APP_PORT_IAX}:${APP_PORT_IAX}
+    - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
+    - ${APP_PORT_SIP}:${APP_PORT_SIP}
+    - ${APP_PORT_IAX}:${APP_PORT_IAX}/udp
+    - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}/udp
+    - ${APP_PORT_SIP}:${APP_PORT_SIP}/udp
     - ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
     volumes:
     - ./data/asterisk:/data

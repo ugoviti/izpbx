@@ -343,7 +343,7 @@ cfgService_cron() {
 ## cron service
 cfgService_letsencrypt() {
   if [ -e "/etc/letsencrypt/live/${APP_FQDN}/privkey.pem" ] ; then
-    echo "--> Let's Encrypt certificate already exist... tring to renew"
+    echo "--> Let's Encrypt certificate already exist... trying to renew"
     certbot renew --standalone
   else
     echo "--> Generating HTTPS Let's Encrypt certificate"

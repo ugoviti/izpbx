@@ -143,6 +143,22 @@ RUN set -xe && \
     zip \
     uriparser \
     jq \
+    speex \
+    portaudio \
+    libsrtp \
+    unbound-libs \
+    freetds \
+    freetds-libs \
+    libevent \
+    net-snmp-libs \
+    codec2 \
+    neon \
+    pakchois \
+    libmodman \
+    libproxy \
+    net-snmp-agent-libs \
+    lm_sensors-libs \
+    libical \
   && \
   \
   : "---------- generate selfsigned certificate ----------" && \
@@ -374,16 +390,17 @@ RUN set -xe && \
   ldconfig && \
   : "---------- ALL builds finished ----------" && \
   \
-  : "---------- Clean temporary files ----------" && \
-  dnf -y remove $ASTERISK_BUILD_DEPS \
-    -x diffutils \
-    -x unzip \
-    -x zip \
-    -x uriparser \
-   && \
-   dnf clean all && \
-   rm -rf /var/cache/yum /tmp /usr/src && \
-   mkdir -p /usr/src /tmp && chmod 1777 /tmp
+  : "---------- Clean temporary files ----------" 
+#  && \
+#  dnf -y remove $ASTERISK_BUILD_DEPS \
+#    -x diffutils \
+#    -x unzip \
+#    -x zip \
+#    -x uriparser \
+#   && \
+#   dnf clean all && \
+#   rm -rf /var/cache/yum /tmp /usr/src && \
+#   mkdir -p /usr/src /tmp && chmod 1777 /tmp
 
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
