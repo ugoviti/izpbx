@@ -30,23 +30,32 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 
 Using docker-compose is the suggested method:
 
-1) Create file: `/etc/docker/daemon.json`
+1. Clone GIT repository:
 
-```{
+```
+git clone https://github.com/ugoviti/izdock-izpbx.git
+```
+
+3. Create file: `/etc/docker/daemon.json`
+
+```
+{
   "userland-proxy": false
 }
 ```
 
-3) Restart Docker Engine: `systemctl restart docker`
+3. Restart Docker Engine: `systemctl restart docker`
 
-4) Copy **default.env** in **.env** and edit the variables inside:
+4. Copy **default.env** in **.env** and edit the variables inside:
 
-```cp default.env .env
+```
+cp default.env .env
 ```
 
-5) Start izpbx deploy with:
+5. Start izpbx deploy with:
 
-```docker-compose up -d
+```
+docker-compose up -d
 ```
 
 # Environment default variables
@@ -58,7 +67,7 @@ TODO:
   [InitZero Corporate Support](https://www.initzero.it/)
 
 - **Where to file issues**:
-  [https://github.com/ugoviti](https://github.com/ugoviti)
+  [https://github.com/ugoviti/izdock-izpbx/issues](https://github.com/ugoviti/izdock-izpbx/issues)
 
 - **Maintained by**:
   [Ugo Viti](https://github.com/ugoviti)
