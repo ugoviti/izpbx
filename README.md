@@ -46,11 +46,13 @@ git clone https://github.com/ugoviti/izdock-izpbx.git
 
 - Restart Docker Engine: `systemctl restart docker`
 
-- Copy **default.env** in **.env** and edit the variables inside:
+- Copy ``default.env` in `.env` and edit the variables inside:
 
 ```
 cp default.env .env
 ```
+
+- Customize `.env` veriables, specially mysql passwords
 
 - Start izpbx deploy with:
 
