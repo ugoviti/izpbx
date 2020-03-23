@@ -34,9 +34,6 @@ ENV APP_GRP               "asterisk"
 ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 ENV APP_VER_BUILD=${APP_VER_BUILD}
 
-# Development Debug mode
-ARG APP_DEBUG=0
-
 ## app componets
 # https://downloads.asterisk.org/pub/telephony/asterisk/
 ARG ASTERISK_VER=${APP_VER}
@@ -178,6 +175,10 @@ RUN set -xe && \
   usermod -aG wheel ${APP_USR}
   
 ## build
+
+# Development Debug mode
+ARG APP_DEBUG=0
+
 # copy external sources files
 ADD build/ /usr/src/
 
@@ -393,9 +394,9 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  : "---------- ALL builds finished ----------" && \
+  : "---------- END Build ----------" && \
   \
-  [[ "$APP_DEBUG" -ne 1 ]] && \
+  [[ $APP_DEBUG -eq 0 ]] && \
   : "---------- Clean temporary files ----------" && \
   dnf -y remove $ASTERISK_BUILD_DEPS \
     -x diffutils \
@@ -405,7 +406,8 @@ RUN set -xe && \
    && \
    dnf clean all && \
    rm -rf /var/cache/yum /tmp /usr/src && \
-   mkdir -p /usr/src /tmp && chmod 1777 /tmp ;
+   mkdir -p /usr/src /tmp && chmod 1777 /tmp ; \
+   : "---------- ALL builds finished ----------" 
 
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
