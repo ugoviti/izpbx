@@ -34,6 +34,9 @@ ENV APP_GRP               "asterisk"
 ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 ENV APP_VER_BUILD=${APP_VER_BUILD}
 
+# Development Debug mode
+ARG APP_DEBUG=0
+
 ## app componets
 # https://downloads.asterisk.org/pub/telephony/asterisk/
 ARG ASTERISK_VER=${APP_VER}
@@ -77,7 +80,7 @@ RUN set -xe && \
     # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
     dnf config-manager --set-disabled forensics && \
     dnf -y module disable php && \
-    dnf -y module enable php:remi-7.3  && \
+    dnf -y module enable php:remi-7.3 ; \
   \
   dnf upgrade -y && \
   dnf -y install \
@@ -144,6 +147,7 @@ RUN set -xe && \
     uriparser \
     jq \
     speex \
+    speexdsp \
     portaudio \
     libsrtp \
     unbound-libs \
@@ -227,6 +231,7 @@ RUN set -xe && \
     lua-devel \
     neon-devel \
     speex-devel \
+    speexdsp-devel \
     codec2-devel \
     freetds-devel \
     portaudio-devel \
@@ -364,8 +369,8 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END Build ----------" && \
   \
-  : "---------- START Build asterisk-g72x ----------" && \
   [[ $APP_VER_MAJOR -le 17 ]] && \
+  : "---------- START Build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
   curl -fSL --connect-timeout 30 https://bitbucket.org/arkadi/asterisk-g72x/get/master.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
@@ -374,7 +379,7 @@ RUN set -xe && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
   make && \
   make install && \
-  ldconfig && \
+  ldconfig ; \
   : "---------- END Build ----------" && \
   \
   : "---------- START Build sngrep ----------" && \
@@ -390,17 +395,17 @@ RUN set -xe && \
   ldconfig && \
   : "---------- ALL builds finished ----------" && \
   \
-  : "---------- Clean temporary files ----------" 
-#  && \
-#  dnf -y remove $ASTERISK_BUILD_DEPS \
-#    -x diffutils \
-#    -x unzip \
-#    -x zip \
-#    -x uriparser \
-#   && \
-#   dnf clean all && \
-#   rm -rf /var/cache/yum /tmp /usr/src && \
-#   mkdir -p /usr/src /tmp && chmod 1777 /tmp
+  [[ $APP_DEBUG -ne 1 ]] && \
+  : "---------- Clean temporary files ----------" && \
+  dnf -y remove $ASTERISK_BUILD_DEPS \
+    -x diffutils \
+    -x unzip \
+    -x zip \
+    -x uriparser \
+   && \
+   dnf clean all && \
+   rm -rf /var/cache/yum /tmp /usr/src && \
+   mkdir -p /usr/src /tmp && chmod 1777 /tmp
 
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
