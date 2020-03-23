@@ -36,7 +36,7 @@ Using docker-compose is the suggested method:
 git clone https://github.com/ugoviti/izdock-izpbx.git
 ```
 
-3. Create file: `/etc/docker/daemon.json`
+2. Create file: `/etc/docker/daemon.json`
 
 ```
 {
