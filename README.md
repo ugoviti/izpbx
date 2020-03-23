@@ -13,27 +13,40 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 # Features
 - CentOS 8 powered
 - Small image footprint
-- Build from scratch Asterisk Engine
+- Built from scratch Asterisk engine
 - FreePBX Engine as Web Management GUI
-- Many customizable variables to use
-- Two containers setup: 
-  - izpbx-asterisk (Asterisk+FreePBX Frontend)
+- Persistent storage for configuration data
+- Automatic HTTPS Certificate management via Let's Encrypt service
+- Send out emails via local postfix smtp daemon
+- Security and bruteforce SIP attacks detection managed by fail2ban service
+- First automatic installation managed when deploing the izpbx, subsequent updates managed by FreePBX Version Upgrade
+- All Bootstrap configurations made via single `.env` file
+- Many customizable variables to use (look inside `default.env` file)
+- Two containers setup:
+  - izpbx-asterisk (Asterisk Engine + FreePBX Frontend)
   - mariadb (Database Backend)
 
 # How to use this image
 
 Using docker-compose is the suggested method:
 
-copy **default.env** in **.env** and edit the variables inside:
+1) Create file: `/etc/docker/daemon.json`
 
-```
-cp default.env .env
+```{
+  "userland-proxy": false
+}
 ```
 
-Start containers with:
+3) Restart Docker Engine: `systemctl restart docker`
 
+4) Copy **default.env** in **.env** and edit the variables inside:
+
+```cp default.env .env
 ```
-docker-compose up -d
+
+5) Start izpbx deploy with:
+
+```docker-compose up -d
 ```
 
 # Environment default variables
