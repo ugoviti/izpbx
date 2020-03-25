@@ -699,12 +699,13 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --ampplayback=${AMPPLAYBACK}"
 
   echo "--> Installing FreePBX in '${AMPWEBROOT}'"
+  # https://github.com/FreePBX/announcement/archive/release/15.0.zip
   set -x
   ./install -n --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} ${FPBX_OPTS}
   RETVAL=$?
   set +x
   unset FPBX_OPTS
-  
+ 
   # TEST:
   #[ $RETVAL != 0 ] && fwconsole ma install pm2 && ./install -n --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD}
   #RETVAL=$?
@@ -725,63 +726,69 @@ cfgService_freepbx_install() {
       done
     fi
    
+    FREEPBX_MODULES_CORE="
+      core
+      framework
+      callrecording
+      cdr
+      conferences
+      customappsreg
+      dashboard
+      featurecodeadmin
+      infoservices
+      logfiles
+      music
+      pm2
+      recordings
+      sipsettings
+      voicemail
+      soundlang
+    "
+
+    FREEPBX_MODULES_EXTRA="
+      announcement
+      asteriskinfo
+      backup
+      callforward
+      callwaiting
+      daynight
+      calendar
+      certman
+      cidlookup
+      contactmanager
+      donotdisturb
+      fax
+      findmefollow
+      iaxsettings
+      miscapps
+      miscdests
+      userman
+      ivr
+      parking
+      phonebook
+      presencestate
+      queues
+      timeconditions
+      printextensions
+    "
+
     echo "--> Installing CORE FreePBX modules..."
-    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install \
-      core \
-      framework \
-      callrecording \
-      cdr \
-      conferences \
-      customappsreg \
-      dashboard \
-      featurecodeadmin \
-      infoservices \
-      logfiles \
-      music \
-      pm2 \
-      recordings \
-      sipsettings \
-      voicemail \
-      soundlang \
-      "
+    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${FREEPBX_MODULES_CORE}"
  
     echo "--> Enabling EXTENDED FreePBX repo..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
-    # https://github.com/FreePBX/announcement/archive/release/15.0.zip
-    
+    echo "--> Copying extra FreePBX modules to ${freepbxDirs[AMPWEBROOT]}/admin/modules"
+    for module in ${FREEPBX_MODULES_EXTRA}; do rsync -a amp_conf/htdocs/admin/modules/${modules}/ ${freepbxDirs[AMPWEBROOT]}/admin/modules/${modules}/ ; done
+
     echo "--> Installing extra FreePBX modules..."
-    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install \
-      announcement \
-      asteriskinfo \
-      backup \
-      callforward \
-      callwaiting \
-      daynight \
-      calendar \
-      certman \
-      cidlookup \
-      contactmanager \
-      donotdisturb \
-      fax \
-      findmefollow \
-      iaxsettings \
-      miscapps \
-      miscdests \
-      userman \
-      ivr \
-      parking \
-      phonebook \
-      presencestate \
-      queues \
-      timeconditions \
-      printextensions \
-      "
-      # FIXME: 20200318 disabled because still not 15.0 released
-      #bulkhandler \
-      #speeddial \
-      #weakpasswords \
+    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${FREEPBX_MODULES_EXTRA}"
+
+    # FIXME: 20200318 disabled because still not 15.0 released
+    #bulkhandler \
+    #speeddial \
+    #weakpasswords \
       
     # fix freepbx permissions
     fwconsole chown
