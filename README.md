@@ -151,6 +151,12 @@ FAIL2BAN_ENABLED=true
 #FOP2_ENABLED=false
 ```
 
+# FreePBX Best Practices
+
+  * **Settings-->Asterisk Logfile Settings**
+    * File Name: **security**
+    * Security: **ON** (all others OFF)
+
 # Quick reference
 
 - **Where to get help**:

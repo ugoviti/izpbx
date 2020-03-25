@@ -671,7 +671,7 @@ cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> INFO: New installation detected! installing FreePBX... try:[$n/$t]"
+  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FreePBX for first time... try:[$n/$t]"
   cd /usr/src/freepbx
   
   # start asterisk if it's not running
@@ -811,7 +811,6 @@ cfgService_freepbx_install() {
     # fix freepbx and asterisk permissions
     echo "--> Fixing FreePBX permissions..."
     fwconsole chown
-
     echo "--> Reloading FreePBX..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
     
@@ -820,6 +819,9 @@ cfgService_freepbx_install() {
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
 
+    # fix freepbx and asterisk permissions
+    echo "--> Fixing FreePBX permissions..."
+    fwconsole chown
     echo "--> Reloading FreePBX..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
 

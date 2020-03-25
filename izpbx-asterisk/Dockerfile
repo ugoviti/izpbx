@@ -189,6 +189,7 @@ RUN set -xe && \
     icu \
     gcc-c++ \
     make \
+    python2 \
   && \
   \
   : "---------- generate selfsigned certificate for 100 years duration ----------" && \
@@ -271,6 +272,7 @@ RUN set -xe && \
     xmlstarlet \
     sox-devel \
     ilbc-devel \
+    python2-devel \
     python3-devel \
   ' ; \
   [[ $VERSION_ID -le 7 ]] && ASTERISK_BUILD_DEPS+="mysql-devel" ; \
@@ -305,6 +307,16 @@ RUN set -xe && \
   make install && \
   ldconfig && \
   : "---------- END Build ----------" && \
+  : "---------- START Build iksemel ----------" && \
+  cd /usr/src && \
+  mkdir iksemel && \
+  curl -fSL --connect-timeout 30 https://github.com/holme-r/iksemel/archive/master.tar.gz | tar xz --strip 1 -C iksemel && \
+  cd iksemel && \
+  ./configure --prefix=/usr && \
+  make && \
+  make install && \
+  ldconfig && \
+  : "---------- END Build ----------" && \
   \
   : "---------- START Build ASTERISK ----------" && \
   cd /usr/src && \
@@ -330,42 +342,50 @@ RUN set -xe && \
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
+    --enable app_confbridge \
+    --enable app_macro \
     --enable app_meetme \
     --enable app_page \
-    --enable chan_mgcp \
+    --enable binaural_rendering_in_bridge_softmix \
     --enable chan_motif \
+    --enable codec_silk \
+    --enable codec_opus \
+    --enable format_mp3 \
     --enable res_ari \
-    --enable res_snmp \
-    --enable res_srtp \
-    --enable res_endpoint_stats \
     --enable res_chan_stats \
     --enable res_calendar \
     --enable res_calendar_caldav \
     --enable res_calendar_icalendar \
-    --enable res_pktccops \
-    --enable codec_silk \
-    --enable codec_opus \
-    --enable app_confbridge \
+    --enable res_endpoint_stats \
     --enable res_fax \
     --enable res_fax_spandsp \
-    --enable app_macro \
-    --enable format_mp3 \
-    --enable res_phoneprov \
+    --enable res_pktccops \
+    --enable res_snmp \
+    --enable res_srtp \
+    --enable res_xmpp \
     --disable-category MENUSELECT_CORE_SOUNDS \
     --disable-category MENUSELECT_EXTRA_SOUNDS \
     --disable-category MENUSELECT_MOH \
     --disable BUILD_NATIVE \
     --disable app_ivrdemo \
+    --disable app_meetme \
+    --disable app_mysql \
     --disable app_saycounted \
     --disable app_skel \
     --disable cdr_pgsql \
     --disable cel_pgsql \
+    --disable cdr_sqlite3_custom \
     --disable cel_sqlite3_custom \
+    --disable cdr_mysql \
+    --disable cdr_tds \
     --disable cel_tds \
+    --disable cdr_radius \
     --disable cel_radius \
     --disable cdr_syslog \
     --disable chan_alsa \
+    --disable chan_console \
     --disable chan_oss \
+    --disable chan_mgcp \
     --disable chan_skinny \
     --disable chan_ooh323 \
     --disable chan_mobile \
@@ -378,6 +398,8 @@ RUN set -xe && \
     --disable res_mwi_external_ami \
     --disable res_config_pgsql \
     --disable res_config_mysql \
+    --disable res_config_ldap \
+    --disable res_config_sqlite3 \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
   && \
