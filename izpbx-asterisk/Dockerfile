@@ -378,6 +378,8 @@ RUN set -xe && \
     --disable res_mwi_external_ami \
     --disable res_config_pgsql \
     --disable res_config_mysql \
+    --disable res_phoneprov \
+    --disable res_pjsip_phoneprov_provider \
   && \
   make && \
   make install && \
