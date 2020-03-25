@@ -1,11 +1,11 @@
 #!/bin/bash
-# initzero docker entrypoint generic script
+# initzero docker entrypoint init script
 # written by Ugo Viti <ugo.viti@initzero.it>
 # 20200315
 
 #set -x
 
-app_pre_hooks() {
+appHooks() {
   : ${APP_RUNAS:="false"}
   : ${ENTRYPOINT_TINI:="false"}
   : ${MULTISERVICE:="false"}
@@ -13,30 +13,36 @@ app_pre_hooks() {
   : ${APP_DESCRIPTION:=CHANGEME}
   : ${APP_VER:=""}
   : ${APP_VER_BUILD:=""}
-  echo "=> Starting container $APP_DESCRIPTION :: $APP_NAME:$APP_VER$([ ! -z "${APP_VER_BUILD}" ] && echo "-${APP_VER_BUILD}")"
-}
-
-app_post_hooks() {
+  echo "=> Starting container $APP_DESCRIPTION -> $APP_NAME:$APP_VER$([ ! -z "$APP_VER_BUILD" ] && echo "-$APP_VER_BUILD")"
+  echo "==============================================================================="
+  echo "=> Executing $APP_NAME hooks:"
   . /entrypoint-hooks.sh
+  echo "-------------------------------------------------------------------------------"
 }
 
 # exec app hooks
-app_pre_hooks
-app_post_hooks
-echo "========================================================================"
+appHooks
 
 # set default system umask before starting the container
-umask $UMASK
+[ ! -z "$UMASK" ] && umask $UMASK
 
-# use tini init manager if required
+# use tini init manager if defined in Dockerfile
 [ "$ENTRYPOINT_TINI" = "true" ] && ENTRYPOINT="tini -g --" || ENTRYPOINT=""
 
 # if this container will run multiple commands, override the entry point cmd
+echo "=> Executing $APP_NAME entrypoint command: $@"
+echo "==============================================================================="
 if [ "$MULTISERVICE" = "true" ]; then
   set -x
   exec $ENTRYPOINT runsvdir -P /etc/service
  else
-  set -x
   # run the process as user if specified
-  [ "${APP_RUNAS}" = "true" ] && exec $ENTRYPOINT runuser -p -u ${APP_USR} -- $@ || exec $ENTRYPOINT $@
+  if [ "$APP_RUNAS" = "true" ]; then
+      set -x
+      exec $ENTRYPOINT runuser -p -u $APP_USR -- $@
+    else
+      set -x
+      exec $ENTRYPOINT $@
+  fi
 fi
+exit $?

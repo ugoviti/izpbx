@@ -21,8 +21,8 @@ ENV APP_PORT_IAX          4569
 ENV APP_PORT_SIP          5060
 ENV APP_PORT_PJSIP        5160
 ENV APP_PORT_FOP          4445
-ENV APP_PORT_RTP_START    19000
-ENV APP_PORT_RTP_END      20000
+ENV APP_PORT_RTP_START    10000
+ENV APP_PORT_RTP_END      10200
 
 ## app users
 ENV APP_UID               1000
@@ -55,10 +55,13 @@ ARG SNGREP_VER=1.4.6
 
 ## install
 RUN set -xe && \
+  # import system information vars
   . /etc/os-release && \
   \
+  # install epel repository
   dnf -y install epel-release && \
   \
+  # centos 7 specific (legacy)
   [[ $VERSION_ID -le 7 ]] && \
     ln -s /usr/bin/yum /usr/bin/dnf && \
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
@@ -66,20 +69,43 @@ RUN set -xe && \
     yum-config-manager --enable remi 1>/dev/null && \
     yum-config-manager --enable remi-php73 1>/dev/null ; \
   \
+  # centos 8 specific
   [[ $VERSION_ID -ge 8 ]] && \
-    # install external repositories
+    # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
+    # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
+    # repo for lame command
     rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
+    # repo for posfix 3.5
+    rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-11.gf.el8.noarch.rpm && \
     \
-    dnf -y install dnf-plugins-core lame && \
-    dnf config-manager --set-enabled PowerTools remi && \
+    # install dnf plugins
+    dnf -y install dnf-plugins-core && \
+    # enable extra repository
+    dnf config-manager --set-enabled \
+      PowerTools \
+      remi \
+      rpmfusion-free-updates \
+      forensics \
+      gf-plus \
+      gf-testing \
+    && \
+    # install not upstream packages
+    # postfix > 3.4.x needed for docker logging to stdout
+    dnf -y install \
+      lame \
+      postfix3 \
+    && \
     # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
     dnf config-manager --set-disabled forensics && \
-    dnf -y module disable php && \
-    dnf -y module enable php:remi-7.3 ; \
+    # enable php 7.3 module
+    dnf module disable -y php && \
+    dnf module enable -y php:remi-7.3 ; \
   \
+  # upgrade the system
   dnf upgrade -y && \
+  # install mandatory packages
   dnf -y install \
     ffmpeg \
     rsync \
@@ -137,7 +163,6 @@ RUN set -xe && \
     php-gd \
     php-curl \
     mariadb \
-    postfix \
     diffutils \
     unzip \
     zip \
@@ -160,9 +185,13 @@ RUN set -xe && \
     net-snmp-agent-libs \
     lm_sensors-libs \
     libical \
+    libical-devel \
+    icu \
+    gcc-c++ \
+    make \
   && \
   \
-  : "---------- generate selfsigned certificate ----------" && \
+  : "---------- generate selfsigned certificate for 100 years duration ----------" && \
   openssl req -subj '/CN=izpbx/O=InitZero/C=IT' -new -newkey rsa:2048 -sha256 -days 36500 -nodes -x509 -keyout /etc/pki/tls/private/localhost.key -out /etc/pki/tls/certs/localhost.crt && \
   : "---------- clean temporary files ----------" && \
   dnf clean all && \
@@ -468,6 +497,7 @@ RUN set -xe && \
       presencestate \
       queues \
       timeconditions \
+      ucp \
       ; do \
   echo "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \

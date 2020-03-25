@@ -163,6 +163,38 @@ dirEmpty() {
     [ -z "$(ls -A "$1/")" ]
 }
 
+fixOwner() {
+  usr=$1
+  shift
+  grp=$1
+  shift
+  file="$@"
+  if [ -e "${file}" ]; then
+      if [ "$(stat -c "%U %G" "${file}")" != "${usr} ${grp}" ];then
+          echo "---> fixing owner: '${file}'"
+          chown ${usr}:${grp} "${file}"
+      fi
+    else
+      echo "---> WARNING: file or directory doesn't exist: '${file}'"
+  fi
+}
+
+fixPermission() {
+  usr=$1
+  shift
+  grp=$1
+  shift
+  file="$@"
+  if [ -e "${file}" ]; then
+      if [ "$(stat -c "%a" "${file}")" != "770" ];then
+          echo "---> fixing permission: '${file}'"
+          chmod 0770 "${file}"
+      fi
+    else
+      echo "---> WARNING: file or directory doesn't exist: '${file}'"
+  fi
+}
+
 # if required move default confgurations to custom directory
 symlinkDir() {
   local dirOriginal="$1"
@@ -172,20 +204,20 @@ symlinkDir() {
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
-    echo "---> INFO: Detected empty dir '$dirCustom'. Copying '$dirOriginal' to '$dirCustom'..."
+    echo "---> INFO: detected empty dir '$dirCustom'. copying '$dirOriginal' contents to '$dirCustom'..."
     rsync -a -q "$dirOriginal/" "$dirCustom/"
   fi
 
   # make directory if not exist
   if [ ! -e "$dirOriginal" ]; then
       # make destination dir if not exist
-      echo "---> WARNING: original data directory '$dirOriginal' doesn't exist... creating empty directory"
+      echo "---> WARNING: original data directory doesn't exist... creating empty directory: '$dirOriginal'"
       mkdir -p "$dirOriginal"
   fi
   
   # rename directory
   if [ -e "$dirOriginal" ]; then
-      echo "---> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
+      echo -e -n "---> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
       mv "$dirOriginal" "$dirOriginal".dist
   fi
   
@@ -203,13 +235,13 @@ symlinkFile() {
   if [ -e "$fileOriginal" ]; then
       # copy data files form original directory if destination is empty
       if [ ! -e "$fileCustom" ]; then
-        echo "---> INFO: Detected not existing file '$fileCustom'. Copying '$fileOriginal' to '$fileCustom'..."
+        echo "---> INFO: detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
         rsync -a -q "$fileOriginal" "$fileCustom"
       fi
-      echo "---> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
+      echo -e -n "---> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
-      echo "---> WARNING: original data file '$fileOriginal' doesn't exist... creating symlink from a not existing source"
+      echo "---> WARNING: original data file doesn't exist... creating symlink from a not existing source: '$fileOriginal'"
       #touch "$fileOriginal"
   fi
 
@@ -269,7 +301,7 @@ if [ ! -z "$RELAYHOST" ]; then
 		echo " without any authentication. Make sure your server is configured to accept emails coming from this IP."
 	fi
 else
-	echo "---> Will try to deliver emails directly to the final server. Make sure your DNS is setup properly!"
+	echo "---> postfix will try to deliver emails directly to the final server. make sure your DNS is setup properly!"
 	postconf -# relayhost
 	postconf -# smtp_sasl_auth_enable
 	postconf -# smtp_sasl_password_maps
@@ -321,6 +353,12 @@ sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 # configure /etc/aliases
 [ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
 [ ${ROOT_MAILTO} ] && echo "root: ${ROOT_MAILTO}" >> /etc/aliases && newaliases
+
+# enable logging to stdout
+postconf -e "maillog_file = /dev/stdout"
+
+# fix for send-mail: fatal: parameter inet_interfaces: no local interface found for ::1
+postconf -e "inet_protocols = ipv4"
 }
 
 ## cron service
@@ -380,7 +418,7 @@ iniParser() {
 
 ## fail2ban service
 cfgService_fail2ban() {
-  echo "--> Reconfiguring Fail2ban Settings..."
+  echo "--> reconfiguring Fail2ban settings..."
   # ini config file parse function
   # fix default log path
   echo "DEFAULT_LOGTARGET=/var/log/fail2ban/fail2ban.log" | iniParser /etc/fail2ban/fail2ban.conf
@@ -391,7 +429,7 @@ cfgService_fail2ban() {
 
 ## apache service
 cfgService_httpd() {
-  echo "---> Setting Apache ServerName to ${SERVERNAME}"
+  echo "--> setting Apache ServerName to ${SERVERNAME}"
   if   [ "$OS_RELEASE" = "debian" ]; then
     sed "s/#ServerName .*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/sites-enabled/000-default.conf"
     echo "ServerName ${SERVERNAME}" >> "${HTTPD_CONF_DIR}/apache2.conf"
@@ -401,8 +439,8 @@ cfgService_httpd() {
     sed "s/#LoadModule mpm_prefork_module/LoadModule mpm_prefork_module/" -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
     sed "s/LoadModule mpm_event_module/#LoadModule mpm_event_module/"     -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
     sed "s/^#ServerName.*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    sed "s/User apache/User asterisk/"               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    sed "s/Group apache/Group asterisk/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+    sed "s/User apache/User ${APP_USR}/"               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+    sed "s/Group apache/Group ${APP_GRP}/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
     # disable default ssl.conf and use virtual.conf instead if HTTPS_ENABLED=false
@@ -586,8 +624,8 @@ Charset=utf8" > /etc/odbc.ini
   [ ! -e "${freepbxDirs[ASTLOGDIR]}/full" ] && touch "${freepbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${freepbxDirs[ASTLOGDIR]}/full"
   
   # relink fwconsole and amportal if not exist
-  [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
-  [ ! -e "/usr/sbin/amportal" ]  && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/amportal  /usr/sbin/amportal
+  [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[AMPBIN]}/fwconsole /usr/sbin/fwconsole
+  [ ! -e "/usr/sbin/amportal" ]  && ln -s ${freepbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
 
   # FIXME: 20200318 freep 15 warnings workaround
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${freepbxDirs[ASTETCDIR]}/modules.conf
@@ -673,8 +711,8 @@ cfgService_freepbx_install() {
   
   if [ $RETVAL = 0 ]; then
     # fix paths and relink fwconsole and amportal if not exist
-    [ ! -e "/usr/sbin/fwconsole" ] && ln -s /var/lib/asterisk/bin/fwconsole /usr/sbin/fwconsole
-    [ ! -e "/usr/sbin/amportal" ]  && ln -s /var/lib/asterisk/bin/amportal  /usr/sbin/amportal
+    [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
+    [ ! -e "/usr/sbin/amportal" ]  && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/amportal  /usr/sbin/amportal
     
     # fix freepbx config file permissions
     if [ ! -z "${APP_DATA}" ]; then
@@ -738,10 +776,10 @@ cfgService_freepbx_install() {
       presencestate \
       queues \
       timeconditions \
+      printextensions \
       "
       # FIXME: 20200318 disabled because still not 15.0 released
       #bulkhandler \
-      #printextensions \
       #speeddial \
       #weakpasswords \
       
@@ -766,25 +804,7 @@ cfgService_freepbx_install() {
   fi
 }
 
-fixOwner() {
-  dir="$1"
-  if [ "$(stat -c "%U %G" "$dir")" != "${APP_USR} ${APP_GRP}" ];then
-      echo "---> fixing owner: '$dir'"
-      chown ${APP_USR}:${APP_GRP} "$dir"
-      #chmod 0770 "$dir"
-  fi
-}
-
-fixPermission() {
-  dir="$1"
-  if [ "$(stat -c "%a" "$dir")" != "770" ];then
-      echo "---> fixing permission: '$dir'"
-      chmod 0770 "$dir"
-  fi
-}
-
 runHooks() {
-  echo "=> Executing $APP_DESCRIPTION container hooks..."
   # configure supervisord
   echo "--> Fixing supervisord config file..."
   if   [ "$OS_RELEASE" = "debian" ]; then
@@ -804,13 +824,12 @@ runHooks() {
 
   # check and create missing container directory
   if [ ! -z "${APP_DATA}" ]; then  
-    echo "=> Persistent storage detected: ${APP_DATA}"
-    echo "--> Relocating and reconfiguring system data and configuration paths"
+    echo "=> Persistent storage path detected... relocating and reconfiguring system data and configuration files using base: ${APP_DATA}"
     for dir in ${appDataDirs[@]}
       do
         dir="${APP_DATA}${dir}"
         if [ ! -e "${dir}" ];then
-          echo "---> Creating missing dir: '$dir'"
+          echo "--> Creating missing dir: '$dir'"
           mkdir -p "${dir}"
         fi
       done
@@ -827,17 +846,17 @@ runHooks() {
   fi
 
   # check files and directory permissions
-  echo "---> Verifing files permissions"
+  echo "--> Verifing files permissions"
   for dir in ${appDataDirs[@]}; do
     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
-    [ -e "${dir}" ] && fixOwner "${dir}" || echo "---> WARNING: the directory doesn't exist: '${dir}'"
+    fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
   done
   for dir in ${appCacheDirs[@]}; do
-    fixOwner "${dir}"
+    fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
   done
   for file in ${appFilesConf[@]}; do
     [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
-    [ -e "${file}" ] && fixOwner "${file}" || echo "---> WARNING: the file doesn't exist: '${file}'"
+    fixOwner "${APP_USR}" "${APP_GRP}" "${file}"
   done
 
   # enable/disable and configure services
