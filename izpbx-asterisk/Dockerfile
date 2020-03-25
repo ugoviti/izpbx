@@ -53,60 +53,8 @@ ARG FOP2_VER=2.31.27
 # https://github.com/irontec/sngrep/releases
 ARG SNGREP_VER=1.4.6
 
-## install
-RUN set -xe && \
-  # import system information vars
-  . /etc/os-release && \
-  \
-  # install epel repository
-  dnf -y install epel-release && \
-  \
-  # centos 7 specific (legacy)
-  [[ $VERSION_ID -le 7 ]] && \
-    ln -s /usr/bin/yum /usr/bin/dnf && \
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
-    yum-config-manager --enable remi 1>/dev/null && \
-    yum-config-manager --enable remi-php73 1>/dev/null ; \
-  \
-  # centos 8 specific
-  [[ $VERSION_ID -ge 8 ]] && \
-    # repo for php 7.x
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
-    # repo for ffmpeg
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
-    # repo for lame command
-    rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
-    # repo for posfix 3.5
-    rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-11.gf.el8.noarch.rpm && \
-    \
-    # install dnf plugins
-    dnf -y install dnf-plugins-core && \
-    # enable extra repository
-    dnf config-manager --set-enabled \
-      PowerTools \
-      remi \
-      rpmfusion-free-updates \
-      forensics \
-      gf-plus \
-      gf-testing \
-    && \
-    # install not upstream packages
-    # postfix > 3.4.x needed for docker logging to stdout
-    dnf -y install \
-      lame \
-      postfix3 \
-    && \
-    # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
-    dnf config-manager --set-disabled forensics && \
-    # enable php 7.3 module
-    dnf module disable -y php && \
-    dnf module enable -y php:remi-7.3 ; \
-  \
-  # upgrade the system
-  dnf upgrade -y && \
-  # install mandatory packages
-  dnf -y install \
+## install packages
+ENV ASTERISK_INSTALL_DEPS=' \
     ffmpeg \
     rsync \
     net-tools \
@@ -190,7 +138,62 @@ RUN set -xe && \
     gcc-c++ \
     make \
     python2 \
-  && \
+  '
+
+RUN set -xe && \
+  # import system information vars
+  . /etc/os-release && \
+  \
+  # install epel repository
+  dnf -y install epel-release && \
+  \
+  # centos 7 specific (legacy)
+  [[ $VERSION_ID -le 7 ]] && \
+    ln -s /usr/bin/yum /usr/bin/dnf && \
+    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
+    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
+    yum-config-manager --enable remi 1>/dev/null && \
+    yum-config-manager --enable remi-php73 1>/dev/null ; \
+  \
+  # centos 8 specific
+  [[ $VERSION_ID -ge 8 ]] && \
+    # repo for php 7.x
+    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
+    # repo for ffmpeg
+    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
+    # repo for lame command
+    rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
+    # repo for posfix 3.5
+    rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-11.gf.el8.noarch.rpm && \
+    \
+    # install dnf plugins
+    dnf -y install dnf-plugins-core && \
+    # enable extra repository
+    dnf config-manager --set-enabled \
+      PowerTools \
+      remi \
+      rpmfusion-free-updates \
+      forensics \
+      gf-plus \
+      gf-testing \
+    && \
+    # install not upstream packages
+    # postfix > 3.4.x needed for docker logging to stdout
+    dnf -y install \
+      lame \
+      postfix3 \
+    && \
+    # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
+    dnf config-manager --set-disabled forensics && \
+    # enable php 7.3 module
+    dnf module disable -y php && \
+    dnf module enable -y php:remi-7.3 ; \
+  \
+  # upgrade the system
+  dnf upgrade -y && \
+  # install mandatory packages
+  dnf install -y $ASTERISK_INSTALL_DEPS && \
+  dnf mark install $ASTERISK_INSTALL_DEPS && \
   \
   : "---------- generate selfsigned certificate for 100 years duration ----------" && \
   openssl req -subj '/CN=izpbx/O=InitZero/C=IT' -new -newkey rsa:2048 -sha256 -days 36500 -nodes -x509 -keyout /etc/pki/tls/private/localhost.key -out /etc/pki/tls/certs/localhost.crt && \
@@ -451,31 +454,18 @@ RUN set -xe && \
   \
   [[ $APP_DEBUG -eq 0 ]] && \
   : "---------- Clean temporary files ----------" && \
-  dnf -y remove $ASTERISK_BUILD_DEPS \
-    -x diffutils \
-    -x unzip \
-    -x zip \
-    -x uriparser \
-   && \
-   dnf clean all && \
-   rm -rf /var/cache/yum /tmp /usr/src && \
-   mkdir -p /usr/src /tmp && chmod 1777 /tmp ; \
-   : "---------- ALL builds finished ----------" 
+  dnf remove -y $ASTERISK_BUILD_DEPS \
+    -x gcc-c++ \
+    -x make \
+    -x libical-devel \
+  && \
+  dnf clean all && \
+  rm -rf /var/cache/yum /tmp /usr/src && \
+  mkdir -p /usr/src /tmp && chmod 1777 /tmp ; \
+  : "---------- ALL builds finished ----------" 
 
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
-
-RUN set -xe && \
-  : "---------- Install FOP2 ----------" && \
-  cd /usr/src && \
-  mkdir fop2 && \
-  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz --strip 1 -C fop2 && \
-  cd fop2 && \
-#  ./configure --prefix=/usr && \
-#  make && \
-#  make install && \
-#  ldconfig && \
-  : "---------- END Install ----------"
 
 ## download freepbx and modules for offline install
 # modules xml url: http://mirror1.freepbx.org/modules-15.0.xml
@@ -537,6 +527,25 @@ RUN set -xe && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key" && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
 
+# install other componets
+RUN set -xe && \
+  : "---------- START Install izsynth ----------" && \
+  cd /usr/src && \
+  curl -fSL --connect-timeout 30 https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -o /usr/local/bin/izsynth && \
+  chmod 755 /usr/local/bin/izsynth && \
+  : "---------- END Install ----------" && \
+  \
+  : "---------- START Install FOP2 ----------" && \
+  cd /usr/src && \
+  mkdir fop2 && \
+  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz --strip 1 -C fop2 && \
+  cd fop2 && \
+#  ./configure --prefix=/usr && \
+#  make && \
+#  make install && \
+#  ldconfig && \
+  : "---------- END Install ----------"
+  
 # set pemissions
 RUN set -xe && \
   chown -R ${APP_USR}:${APP_GRP} \
