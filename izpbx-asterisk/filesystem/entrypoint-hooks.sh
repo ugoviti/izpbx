@@ -633,7 +633,7 @@ Charset=utf8" > /etc/odbc.ini
 
   # reconfigure freepbx from env variables
   echo "--> Reconfiguring FreePBX Advanced Settings if needed..."
-  set | grep ^FREEPBX_ | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
+  set | grep ^"FREEPBX_" | grep -v ^"FREEPBX_MODULES_" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
     k="$(echo $setting | awk '{print $1}')"
     v="$(echo $setting | awk '{print $2}')"
     currentVal=$(fwconsole setting $k | awk -F"[][{}]" '{print $2}')
@@ -662,7 +662,7 @@ Charset=utf8" > /etc/odbc.ini
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
   
-  # reload asterisk
+  # reload freepbx config
   #echo "--> Reloading FreePBX..."
   #su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
 }
@@ -671,14 +671,25 @@ cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> INFO: New installation detected! installing FreePBX in 30 seconds... try:[$n/$t]"
-  
+  echo "=> INFO: New installation detected! installing FreePBX... try:[$n/$t]"
   cd /usr/src/freepbx
   
   # start asterisk if it's not running
   if ! asterisk -r -x "core show version" 2>/dev/null ; then ./start_asterisk start ; fi
   
-  sleep 30
+  # verify and wait if mysql is ready
+  myn=1 ; myt=10
+  until [ $myn -eq $myt ]; do
+    mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "SELECT 1;" >/dev/null
+    RETVAL=$?
+    if [ $RETVAL = 0 ]; then
+        myn=$myt
+      else
+        let myn+=1
+        echo "--> WARNING: cannot connect to MySQL database '${MYSQL_SERVER}'... waiting database to become ready... retrying in 10 seconds... try:[$myn/$myt]"
+        sleep 10
+    fi
+  done
   
   # FIXME: allow asterisk user to manage asteriskcdrdb database
   mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS asteriskcdrdb"
@@ -699,11 +710,13 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --ampplayback=${AMPPLAYBACK}"
 
   echo "--> Installing FreePBX in '${AMPWEBROOT}'"
+  echo "---> START install FreePBX @ $(date)"
   # https://github.com/FreePBX/announcement/archive/release/15.0.zip
   set -x
-  ./install -n --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} ${FPBX_OPTS}
+  ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} ${FPBX_OPTS}
   RETVAL=$?
   set +x
+  echo "---> END install FreePBX @ $(date)"
   unset FPBX_OPTS
  
   # TEST:
@@ -714,7 +727,7 @@ cfgService_freepbx_install() {
     # fix paths and relink fwconsole and amportal if not exist
     [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
     [ ! -e "/usr/sbin/amportal" ]  && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/amportal  /usr/sbin/amportal
-    
+      
     # fix freepbx config file permissions
     if [ ! -z "${APP_DATA}" ]; then
       for file in ${appFilesConf[@]}; do
@@ -727,25 +740,32 @@ cfgService_freepbx_install() {
     fi
    
     FREEPBX_MODULES_CORE="
-      core
       framework
+      core
+      dashboard
+      sipsettings
+      voicemail
+    "
+
+    # ordered install
+    FREEPBX_MODULES_PRE="
+      userman
+    "
+    
+    FREEPBX_MODULES_EXTRA="
+      soundlang
       callrecording
       cdr
       conferences
       customappsreg
-      dashboard
       featurecodeadmin
       infoservices
       logfiles
       music
-      pm2
+      manager
+      arimanager
+      filestore
       recordings
-      sipsettings
-      voicemail
-      soundlang
-    "
-
-    FREEPBX_MODULES_EXTRA="
       announcement
       asteriskinfo
       backup
@@ -762,36 +782,49 @@ cfgService_freepbx_install() {
       iaxsettings
       miscapps
       miscdests
-      userman
       ivr
       parking
       phonebook
       presencestate
-      queues
-      timeconditions
       printextensions
+      queues
+      cel
+      timeconditions
+      pm2
     "
 
-    echo "--> Installing CORE FreePBX modules..."
-    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${FREEPBX_MODULES_CORE}"
- 
+    FREEPBX_MODULES_DISABLED="
+      bulkhandler
+      speeddial
+      weakpasswords
+      ucp
+    "
     echo "--> Enabling EXTENDED FreePBX repo..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
-    echo "--> Copying extra FreePBX modules to ${freepbxDirs[AMPWEBROOT]}/admin/modules"
-    for module in ${FREEPBX_MODULES_EXTRA}; do rsync -a amp_conf/htdocs/admin/modules/${modules}/ ${freepbxDirs[AMPWEBROOT]}/admin/modules/${modules}/ ; done
+    echo "--> Installing Prerequisite FreePBX modules from local install into '${freepbxDirs[AMPWEBROOT]}/admin/modules'"
+    for module in ${FREEPBX_MODULES_PRE}; do
+      su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
+    done
 
-    echo "--> Installing extra FreePBX modules..."
-    su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${FREEPBX_MODULES_EXTRA}"
-
-    # FIXME: 20200318 disabled because still not 15.0 released
-    #bulkhandler \
-    #speeddial \
-    #weakpasswords \
-      
-    # fix freepbx permissions
+    # fix freepbx and asterisk permissions
+    echo "--> Fixing FreePBX permissions..."
     fwconsole chown
+
+    echo "--> Reloading FreePBX..."
+    su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+    
+    echo "--> Installing Extra FreePBX modules from local install into '${freepbxDirs[AMPWEBROOT]}/admin/modules'"
+    for module in ${FREEPBX_MODULES_EXTRA}; do
+      su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
+    done
+
+    echo "--> Reloading FreePBX..."
+    su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+
+    # pause forevere here
+    #while true ; do sleep 10 ; done
   fi
 
   if [ $RETVAL = 0 ]; then

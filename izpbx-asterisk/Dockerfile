@@ -443,13 +443,6 @@ RUN set -xe && \
 # NOTE: asterisk build
 # to get the options passed below: menuselect/menuselect --list-options
 
-# set pemissions
-RUN set -xe && \
-  chown -R ${APP_USR}:${APP_GRP} \
-    /etc/asterisk \
-    /var/lib/asterisk \
-    /var/spool/asterisk
-
 RUN set -xe && \
   : "---------- Install FOP2 ----------" && \
   cd /usr/src && \
@@ -477,29 +470,38 @@ RUN set -xe && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
       announcement \
+      arimanager \
       asteriskinfo \
       backup \
+      calendar \
       callforward \
       callwaiting \
-      daynight \
-      calendar \
+      cel \
       certman \
       cidlookup \
       contactmanager \
+      daynight \
       donotdisturb \
       fax \
+      filestore \
       findmefollow \
       iaxsettings \
+      ivr \
+      manager \
       miscapps \
       miscdests \
-      userman \
-      ivr \
       parking \
       phonebook \
       presencestate \
+      printextensions \
       queues \
+      soundlang \
       timeconditions \
+      userman \
       ucp \
+      bulkhandler \
+      speeddial \
+      weakpasswords \
       ; do \
   echo "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
@@ -513,6 +515,13 @@ RUN set -xe && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key" && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
 
+# set pemissions
+RUN set -xe && \
+  chown -R ${APP_USR}:${APP_GRP} \
+    /etc/asterisk \
+    /var/lib/asterisk \
+    /var/spool/asterisk
+  
 # exposed ports
 EXPOSE \
   ${APP_PORT_HTTP}/tcp \
