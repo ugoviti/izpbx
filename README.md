@@ -153,9 +153,22 @@ FAIL2BAN_ENABLED=true
 
 # FreePBX Best Practices
 
+  * **Settings-->Advanced Settings**
+    * CW Enabled by Default: **NO**
+    * Country Indication Tones: **Italy**
+    * Ringtime Default: **60 seconds*
+    * Speaking Clock Time Format: **24H**
+    * PHP Timezone: **Europe/Rome**
   * **Settings-->Asterisk Logfile Settings**
     * File Name: **security**
     * Security: **ON** (all others OFF)
+  * **Admin-->Caller ID Lookup Sources
+    * Source Description: **ContactManager**
+    * Source type: **Contact Manager**
+    * Cache Results: **No**
+    * Contact Manager Group(s): **All selected**
+  * **Admin-->Sound Languages-->Setttings
+    * Global Language: **Italian**
 
 # Quick reference
 

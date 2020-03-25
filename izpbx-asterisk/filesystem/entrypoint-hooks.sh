@@ -671,7 +671,7 @@ cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FreePBX for first time... try:[$n/$t]"
+  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FreePBX for the first time... try:[$n/$t]"
   cd /usr/src/freepbx
   
   # start asterisk if it's not running
