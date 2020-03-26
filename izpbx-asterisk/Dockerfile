@@ -213,6 +213,7 @@ RUN set -xe && \
 
 # Development Debug mode
 ARG APP_DEBUG=0
+ENV APP_DEBUG=${APP_DEBUG}
 
 # copy external sources files
 ADD build/ /usr/src/
@@ -454,7 +455,7 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END Build ----------" && \
   \
-  [[ $APP_DEBUG -eq 0 ]] && \
+  [[ ${APP_DEBUG} -eq 0 ]] && \
   : "---------- Clean temporary files ----------" && \
   dnf remove -y $ASTERISK_BUILD_DEPS \
     -x gcc-c++ \

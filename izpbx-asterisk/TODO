@@ -1,10 +1,9 @@
 TODO:
 ======================
-httpd: Allow from
-fop2 (WIP)
-reload si pianta: causato da: /usr/bin/gpg --keyserver pool.sks-keyservers.net
-capire come mai alcuni pacchetti udp sulla 5060 arrivano dal default gateway (sembra risolvere con /etc/docker/daemon.json: {"userland-proxy": true}
-fail2ban: bloccare flood: SecurityEvent="ChallengeSent"
+- httpd: Allow from
+- zabbix agent
+- reload si pianta: causato da: /usr/bin/gpg --keyserver pool.sks-keyservers.net
+- fail2ban: block flood: SecurityEvent="ChallengeSent"
 
 
 DONE:
@@ -16,7 +15,8 @@ DONE:
 - backup restore incrista tutto e floodda i log con questo: (provare con mariadb 10.3)
   ob_end_clean(): failed to discard buffer of zlib output compression
 - modificare sipsettings in fase di startup usando variabili esterne
-  
+- fop2
+- capire come mai alcuni pacchetti udp sulla 5060 arrivano dal default gateway (sembra risolvere con /etc/docker/daemon.json: {"userland-proxy": true}
   
 Problemi da risolvere:
 ======================

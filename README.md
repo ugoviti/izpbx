@@ -15,8 +15,8 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 
 
 # Features
-- Really fast initial boostrap (under 60 seconds to deploy a full stack Asterisk+FreePBX system)
-- CentOS 8 powered
+- 60secs install... from zero to running a full features PBX... really fast initial boostrap to deploy a full stack Asterisk+FreePBX system
+- CentOS 8 64bit powered
 - Small image footprint
 - Compiled from scratch latest stable Asterisk engine
 - FreePBX Engine as Web Management GUI
