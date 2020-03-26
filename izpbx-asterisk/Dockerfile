@@ -138,6 +138,8 @@ ENV ASTERISK_INSTALL_DEPS=' \
     gcc-c++ \
     make \
     python2 \
+    libnsl \
+    which \
   '
 
 RUN set -xe && \
@@ -533,17 +535,6 @@ RUN set -xe && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -o /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
-  : "---------- END Install ----------" && \
-  \
-  : "---------- START Install FOP2 ----------" && \
-  cd /usr/src && \
-  mkdir fop2 && \
-  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz | tar xz --strip 1 -C fop2 && \
-  cd fop2 && \
-#  ./configure --prefix=/usr && \
-#  make && \
-#  make install && \
-#  ldconfig && \
   : "---------- END Install ----------"
   
 # set pemissions

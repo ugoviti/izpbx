@@ -28,7 +28,7 @@ declare -A appDataDirs=(
   [ASTLOGDIR]=/var/log/asterisk
   [F2BLOGDIR]=/var/log/fail2ban
   [F2BLIBDIR]=/var/lib/fail2ban
-  [FOP2LOGDIR]=/var/log/fop2
+  [FOP2APPDIR]=/usr/local/fop2
 )
 
 declare -A appFilesConf=(
@@ -76,9 +76,9 @@ declare -A freepbxSipSettings=(
 )
 
 # 20200318 still not used
-declare -A freepbxIaxSettings=(
-  [bindport]=${APP_PORT_IAX}
-)
+#declare -A freepbxIaxSettings=(
+#  [bindport]=${APP_PORT_IAX}
+#)
 
 ## other variables
 # mysql configuration
@@ -88,11 +88,17 @@ declare -A freepbxIaxSettings=(
 : ${MYSQL_USER:="asterisk"}
 : ${MYSQL_PASSWORD:=""}
 
+# fop2 (automaticcally obtained quering freepbx settings)
+#: ${FOP2_AMI_HOST:="localhost"}
+#: ${FOP2_AMI_PORT:="5038"}
+#: ${FOP2_AMI_USERNAME:="admin"}
+#: ${FOP2_AMI_PASSWORD:="amp111"}
+
 ## hostname configuration
 [ ! -z ${APP_FQDN} ] && HOSTNAME="${APP_FQDN}" # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
 
-## supervisord services
+## default supervisord services status
 #: ${SYSLOG_ENABLED:="true"}
 #: ${POSTFIX_ENABLED:="true"}
 : ${CRON_ENABLED:="true"}
@@ -103,6 +109,7 @@ declare -A freepbxIaxSettings=(
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
 : ${POSTFIX_ENABLED:="true"}
+: ${FOP2_ENABLED:="false"}
 
 ## daemons configs
 : ${RELAYHOST:=""}
@@ -846,6 +853,34 @@ cfgService_freepbx_install() {
   fi
 }
 
+cfgService_fop2 () {
+  [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
+
+  if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ];then
+    # obtain asterisk manager configs from freepbx
+    
+    : ${FOP2_AMI_HOST:="$(fwconsole setting ASTMANAGERHOST | awk -F"[][{}]" '{print $2}')"}
+    : ${FOP2_AMI_PORT:="$(fwconsole setting ASTMANAGERPORT | awk -F"[][{}]" '{print $2}')"}
+    : ${FOP2_AMI_USERNAME:="$(fwconsole setting AMPMGRUSER | awk -F"[][{}]" '{print $2}')"}
+    : ${FOP2_AMI_PASSWORD:="$(fwconsole setting AMPMGRPASS | awk -F"[][{}]" '{print $2}')"}
+  
+    # reconfigure fop2.cfg
+    sed "s|^manager_host.*=.*|manager_host=${FOP2_AMI_HOST}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    sed "s|^manager_port.*=.*|manager_port=${FOP2_AMI_PORT}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    sed "s|^manager_user.*=.*|manager_user=${FOP2_AMI_USERNAME}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    sed "s|^manager_secret.*=.*|manager_secret=${FOP2_AMI_PASSWORD}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+  fi
+}
+
+cfgService_fop2_install() {
+  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FOP2"
+  wget -O - http://download.fop2.com/install_fop2.sh | bash
+  pkill fop2_server
+
+  # FIXME: right now you must run that command from an exec shell into your container
+  # ${appDataDirs[FOP2APPDIR]}/fop2_server --code ${FOP2_LICENSE_CODE}
+}
+
 runHooks() {
   # configure supervisord
   echo "--> Fixing supervisord config file..."
@@ -909,6 +944,7 @@ runHooks() {
   chkService HTTPD_ENABLED
   chkService ASTERISK_ENABLED
   chkService IZPBX_ENABLED
+  chkService FOP2_ENABLED
   
   # generate SSL Certificates used for HTTPS
   [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt

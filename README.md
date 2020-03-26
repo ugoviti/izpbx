@@ -15,9 +15,10 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 
 
 # Features
+- Really fast initial boostrap (under 60 seconds to deploy a full stack Asterisk+FreePBX system)
 - CentOS 8 powered
 - Small image footprint
-- Built from scratch Asterisk engine
+- Compiled from scratch latest stable Asterisk engine
 - FreePBX Engine as Web Management GUI
 - Persistent storage for configuration data
 - Automatic HTTPS Certificate management via Let's Encrypt service
@@ -40,7 +41,7 @@ Using docker-compose is the suggested method:
 git clone https://github.com/ugoviti/izdock-izpbx.git
 ```
 
-- Create file: `/etc/docker/daemon.json`
+- Create file: `/etc/docker/daemon.json` (needed to manage SIP/RTP UDP traffic without nat of docker gateway)
 
 ```
 {
