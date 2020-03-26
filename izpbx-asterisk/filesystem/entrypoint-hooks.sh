@@ -418,7 +418,7 @@ iniParser() {
   while read setting ; do
     section="$(echo $setting | awk -F"_" '{print $1}')"
     k=$(echo $setting | sed -e "s/^${section}_//" | awk -F"=" '{print $1}' | tr '[:upper:]' '[:lower:]')
-    v=$(echo $setting | awk -F"=" '{print $2}')
+    v=$(echo $setting | sed -e "s/'//g" | awk -F"=" '{print $2}')
     sed -i "/^\[${section}\]$/I,/^\[/ s|^${k}.*=.*|${k} = ${v}|I" "${ini}"
   done
 }

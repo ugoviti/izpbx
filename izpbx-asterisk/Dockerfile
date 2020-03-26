@@ -213,7 +213,6 @@ RUN set -xe && \
 
 # Development Debug mode
 ARG APP_DEBUG=0
-ENV APP_DEBUG=${APP_DEBUG}
 
 # copy external sources files
 ADD build/ /usr/src/
@@ -445,7 +444,7 @@ RUN set -xe && \
   : "---------- START Build sngrep ----------" && \
   cd /usr/src && \
   mkdir sngrep && \
-  curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/releases/download/v${SNGREP_VER}/sngrep-${SNGREP_VER}.tar.gz | tar xz --strip 1 -C sngrep && \
+  curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/archive/v${SNGREP_VER}.tar.gz | tar xz --strip 1 -C sngrep && \
   cd sngrep && \
   dnf -y install libpcap libpcap-devel && \
   ./bootstrap.sh && \
