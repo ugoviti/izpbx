@@ -1,12 +1,10 @@
 TODO:
 ======================
-fop2
-soundlang it iz
+httpd: Allow from
+fop2 (WIP)
 reload si pianta: causato da: /usr/bin/gpg --keyserver pool.sks-keyservers.net
-capire come mai alcuni apcchetti udp sulla 5060 arrivano dal default gateway (sembra risolvere con /etc/docker/daemon.json: {"userland-proxy": true}
-
-fail2ban:
- bloccare flood: SecurityEvent="ChallengeSent"
+capire come mai alcuni pacchetti udp sulla 5060 arrivano dal default gateway (sembra risolvere con /etc/docker/daemon.json: {"userland-proxy": true}
+fail2ban: bloccare flood: SecurityEvent="ChallengeSent"
 
 
 DONE:

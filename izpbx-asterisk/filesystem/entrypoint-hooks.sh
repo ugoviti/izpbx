@@ -854,7 +854,7 @@ cfgService_freepbx_install() {
 }
 
 cfgService_fop2 () {
-  [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
+  [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
 
   if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ];then
     # obtain asterisk manager configs from freepbx
@@ -874,8 +874,10 @@ cfgService_fop2 () {
 
 cfgService_fop2_install() {
   echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FOP2"
+  fwconsole start
   wget -O - http://download.fop2.com/install_fop2.sh | bash
   pkill fop2_server
+  fwconsole stop
 
   # FIXME: right now you must run that command from an exec shell into your container
   # ${appDataDirs[FOP2APPDIR]}/fop2_server --code ${FOP2_LICENSE_CODE}
