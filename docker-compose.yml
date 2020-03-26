@@ -8,7 +8,6 @@ services:
     container_name: izpbx
     hostname: ${APP_FQDN}
     image: izdock/izpbx-asterisk:16
-    #network_mode: bridge
     restart: always
     depends_on:
     - db
@@ -33,7 +32,8 @@ services:
     cap_add:
     - NET_ADMIN
     privileged: true
-    #network_mode: "host"
+    #network_mode: host
+    #network_mode: bridge
     networks:
     - izpbx
     
@@ -42,7 +42,6 @@ services:
     image: mariadb:10.4
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: always
-    #network_mode: bridge
     #ports:
     #- ${APP_PORT_MYSQL}:3306
     volumes:
@@ -54,6 +53,7 @@ services:
     - MYSQL_DATABASE
     - MYSQL_USER
     - MYSQL_PASSWORD
-    #network_mode: "host"
+    #network_mode: host
+    #network_mode: bridge
     networks:
     - izpbx
