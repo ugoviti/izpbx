@@ -73,7 +73,7 @@ docker-compose up -d
 MYSQL_ROOT_PASSWORD=CHANGEM3
 MYSQL_PASSWORD=CHANGEM3
 
-# if the pbx is exposed to internet and want generate autoconfigure virtualhosting based on the following FQDN (default: none)
+# if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
 #APP_FQDN=pbx.example.com
 
 # enable https protocols (default: true)
@@ -98,7 +98,7 @@ APP_PORT_PJSIP=5060
 APP_PORT_SIP=5160
 APP_PORT_IAX=4569
 APP_PORT_RTP_START=10000
-APP_PORT_RTP_END=10100
+APP_PORT_RTP_END=10200
 APP_PORT_FOP=4445
 # database configurations (WARNING: if you comment out, will expose database port outside the container)
 APP_PORT_MYSQL=3306
@@ -111,6 +111,7 @@ MYSQL_USER=asterisk
 # fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
 FAIL2BAN_ENABLED=true
 FAIL2BAN_ASTERISK_ENABLED=true
+#FAIL2BAN_ASTERISK_LOGPATH=/var/log/asterisk/security
 FAIL2BAN_DEFAULT_SENDER=fail2ban@example.com
 FAIL2BAN_DEFAULT_DESTEMAIL=security@example.com
 FAIL2BAN_DEFAULT_IGNOREIP=127.0.0.0/8
@@ -142,22 +143,29 @@ FREEPBX_PHPTIMEZONE=Europe/Rome
 # WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559
 FREEPBX_SIGNATURECHECK=0
 
+# fop2 configuration (https://www.fop2.com/docs/)
+#FOP2_LICENSE_CODE=<put here your license code>
+## the following variables are not mandatory, you can leave commented
+#FOP2_AMI_HOST=localhost
+#FOP2_AMI_PORT=5038
+#FOP2_AMI_USERNAME=admin
+#FOP2_AMI_PASSWORD=amp111
+
 # services
 POSTFIX_ENABLED=true
 CRON_ENABLED=true
 HTTPD_ENABLED=true
 IZPBX_ENABLED=true
 FAIL2BAN_ENABLED=true
-# FOP2 WIP
-#FOP2_ENABLED=false
+#FOP2_ENABLED=true
 ```
 
-# FreePBX Best Practices
+# FreePBX Configuration Best Practices
 
 * **Settings-->Advanced Settings**
   * CW Enabled by Default: **NO**
   * Country Indication Tones: **Italy**
-  * Ringtime Default: **60 seconds*
+  * Ringtime Default: **60 seconds**
   * Speaking Clock Time Format: **24H**
   * PHP Timezone: **Europe/Rome**
   
