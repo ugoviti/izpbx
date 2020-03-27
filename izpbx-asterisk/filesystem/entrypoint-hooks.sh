@@ -94,6 +94,11 @@ declare -A fpbxSipSettings=(
 #: ${FOP2_AMI_USERNAME:="admin"}
 #: ${FOP2_AMI_PASSWORD:="amp111"}
 
+# apache httpd configuration
+: ${HTTPD_HTTPS_ENABLED:="true"}
+: ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
+: ${HTTPD_ALLOW_FROM:=""}
+
 ## hostname configuration
 [ ! -z ${APP_FQDN} ] && HOSTNAME="${APP_FQDN}" # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
@@ -103,8 +108,6 @@ declare -A fpbxSipSettings=(
 #: ${POSTFIX_ENABLED:="true"}
 : ${CRON_ENABLED:="true"}
 : ${HTTPD_ENABLED:="true"}
-: ${HTTPS_ENABLED:="true"}
-: ${HTTP_REDIRECT_TO_HTTPS:="false"}
 : ${ASTERISK_ENABLED:="false"}
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
@@ -450,27 +453,38 @@ cfgService_httpd() {
     sed "s/Group apache/Group ${APP_GRP}/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
-    # disable default ssl.conf and use virtual.conf instead if HTTPS_ENABLED=false
-    [ "${HTTPS_ENABLED}" = "true" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
+    # disable default ssl.conf and use virtual.conf instead if HTTPD_HTTPS_ENABLED=false
+    [ "${HTTPD_HTTPS_ENABLED}" = "true" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
 
+
+print_AllowFrom() {
+  if [ ! -z "${HTTPD_ALLOW_FROM}" ]; then 
+      for IP in $(echo ${HTTPD_ALLOW_FROM} | sed -e "s/'//g") ; do
+        echo "    Require ip ${IP}"
+      done
+  else
+      echo "    Require all granted"
+  fi
+}
+    
     echo "
 # default HTTP virtualhost
 <VirtualHost *:${APP_PORT_HTTP}>
   DocumentRoot /var/www/html
+$(if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
+echo "  <IfModule mod_rewrite.c>
+    RewriteEngine on
+    RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
+    RewriteCond %{HTTPS} off
+    #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+    RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+  </IfModule>"
+fi)
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-    Require all granted
+$(print_AllowFrom)
   </Directory>
-$(if [ "${HTTP_REDIRECT_TO_HTTPS}" = "true" ]; then
-echo "<IfModule mod_rewrite.c>
-  RewriteEngine on
-  RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
-  RewriteCond %{HTTPS} off
-  #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
-  RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-</IfModule>"
-fi)
 </VirtualHost>
 
 $(if [ ! -z "${APP_FQDN}" ]; then
@@ -478,13 +492,9 @@ echo "
 # HTTP virtualhost
 <VirtualHost *:${APP_PORT_HTTP}>
   ServerName ${APP_FQDN}
-  <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
-    AllowOverride All
-    Require all granted
-  </Directory>
-$(if [ "${HTTP_REDIRECT_TO_HTTPS}" = "true" ]; then
-echo "<IfModule mod_rewrite.c>
+$(if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
+echo "# enable http to https automatic rewrite
+<IfModule mod_rewrite.c>
   RewriteEngine on
   RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
   RewriteCond %{HTTPS} off
@@ -492,30 +502,28 @@ echo "<IfModule mod_rewrite.c>
   RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 </IfModule>"
 fi)
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+$(print_AllowFrom)
+  </Directory>
 </VirtualHost>"
 fi)
 
-$(if [ "${HTTPS_ENABLED}" = "true" ]; then
-echo "
-# Enable HTTPS listening
+$(if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
+echo "# Enable HTTPS listening
 Listen ${APP_PORT_HTTPS} https
 SSLPassPhraseDialog    exec:/usr/libexec/httpd-ssl-pass-dialog
 SSLSessionCache        shmcb:/run/httpd/sslcache(512000)
 SSLSessionCacheTimeout 300
-SSLCryptoDevice        builtin
-"
+SSLCryptoDevice        builtin"
 fi)
 
 $(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
-echo "
-# HTTPS virtualhost
+echo "# HTTPS virtualhost
 <VirtualHost *:${APP_PORT_HTTPS}>
   ServerName ${APP_FQDN}
-  <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
-    AllowOverride All
-    Require all granted
-  </Directory>
+
   SSLEngine on
   SSLHonorCipherOrder on
   SSLCipherSuite PROFILE=SYSTEM
@@ -523,13 +531,17 @@ echo "
   SSLCertificateChainFile /etc/letsencrypt/live/${APP_FQDN}/chain.pem
   SSLCertificateFile      /etc/letsencrypt/live/${APP_FQDN}/cert.pem
   SSLCertificateKeyFile   /etc/letsencrypt/live/${APP_FQDN}/privkey.pem
-</VirtualHost>
-"
+
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+$(print_AllowFrom)
+  </Directory>
+</VirtualHost>"
 fi)
 
-$(if [[ "${HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]]; then
-echo "
-# enable default ssl virtualhost with self signed certificate
+$(if [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]]; then
+echo "# enable default ssl virtualhost with self signed certificate
 <VirtualHost _default_:${APP_PORT_HTTPS}>
   ErrorLog logs/ssl_error_log
   TransferLog logs/ssl_access_log
@@ -540,15 +552,15 @@ echo "
   SSLProxyCipherSuite PROFILE=SYSTEM
   SSLCertificateFile /etc/pki/tls/certs/localhost.crt
   SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+  
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-    Require all granted
+$(print_AllowFrom)
   </Directory>
 </VirtualHost>
 "
 fi)
-
 " > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
   fi
 }
