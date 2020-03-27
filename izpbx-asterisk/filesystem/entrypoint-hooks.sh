@@ -43,7 +43,7 @@ declare -A appCacheDirs=(
   [PHPWSDLDIR]=/var/lib/php/wsdlcache
 )
 
-declare -A freepbxDirs=(
+declare -A fpbxDirs=(
   [AMPWEBROOT]=/var/www/html
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
@@ -58,16 +58,16 @@ declare -A freepbxDirs=(
   [CERTKEYLOC]=/etc/asterisk/keys               
 )
 
-declare -A freepbxDirsExtra=(
+declare -A fpbxDirsExtra=(
   [ASTMODDIR]=/usr/lib64/asterisk/modules
 )
 
-declare -A freepbxFilesLog=(
+declare -A fpbxFilesLog=(
   [FPBXDBUGFILE]=/var/log/asterisk/freepbx-debug.log
   [FPBX_LOG_FILE]=/var/log/asterisk/freepbx.log
 )
 
-declare -A freepbxSipSettings=(
+declare -A fpbxSipSettings=(
   [rtpstart]=${APP_PORT_RTP_START}
   [rtpend]=${APP_PORT_RTP_END}
   [udpport-0.0.0.0]=${APP_PORT_PJSIP}
@@ -561,19 +561,6 @@ cfgService_asterisk() {
 cfgService_izpbx() {
   echo "=> Verifing FreePBX configurations"
 
-  echo "--> Configuring FreePBX ODBC"
-  # fix mysql odbc inst file path
-  sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmaodbc.so/' /etc/odbcinst.ini
-  # create mysql odbc
-  echo "[MySQL-asteriskcdrdb]
-Description = MariaDB connection to 'asteriskcdrdb' database
-driver = MySQL
-server = ${MYSQL_SERVER}
-database = asteriskcdrdb
-Port = 3306
-option = 3
-Charset=utf8" > /etc/odbc.ini
-
   # legend of freepbx install script:
   #    --webroot=WEBROOT            Filesystem location from which FreePBX files will be served [default: "/var/www/html"]
   #    --astetcdir=ASTETCDIR        Filesystem location from which Asterisk configuration files will be served [default: "/etc/asterisk"]
@@ -588,14 +575,19 @@ Charset=utf8" > /etc/odbc.ini
   #    --ampcgibin=AMPCGIBIN        Location of the Apache cgi-bin executables [default: "/var/www/cgi-bin"]
   #    --ampplayback=AMPPLAYBACK    Directory for FreePBX html5 playback files [default: "/var/lib/asterisk/playback"]
 
+  # transform associative array to variable=paths, ex. AMPWEBROOT=/var/www/html (not needed anymore)
+  #for k in ${!fpbxDirs[@]}      ; do eval $k=${fpbxDirs[$k]}      ;done
+  #for k in ${!fpbxDirsExtra[@]} ; do eval $k=${fpbxDirsExtra[$k]} ;done
+  #for k in ${!fpbxFilesLog[@]}  ; do eval $k=${fpbxFilesLog[$k]}  ;done    
+
   ## rebase directory paths, based on APP_DATA and create/chown missing directories
   # process directories
   if [ ! -z "${APP_DATA}" ]; then
     echo "--> Using '${APP_DATA}' as basedir for FreePBX install"
     # process directories
-    for k in ${!freepbxDirs[@]}; do
-      v="${freepbxDirs[$k]}"
-      eval freepbxDirs[$k]=${APP_DATA}$v
+    for k in ${!fpbxDirs[@]}; do
+      v="${fpbxDirs[$k]}"
+      eval fpbxDirs[$k]=${APP_DATA}$v
       [ ! -e "$v" ] && mkdir -p "$v"
       if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
       echo "---> fixing permissions for: $k=$v"
@@ -604,9 +596,9 @@ Charset=utf8" > /etc/odbc.ini
     done
     
     # process logs files
-    for k in ${!freepbxFilesLog[@]}; do
-      v="${freepbxFilesLog[$k]}"
-      eval freepbxFilesLog[$k]=${APP_DATA}$v
+    for k in ${!fpbxFilesLog[@]}; do
+      v="${fpbxFilesLog[$k]}"
+      eval fpbxFilesLog[$k]=${APP_DATA}$v
       [ ! -e "$v" ] && touch "$v"
       if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
       echo "---> fixing permissions for: $k=$v"
@@ -615,28 +607,44 @@ Charset=utf8" > /etc/odbc.ini
     done
   fi
 
-  # transform associative array to variable=paths, ex. AMPWEBROOT=/var/www/html
-  for k in ${!freepbxDirs[@]}      ; do eval $k=${freepbxDirs[$k]}      ;done
-  for k in ${!freepbxDirsExtra[@]} ; do eval $k=${freepbxDirsExtra[$k]} ;done
-  for k in ${!freepbxFilesLog[@]}  ; do eval $k=${freepbxFilesLog[$k]}  ;done    
+  echo "--> Configuring FreePBX ODBC"
+  # fix mysql odbc inst file path
+  sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmaodbc.so/' /etc/odbcinst.ini
+  # create mysql odbc
+  echo "[MySQL-asteriskcdrdb]
+Description = MariaDB connection to 'asteriskcdrdb' database
+driver = MySQL
+server = ${MYSQL_SERVER}
+database = asteriskcdrdb
+Port = ${APP_PORT_MYSQL}
+option = 3
+Charset=utf8" > /etc/odbc.ini
 
-  # OneTime: install freepbx if this is the first time we initialize the container
+  # install freepbx or update configuration if already installed
   if [ ! -e "${appFilesConf[FPBXCFGFILE]}" ]; then
-    echo "---> Missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
-    cfgService_freepbx_install
+      # onetime: install freepbx if this is the first time we initialize the container
+      echo "---> Missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
+      cfgService_freepbx_install
+    else
+      # update freepbx.conf file
+      echo "---> Reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
+      sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '${MYSQL_SERVER}';/"   -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
   echo "--> Applying Workarounds for FreePBX and Asterisk..."
   # make missing log files
-  [ ! -e "${freepbxDirs[ASTLOGDIR]}/full" ] && touch "${freepbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${freepbxDirs[ASTLOGDIR]}/full"
+  [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${fpbxDirs[ASTLOGDIR]}/full"
   
   # relink fwconsole and amportal if not exist
-  [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[AMPBIN]}/fwconsole /usr/sbin/fwconsole
-  [ ! -e "/usr/sbin/amportal" ]  && ln -s ${freepbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
+  [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[AMPBIN]}/fwconsole /usr/sbin/fwconsole
+  [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
 
   # FIXME: 20200318 freep 15 warnings workaround
-  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${freepbxDirs[ASTETCDIR]}/modules.conf
-  sed 's/^enabled =.*/enabled = yes/' -i ${freepbxDirs[ASTETCDIR]}/hep.conf
+  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
+  sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
 
   # reconfigure freepbx from env variables
   echo "--> Reconfiguring FreePBX Advanced Settings if needed..."
@@ -654,8 +662,8 @@ Charset=utf8" > /etc/odbc.ini
 
   # reconfigure freepbx settings based on docker variables content using FreePBX API bootstrap
   echo "--> Reconfiguring FreePBX SIP Settings if needed..."
-  for k in ${!freepbxSipSettings[@]}; do
-    v="${freepbxSipSettings[$k]}"
+  for k in ${!fpbxSipSettings[@]}; do
+    v="${fpbxSipSettings[$k]}"
     cVal=$(echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); echo \$FreePBX->sipsettings->getConfig('${k}');?>" | php)
     if [ "$cVal" != "${v}" ];then
       echo "---> reconfiguring sip setting: ${k}=${v}"
@@ -703,20 +711,20 @@ cfgService_freepbx_install() {
   mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO 'asterisk'@'%' WITH GRANT OPTION;"
 
   # set default freepbx install options
-  FPBX_OPTS+=" --webroot=${AMPWEBROOT}"
-  FPBX_OPTS+=" --astetcdir=${ASTETCDIR}"
-  FPBX_OPTS+=" --astmoddir=${ASTMODDIR}"
-  FPBX_OPTS+=" --astvarlibdir=${ASTVARLIBDIR}"
-  FPBX_OPTS+=" --astagidir=${ASTAGIDIR}"
-  FPBX_OPTS+=" --astspooldir=${ASTSPOOLDIR}"
-  FPBX_OPTS+=" --astrundir=${ASTRUNDIR}"
-  FPBX_OPTS+=" --astlogdir=${ASTLOGDIR}"
-  FPBX_OPTS+=" --ampbin=${AMPBIN}"
-  FPBX_OPTS+=" --ampsbin=${AMPSBIN}"
-  FPBX_OPTS+=" --ampcgibin=${AMPCGIBIN}"
-  FPBX_OPTS+=" --ampplayback=${AMPPLAYBACK}"
+  FPBX_OPTS+=" --webroot=${fpbxDirs[AMPWEBROOT]}"
+  FPBX_OPTS+=" --astetcdir=${fpbxDirs[ASTETCDIR]}"
+  FPBX_OPTS+=" --astmoddir=${fpbxDirs[ASTMODDIR]}"
+  FPBX_OPTS+=" --astvarlibdir=${fpbxDirs[ASTVARLIBDIR]}"
+  FPBX_OPTS+=" --astagidir=${fpbxDirs[ASTAGIDIR]}"
+  FPBX_OPTS+=" --astspooldir=${fpbxDirs[ASTSPOOLDIR]}"
+  FPBX_OPTS+=" --astrundir=${fpbxDirs[ASTRUNDIR]}"
+  FPBX_OPTS+=" --astlogdir=${fpbxDirs[ASTLOGDIR]}"
+  FPBX_OPTS+=" --ampbin=${fpbxDirs[AMPBIN]}"
+  FPBX_OPTS+=" --ampsbin=${fpbxDirs[AMPSBIN]}"
+  FPBX_OPTS+=" --ampcgibin=${fpbxDirs[AMPCGIBIN]}"
+  FPBX_OPTS+=" --ampplayback=${fpbxDirs[AMPPLAYBACK]}"
 
-  echo "--> Installing FreePBX in '${AMPWEBROOT}'"
+  echo "--> Installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
   echo "---> START install FreePBX @ $(date)"
   # https://github.com/FreePBX/announcement/archive/release/15.0.zip
   set -x
@@ -732,8 +740,8 @@ cfgService_freepbx_install() {
   
   if [ $RETVAL = 0 ]; then
     # fix paths and relink fwconsole and amportal if not exist
-    [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
-    [ ! -e "/usr/sbin/amportal" ]  && ln -s ${freepbxDirs[ASTVARLIBDIR]}/bin/amportal  /usr/sbin/amportal
+    [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
+    [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[ASTVARLIBDIR]}/bin/amportal  /usr/sbin/amportal
       
     # fix freepbx config file permissions
     if [ ! -z "${APP_DATA}" ]; then
@@ -741,8 +749,8 @@ cfgService_freepbx_install() {
         chown ${APP_USR}:${APP_GRP} "${file}"
       done
       echo "--> Fixing directory system paths in db configuration..."
-      for k in ${!freepbxDirs[@]} ${!freepbxFilesLog[@]}; do
-        fwconsole setting ${k} ${freepbxDirs[$k]}
+      for k in ${!fpbxDirs[@]} ${!fpbxFilesLog[@]}; do
+        fwconsole setting ${k} ${fpbxDirs[$k]}
       done
     fi
    
@@ -810,7 +818,7 @@ cfgService_freepbx_install() {
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
-    echo "--> Installing Prerequisite FreePBX modules from local install into '${freepbxDirs[AMPWEBROOT]}/admin/modules'"
+    echo "--> Installing Prerequisite FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_PRE}; do
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
@@ -821,7 +829,7 @@ cfgService_freepbx_install() {
     echo "--> Reloading FreePBX..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
     
-    echo "--> Installing Extra FreePBX modules from local install into '${freepbxDirs[AMPWEBROOT]}/admin/modules'"
+    echo "--> Installing Extra FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_EXTRA}; do
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
