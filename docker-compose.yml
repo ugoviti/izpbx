@@ -33,6 +33,7 @@ services:
     privileged: true
     # for simpler sip nat management use 'host'
     network_mode: host
+    # if 'network_mode: host' is disabled, comment out the following lines
     #links: 
     #- db
     #networks:
@@ -56,6 +57,7 @@ services:
     - MYSQL_USER
     - MYSQL_PASSWORD
     network_mode: host
+    # if 'network_mode: host' is disabled, comment out the following lines
     #network_mode: bridge
     #networks:
     #- izpbx
