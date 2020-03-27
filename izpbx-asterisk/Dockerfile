@@ -140,6 +140,7 @@ ENV ASTERISK_INSTALL_DEPS=' \
     python2 \
     libnsl \
     which \
+    fftw \
     fftw-libs \
   '
 

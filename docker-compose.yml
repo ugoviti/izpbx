@@ -1,7 +1,7 @@
 version: '3'
 
-networks:
-  izpbx:
+#networks:
+#  izpbx:
 
 services:
   izpbx:
@@ -10,8 +10,6 @@ services:
     image: izdock/izpbx-asterisk:16
     restart: always
     depends_on:
-    - db
-    links: 
     - db
     ports:
     - ${APP_PORT_HTTP}:${APP_PORT_HTTP}
@@ -32,10 +30,11 @@ services:
     cap_add:
     - NET_ADMIN
     privileged: true
-    #network_mode: host
-    #network_mode: bridge
-    networks:
-    - izpbx
+    network_mode: host
+    #links: 
+    #- db
+    #networks:
+    #- izpbx
     
   db:
     container_name: izpbx-db
@@ -53,7 +52,7 @@ services:
     - MYSQL_DATABASE
     - MYSQL_USER
     - MYSQL_PASSWORD
-    #network_mode: host
+    network_mode: host
     #network_mode: bridge
-    networks:
-    - izpbx
+    #networks:
+    #- izpbx
