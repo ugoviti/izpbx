@@ -151,15 +151,15 @@ RUN set -xe && \
   dnf -y install epel-release && \
   \
   # centos 7 specific (legacy)
-  [[ $VERSION_ID -le 7 ]] && \
+  if [[ $VERSION_ID -le 7 ]]; then \
     ln -s /usr/bin/yum /usr/bin/dnf && \
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     yum-config-manager --enable remi 1>/dev/null && \
-    yum-config-manager --enable remi-php73 1>/dev/null ; \
+    yum-config-manager --enable remi-php73 1>/dev/null ;fi && \
   \
   # centos 8 specific
-  [[ $VERSION_ID -ge 8 ]] && \
+  if [[ $VERSION_ID -ge 8 ]]; then \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
     # repo for ffmpeg
@@ -190,7 +190,7 @@ RUN set -xe && \
     dnf config-manager --set-disabled forensics && \
     # enable php 7.3 module
     dnf module disable -y php && \
-    dnf module enable -y php:remi-7.3 ; \
+    dnf module enable -y php:remi-7.3 ;fi && \
   \
   # upgrade the system
   dnf upgrade -y && \
@@ -280,9 +280,9 @@ RUN set -xe && \
     ilbc-devel \
     python2-devel \
     python3-devel \
-  ' ; \
-  [[ $VERSION_ID -le 7 ]] && ASTERISK_BUILD_DEPS+="mysql-devel" ; \
-  [[ $VERSION_ID -ge 8 ]] && ASTERISK_BUILD_DEPS+="mariadb-devel" ; \  
+  ' && \
+  if [[ $VERSION_ID -le 7 ]]; then ASTERISK_BUILD_DEPS+="mysql-devel" ;fi && \
+  if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
   : "---------- START Build libresample ----------" && \
@@ -429,7 +429,7 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END Build ----------" && \
   \
-  [[ $APP_VER_MAJOR -le 17 ]] && \
+  if [[ $APP_VER_MAJOR -le 17 ]]; then \
   : "---------- START Build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
@@ -439,7 +439,7 @@ RUN set -xe && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
   make && \
   make install && \
-  ldconfig ; \
+  ldconfig ;fi && \
   : "---------- END Build ----------" && \
   \
   : "---------- START Build sngrep ----------" && \
@@ -455,7 +455,7 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END Build ----------" && \
   \
-  [[ ${APP_DEBUG} -eq 0 ]] && \
+  if [[ ${APP_DEBUG} -eq 0 ]]; then \
   : "---------- Clean temporary files ----------" && \
   dnf remove -y $ASTERISK_BUILD_DEPS \
     -x gcc-c++ \
@@ -464,7 +464,7 @@ RUN set -xe && \
   && \
   dnf clean all && \
   rm -rf /var/cache/yum /tmp /usr/src && \
-  mkdir -p /usr/src /tmp && chmod 1777 /tmp ; \
+  mkdir -p /usr/src /tmp && chmod 1777 /tmp ;fi && \
   : "---------- ALL builds finished ----------" 
 
 # NOTE: asterisk build
