@@ -30,6 +30,7 @@ services:
     cap_add:
     - NET_ADMIN
     privileged: true
+    # for simpler sip nat management use 'host'
     network_mode: host
     #links: 
     #- db

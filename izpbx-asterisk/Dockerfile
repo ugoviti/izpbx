@@ -140,7 +140,6 @@ ENV ASTERISK_INSTALL_DEPS=' \
     python2 \
     libnsl \
     which \
-    fftw \
     fftw-libs \
   '
 
@@ -223,12 +222,10 @@ RUN set -xe && \
   . /etc/os-release && \
   ASTERISK_BUILD_DEPS=' \
     dmidecode \
-    gcc-c++ \
     autoconf \
     automake \
     ncurses-devel \
     libxml2-devel \
-    make \
     openssl-devel \
     newt-devel \
     kernel-devel \
@@ -254,7 +251,6 @@ RUN set -xe && \
     fftw-devel \
     flex \
     graphviz \
-    libical-devel \
     libpq-devel \
     libxslt-devel \
     net-snmp-devel \
@@ -458,11 +454,7 @@ RUN set -xe && \
   \
   if [[ ${APP_DEBUG} -eq 0 ]]; then \
   : "---------- Clean temporary files ----------" && \
-  dnf remove -y $ASTERISK_BUILD_DEPS \
-    -x gcc-c++ \
-    -x make \
-    -x libical-devel \
-  && \
+  dnf remove -y $ASTERISK_BUILD_DEPS && \
   dnf clean all && \
   rm -rf /var/cache/yum /tmp /usr/src && \
   mkdir -p /usr/src /tmp && chmod 1777 /tmp ;fi && \
