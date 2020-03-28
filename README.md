@@ -15,9 +15,10 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 
 
 # Features
-- 60secs install... from zero to running a full features PBX... really fast initial boostrap to deploy a full stack Asterisk+FreePBX system
+- 60secs install from zero to running a full features PBX... really fast initial boostrap to deploy a full stack Asterisk+FreePBX system
 - CentOS 8 64bit powered
 - Small image footprint
+- Services managed by supervisord daemon (monitoring and automatic restart of services)
 - Compiled from scratch latest stable Asterisk engine
 - FreePBX Engine as Web Management GUI
 - Persistent storage for configuration data
@@ -28,8 +29,8 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - All Bootstrap configurations made via single `.env` file
 - Many customizable variables to use (look inside `default.env` file)
 - Two containers setup:
-  - izpbx-asterisk (Asterisk Engine + FreePBX Frontend)
-  - mariadb (Database Backend)
+  - izpbx-asterisk: Asterisk Engine + FreePBX Frontend (antipattern layout but needed for the PBX ecosystem)
+  - mariadb: Database Backend
 
 # How to use this image
 
@@ -76,18 +77,31 @@ MYSQL_PASSWORD=CHANGEM3
 # if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
 #APP_FQDN=pbx.example.com
 
-# enable https protocols (default: true)
-#HTTPS_ENABLED=true
 # if the pbx is exposed to internet and want generate an SSL Let's Encrypt certificates (default: false)
 #LETSENCRYPT_ENABLED=true
+
+# enable https protocols (default: true)
+HTTPD_HTTPS_ENABLED=true
+
 # redirect unencrypted http connetions to https (default: false)
-#HTTP_REDIRECT_TO_HTTPS=true
+#HTTPD_REDIRECT_HTTP_TO_HTTPS=true
+
+# by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restric the access and enhance the security
+#HTTPD_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 
 # Cron notifications mail address (default: root@localhost)
 #ROOT_MAILTO=
 
-# persistent external data (comment if you want disable persistence of data) (default: /data)
+# enable persistent external data storage (comment if you want disable persistence of data) (default: /data)
 APP_DATA=/data
+
+# database configurations
+# WARNING: if the container network run in bridge mode use: db
+#MYSQL_SERVER=db
+# WARNING: if the container network run in host mode use: 127.0.0.1
+MYSQL_SERVER=127.0.0.1
+MYSQL_DATABASE=asterisk
+MYSQL_USER=asterisk
 
 ## network ports
 # freepbx configurations
@@ -103,18 +117,13 @@ APP_PORT_FOP=4445
 # database configurations (WARNING: if you comment out, will expose database port outside the container)
 APP_PORT_MYSQL=3306
 
-# database configurations
-MYSQL_SERVER=db
-MYSQL_DATABASE=asterisk
-MYSQL_USER=asterisk
-
 # fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
 FAIL2BAN_ENABLED=true
 FAIL2BAN_ASTERISK_ENABLED=true
 #FAIL2BAN_ASTERISK_LOGPATH=/var/log/asterisk/security
 FAIL2BAN_DEFAULT_SENDER=fail2ban@example.com
 FAIL2BAN_DEFAULT_DESTEMAIL=security@example.com
-FAIL2BAN_DEFAULT_IGNOREIP=127.0.0.0/8
+FAIL2BAN_DEFAULT_IGNOREIP=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 FAIL2BAN_DEFAULT_BANTIME=300
 FAIL2BAN_DEFAULT_FINDTIME=3600
 FAIL2BAN_DEFAULT_MAXRETRY=10
@@ -140,7 +149,7 @@ FREEPBX_PHPTIMEZONE=Europe/Rome
 #FREEPBX_BRAND_IMAGE_FREEPBX_LINK_FOOT=http://www.freepbx.org
 #FREEPBX_BRAND_IMAGE_SPONSOR_LINK_FOOT=http://www.sangoma.com
 
-# WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559
+# WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
 FREEPBX_SIGNATURECHECK=0
 
 # fop2 configuration (https://www.fop2.com/docs/)
@@ -198,7 +207,7 @@ FAIL2BAN_ENABLED=true
 # Trobleshooting
 
 - FreePBX is slow to reload
-  - enter the container and run:
+  - enter into container and run:
     docker exec -it izpbx bash
     fwconsole setting SIGNATURECHECK 0
     
