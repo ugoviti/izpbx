@@ -141,6 +141,8 @@ ENV ASTERISK_INSTALL_DEPS=' \
     libnsl \
     which \
     fftw-libs \
+    zabbix-agent \
+    zabbix-sender \
   '
 
 RUN set -xe && \
@@ -153,8 +155,13 @@ RUN set -xe && \
   # centos 7 specific (legacy)
   if [[ $VERSION_ID -le 7 ]]; then \
     ln -s /usr/bin/yum /usr/bin/dnf && \
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
+    # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
+    # zabbix agent repo
+    rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/8/x86_64/zabbix-release-4.4-1.el8.noarch.rpm && \
+    # repo for ffmpeg
+    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
+    \
     yum-config-manager --enable remi 1>/dev/null && \
     yum-config-manager --enable remi-php73 1>/dev/null ;fi && \
   \
@@ -162,6 +169,8 @@ RUN set -xe && \
   if [[ $VERSION_ID -ge 8 ]]; then \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
+    # zabbix agent repo
+    rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/8/x86_64/zabbix-release-4.4-1.el8.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
     # repo for lame command
@@ -175,6 +184,7 @@ RUN set -xe && \
     dnf config-manager --set-enabled \
       PowerTools \
       remi \
+      zabbix \
       rpmfusion-free-updates \
       forensics \
       gf-plus \

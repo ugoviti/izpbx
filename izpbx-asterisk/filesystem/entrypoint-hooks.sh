@@ -99,6 +99,14 @@ declare -A fpbxSipSettings=(
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
 : ${HTTPD_ALLOW_FROM:=""}
 
+## zabbix configuration
+: ${ZABBIX_USR:="zabbix"}
+: ${ZABBIX_GRP:="zabbix"}
+: ${ZABBIX_SERVER:="127.0.0.1"}
+: ${ZABBIX_SERVER_ACTIVE:="127.0.0.1"}
+: ${ZABBIX_HOSTNAME:="${HOSTNAME}"}
+: ${ZABBIX_HOSTMETADATA:="Linux"}
+
 ## hostname configuration
 [ ! -z ${APP_FQDN} ] && HOSTNAME="${APP_FQDN}" # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
@@ -112,6 +120,7 @@ declare -A fpbxSipSettings=(
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
 : ${POSTFIX_ENABLED:="true"}
+: ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
 
 ## daemons configs
@@ -148,6 +157,8 @@ elif [ "$OS_RELEASE" = "centos" ]; then
 : ${SUPERVISOR_DIR:="/etc/supervisord.d"}
 : ${HTTPD_CONF_DIR:="/etc/httpd"} # apache config dir
 : ${PMA_CONF_APACHE:="/etc/httpd/conf.d/phpMyadmin.conf"}
+: ${ZABBIX_CONF:="/etc/zabbix/zabbix_agentd.conf"}
+: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.conf.d/local.conf"}
 fi
 
 
@@ -766,20 +777,20 @@ cfgService_freepbx_install() {
       done
     fi
    
-    FREEPBX_MODULES_CORE="
+    : ${FREEPBX_MODULES_CORE="
       framework
       core
       dashboard
       sipsettings
       voicemail
-    "
+    "}
 
     # ordered install
-    FREEPBX_MODULES_PRE="
+    : ${FREEPBX_MODULES_PRE:="
       userman
-    "
+    "}
     
-    FREEPBX_MODULES_EXTRA="
+    : ${FREEPBX_MODULES_EXTRA:="
       soundlang
       callrecording
       cdr
@@ -818,14 +829,14 @@ cfgService_freepbx_install() {
       cel
       timeconditions
       pm2
-    "
+    "}
 
-    FREEPBX_MODULES_DISABLED="
+    : ${FREEPBX_MODULES_DISABLED="
       bulkhandler
       speeddial
       weakpasswords
       ucp
-    "
+    "}
     echo "--> Enabling EXTENDED FreePBX repo..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
@@ -870,6 +881,26 @@ cfgService_freepbx_install() {
     echo "--> Stopping Asterisk"
     asterisk -r -x "core stop now"
     echo "=> Finished installing FreePBX"
+  fi
+}
+
+## zabbix service
+cfgService_zabbix() {
+  # zabbix user defined local config
+  echo "#DebugLevel=4
+#LogFileSize=1
+LogType=system
+Hostname=${ZABBIX_HOSTNAME}
+Server=${ZABBIX_SERVER}
+ServerActive=${ZABBIX_SERVER_ACTIVE}
+#HostMetadataItem=system.uname
+HostMetadata=${ZABBIX_HOSTMETADATA}
+" > "$ZABBIX_CONF_LOCAL"
+  # zabbix global config
+  if [ -w "$ZABBIX_CONF" ]; then
+    sed 's/^LogFile=/#LogFile=/g' -i $ZABBIX_CONF
+    sed 's/^Hostname=/#Hostname=/g' -i $ZABBIX_CONF
+    sed 's/Hostname=.*/Hostname=${ZABBIX_HOSTNAME}/g' -i $ZABBIX_CONF
   fi
 }
 
@@ -966,6 +997,7 @@ runHooks() {
   chkService HTTPD_ENABLED
   chkService ASTERISK_ENABLED
   chkService IZPBX_ENABLED
+  chkService ZABBIX_ENABLED
   chkService FOP2_ENABLED
   
   # generate SSL Certificates used for HTTPS

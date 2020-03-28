@@ -6,26 +6,33 @@ izPBX Cloud Native Telephony System
 
 # Supported tags
 * `16.9.X-BUILD, 16.9, 16, latest`
-* `17.3.X-BUILD, 17.3, 17`
+* `17.3.X-BUILD, 17.3, 17` (testing branch - not supported)
 
 Where **X** is the patch version number, and **BUILD** is the build number (look into project [Tags](/repository/docker/izdock/httpd/tags/) page to discover the latest versions)
 
 # Dockerfile
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
-
 # Features
 - 60secs install from zero to running a full features PBX... really fast initial boostrap to deploy a full stack Asterisk+FreePBX system
-- CentOS 8 64bit powered
 - Small image footprint
-- Services managed by supervisord daemon (monitoring and automatic restart of services)
-- Compiled from scratch latest stable Asterisk engine
-- FreePBX Engine as Web Management GUI
-- Persistent storage for configuration data
-- Automatic HTTPS Certificate management via Let's Encrypt service
-- Send out emails via local postfix smtp daemon
-- Security and bruteforce SIP attacks detection managed by fail2ban service
+- Persistent storage mode for configuration data (define APP_DATA variable to enable)
+- CentOS 8 64bit powered
+- Asterisk PBX Engine (compiled from scratch)
+- G729, Motif coded compiled
+- FreePBX WEB Management GUI (with predownloaded modules for quicker initial deploy)
 - First automatic installation managed when deploing the izpbx, subsequent updates managed by FreePBX Version Upgrade
+- izpbx scripts (into container shell digit izpbx+<TAB> to discover)
+- tcpdump and sngrep utility to debug VoIP packets
+- fail2ban as security monitor to block SIP and HTTP brute force attacks
+- supervisord as services management with monitoring and automatic restart
+- postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
+- cron daemon
+- Apache 2.4 and PHP 7.3
+- Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
+- logrotating of services logs
+- FOP2 Operator Panel
+- Zabbix Agent for active healt monitoring (developing stage)
 - All Bootstrap configurations made via single `.env` file
 - Many customizable variables to use (look inside `default.env` file)
 - Two containers setup:
@@ -65,6 +72,15 @@ cp default.env .env
 ```
 docker-compose up -d
 ```
+
+# Upgrade path
+
+1. Verify your current running version
+2. Upgrade the version of izpbx changing image tag into `docker-compose.yml`
+
+Upgrading izpbx deploy must follow that path:
+
+- 16.9.0 --> 16.9.x (initial release. no upgrade path right now)
 
 # Environment default variables
 
@@ -186,7 +202,7 @@ FAIL2BAN_ENABLED=true
   * Path Name: **Local Storage**
   * Path: **__ASTSPOOLDIR__/backup**
 
-* **Admin-->Backup & Restore
+* **Admin-->Backup & Restore**
   * Basic Information-->Backup Name: **Daily Backup**
   * Notifications-->Email Type: **Failure**
   * Storage-->Storage Location: **Local Storage**
@@ -195,22 +211,22 @@ FAIL2BAN_ENABLED=true
   * Maintinence-->Delete After Runs: **0**
   * Maintinence-->Delete After Days: **14**
   
-* **Admin-->Caller ID Lookup Sources
+* **Admin-->Caller ID Lookup Sources**
   * Source Description: **ContactManager**
   * Source type: **Contact Manager**
   * Cache Results: **No**
   * Contact Manager Group(s): **All selected**
   
-* **Admin-->Sound Languages-->Setttings
+* **Admin-->Sound Languages-->Setttings**
   * Global Language: **Italian**
 
 # Trobleshooting
 
 - FreePBX is slow to reload
-  - enter into container and run:
-    docker exec -it izpbx bash
-    fwconsole setting SIGNATURECHECK 0
-    
+  - enter into container and run:  
+    `docker exec -it izpbx bash`  
+    `fwconsole setting SIGNATURECHECK 0`
+
 # Quick reference
 
 - **Where to get help**:
