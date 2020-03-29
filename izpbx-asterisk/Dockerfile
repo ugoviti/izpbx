@@ -141,9 +141,10 @@ ENV ASTERISK_INSTALL_DEPS=' \
     libnsl \
     which \
     fftw-libs \
+    zabbix-agent \
+    zabbix-sender \
   '
-#    zabbix-agent \
-#    zabbix-sender \
+
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
@@ -157,7 +158,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/8/x86_64/zabbix-release-4.4-1.el8.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     \
@@ -199,7 +200,7 @@ RUN set -xe && \
     dnf config-manager --set-disabled forensics && \
     # enable php 7.3 module
     dnf module disable -y php && \
-    dnf module enable -y php:remi-7.3 ;fi && \
+    dnf module enable  -y php:remi-7.3 ;fi && \
   \
   # upgrade the system
   dnf upgrade -y && \
@@ -220,7 +221,6 @@ RUN set -xe && \
   usermod -aG wheel ${APP_USR}
   
 ## build
-
 # Development Debug mode
 ARG APP_DEBUG=0
 
