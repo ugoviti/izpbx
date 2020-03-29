@@ -82,6 +82,11 @@ declare -A fpbxSipSettings=(
 #)
 
 ## other variables
+
+# hostname configuration
+[ ! -z ${APP_FQDN} ] && HOSTNAME="${APP_FQDN}" # set hostname to APP_FQDN if defined
+: ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
+
 # mysql configuration
 : ${MYSQL_SERVER:="db"}
 : ${MYSQL_ROOT_PASSWORD:=""}
@@ -107,10 +112,6 @@ declare -A fpbxSipSettings=(
 : ${ZABBIX_SERVER_ACTIVE:="127.0.0.1"}
 : ${ZABBIX_HOSTNAME:="${HOSTNAME}"}
 : ${ZABBIX_HOSTMETADATA:="Linux"}
-
-## hostname configuration
-[ ! -z ${APP_FQDN} ] && HOSTNAME="${APP_FQDN}" # set hostname to APP_FQDN if defined
-: ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
 
 ## default supervisord services status
 #: ${SYSLOG_ENABLED:="true"}
@@ -696,6 +697,8 @@ Charset=utf8" > /etc/odbc.ini
     fi
   done
 
+# logfiles_put_opts
+  
   # FIXME: iaxsettings doesn't works right now
   #for k in ${!freepbxIaxSettings[@]}; do
   #  v="${freepbxIaxSettings[$k]}"
@@ -888,21 +891,28 @@ cfgService_freepbx_install() {
 
 ## zabbix service
 cfgService_zabbix() {
-  # zabbix global config
+  # comment zabbix global config
   if [ -w "$ZABBIX_CONF" ]; then
     sed 's/^LogFile=/#LogFile=/g' -i $ZABBIX_CONF
     sed 's/^Hostname=/#Hostname=/g' -i $ZABBIX_CONF
-    sed 's/Hostname=.*/Hostname=${ZABBIX_HOSTNAME}/g' -i $ZABBIX_CONF
+    sed 's/^Server=/#Server=/g' -i $ZABBIX_CONF
+    sed 's/^ServerActive=/#ServerActive=/g' -i $ZABBIX_CONF
   fi
   # zabbix user defined local config
   echo "#DebugLevel=4
 #LogFileSize=1
-LogType=system
-Hostname=${ZABBIX_HOSTNAME}
+#EnableRemoteCommands=1
+LogRemoteCommands=1
+LogType=console
+
+#Hostname=${ZABBIX_HOSTNAME}
+HostnameItem=system.hostname
+
 Server=${ZABBIX_SERVER}
-ServerActive=${ZABBIX_SERVER_ACTIVE}
+#ServerActive=${ZABBIX_SERVER_ACTIVE}
+
 #HostMetadataItem=system.uname
-HostMetadata=${ZABBIX_HOSTMETADATA}
+#HostMetadata=${ZABBIX_HOSTMETADATA}
 " > "$ZABBIX_CONF_LOCAL"
 }
 

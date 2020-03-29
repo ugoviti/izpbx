@@ -21,6 +21,7 @@ services:
     - ${APP_PORT_IAX}:${APP_PORT_IAX}/udp
     - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}/udp
     - ${APP_PORT_SIP}:${APP_PORT_SIP}/udp
+    - ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}
     - ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
     volumes:
     - /etc/localtime:/etc/localtime:ro
