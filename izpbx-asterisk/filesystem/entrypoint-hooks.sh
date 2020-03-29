@@ -419,22 +419,23 @@ exit $?' > /etc/cron.daily/certbot && chmod 755 /etc/cron.daily/certbot
 
 ## parse and edit ini config files based on SECTION and KEY=VALUE
 
-# input stream format: SECTION_KEY=VALUE
-#   echo RECIDIVE_ENABLED=false | iniParseEdit /etc/fail2ban/jail.d/99-local.conf
+# input stream format: SECTION KEY=VALUE
+#   echo RECIDIVE ENABLED=false | iniParser /etc/fail2ban/jail.d/99-local.conf
 
-# example for multple values in global env:
+# FIXME: match all files sections right now
+# example for multple values using global env and parsing it before send to iniParser:
 #  set FAIL2BAN_DEFAULT_FINDTIME=3600
 #  set FAIL2BAN_DEFAULT_MAXRETRY=10
 #  set FAIL2BAN_RECIDIVE_ENABLED=false
 #  set FAIL2BAN_RECIDIVE_BANTIME=1814400
-#  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | iniParseEdit /etc/fail2ban/jail.d/99-local.conf
+#  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | sed -e 's/_/ /' | iniParser /etc/fail2ban/jail.d/99-local.conf
 iniParser() {
   ini="$@"
   while read setting ; do
-    section="$(echo $setting | awk -F"_" '{print $1}')"
-    k=$(echo $setting | sed -e "s/^${section}_//" | awk -F"=" '{print $1}' | tr '[:upper:]' '[:lower:]')
+    section="$(echo $setting | awk -F" " '{print $1}')"
+    k=$(echo $setting | sed -e "s/^${section} //" | awk -F"=" '{print $1}' | tr '[:upper:]' '[:lower:]')
     v=$(echo $setting | sed -e "s/'//g" | awk -F"=" '{print $2}')
-    sed -i "/^\[${section}\]$/I,/^\[/ s|^${k}.*=.*|${k} = ${v}|I" "${ini}"
+    sed -e "/^\[${section}\]$/I,/^\(\|;\|#\)\[/ s/^\(;\|#\)${k}/${k}/" -e "/^\[${section}\]$/I,/^\[/ s|^${k}.*=.*|${k}=${v}|I" -i "${ini}"
   done
 }
 
@@ -443,10 +444,10 @@ cfgService_fail2ban() {
   echo "--> reconfiguring Fail2ban settings..."
   # ini config file parse function
   # fix default log path
-  echo "DEFAULT_LOGTARGET=/var/log/fail2ban/fail2ban.log" | iniParser /etc/fail2ban/fail2ban.conf
+  echo "DEFAULT LOGTARGET=/var/log/fail2ban/fail2ban.log" | iniParser /etc/fail2ban/fail2ban.conf
   touch /var/log/fail2ban/fail2ban.log
   # configure all settings
-  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | iniParser "/etc/fail2ban/jail.d/99-local.conf"
+  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | sed -e 's/_/ /' | iniParser "/etc/fail2ban/jail.d/99-local.conf"
 }
 
 ## apache service
@@ -951,9 +952,9 @@ runHooks() {
     sed 's|^file=.*|file=/run/supervisor/supervisor.sock|' -i /etc/supervisord.conf
     sed 's|^pidfile=.*|pidfile=/run/supervisor/supervisord.pid|' -i /etc/supervisord.conf
     sed 's|^nodaemon=.*|nodaemon=true|' -i /etc/supervisord.conf
-    # disable web server
-    sed 's|^\[unix_http_server\]|;\[unix_http_server\]|' -i /etc/supervisord.conf
-    sed 's|^file=|;file=|' -i /etc/supervisord.conf
+    # configure webserver security
+    echo unix_http_server username=admin | iniParser /etc/supervisord.conf
+    echo unix_http_server password=izpbx | iniParser /etc/supervisord.conf
   fi
 
   # check and create missing container directory
