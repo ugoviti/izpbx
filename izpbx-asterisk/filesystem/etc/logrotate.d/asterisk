@@ -1,4 +1,5 @@
 /var/log/asterisk/full
+/var/log/asterisk/security
 /var/log/asterisk/freepbx.log
 /var/log/asterisk/freepbx_security.log
 /var/log/asterisk/ucp_err.log

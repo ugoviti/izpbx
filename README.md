@@ -195,6 +195,10 @@ FAIL2BAN_ENABLED=true
   * PHP Timezone: **Europe/Rome**
   
 * **Settings-->Asterisk Logfile Settings**
+  * Security Settings-->Allow Anonymous Inbound SIP Calls: **No**
+  * Security Settings-->Allow SIP Guests: **No**
+
+* **Settings-->Asterisk SIP Settings**
   * File Name: **security**
   * Security: **ON** (all others OFF)
   
