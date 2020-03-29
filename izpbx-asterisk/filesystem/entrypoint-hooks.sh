@@ -64,7 +64,8 @@ declare -A fpbxDirsExtra=(
 
 declare -A fpbxFilesLog=(
   [FPBXDBUGFILE]=/var/log/asterisk/freepbx-debug.log
-  [FPBX_LOG_FILE]=/var/log/asterisk/freepbx.log
+  [FPBXLOGFILE]=/var/log/asterisk/freepbx.log
+  [FPBXSECLOGFILE]=/var/log/asterisk/freepbx_security.log
 )
 
 declare -A fpbxSipSettings=(
@@ -151,14 +152,14 @@ elif [ "$OS_RELEASE" = "alpine" ]; then
 : ${PMA_CONF:="/etc/phpmyadmin/config.inc.php"}
 : ${PMA_CONF_APACHE:="/etc/apache2/conf.d/phpmyadmin.conf"}
 : ${PHP_CONF:="/etc/php/php.ini"}
-: ${NRPE_CONF:="/etc/nrpe.cfg"}
+: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.conf.d/local.conf"}
 # centos paths
 elif [ "$OS_RELEASE" = "centos" ]; then
 : ${SUPERVISOR_DIR:="/etc/supervisord.d"}
 : ${HTTPD_CONF_DIR:="/etc/httpd"} # apache config dir
 : ${PMA_CONF_APACHE:="/etc/httpd/conf.d/phpMyadmin.conf"}
 : ${ZABBIX_CONF:="/etc/zabbix/zabbix_agentd.conf"}
-: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.conf.d/local.conf"}
+: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.d/local.conf"}
 fi
 
 
@@ -886,6 +887,12 @@ cfgService_freepbx_install() {
 
 ## zabbix service
 cfgService_zabbix() {
+  # zabbix global config
+  if [ -w "$ZABBIX_CONF" ]; then
+    sed 's/^LogFile=/#LogFile=/g' -i $ZABBIX_CONF
+    sed 's/^Hostname=/#Hostname=/g' -i $ZABBIX_CONF
+    sed 's/Hostname=.*/Hostname=${ZABBIX_HOSTNAME}/g' -i $ZABBIX_CONF
+  fi
   # zabbix user defined local config
   echo "#DebugLevel=4
 #LogFileSize=1
@@ -896,12 +903,6 @@ ServerActive=${ZABBIX_SERVER_ACTIVE}
 #HostMetadataItem=system.uname
 HostMetadata=${ZABBIX_HOSTMETADATA}
 " > "$ZABBIX_CONF_LOCAL"
-  # zabbix global config
-  if [ -w "$ZABBIX_CONF" ]; then
-    sed 's/^LogFile=/#LogFile=/g' -i $ZABBIX_CONF
-    sed 's/^Hostname=/#Hostname=/g' -i $ZABBIX_CONF
-    sed 's/Hostname=.*/Hostname=${ZABBIX_HOSTNAME}/g' -i $ZABBIX_CONF
-  fi
 }
 
 cfgService_fop2 () {
