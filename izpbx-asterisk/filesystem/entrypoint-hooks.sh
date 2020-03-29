@@ -951,6 +951,9 @@ runHooks() {
     sed 's|^file=.*|file=/run/supervisor/supervisor.sock|' -i /etc/supervisord.conf
     sed 's|^pidfile=.*|pidfile=/run/supervisor/supervisord.pid|' -i /etc/supervisord.conf
     sed 's|^nodaemon=.*|nodaemon=true|' -i /etc/supervisord.conf
+    # disable web server
+    sed 's|^\[unix_http_server\]|;\[unix_http_server\]|' -i /etc/supervisord.conf
+    sed 's|^file=|;file=|' -i /etc/supervisord.conf
   fi
 
   # check and create missing container directory
