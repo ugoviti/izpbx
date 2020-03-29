@@ -697,8 +697,6 @@ Charset=utf8" > /etc/odbc.ini
     fi
   done
 
-# logfiles_put_opts
-  
   # FIXME: iaxsettings doesn't works right now
   #for k in ${!freepbxIaxSettings[@]}; do
   #  v="${freepbxIaxSettings[$k]}"

@@ -141,10 +141,9 @@ ENV ASTERISK_INSTALL_DEPS=' \
     libnsl \
     which \
     fftw-libs \
-    zabbix-agent \
-    zabbix-sender \
   '
-
+#    zabbix-agent \
+#    zabbix-sender \
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
