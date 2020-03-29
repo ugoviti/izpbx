@@ -1,0 +1,5 @@
+## allow zabbix to restart sevices
+User_Alias ZABBIX = zabbix
+Cmnd_Alias ZABBIX_COMMANDS = /usr/sbin/asterisk
+Defaults:ZABBIX !requiretty
+ZABBIX ALL=(ALL) NOPASSWD: ZABBIX_COMMANDS

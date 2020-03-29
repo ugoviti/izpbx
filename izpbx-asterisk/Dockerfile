@@ -546,13 +546,7 @@ RUN set -xe && \
   chown -R ${APP_USR}:${APP_GRP} \
     /etc/asterisk \
     /var/lib/asterisk \
-    /var/spool/asterisk \
-    && \
-    echo "## allow zabbix to restart sevices \
-User_Alias ZABBIX = zabbix \
-Cmnd_Alias ZABBIX_COMMANDS = /usr/sbin/asterisk \
-Defaults:ZABBIX !requiretty \
-ZABBIX ALL=(ALL) NOPASSWD: ZABBIX_COMMANDS " >> /etc/sudoers
+    /var/spool/asterisk
   
 # exposed ports
 EXPOSE \
