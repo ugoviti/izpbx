@@ -961,8 +961,8 @@ runHooks() {
     sed 's|^pidfile=.*|pidfile=/run/supervisor/supervisord.pid|' -i /etc/supervisord.conf
     sed 's|^nodaemon=.*|nodaemon=true|' -i /etc/supervisord.conf
     # configure webserver security
-    echo unix_http_server username=admin | iniParser /etc/supervisord.conf
-    echo unix_http_server password=izpbx | iniParser /etc/supervisord.conf
+    #echo unix_http_server username=admin | iniParser /etc/supervisord.conf
+    #echo unix_http_server password=izpbx | iniParser /etc/supervisord.conf
   fi
 
   # check and create missing container directory
