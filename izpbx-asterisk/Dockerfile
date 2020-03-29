@@ -141,6 +141,7 @@ ENV ASTERISK_INSTALL_DEPS=' \
     libnsl \
     which \
     fftw-libs \
+    sudo \
     zabbix-agent \
     zabbix-sender \
   '
@@ -540,12 +541,18 @@ RUN set -xe && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END Install ----------"
   
-# set pemissions
+# set pemissions and sudo
 RUN set -xe && \
   chown -R ${APP_USR}:${APP_GRP} \
     /etc/asterisk \
     /var/lib/asterisk \
-    /var/spool/asterisk
+    /var/spool/asterisk \
+    && \
+    echo "## allow zabbix to restart sevices \
+User_Alias ZABBIX = zabbix \
+Cmnd_Alias ZABBIX_COMMANDS = /usr/sbin/asterisk \
+Defaults:ZABBIX !requiretty \
+ZABBIX ALL=(ALL) NOPASSWD: ZABBIX_COMMANDS " >> /etc/sudoers
   
 # exposed ports
 EXPOSE \
