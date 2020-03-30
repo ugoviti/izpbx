@@ -1,5 +1,5 @@
 #!/bin/bash
-# Asterisk automatic discovery and check script
+# Zabbix Agent monitoring automatic discovery and check script for Asterisk PBX services
 # author: Ugo Viti <ugo.viti@initzero.it>
 # version: 20200330
 
@@ -29,7 +29,7 @@ convert_registrations_to_json() {
   HOST="$(echo $registry | awk '{print $1}')"
   USERNAME="$(echo $registry | awk '{print $3}')"
   STATE="$(echo $registry | awk '{print $5}')"
-  echo "    { \"{#HOST}\":\"$HOST\", \"{#USERNAME}\":\"$USERNAME\", \"{#STATE}\":\"$STATE\"},"
+  [ ! -z "$HOST" ] && echo "    { \"{#HOST}\":\"$HOST\", \"{#USERNAME}\":\"$USERNAME\", \"{#STATE}\":\"$STATE\"},"
   done | sed '$ s/,$//'
   echo "  ]
 }"
@@ -37,12 +37,12 @@ convert_registrations_to_json() {
 
 discovery.sip.registry() {
   REGISTRY="$($sudo asterisk -r -x "sip show registry" | grep -v -e "^Host" -e "SIP registrations")"
-  [ ! -z "$REGISTRY" ] && convert_registrations_to_json
+  convert_registrations_to_json
 }
 
 discovery.iax2.registry() {
   REGISTRY="$($sudo asterisk -r -x "iax2 show registry" | grep -v -e "^Host" -e "IAX2 registrations")"
-  [ ! -z "$REGISTRY" ] && convert_registrations_to_json
+  convert_registrations_to_json
 }
 
 ## status functions 
@@ -84,7 +84,7 @@ version() {
 ## sip/iax2 functions - nb. trunks names must container alphanumeric chars adn peer names only numbers
 # return text
 sip.registry() {
-  $sudo asterisk -rx "sip show registry" | grep $1 | awk '{print $5}'
+  $sudo asterisk -rx "sip show registry" | grep $1 | sed 's/Request Sent/RequestSent/' | awk '{print $5}'
 }
 
 sip.peers.online(){
@@ -104,7 +104,7 @@ sip.trunks.offline(){
 }
 
 iax2.registry() {
-  $sudo asterisk -rx "iax2 show registry" | grep $1 | awk '{print $5}'
+  $sudo asterisk -rx "iax2 show registry" | grep $1 | sed 's/Request Sent/RequestSent/' | awk '{print $5}'
 }
 
 iax2.peers.online(){
