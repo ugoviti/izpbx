@@ -103,6 +103,10 @@ sip.trunks.offline(){
   $sudo asterisk -rx "sip show peers" | grep -e UNREACHABLE  -e UNKNOWN | awk '{print $1}' | grep [A-Za-z] | wc -l
 }
 
+iax2.registry() {
+  $sudo asterisk -rx "iax2 show registry" | grep $1 | awk '{print $5}'
+}
+
 iax2.peers.online(){
   $sudo asterisk -rx "iax2 show peers" | grep OK | awk '{print $1}' | wc -l
 }
