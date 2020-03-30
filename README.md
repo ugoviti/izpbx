@@ -32,7 +32,7 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
 - logrotating of services logs
 - FOP2 Operator Panel
-- Zabbix Agent for active healt monitoring (developing stage)
+- Asterisk Zabbix agent for active health monitoring
 - All Bootstrap configurations made via single `.env` file
 - Many customizable variables to use (look inside `default.env` file)
 - Two containers setup:
