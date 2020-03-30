@@ -142,10 +142,10 @@ ENV ASTERISK_INSTALL_DEPS=' \
     which \
     fftw-libs \
     sudo \
-    zabbix-agent \
-    zabbix-sender \
   '
-
+#     zabbix-agent \
+#     zabbix-sender \
+  
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
@@ -159,7 +159,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm && \
+    #rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     \
@@ -185,7 +185,6 @@ RUN set -xe && \
     dnf config-manager --set-enabled \
       PowerTools \
       remi \
-      zabbix \
       rpmfusion-free-updates \
       forensics \
       gf-plus \
@@ -227,6 +226,10 @@ ARG APP_DEBUG=0
 
 # copy external sources files
 ADD build/ /usr/src/
+
+# install zabbix with predownloaded packages because their repositories have many problems
+RUN set -xe && \
+  rpm -Uhv /usr/src/zabbix-*.rpm
 
 RUN set -xe && \
   . /etc/os-release && \
