@@ -129,7 +129,8 @@ APP_PORT_SIP=5160
 APP_PORT_IAX=4569
 APP_PORT_RTP_START=10000
 APP_PORT_RTP_END=10200
-APP_PORT_FOP=4445
+APP_PORT_FOP2=4445
+APP_PORT_ZABBIX=10050
 # database configurations (WARNING: if you comment out, will expose database port outside the container)
 APP_PORT_MYSQL=3306
 
@@ -148,7 +149,9 @@ FAIL2BAN_RECIDIVE_BANTIME=1814400
 FAIL2BAN_RECIDIVE_FINDTIME=15552000
 FAIL2BAN_RECIDIVE_MAXRETRY=10
 
-# freepbx advanced settings (prefix every FreePBX variable with FREEPBX_)
+## freepbx advanced settings (prefix every FreePBX variable with FREEPBX_)
+# modules enabled on first startup
+#FREEPBX_MODULES_EXTRA=soundlang callrecording cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking phonebook presencestate printextensions queues cel timeconditions pm2
 FREEPBX_FREEPBX_SYSTEM_IDENT=izPBX
 FREEPBX_AS_DISPLAY_READONLY_SETTINGS=1
 FREEPBX_AS_OVERRIDE_READONLY=1
@@ -168,6 +171,9 @@ FREEPBX_PHPTIMEZONE=Europe/Rome
 # WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
 FREEPBX_SIGNATURECHECK=0
 
+## zabbix configuration
+#ZABBIX_SERVER=127.0.0.1
+
 # fop2 configuration (https://www.fop2.com/docs/)
 #FOP2_LICENSE_CODE=<put here your license code>
 ## the following variables are not mandatory, you can leave commented
@@ -182,6 +188,7 @@ CRON_ENABLED=true
 HTTPD_ENABLED=true
 IZPBX_ENABLED=true
 FAIL2BAN_ENABLED=true
+#ZABBIX_ENABLED=true
 #FOP2_ENABLED=true
 ```
 

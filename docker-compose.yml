@@ -14,7 +14,7 @@ services:
     ports:
     - ${APP_PORT_HTTP}:${APP_PORT_HTTP}
     - ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
-    - ${APP_PORT_FOP}:${APP_PORT_FOP}
+    - ${APP_PORT_FOP2}:${APP_PORT_FOP2}
     - ${APP_PORT_IAX}:${APP_PORT_IAX}
     - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
     - ${APP_PORT_SIP}:${APP_PORT_SIP}

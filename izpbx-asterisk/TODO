@@ -1,7 +1,5 @@
 TODO:
 ======================
-- httpd: Allow from
-- zabbix agent
 - reload si pianta: causato da: /usr/bin/gpg --keyserver pool.sks-keyservers.net
 - fail2ban: block flood: SecurityEvent="ChallengeSent"
 
@@ -17,6 +15,8 @@ DONE:
 - modificare sipsettings in fase di startup usando variabili esterne
 - fop2
 - capire come mai alcuni pacchetti udp sulla 5060 arrivano dal default gateway (sembra risolvere con /etc/docker/daemon.json: {"userland-proxy": true}
+- httpd: Allow from
+- zabbix agent
   
 Problemi da risolvere:
 ======================
