@@ -585,6 +585,13 @@ cfgService_asterisk() {
 
 ## freepbx+asterisk service
 cfgService_izpbx() {
+
+  freepbx_reload() {
+    # reload freepbx config
+    echo "--> Reloading FreePBX..."
+    su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+  }
+  
   echo "=> Verifing FreePBX configurations"
 
   # legend of freepbx install script:
@@ -667,11 +674,7 @@ Charset=utf8" > /etc/odbc.ini
   # relink fwconsole and amportal if not exist
   [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[AMPBIN]}/fwconsole /usr/sbin/fwconsole
   [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
-
-  # FIXME: 20200318 freep 15 warnings workaround
-  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
-  sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
-
+  
   # reconfigure freepbx from env variables
   echo "--> Reconfiguring FreePBX Advanced Settings if needed..."
   set | grep ^"FREEPBX_" | grep -v ^"FREEPBX_MODULES_" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
@@ -697,15 +700,18 @@ Charset=utf8" > /etc/odbc.ini
     fi
   done
 
-  # FIXME: iaxsettings doesn't works right now
+  # FIXME: 20200315 iaxsettings doesn't works right now
   #for k in ${!freepbxIaxSettings[@]}; do
   #  v="${freepbxIaxSettings[$k]}"
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
-  
-  # reload freepbx config
-  #echo "--> Reloading FreePBX..."
-  #su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+
+    echo "--> FIXME: Temporary Workarounds for FreePBX broken modules and configs..."
+  # FIXME: 20200318 freepbx 15.x warnings workaround
+  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
+  sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
+  # FIXME: 20200322 https://issues.freepbx.org/browse/FREEPBX-21317
+  [ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
 }
 
 cfgService_freepbx_install() {
@@ -852,8 +858,7 @@ cfgService_freepbx_install() {
     # fix freepbx and asterisk permissions
     echo "--> Fixing FreePBX permissions..."
     fwconsole chown
-    echo "--> Reloading FreePBX..."
-    su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+    freepbx_reload
     
     echo "--> Installing Extra FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_EXTRA}; do
@@ -863,10 +868,9 @@ cfgService_freepbx_install() {
     # fix freepbx and asterisk permissions
     echo "--> Fixing FreePBX permissions..."
     fwconsole chown
-    echo "--> Reloading FreePBX..."
-    su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+    freepbx_reload
 
-    # pause forevere here
+    # DEBUG: pause forever here
     #while true ; do sleep 10 ; done
   fi
 

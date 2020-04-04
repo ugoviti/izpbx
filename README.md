@@ -22,7 +22,7 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - G729, Motif coded compiled
 - FreePBX WEB Management GUI (with predownloaded modules for quicker initial deploy)
 - First automatic installation managed when deploing the izpbx, subsequent updates managed by FreePBX Version Upgrade
-- izpbx scripts (into container shell digit izpbx+<TAB> to discover)
+- izpbx scripts (into container shell digit izpbx+TAB to discover)
 - tcpdump and sngrep utility to debug VoIP packets
 - fail2ban as security monitor to block SIP and HTTP brute force attacks
 - supervisord as services management with monitoring and automatic restart

@@ -1,1 +1,1 @@
-izPBX Kubernetes Helm Chart - NOT FINISHED - PLACE HOLDER
+izPBX Kubernetes Helm Chart - W.I.P. - NOT FINISHED - JUST PLACE HOLDER
