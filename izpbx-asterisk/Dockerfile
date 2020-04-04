@@ -543,7 +543,7 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -o /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END Install ----------" && \
-  : "---------- START Install Asterisk Zabbix Agents by InitZero b5 ----------" && \
+  : "---------- START Install Asterisk Zabbix Agents by InitZero b6 ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/master.tar.gz | tar xz --strip 3 zabbix-templates-master/asterisk/zabbix_agentd.d && \
   : "---------- END Install ----------"
