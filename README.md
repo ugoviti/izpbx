@@ -14,7 +14,8 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
 # Features
-- 60secs install from zero to running a full features PBX... really fast initial boostrap to deploy a full stack Asterisk+FreePBX system
+- 60 secs install from zero to a running full features PBX system.
+- Really fast initial bootstrap to deploy a full stack Asterisk+FreePBX system
 - Small image footprint
 - Persistent storage mode for configuration data (define APP_DATA variable to enable)
 - CentOS 8 64bit powered
@@ -30,13 +31,13 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - cron daemon
 - Apache 2.4 and PHP 7.3
 - Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
-- logrotating of services logs
+- Logrotating of services logs
 - FOP2 Operator Panel
 - Asterisk Zabbix agent for active health monitoring
 - All Bootstrap configurations made via single `.env` file
 - Many customizable variables to use (look inside `default.env` file)
 - Two containers setup:
-  - izpbx-asterisk: Asterisk Engine + FreePBX Frontend (antipattern layout but needed for the PBX ecosystem)
+  - izpbx-asterisk: Asterisk Engine + FreePBX Frontend (antipattern docker design but needed for the PBX ecosystem)
   - mariadb: Database Backend
 
 # How to use this image
@@ -73,14 +74,19 @@ cp default.env .env
 docker-compose up -d
 ```
 
-# Upgrade path
+# Deploy upgrade path
 
 1. Verify your current running version
-2. Upgrade the version of izpbx changing image tag into `docker-compose.yml`
+2. Upgrade the version of izpbx changing image tag into `docker-compose.yml` (verify for changes upstream in official repository and merge the differences)
 
 Upgrading izpbx deploy must follow that path:
 
 - 16.9.0 --> 16.9.x (initial release. no upgrade path right now)
+
+# FreePBX upgrade path
+
+FreePBX is installed into persistent data dir on first bootstrap 
+
 
 # Environment default variables
 
@@ -234,8 +240,8 @@ FAIL2BAN_ENABLED=true
 # Trobleshooting
 
 - FreePBX is slow to reload
-  - enter into container and run:  
-    `docker exec -it izpbx bash`  
+  - enter into container and run:
+    `docker exec -it izpbx bash`
     `fwconsole setting SIGNATURECHECK 0`
 
 # Quick reference

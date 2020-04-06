@@ -1,5 +1,6 @@
 version: '3'
 
+# if 'network_mode: host' is disabled, comment out the following lines
 #networks:
 #  izpbx:
 
@@ -28,11 +29,11 @@ services:
     - ./data/asterisk:/data
     env_file:
     - .env
-    ### fail2ban need privileged mode
+    ### fail2ban need privileged mode to manage iptables
     cap_add:
     - NET_ADMIN
     privileged: true
-    # for simpler sip nat management use 'host'
+    # for simpler sip nat management use: 'network_mode: host'
     network_mode: host
     # if 'network_mode: host' is disabled, comment out the following lines
     #links: 
