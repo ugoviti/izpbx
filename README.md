@@ -100,40 +100,41 @@ Only asterisk core is upgraded on container upgrade.
 MYSQL_ROOT_PASSWORD=CHANGEM3
 MYSQL_PASSWORD=CHANGEM3
 
-# if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
-#APP_FQDN=pbx.example.com
+# cron notifications mail address (default: root@localhost)
+#ROOT_MAILTO=
 
-# if the pbx is exposed to internet and want generate an SSL Let's Encrypt certificates (default: false)
-#LETSENCRYPT_ENABLED=true
+# enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
+#APP_FQDN=sip.example.com
 
 # enable https protocols (default: true)
-HTTPD_HTTPS_ENABLED=true
+# place your custom SSL certs in $APP_DATA/etc/pki/izpbx (use filename 'izpbx.crt' for public key and 'izpbx.key' for the private)
+#HTTPD_HTTPS_ENABLED=true
 
 # redirect unencrypted http connetions to https (default: false)
-#HTTPD_REDIRECT_HTTP_TO_HTTPS=true
+#HTTPD_REDIRECT_HTTP_TO_HTTPS=false
 
-# by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restric the access and enhance the security
+# enable if the pbx is exposed to internet and want generate an SSL Let's Encrypt certificates (default: false)
+#LETSENCRYPT_ENABLED=false
+
+# by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security
 #HTTPD_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-
-# Cron notifications mail address (default: root@localhost)
-#ROOT_MAILTO=
 
 # enable persistent external data storage (comment if you want disable persistence of data) (default: /data)
 APP_DATA=/data
 
 # database configurations
-# WARNING: if the container network run in bridge mode use: db
+# WARNING: if the docker-compose use "network_mode: bridge" specify: db
 #MYSQL_SERVER=db
-# WARNING: if the container network run in host mode use: 127.0.0.1 (or the IP of external database)
+# WARNING: if the docker-compose use "network_mode: host" specify: 127.0.0.1 or the address of the external database
 MYSQL_SERVER=127.0.0.1
 MYSQL_DATABASE=asterisk
 MYSQL_USER=asterisk
 
 ## network ports
-# freepbx configurations
+# webserver and freepbx ports
 APP_PORT_HTTP=80
 APP_PORT_HTTPS=443
-# asterisk configurations
+# asterisk ports
 APP_PORT_PJSIP=5060
 APP_PORT_SIP=5160
 APP_PORT_IAX=4569
@@ -141,15 +142,15 @@ APP_PORT_RTP_START=10000
 APP_PORT_RTP_END=10200
 APP_PORT_FOP2=4445
 APP_PORT_ZABBIX=10050
-# database configurations (WARNING: if you comment out, will expose database port outside the container)
+# database port
 APP_PORT_MYSQL=3306
 
 # fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
 FAIL2BAN_ENABLED=true
 FAIL2BAN_ASTERISK_ENABLED=true
 #FAIL2BAN_ASTERISK_LOGPATH=/var/log/asterisk/security
-FAIL2BAN_DEFAULT_SENDER=fail2ban@example.com
-FAIL2BAN_DEFAULT_DESTEMAIL=security@example.com
+#FAIL2BAN_DEFAULT_SENDER=fail2ban@example.com
+#FAIL2BAN_DEFAULT_DESTEMAIL=security@example.com
 FAIL2BAN_DEFAULT_IGNOREIP=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 FAIL2BAN_DEFAULT_BANTIME=300
 FAIL2BAN_DEFAULT_FINDTIME=3600
