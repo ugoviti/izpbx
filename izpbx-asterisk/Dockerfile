@@ -120,16 +120,7 @@ ENV ASTERISK_INSTALL_DEPS=' \
     jq \
     speex \
     speexdsp \
-    portaudio \ENV APP_PORT_HTTP         80
-ENV APP_PORT_HTTPS        443
-ENV APP_PORT_PJSIP        5160
-ENV APP_PORT_SIP          5060
-ENV APP_PORT_IAX          4569
-ENV APP_PORT_RTP_START    10000
-ENV APP_PORT_RTP_END      10200
-ENV APP_PORT_FOP2         4445
-ENV APP_PORT_ZABBIX       10050
-ENV APP_PORT_MYSQL        3306
+    portaudio \
     libsrtp \
     unbound-libs \
     freetds \
