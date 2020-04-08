@@ -29,6 +29,7 @@ declare -A appDataDirs=(
   [F2BLOGDIR]=/var/log/fail2ban
   [F2BLIBDIR]=/var/lib/fail2ban
   [FOP2APPDIR]=/usr/local/fop2
+  [SSLCRTDIR]=/etc/pki/izpbx
 )
 
 declare -A appFilesConf=(
@@ -482,8 +483,7 @@ print_AllowFrom() {
   fi
 }
     
-    echo "
-# default HTTP virtualhost
+    echo "# default HTTP virtualhost
 <VirtualHost *:${APP_PORT_HTTP}>
   DocumentRoot /var/www/html
 $(if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
@@ -503,8 +503,7 @@ $(print_AllowFrom)
 </VirtualHost>
 
 $(if [ ! -z "${APP_FQDN}" ]; then
-echo "
-# HTTP virtualhost
+echo "# HTTP virtualhost
 <VirtualHost *:${APP_PORT_HTTP}>
   ServerName ${APP_FQDN}
 $(if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
@@ -534,6 +533,28 @@ SSLSessionCacheTimeout 300
 SSLCryptoDevice        builtin"
 fi)
 
+$(if [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" != "true" ]]; then
+echo "# enable default ssl virtualhost with self signed certificate
+<VirtualHost _default_:${APP_PORT_HTTPS}>
+  ErrorLog logs/ssl_error_log
+  TransferLog logs/ssl_access_log
+  LogLevel warn
+  SSLEngine on
+  SSLHonorCipherOrder on
+  SSLCipherSuite PROFILE=SYSTEM
+  SSLProxyCipherSuite PROFILE=SYSTEM
+  SSLCertificateFile       ${appDataDirs[SSLCRTDIR]}/izpbx.crt
+  SSLCertificateKeyFile    ${appDataDirs[SSLCRTDIR]}/izpbx.key
+  #SSLCertificateChainFile ${appDataDirs[SSLCRTDIR]}/chain.crt
+
+  <Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+$(print_AllowFrom)
+  </Directory>
+</VirtualHost>"
+fi)
+
 $(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
 echo "# HTTPS virtualhost
 <VirtualHost *:${APP_PORT_HTTPS}>
@@ -555,27 +576,6 @@ $(print_AllowFrom)
 </VirtualHost>"
 fi)
 
-$(if [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "false" ]]; then
-echo "# enable default ssl virtualhost with self signed certificate
-<VirtualHost _default_:${APP_PORT_HTTPS}>
-  ErrorLog logs/ssl_error_log
-  TransferLog logs/ssl_access_log
-  LogLevel warn
-  SSLEngine on
-  SSLHonorCipherOrder on
-  SSLCipherSuite PROFILE=SYSTEM
-  SSLProxyCipherSuite PROFILE=SYSTEM
-  SSLCertificateFile /etc/pki/tls/certs/localhost.crt
-  SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
-  
-  <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
-    AllowOverride All
-$(print_AllowFrom)
-  </Directory>
-</VirtualHost>
-"
-fi)
 " > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
   fi
 }
