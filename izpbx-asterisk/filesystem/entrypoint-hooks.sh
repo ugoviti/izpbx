@@ -482,7 +482,7 @@ print_AllowFrom() {
       echo "    Require all granted"
   fi
 }
-    
+
     echo "# default HTTP virtualhost
 <VirtualHost *:${APP_PORT_HTTP}>
   DocumentRoot /var/www/html
@@ -536,13 +536,13 @@ fi)
 $(if [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" != "true" ]]; then
 echo "# enable default ssl virtualhost with self signed certificate
 <VirtualHost _default_:${APP_PORT_HTTPS}>
-  ErrorLog logs/ssl_error_log
-  TransferLog logs/ssl_access_log
-  LogLevel warn
-  SSLEngine on
-  SSLHonorCipherOrder on
-  SSLCipherSuite PROFILE=SYSTEM
-  SSLProxyCipherSuite PROFILE=SYSTEM
+  ErrorLog                 logs/ssl_error_log
+  TransferLog              logs/ssl_access_log
+  LogLevel                 warn
+  SSLEngine                on
+  SSLHonorCipherOrder      on
+  SSLCipherSuite           PROFILE=SYSTEM
+  SSLProxyCipherSuite      PROFILE=SYSTEM
   SSLCertificateFile       ${appDataDirs[SSLCRTDIR]}/izpbx.crt
   SSLCertificateKeyFile    ${appDataDirs[SSLCRTDIR]}/izpbx.key
   #SSLCertificateChainFile ${appDataDirs[SSLCRTDIR]}/chain.crt
@@ -560,10 +560,10 @@ echo "# HTTPS virtualhost
 <VirtualHost *:${APP_PORT_HTTPS}>
   ServerName ${APP_FQDN}
 
-  SSLEngine on
-  SSLHonorCipherOrder on
-  SSLCipherSuite PROFILE=SYSTEM
-  SSLProxyCipherSuite PROFILE=SYSTEM
+  SSLEngine               on
+  SSLHonorCipherOrder     on
+  SSLCipherSuite          PROFILE=SYSTEM
+  SSLProxyCipherSuite     PROFILE=SYSTEM
   SSLCertificateChainFile /etc/letsencrypt/live/${APP_FQDN}/chain.pem
   SSLCertificateFile      /etc/letsencrypt/live/${APP_FQDN}/cert.pem
   SSLCertificateKeyFile   /etc/letsencrypt/live/${APP_FQDN}/privkey.pem
