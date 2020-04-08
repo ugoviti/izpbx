@@ -2,13 +2,13 @@
 izPBX Cloud Native Telephony System
 
 # Description
-(TESTING PHASE) izPBX is a Cloud Native Telephony System powered by Asterisk Engine and FreePBX Management GUI
+izPBX is a Cloud Native Telephony System powered by Asterisk Engine and FreePBX Management GUI
 
 # Supported tags
 * `16.9.X-BUILD, 16.9, 16, latest`
 * `17.3.X-BUILD, 17.3, 17` (testing branch - not supported)
 
-Where **X** is the patch version number, and **BUILD** is the build number (look into project [Tags](/repository/docker/izdock/httpd/tags/) page to discover the latest versions)
+Where **X** is the patch version number, and **BUILD** is the build number (look into project [Tags](/repository/docker/izdock/izpbx-asterisk/tags/) page to discover the latest versions)
 
 # Dockerfile
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
@@ -74,6 +74,8 @@ cp default.env .env
 docker-compose up -d
 ```
 
+Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the containers will be exposed directly to the outside without using docker internal network range. Modify docker-compose.yml to disable host network mode, and enable bridged network mode for the izpbx container.
+
 # Deploy upgrade path
 
 1. Verify your current running version
@@ -85,7 +87,9 @@ Upgrading izpbx deploy must follow that path:
 
 # FreePBX upgrade path
 
-FreePBX is installed into persistent data dir on first bootstrap 
+FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).
+Later container updates will not upgrade FreePBX. After initial install, Upgrading FreePBX Core and Modules is possibile only via official upgrade source path: menù **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
+Only asterisk core is upgraded on container upgrade.
 
 
 # Environment default variables
@@ -120,7 +124,7 @@ APP_DATA=/data
 # database configurations
 # WARNING: if the container network run in bridge mode use: db
 #MYSQL_SERVER=db
-# WARNING: if the container network run in host mode use: 127.0.0.1
+# WARNING: if the container network run in host mode use: 127.0.0.1 (or the IP of external database)
 MYSQL_SERVER=127.0.0.1
 MYSQL_DATABASE=asterisk
 MYSQL_USER=asterisk

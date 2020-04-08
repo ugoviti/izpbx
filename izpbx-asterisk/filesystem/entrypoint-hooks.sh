@@ -93,6 +93,7 @@ declare -A fpbxSipSettings=(
 : ${MYSQL_DATABASE:="asterisk"}
 : ${MYSQL_USER:="asterisk"}
 : ${MYSQL_PASSWORD:=""}
+: ${APP_PORT_MYSQL:="3306"}
 
 # fop2 (automaticcally obtained quering freepbx settings)
 #: ${FOP2_AMI_HOST:="localhost"}
@@ -661,6 +662,7 @@ Charset=utf8" > /etc/odbc.ini
     else
       # update freepbx.conf file
       echo "---> Reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
+      [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
       sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '${MYSQL_SERVER}';/"   -i "${appFilesConf[FPBXCFGFILE]}"
@@ -727,7 +729,7 @@ cfgService_freepbx_install() {
   # verify and wait if mysql is ready
   myn=1 ; myt=10
   until [ $myn -eq $myt ]; do
-    mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "SELECT 1;" >/dev/null
+    mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "SELECT 1;" >/dev/null
     RETVAL=$?
     if [ $RETVAL = 0 ]; then
         myn=$myt
@@ -739,8 +741,8 @@ cfgService_freepbx_install() {
   done
   
   # FIXME: allow asterisk user to manage asteriskcdrdb database
-  mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS asteriskcdrdb"
-  mysql -h ${MYSQL_SERVER} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO 'asterisk'@'%' WITH GRANT OPTION;"
+  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS asteriskcdrdb"
+  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO 'asterisk'@'%' WITH GRANT OPTION;"
 
   # set default freepbx install options
   FPBX_OPTS+=" --webroot=${fpbxDirs[AMPWEBROOT]}"
@@ -759,6 +761,8 @@ cfgService_freepbx_install() {
   echo "--> Installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
   echo "---> START install FreePBX @ $(date)"
   # https://github.com/FreePBX/announcement/archive/release/15.0.zip
+  # if mysql run in a non standard port change the mysql server address
+  [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
   set -x
   ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} ${FPBX_OPTS}
   RETVAL=$?
@@ -766,10 +770,7 @@ cfgService_freepbx_install() {
   echo "---> END install FreePBX @ $(date)"
   unset FPBX_OPTS
  
-  # TEST:
-  #[ $RETVAL != 0 ] && fwconsole ma install pm2 && ./install -n --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD}
-  #RETVAL=$?
-  
+  # if the install success exec
   if [ $RETVAL = 0 ]; then
     # fix paths and relink fwconsole and amportal if not exist
     [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
@@ -794,7 +795,7 @@ cfgService_freepbx_install() {
       voicemail
     "}
 
-    # ordered install
+    # ordered modules install
     : ${FREEPBX_MODULES_PRE:="
       userman
     "}
@@ -840,6 +841,7 @@ cfgService_freepbx_install() {
       pm2
     "}
 
+    # disabled modules
     : ${FREEPBX_MODULES_DISABLED="
       bulkhandler
       speeddial

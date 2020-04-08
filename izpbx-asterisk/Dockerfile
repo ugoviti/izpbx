@@ -17,12 +17,14 @@ ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System"
 ## app ports
 ENV APP_PORT_HTTP         80
 ENV APP_PORT_HTTPS        443
-ENV APP_PORT_IAX          4569
-ENV APP_PORT_SIP          5060
 ENV APP_PORT_PJSIP        5160
-ENV APP_PORT_FOP2         4445
+ENV APP_PORT_SIP          5060
+ENV APP_PORT_IAX          4569
 ENV APP_PORT_RTP_START    10000
 ENV APP_PORT_RTP_END      10200
+ENV APP_PORT_FOP2         4445
+ENV APP_PORT_ZABBIX       10050
+ENV APP_PORT_MYSQL        3306
 
 ## app users
 ENV APP_UID               1000
@@ -118,7 +120,16 @@ ENV ASTERISK_INSTALL_DEPS=' \
     jq \
     speex \
     speexdsp \
-    portaudio \
+    portaudio \ENV APP_PORT_HTTP         80
+ENV APP_PORT_HTTPS        443
+ENV APP_PORT_PJSIP        5160
+ENV APP_PORT_SIP          5060
+ENV APP_PORT_IAX          4569
+ENV APP_PORT_RTP_START    10000
+ENV APP_PORT_RTP_END      10200
+ENV APP_PORT_FOP2         4445
+ENV APP_PORT_ZABBIX       10050
+ENV APP_PORT_MYSQL        3306
     libsrtp \
     unbound-libs \
     freetds \
@@ -559,15 +570,17 @@ RUN set -xe && \
 EXPOSE \
   ${APP_PORT_HTTP}/tcp \
   ${APP_PORT_HTTPS}/tcp \
-  ${APP_PORT_FOP2}/tcp \
-  ${APP_PORT_IAX}/tcp \
-  ${APP_PORT_SIP}/tcp \
   ${APP_PORT_PJSIP}/tcp \
-  ${APP_PORT_IAX}/udp \
-  ${APP_PORT_SIP}/udp \
   ${APP_PORT_PJSIP}/udp \
-  ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
-
+  ${APP_PORT_IAX}/tcp \
+  ${APP_PORT_IAX}/udp \
+  ${APP_PORT_SIP}/tcp \
+  ${APP_PORT_SIP}/udp \
+  ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp \
+  ${APP_PORT_FOP2}/tcp \
+  ${APP_PORT_ZABBIX}/tcp \
+  ${APP_PORT_MYSQL}/tcp
+  
 # define volumes
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
 
