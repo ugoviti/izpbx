@@ -211,6 +211,7 @@ RUN set -xe && \
   dnf mark install $ASTERISK_INSTALL_DEPS && \
   \
   : "---------- generate selfsigned certificate for 100 years duration ----------" && \
+  mkdir -p /etc/pki/izpbx && \
   openssl req -subj '/CN=izpbx/O=InitZero/C=IT' -new -newkey rsa:2048 -sha256 -days 36500 -nodes -x509 -keyout /etc/pki/izpbx/izpbx.key -out /etc/pki/izpbx/izpbx.crt && \
   : "---------- clean temporary files ----------" && \
   dnf clean all && \
