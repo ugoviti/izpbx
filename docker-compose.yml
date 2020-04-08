@@ -26,7 +26,7 @@ services:
     - ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
     volumes:
     - /etc/localtime:/etc/localtime:ro
-    - ./data/asterisk:/data
+    - ./data/izpbx:/data
     env_file:
     - .env
     ### fail2ban need privileged mode to manage iptables

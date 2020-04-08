@@ -1,6 +1,9 @@
 kind: pipeline
 name: izpbx-16
 
+concurrency:
+  limit: 1
+
 volumes:
   - name: docker
     host:
