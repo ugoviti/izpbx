@@ -1,9 +1,6 @@
 kind: pipeline
 name: izpbx-16
 
-concurrency:
-  limit: 1
-
 volumes:
   - name: docker
     host:
@@ -49,9 +46,11 @@ steps:
     branch: master
 
 ---
-
 kind: pipeline
 name: izpbx-17
+
+concurrency:
+  limit: 1
 
 volumes:
   - name: docker
