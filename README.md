@@ -88,8 +88,12 @@ Upgrading izpbx deploy must follow that path:
 # FreePBX upgrade path
 
 FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).
-Later container updates will not upgrade FreePBX. After initial install, Upgrading FreePBX Core and Modules is possibile only via official upgrade source path: menù **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
-Only asterisk core is upgraded on container upgrade.
+
+Later container updates will not upgrade FreePBX. After initial install, Upgrading FreePBX Core and Modules is possible only via official upgrade source path: 
+
+  - FreePBX Menù **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
+
+So, only Asterisk core engine is updated on container image update.
 
 
 # Environment default variables
