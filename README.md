@@ -8,7 +8,7 @@ izPBX is a Cloud Native Telephony System powered by Asterisk Engine and FreePBX 
 * `16.9.X-BUILD, 16.9, 16, latest`
 * `17.3.X-BUILD, 17.3, 17` (testing branch - not supported)
 
-Where **X** is the patch version number, and **BUILD** is the build number (look into project [Tags](/repository/docker/izdock/izpbx-asterisk/tags/) page to discover the latest versions)
+Where **X** is the patch version number, and **BUILD** is the build number (look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions)
 
 # Dockerfile
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
