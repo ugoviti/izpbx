@@ -396,6 +396,7 @@ postconf -e "maillog_file = /dev/stdout"
 postconf -e "inet_protocols = ipv4"
 
 # set max message size limit
+postconf -e "mailbox_size_limit = 0"
 postconf -e "message_size_limit = ${MESSAGE_SIZE_LIMIT}"
 }
 
