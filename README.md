@@ -74,7 +74,8 @@ cp default.env .env
 docker-compose up -d
 ```
 
-Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the containers will be exposed directly to the outside without using docker internal network range. Modify docker-compose.yml to disable host network mode, and enable bridged network mode for the izpbx container.
+Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the containers will be exposed directly to the outside without using docker internal network range.  
+Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host.
 
 # Deploy upgrade path
 
