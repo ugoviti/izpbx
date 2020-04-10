@@ -128,10 +128,20 @@ declare -A fpbxSipSettings=(
 : ${FOP2_ENABLED:="false"}
 
 ## daemons configs
-: ${RELAYHOST:=""}
-: ${RELAYHOST_USERNAME:=""}
-: ${RELAYHOST_PASSWORD:=""}
-: ${ALLOWED_SENDER_DOMAINS:=""}
+
+# postfix
+: ${SMTP_RELAYHOST=:=""}
+: ${SMTP_RELAYHOST_USERNAME=:=""}
+: ${SMTP_RELAYHOST_PASSWORD=:=""}
+: ${SMTP_ALLOWED_SENDER_DOMAINS=:=""}
+: ${SMTP_MESSAGE_SIZE_LIMIT=:="0"}
+
+: ${RELAYHOST:="$SMTP_RELAYHOST"}
+: ${RELAYHOST_USERNAME:="$RELAYHOST_USERNAME"}
+: ${RELAYHOST_PASSWORD:="$RELAYHOST_PASSWORD"}
+: ${ALLOWED_SENDER_DOMAINS:="$ALLOWED_SENDER_DOMAINS"}
+: ${MESSAGE_SIZE_LIMIT=:="$SMTP_MESSAGE_SIZE_LIMIT"}
+
 
 # operating system specific variables
 ## detect current operating system
@@ -384,6 +394,9 @@ postconf -e "maillog_file = /dev/stdout"
 
 # fix for send-mail: fatal: parameter inet_interfaces: no local interface found for ::1
 postconf -e "inet_protocols = ipv4"
+
+# set max message size limit
+postconf -e "message_size_limit = ${MESSAGE_SIZE_LIMIT}"
 }
 
 ## cron service
