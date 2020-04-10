@@ -44,14 +44,8 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 
 Using docker-compose is the suggested method:
 
-- Clone GIT repository:
-
-```
-git clone https://github.com/ugoviti/izdock-izpbx.git
-```
-
-- Create file: `/etc/docker/daemon.json` (needed to manage SIP/RTP UDP traffic without nat of docker gateway)
-
+- Update or create file `/etc/docker/daemon.json` with:  
+(useful to avoid docker proxy NAT of packets. Needed to make SIP/RTP UDP traffic works without problems)
 ```
 {
   "userland-proxy": false
@@ -60,21 +54,17 @@ git clone https://github.com/ugoviti/izdock-izpbx.git
 
 - Restart Docker Engine: `systemctl restart docker`
 
-- Copy `default.env` in `.env` and edit the variables inside:
+- Clone GIT repository or download latest release from: https://git.initzero.it/initzero/izdock-izpbx/releases and unpack it into a directory
 
-```
-cp default.env .env
-```
+- Copy `default.env` file in `.env`: `cp default.env .env`
 
-- Customize `.env` veriables, specially mysql passwords
+- Customize `.env` variables, specially the security section of mysql passwords
 
-- Start izpbx deploy with:
+- Start izpbx deploy with: `docker-compose up -d`
 
-```
-docker-compose up -d
-```
+- Point your web browser to the IP address of your docker host and follow initial startup guide
 
-Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the containers will be exposed directly to the outside without using docker internal network range.  
+Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside without using docker internal network range.  
 Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host.
 
 # Deploy upgrade path
@@ -94,7 +84,7 @@ Later container updates will not upgrade FreePBX. After initial install, Upgradi
 
   - FreePBX Menù **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
 
-So, only Asterisk core engine is updated on container image update.
+So, only Asterisk core engine will be updated on container image update.
 
 
 # Environment default variables
@@ -107,6 +97,13 @@ MYSQL_PASSWORD=CHANGEM3
 
 # cron notifications mail address (default: root@localhost)
 #ROOT_MAILTO=
+
+#SMTP SmartHost configuration. Specify DNS name or IP address for the SMTP RelayHost (default: none)
+#SMTP_RELAYHOST=
+#SMTP_RELAYHOST_USERNAME=
+#SMTP_RELAYHOST_PASSWORD=
+#SMTP_ALLOWED_SENDER_DOMAINS=
+#SMTP_MESSAGE_SIZE_LIMIT=
 
 # enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
 #APP_FQDN=sip.example.com
@@ -140,8 +137,8 @@ MYSQL_USER=asterisk
 APP_PORT_HTTP=80
 APP_PORT_HTTPS=443
 # asterisk ports
-APP_PORT_PJSIP=5060
-APP_PORT_SIP=5160
+APP_PORT_PJSIP=5160
+APP_PORT_SIP=5060
 APP_PORT_IAX=4569
 APP_PORT_RTP_START=10000
 APP_PORT_RTP_END=10200
