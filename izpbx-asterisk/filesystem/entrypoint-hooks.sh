@@ -130,10 +130,10 @@ declare -A fpbxSipSettings=(
 ## daemons configs
 
 # postfix
-: ${SMTP_RELAYHOST=:=""}
-: ${SMTP_RELAYHOST_USERNAME=:=""}
-: ${SMTP_RELAYHOST_PASSWORD=:=""}
-: ${SMTP_ALLOWED_SENDER_DOMAINS=:=""}
+: ${SMTP_RELAYHOST:=""}
+: ${SMTP_RELAYHOST_USERNAME:=""}
+: ${SMTP_RELAYHOST_PASSWORD:=""}
+: ${SMTP_ALLOWED_SENDER_DOMAINS:=""}
 : ${SMTP_MESSAGE_SIZE_LIMIT:="0"}
 
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
@@ -484,7 +484,7 @@ cfgService_httpd() {
     sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
     # disable default ssl.conf and use virtual.conf instead if HTTPD_HTTPS_ENABLED=false
-    [ "${HTTPD_HTTPS_ENABLED}" = "true" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
+    mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
 
 
 print_AllowFrom() {
