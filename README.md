@@ -17,32 +17,34 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - 60 secs install from zero to a running full features PBX system.
 - Really fast initial bootstrap to deploy a full stack Asterisk+FreePBX system
 - Small image footprint
-- Persistent storage mode for configuration data (define APP_DATA variable to enable)
 - CentOS 8 64bit powered
 - Asterisk PBX Engine (compiled from scratch)
-- G729, Motif coded compiled
+- Opus, G729, Motif codecs compiled
 - FreePBX WEB Management GUI (with predownloaded modules for quicker initial deploy)
-- First automatic installation managed when deploing the izpbx, subsequent updates managed by FreePBX Version Upgrade
-- izpbx scripts (into container shell digit izpbx+TAB to discover)
+- First automatic installation managed when deploying the izpbx, subsequent updates managed by FreePBX Official Version Upgrade
+- Persistent storage mode for configuration data (define APP_DATA variable to enable)
+- Misc izpbx scripts (into container shell digit izpbx+TAB to discover)
 - tcpdump and sngrep utility to debug VoIP packets
 - fail2ban as security monitor to block SIP and HTTP brute force attacks
 - supervisord as services management with monitoring and automatic restart
 - postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
 - cron daemon
-- Apache 2.4 and PHP 7.3
+- Apache 2.4 and PHP 7.3 (mpm_prefork+mod_php configuration mode)
 - Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
 - Logrotating of services logs
-- FOP2 Operator Panel
+- FOP2 Operator Panel (optional)
 - Asterisk Zabbix agent for active health monitoring
 - All Bootstrap configurations made via single `.env` file
 - Many customizable variables to use (look inside `default.env` file)
-- Two containers setup:
-  - izpbx-asterisk: Asterisk Engine + FreePBX Frontend (antipattern docker design but needed for the PBX ecosystem)
+- Two containers setup: (antipattern docker design but needed by the FreePBX ecosystem to works)
+  - izpbx-asterisk: Asterisk Engine + FreePBX Frontend + others services
   - mariadb: Database Backend
 
 # How to use this image
 
 Using docker-compose is the suggested method:
+
+- Install Docker Runtime and docker-compose utility from https://www.docker.com/get-started for you Operating System.
 
 - Update or create file `/etc/docker/daemon.json` with:  
 (useful to avoid docker proxy NAT of packets. Needed to make SIP/RTP UDP traffic works without problems)
@@ -64,10 +66,23 @@ Using docker-compose is the suggested method:
 
 - Point your web browser to the IP address of your docker host and follow initial startup guide
 
-Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside without using docker internal network range.  
-Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host.
+Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range.  
+Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested).
 
-# Deploy upgrade path
+# Tested systems and host compatibility
+
+Tested Docker Runtime:
+  - moby-engine 19.03
+  - docker-ce 19.03
+  - docker-compose 1.25
+
+Tested Host Operating Systems:
+  - CentOS 7
+  - CentOS 8
+  - Fedora Core 31
+  - Debian 10
+
+# Container deploy upgrade path
 
 1. Verify your current running version
 2. Upgrade the version of izpbx changing image tag into `docker-compose.yml` (verify for changes upstream in official repository and merge the differences)
@@ -85,7 +100,6 @@ Later container updates will not upgrade FreePBX. After initial install, Upgradi
   - FreePBX Menù **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
 
 So, only Asterisk core engine will be updated on container image update.
-
 
 # Environment default variables
 
@@ -110,6 +124,7 @@ MYSQL_PASSWORD=CHANGEM3
 
 # enable https protocols (default: true)
 # place your custom SSL certs in $APP_DATA/etc/pki/izpbx (use filename 'izpbx.crt' for public key and 'izpbx.key' for the private)
+# by default izpbx will use a self-signed certificate
 #HTTPD_HTTPS_ENABLED=true
 
 # redirect unencrypted http connetions to https (default: false)
@@ -205,6 +220,11 @@ FAIL2BAN_ENABLED=true
 #FOP2_ENABLED=true
 ```
 
+# Zabbix Agent Configuration
+
+Consult official repository page for installation and configuration of Asterisk Zabbix Template:
+- https://github.com/ugoviti/zabbix-templates/tree/master/asterisk
+
 # FreePBX Configuration Best Practices
 
 * **Settings-->Advanced Settings**
@@ -247,23 +267,33 @@ FAIL2BAN_ENABLED=true
 # Trobleshooting
 
 - FreePBX is slow to reload
-  - enter into container and run:
-    `docker exec -it izpbx bash`
+  - enter into container and run:  
+    `docker exec -it izpbx bash`  
     `fwconsole setting SIGNATURECHECK 0`
+
+# TODO / Future Development
+- Hylafax+ Server
+- IAXModem
+- macOS host support? (edit docker-compose.yml and comment localtime volume)
+- Windows host support (need to use docker volume instead local directory path)
+- Kubernetes deploy via Helm Chart
 
 # Quick reference
 
-- **Where to get help**:
-  [InitZero Corporate Support](https://www.initzero.it/)
+- **Developed and maintained by**:
+  [Ugo Viti](https://github.com/ugoviti)
 
 - **Where to file issues**:
   [https://github.com/ugoviti/izdock-izpbx/issues](https://github.com/ugoviti/izdock-izpbx/issues)
 
-- **Maintained by**:
-  [Ugo Viti](https://github.com/ugoviti)
-
+- **Where to get commercial help**:
+  [InitZero Support](https://www.initzero.it/)
+  
 - **Supported architectures**:
   [`amd64`]
 
 - **Supported Docker versions**:
   [the latest release](https://github.com/docker/docker-ce/releases/latest) (down to 1.6 on a best-effort basis)
+
+- **License**:
+  [GPL v3](https://github.com/ugoviti/izdock-izpbx/blob/master/LICENSE)
