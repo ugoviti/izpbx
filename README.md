@@ -31,17 +31,17 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - cron daemon
 - Apache 2.4 and PHP 7.3 (mpm_prefork+mod_php configuration mode)
 - Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
+- Commercial SSL Certificates support
 - Logrotating of services logs
 - FOP2 Operator Panel (optional)
-- Asterisk Zabbix agent for active health monitoring
-- All Bootstrap configurations made via single `.env` file
+- Integrated Asterisk Zabbix agent for active health monitoring
+- All Bootstrap configurations made via single central `.env` file
 - Many customizable variables to use (look inside `default.env` file)
 - Two containers setup: (antipattern docker design but needed by the FreePBX ecosystem to works)
   - izpbx-asterisk: Asterisk Engine + FreePBX Frontend + others services
   - mariadb: Database Backend
 
 # How to use this image
-
 Using docker-compose is the suggested method:
 
 - Install Docker Runtime and docker-compose utility from https://www.docker.com/get-started for you Operating System.
@@ -70,7 +70,6 @@ Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx
 Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested).
 
 # Tested systems and host compatibility
-
 Tested Docker Runtime:
   - moby-engine 19.03
   - docker-ce 19.03
@@ -83,7 +82,6 @@ Tested Host Operating Systems:
   - Debian 10
 
 # Container deploy upgrade path
-
 1. Verify your current running version
 2. Upgrade the version of izpbx changing image tag into `docker-compose.yml` (verify for changes upstream in official repository and merge the differences)
 
@@ -92,7 +90,6 @@ Upgrading izpbx deploy must follow that path:
 - 16.9.0 --> 16.9.x (initial release. no upgrade path right now)
 
 # FreePBX upgrade path
-
 FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).
 
 Later container updates will not upgrade FreePBX. After initial install, Upgrading FreePBX Core and Modules is possible only via official upgrade source path: 
@@ -102,7 +99,6 @@ Later container updates will not upgrade FreePBX. After initial install, Upgradi
 So, only Asterisk core engine will be updated on container image update.
 
 # Environment default variables
-
 ```
 ## mandatory options
 # WARNING: security passwords... please change the default
@@ -221,12 +217,10 @@ FAIL2BAN_ENABLED=true
 ```
 
 # Zabbix Agent Configuration
-
 Consult official repository page for installation and configuration of Asterisk Zabbix Template:
 - https://github.com/ugoviti/zabbix-templates/tree/master/asterisk
 
 # FreePBX Configuration Best Practices
-
 * **Settings-->Advanced Settings**
   * CW Enabled by Default: **NO**
   * Country Indication Tones: **Italy**
@@ -265,7 +259,6 @@ Consult official repository page for installation and configuration of Asterisk 
   * Global Language: **Italian**
 
 # Trobleshooting
-
 - FreePBX is slow to reload
   - enter into container and run:  
     `docker exec -it izpbx bash`  
@@ -279,7 +272,6 @@ Consult official repository page for installation and configuration of Asterisk 
 - Kubernetes deploy via Helm Chart
 
 # Quick reference
-
 - **Developed and maintained by**:
   [Ugo Viti](https://github.com/ugoviti)
 
