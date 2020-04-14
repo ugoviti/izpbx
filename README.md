@@ -13,6 +13,10 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 # Dockerfile
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
+# Targets and limits of this project
+- On-Premise quick automatic a repeatable deploy of "small" PBX Systems (by default max 50 concurrent calls)
+- On the Cloud single deploy for every VM. No multi containers setup works out of the box right now (technical limits of how Docker and SIP UDP RTP traffic works)
+
 # Features
 - 60 secs install from zero to a running full features PBX system.
 - Really fast initial bootstrap to deploy a full stack Asterisk+FreePBX system
@@ -43,6 +47,8 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 
 # How to use this image
 Using docker-compose is the suggested method:
+
+- Install your prefered Linux OS into a VM o a baremetal appliance
 
 - Install Docker Runtime and docker-compose utility from https://www.docker.com/get-started for you Operating System.
 
@@ -264,6 +270,9 @@ Consult official repository page for installation and configuration of Asterisk 
     `docker exec -it izpbx bash`  
     `fwconsole setting SIGNATURECHECK 0`
 
+- Start from scratch and cleanup the configurations
+  - Simply remove the `data` directory created by deploy, and start over to make a new clean and empty installation
+    
 # TODO / Future Development
 - Hylafax+ Server
 - IAXModem

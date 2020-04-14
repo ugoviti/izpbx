@@ -486,6 +486,7 @@ RUN set -xe && \
 # curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
 RUN set -xe && \
+  \
   cd /usr/src && \
   mkdir freepbx && \
   curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx && \
@@ -526,6 +527,7 @@ RUN set -xe && \
       bulkhandler \
       speeddial \
       weakpasswords \
+      pm2 \
       ; do \
   echo "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
