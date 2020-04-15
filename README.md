@@ -5,8 +5,13 @@ izPBX Cloud Native Telephony System
 izPBX is a Cloud Native Telephony System powered by Asterisk Engine and FreePBX Management GUI
 
 # Supported tags
-* `16.9.X-BUILD, 16.9, 16, latest`
-* `17.3.X-BUILD, 17.3, 17` (testing branch - not supported)
+
+Production Branch (Asterisk 16):
+* `0.9.X-BUILD`, `0.9.X`, `0.9`, `0`, `latest`
+
+Development Branches:
+* `dev-16.9.X-BUILD`, `dev-16.9`, `dev-16`
+* `dev-17.3.X-BUILD`, `dev-17.3`, `dev-17`
 
 Where **X** is the patch version number, and **BUILD** is the build number (look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions)
 
