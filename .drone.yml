@@ -77,7 +77,6 @@ steps:
 - name: clone
   image: drone/git
   when:
-    event: push
     branch: dev
 
 - name: prep
@@ -93,7 +92,6 @@ steps:
     - echo -e -n ",$${ASTERISK_VER}" >> .tags
     - echo -e -n ",$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
   when:
-    event: push
     branch: dev
 
 - name: build&publish
@@ -117,5 +115,4 @@ steps:
   - name: docker
     path: /var/lib/docker
   when:
-    event: push
     branch: dev
