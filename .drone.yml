@@ -41,7 +41,7 @@ steps:
   - name: docker
     path: /var/lib/docker
   when:
-    event: tag
+    event: [push, tag]
     branch: master
 
 ---
