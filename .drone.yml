@@ -32,8 +32,6 @@ steps:
       from_secret: DOCKER_USERNAME
     password:
       from_secret: DOCKER_PASSWORD
-    auto_tag: true
-    force_tag: true
     tags:
       - ${DRONE_TAG}-${DRONE_COMMIT_SHA:0:7}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
