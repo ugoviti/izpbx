@@ -12,7 +12,11 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-    
+
+clone:
+  when:
+    event: tag
+
 steps:
 - name: build
   image: plugins/docker
@@ -33,9 +37,12 @@ steps:
     password:
       from_secret: DOCKER_PASSWORD
     tags:
-      - ${DRONE_TAG}-${DRONE_COMMIT_SHA:0:7}
-      - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
       - latest
+      - ${DRONE_TAG}
+      - ${DRONE_TAG%.*}
+      - ${DRONE_TAG%%.*}
+      - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
+      - ${DRONE_TAG}-${DRONE_COMMIT_SHA:0:7}
   volumes:
   - name: docker
     path: /var/lib/docker
@@ -58,7 +65,12 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-    
+
+clone:
+  when:
+    event: push
+    branch: dev
+
 steps:
 - name: setup
   image: alpine
