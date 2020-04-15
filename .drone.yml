@@ -22,21 +22,6 @@ steps:
   when:
     event: tag
 
-- name: prep
-  image: alpine
-  environment: &setup_env
-    ASTERISK_VER: 16.9.0
-    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
-  commands:
-    - echo -e -n "$${ASTERISK_VER%%.*}" > .tags
-    - echo -e -n ",$${ASTERISK_VER%.*}" >> .tags
-    - echo -e -n ",$${ASTERISK_VER}" >> .tags
-    - echo -e -n ",$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-  when:
-    event: tag
-
 - name: build&publish
   image: plugins/docker
   environment:
