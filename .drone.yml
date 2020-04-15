@@ -17,9 +17,6 @@ steps:
 - name: build
   image: plugins/docker
   environment:
-    APP_VER_MAJOR: 16
-    APP_VER_MINOR: 9
-    APP_VER_PATCH: 0
     APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
     APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
     APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
@@ -28,9 +25,6 @@ steps:
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
-    - APP_VER_MAJOR
-    - APP_VER_MINOR
-    - APP_VER_PATCH
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
@@ -71,17 +65,15 @@ steps:
 - name: setup
   image: alpine
   environment: &setup_env
-    APP_VER_MAJOR: 16
-    APP_VER_MINOR: 9
-    APP_VER_PATCH: 0
+    ASTERISK_VER: 16.9.0
     APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
     APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
     APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   commands:
-    - echo -e -n "$${APP_VER_MAJOR}" > .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
+    - echo -e -n "$${DRONE_BRANCH}-$${ASTERISK_VER%%.*}" > .tags
+    - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER%.*}" >> .tags
+    - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER}" >> .tags
+    - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
 
 - name: build
   image: plugins/docker
@@ -108,55 +100,3 @@ steps:
   when:
     event: push
     branch: dev
-
----
-kind: pipeline
-name: izpbx-dev-17
-
-platform:
-  os: linux
-  arch: amd64
-
-concurrency:
-  limit: 1
-
-volumes:
-  - name: docker
-    host:
-      path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-    
-steps:
-- name: setup
-  image: alpine
-  environment: &setup_env
-    APP_VER_MAJOR: 17
-    APP_VER_MINOR: 3
-    APP_VER_PATCH: 0
-  commands:
-    - echo -e -n "$${APP_VER_MAJOR}" > .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags
-    - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" >> .tags
-
-- name: build
-  image: plugins/docker
-  environment:
-    <<: *setup_env
-  settings:
-    repo: izdock/izpbx-asterisk
-    dockerfile: izpbx-asterisk/Dockerfile
-    context: izpbx-asterisk
-    build_args_from_env:
-    - APP_VER_MAJOR
-    - APP_VER_MINOR
-    - APP_VER_PATCH
-    username:
-      from_secret: DOCKER_USERNAME
-    password:
-      from_secret: DOCKER_PASSWORD
-  volumes:
-  - name: docker
-    path: /var/lib/docker
-  when:
-    event: [push]
-    branch: master

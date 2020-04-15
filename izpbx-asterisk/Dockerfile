@@ -5,15 +5,15 @@ FROM ${IMAGE_FROM}
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
 # default app args used during build step
-ARG APP_VER_MAJOR=16
+ARG APP_VER_MAJOR=0
 ARG APP_VER_MINOR=9
-ARG APP_VER_PATCH=0
+ARG APP_VER_PATCH=2
 
 # full app version
 ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 
 # components args
-ARG ASTERISK_VER=${APP_VER}
+ARG ASTERISK_VER=16.9.0
 ARG FREEPBX_VER=15.0
 
 ## app name
@@ -450,7 +450,7 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END Build ----------" && \
   \
-  if [[ $APP_VER_MAJOR -le 17 ]]; then \
+  if [[ ${ASTERISK_VER%%.*} -le 17 ]]; then \
   : "---------- START Build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
