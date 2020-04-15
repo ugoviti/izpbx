@@ -9,6 +9,8 @@ ARG APP_VER_MAJOR=16
 ARG APP_VER_MINOR=9
 ARG APP_VER_PATCH=0
 ARG APP_VER_BUILD
+ARG APP_BUILD_COMMIT
+ARG APP_BUILD_DATE
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
@@ -34,7 +36,6 @@ ENV APP_GRP               "asterisk"
 
 # full app version
 ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
-ENV APP_VER_BUILD=${APP_VER_BUILD}
 
 ## app componets
 # https://downloads.asterisk.org/pub/telephony/asterisk/
@@ -56,8 +57,10 @@ ARG FOP2_VER=2.31.27
 ARG SNGREP_VER=1.4.6
 
 ## install packages
+# 20200415 disabled ffmpeg for broken dependencies
+#     ffmpeg \
+
 ENV ASTERISK_INSTALL_DEPS=' \
-    ffmpeg \
     rsync \
     net-tools \
     iftop \
@@ -144,6 +147,7 @@ ENV ASTERISK_INSTALL_DEPS=' \
     which \
     fftw-libs \
     sudo \
+    figlet \
   '
 #     zabbix-agent \
 #     zabbix-sender \
@@ -207,15 +211,20 @@ RUN set -xe && \
   # upgrade the system
   dnf upgrade -y && \
   # install mandatory packages
-  dnf install -y $ASTERISK_INSTALL_DEPS && \
+  dnf install -y \
+  $ASTERISK_INSTALL_DEPS \
+  -x ffmpeg*-4.2.2-5* -x libavdevice*4.2.2-5* \
+  && \
   dnf mark install $ASTERISK_INSTALL_DEPS && \
   \
   : "---------- generate selfsigned certificate for 100 years duration ----------" && \
   mkdir -p /etc/pki/izpbx && \
   openssl req -subj '/CN=izpbx/O=InitZero/C=IT' -new -newkey rsa:2048 -sha256 -days 36500 -nodes -x509 -keyout /etc/pki/izpbx/izpbx.key -out /etc/pki/izpbx/izpbx.crt && \
-  : "---------- clean temporary files ----------" && \
+  if [[ ${APP_DEBUG} -eq 0 ]]; then \
+  : "---------- Clean temporary files ----------" && \
   dnf clean all && \
-  rm -rf /var/cache/yum
+  rm -rf /var/cache/{dnf,yum} ;fi && \
+  : "---------- ALL install finished ----------" 
 
 ## prep
 RUN set -xe && \
@@ -494,6 +503,11 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
+      framework \
+      core \
+      dashboard \
+      sipsettings \
+      voicemail \
       announcement \
       arimanager \
       asteriskinfo \
@@ -581,8 +595,8 @@ EXPOSE \
 # add files to container
 ADD Dockerfile filesystem README.md /
 
-# other variables
-ENV APP_FQDN ""
+# define other variables
+ENV APP_FQDN="" APP_VER_BUILD="${APP_VER_BUILD}" APP_BUILD_COMMIT="${APP_BUILD_COMMIT}" APP_BUILD_DATE="${APP_BUILD_DATE}"
 
 # start the container process
 ENTRYPOINT ["/entrypoint.sh"]

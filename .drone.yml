@@ -16,9 +16,10 @@ steps:
     APP_VER_MAJOR: 16
     APP_VER_MINOR: 9
     APP_VER_PATCH: 0
-    APP_VER_BUILD: ${DRONE_BUILD_NUMBER}
+    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   commands:
-    #- echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
     - echo -e -n "$${APP_VER_MAJOR}" > .tags
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags
@@ -37,6 +38,9 @@ steps:
     - APP_VER_MAJOR
     - APP_VER_MINOR
     - APP_VER_PATCH
+    - APP_VER_BUILD
+    - APP_BUILD_COMMIT
+    - APP_BUILD_DATE
     username:
       from_secret: DOCKER_USERNAME
     password:
@@ -68,7 +72,7 @@ steps:
     APP_VER_MINOR: 3
     APP_VER_PATCH: 0
   commands:
-    - echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
+    #- echo -e -n "$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}-$${DRONE_BUILD_NUMBER}" > VERSION
     - echo -e -n "$${APP_VER_MAJOR}" > .tags
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}" >> .tags
     - echo -e -n ",$${APP_VER_MAJOR}.$${APP_VER_MINOR}.$${APP_VER_PATCH}" >> .tags

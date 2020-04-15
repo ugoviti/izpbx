@@ -964,6 +964,25 @@ cfgService_fop2_install() {
   # ${appDataDirs[FOP2APPDIR]}/fop2_server --code ${FOP2_LICENSE_CODE}
 }
 
+cfgBashEnv() {
+  echo '. /etc/os-release
+  
+  if [ -t 1 ]; then
+    export PS1="\e[1;34m[\e[1;33m\u@\e[1;32mdocker-\h\e[1;37m:\w\[\e[1;34m]\e[1;36m\\$ \e[0m"
+  fi
+
+  # aliases
+  alias d="ls -lAsh --color"
+  alias cp="cp -ip"
+  alias rm="rm -i"
+  alias mv="mv -i"
+
+  echo -e -n "\E[1;34m"
+  figlet -w 120 "izPBX"
+  echo -e "\E[1;36mizPBX \E[1;32m${APP_VER:-unknown}\E[1;36m (build: ${APP_BUILD_COMMIT:-unknown}@${APP_BUILD_DATE:-0000-00-00}), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
+  echo'
+}
+
 runHooks() {
   # configure supervisord
   echo "--> Fixing supervisord config file..."
@@ -1022,6 +1041,9 @@ runHooks() {
     fixOwner "${APP_USR}" "${APP_GRP}" "${file}"
   done
 
+  # customize bash env
+  cfgBashEnv > /etc/profile.d/iz.sh
+  
   # enable/disable and configure services
   #chkService SYSLOG_ENABLED
   chkService POSTFIX_ENABLED

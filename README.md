@@ -23,7 +23,6 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
 - Small image footprint
 - CentOS 8 64bit powered
 - Asterisk PBX Engine (compiled from scratch)
-- Opus, G729, Motif codecs compiled
 - FreePBX WEB Management GUI (with predownloaded modules for quicker initial deploy)
 - First automatic installation managed when deploying the izpbx, subsequent updates managed by FreePBX Official Version Upgrade
 - Persistent storage mode for configuration data (define APP_DATA variable to enable)
