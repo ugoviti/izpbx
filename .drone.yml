@@ -41,8 +41,8 @@ steps:
   - name: docker
     path: /var/lib/docker
   when:
-    event: tag
-    branch: [ master, refs/tags/* ]
+    event: [push, tag]
+    branch: master
 
 ---
 
@@ -74,6 +74,9 @@ steps:
     - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER%.*}" >> .tags
     - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER}" >> .tags
     - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
+  when:
+    event: push
+    branch: dev
 
 - name: build
   image: plugins/docker
