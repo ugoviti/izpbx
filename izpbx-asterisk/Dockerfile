@@ -4,13 +4,17 @@ FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
-# default app versions used during build step
+# default app args used during build step
 ARG APP_VER_MAJOR=16
 ARG APP_VER_MINOR=9
 ARG APP_VER_PATCH=0
-ARG APP_VER_BUILD
-ARG APP_BUILD_COMMIT
-ARG APP_BUILD_DATE
+
+# full app version
+ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+
+# components args
+ARG ASTERISK_VER=${APP_VER}
+ARG FREEPBX_VER=15.0
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
@@ -34,15 +38,10 @@ ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
-# full app version
-ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
-
-## app componets
+## app components
 # https://downloads.asterisk.org/pub/telephony/asterisk/
-ARG ASTERISK_VER=${APP_VER}
-
-ARG FREEPBX_VER=15.0
-#ARG FREEPBX_VER_FRAMEWORK=15.0.16.46
+ENV ASTERISK_VER=${ASTERISK_VER}
+ENV FREEPBX_VER=${FREEPBX_VER}
 
 # http://sources.buildroot.net/spandsp/
 ARG SPANDSP_VER=20180108
@@ -595,8 +594,13 @@ EXPOSE \
 # add files to container
 ADD Dockerfile filesystem README.md /
 
-# define other variables
-ENV APP_FQDN="" APP_VER_BUILD="${APP_VER_BUILD}" APP_BUILD_COMMIT="${APP_BUILD_COMMIT}" APP_BUILD_DATE="${APP_BUILD_DATE}"
+# CI args
+ARG APP_VER_BUILD
+ARG APP_BUILD_COMMIT
+ARG APP_BUILD_DATE
+
+# define other build variables
+ENV APP_FQDN APP_VER_BUILD="${APP_VER_BUILD}" APP_BUILD_COMMIT="${APP_BUILD_COMMIT}" APP_BUILD_DATE="${APP_BUILD_DATE}"
 
 # start the container process
 ENTRYPOINT ["/entrypoint.sh"]

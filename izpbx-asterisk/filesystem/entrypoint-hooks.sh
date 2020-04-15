@@ -12,6 +12,9 @@
 : ${APP_RELEASE:=""}
 : ${APP_NAMESPACE:=""}
 
+: ${ASTERISK_VER:=""}
+: ${FREEPBX_VER:=""}
+
 # override default data directory used by container apps (used for statefll aps)
 : ${APP_DATA:=""}
 
