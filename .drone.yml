@@ -84,10 +84,7 @@ steps:
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
-    - APP_VER_MAJOR
-    - APP_VER_MINOR
-    - APP_VER_PATCH
-    - APP_VER_BUILD
+    - ASTERISK_VER
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
     username:

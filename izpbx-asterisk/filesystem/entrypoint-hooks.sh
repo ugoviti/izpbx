@@ -695,7 +695,7 @@ Charset=utf8" > /etc/odbc.ini
   
   # reconfigure freepbx from env variables
   echo "--> Reconfiguring FreePBX Advanced Settings if needed..."
-  set | grep ^"FREEPBX_" | grep -v ^"FREEPBX_MODULES_" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
+  set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_VER=" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
     k="$(echo $setting | awk '{print $1}')"
     v="$(echo $setting | awk '{print $2}')"
     currentVal=$(fwconsole setting $k | awk -F"[][{}]" '{print $2}')
