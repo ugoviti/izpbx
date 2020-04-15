@@ -92,14 +92,18 @@ Tested Host Operating Systems:
   - Debian 10
 
 # Container deploy upgrade path
-1. Verify your current running version
-2. Upgrade the version of izpbx changing image tag into `docker-compose.yml` (verify for changes upstream in official repository and merge the differences)
+1. Verify latest available release from https://github.com/ugoviti/izdock-izpbx/releases
 
-Upgrading izpbx deploy must follow that path:
+2. Verify your current running version with `docker ps` and  follow this release path:
+  - `0.9.0` --> `0.9.x`
 
-- 16.9.0 --> 16.9.x (initial release. no upgrade path right now)
+3. Upgrade the version of izpbx changing image tag into `docker-compose.yml`
 
-# FreePBX upgrade path
+4. Run `docker-compose up -d` and wait the automatic download and restart of container
+
+5. Open FreePBX Web URL and verify if exist upstream modules updates from **Admin --> Modules Admin** menù
+
+## FreePBX upgrade path
 FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).
 
 Later container updates will not upgrade FreePBX. After initial install, Upgrading FreePBX Core and Modules is possible only via official upgrade source path: 
