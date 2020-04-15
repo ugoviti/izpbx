@@ -33,6 +33,7 @@ steps:
     password:
       from_secret: DOCKER_PASSWORD
     auto_tag: true
+    force_tag: true
     tags:
       - ${DRONE_TAG}-${DRONE_COMMIT_SHA:0:7}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
@@ -69,10 +70,10 @@ steps:
     APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
     APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   commands:
-    - echo -e -n "$${DRONE_BRANCH}-$${ASTERISK_VER%%.*}" > .tags
-    - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER%.*}" >> .tags
-    - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER}" >> .tags
-    - echo -e -n ",$${DRONE_BRANCH}-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
+    - echo -e -n "$${ASTERISK_VER%%.*}" > .tags
+    - echo -e -n ",$${ASTERISK_VER%.*}" >> .tags
+    - echo -e -n ",$${ASTERISK_VER}" >> .tags
+    - echo -e -n ",$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
   when:
     event: push
     branch: dev
@@ -93,6 +94,7 @@ steps:
       from_secret: DOCKER_USERNAME
     password:
       from_secret: DOCKER_PASSWORD
+    auto_tag_suffix: dev
   volumes:
   - name: docker
     path: /var/lib/docker
