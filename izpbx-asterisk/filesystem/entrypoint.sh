@@ -12,6 +12,9 @@ appHooks() {
   : ${APP_NAME:=CHANGEME}
   : ${APP_DESCRIPTION:=CHANGEME}
   : ${APP_VER:=""}
+  : ${APP_VER_BUILD:=""}
+  : ${APP_BUILD_COMMIT:=""}
+  : ${APP_BUILD_DATE:=""}
 
   echo "=> Starting container $APP_DESCRIPTION -> $APP_NAME:$APP_VER$([ ! -z "$APP_VER_BUILD" ] && echo "-${APP_VER_BUILD}")"
   echo "==============================================================================="

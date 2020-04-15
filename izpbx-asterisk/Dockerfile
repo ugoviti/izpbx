@@ -56,9 +56,6 @@ ARG FOP2_VER=2.31.27
 ARG SNGREP_VER=1.4.6
 
 ## install packages
-# 20200415 disabled ffmpeg for broken dependencies
-#     ffmpeg \
-
 ENV ASTERISK_INSTALL_DEPS=' \
     rsync \
     net-tools \
@@ -148,6 +145,10 @@ ENV ASTERISK_INSTALL_DEPS=' \
     sudo \
     figlet \
   '
+# 20200415 disabled ffmpeg for broken dependencies
+#     ffmpeg \
+
+# 20200320 disabled zabbix agent from random repo download problems
 #     zabbix-agent \
 #     zabbix-sender \
   
@@ -212,7 +213,6 @@ RUN set -xe && \
   # install mandatory packages
   dnf install -y \
   $ASTERISK_INSTALL_DEPS \
-  -x ffmpeg*-4.2.2-5* -x libavdevice*4.2.2-5* \
   && \
   dnf mark install $ASTERISK_INSTALL_DEPS && \
   \
@@ -600,7 +600,10 @@ ARG APP_BUILD_COMMIT
 ARG APP_BUILD_DATE
 
 # define other build variables
-ENV APP_FQDN APP_VER_BUILD="${APP_VER_BUILD}" APP_BUILD_COMMIT="${APP_BUILD_COMMIT}" APP_BUILD_DATE="${APP_BUILD_DATE}"
+ENV APP_FQDN=""
+ENV APP_VER_BUILD="${APP_VER_BUILD}"
+ENV APP_BUILD_COMMIT="${APP_BUILD_COMMIT}"
+ENV APP_BUILD_DATE="${APP_BUILD_DATE}"
 
 # start the container process
 ENTRYPOINT ["/entrypoint.sh"]

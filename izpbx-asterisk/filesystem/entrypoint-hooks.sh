@@ -104,7 +104,6 @@ declare -A fpbxSipSettings=(
 #: ${FOP2_AMI_PORT:="5038"}
 #: ${FOP2_AMI_USERNAME:="admin"}
 #: ${FOP2_AMI_PASSWORD:="amp111"}
-
 # apache httpd configuration
 : ${HTTPD_HTTPS_ENABLED:="true"}
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
@@ -982,7 +981,10 @@ cfgBashEnv() {
 
   echo -e -n "\E[1;34m"
   figlet -w 120 "izPBX"
-  echo -e "\E[1;36mizPBX \E[1;32m${APP_VER:-unknown}\E[1;36m (build: ${APP_BUILD_COMMIT:-unknown}@${APP_BUILD_DATE:-0000-00-00}), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
+  
+  [ ! -z "${APP_BUILD_DATE}" ] && APP_BUILD_DATE=$(date -d @${APP_BUILD_DATE} +"%Y-%m-%d")
+  
+  echo -e "\E[1;36mizPBX \E[1;32m${APP_VER:-unknown}$([ ! -z "$APP_VER_BUILD" ] && echo "-${APP_VER_BUILD}")\E[1;36m (build: ${APP_BUILD_COMMIT:-unknown}@${APP_BUILD_DATE:-0000-00-00}), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
   echo'
 }
 
