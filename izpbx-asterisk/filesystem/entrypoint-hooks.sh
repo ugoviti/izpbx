@@ -21,7 +21,7 @@
 # default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
   [CRONDIR]=/var/spool/cron
-  [USERSHOME]=/home/asterisk
+  [ASTHOME]=/home/asterisk
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTSPOOLDIR]=/var/spool/asterisk
@@ -33,6 +33,7 @@ declare -A appDataDirs=(
   [F2BLIBDIR]=/var/lib/fail2ban
   [FOP2APPDIR]=/usr/local/fop2
   [SSLCRTDIR]=/etc/pki/izpbx
+  [ROOTHOME]=/root
 )
 
 declare -A appFilesConf=(
@@ -1033,18 +1034,18 @@ runHooks() {
   fi
 
   # check files and directory permissions
-  echo "--> Verifing files permissions"
-  for dir in ${appDataDirs[@]}; do
-    [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
-    fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
-  done
-  for dir in ${appCacheDirs[@]}; do
-    fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
-  done
-  for file in ${appFilesConf[@]}; do
-    [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
-    fixOwner "${APP_USR}" "${APP_GRP}" "${file}"
-  done
+#  echo "--> Verifying files permissions"
+#   for dir in ${appDataDirs[@]}; do
+#     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
+#     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
+#   done
+#   for dir in ${appCacheDirs[@]}; do
+#     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
+#   done
+#   for file in ${appFilesConf[@]}; do
+#     [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
+#     fixOwner "${APP_USR}" "${APP_GRP}" "${file}"
+#   done
 
   # customize bash env
   cfgBashEnv > /etc/profile.d/iz.sh

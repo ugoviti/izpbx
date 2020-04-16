@@ -502,11 +502,6 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
-      framework \
-      core \
-      dashboard \
-      sipsettings \
-      voicemail \
       announcement \
       arimanager \
       asteriskinfo \
