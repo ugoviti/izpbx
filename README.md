@@ -6,21 +6,17 @@ izPBX is a Cloud Native Telephony System powered by Asterisk Engine and FreePBX 
 
 # Supported tags
 
-Production Branch (Asterisk 16):
-* `0.9.X-BUILD`, `0.9.X`, `0.9`, `0`, `latest`
+Production Branch (Asterisk 16 + FreePBX 15):
+* `latest`, `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
 
 Development Branches:
-* `dev-16.9.X-BUILD`, `dev-16.9`, `dev-16`
-* `dev-17.3.X-BUILD`, `dev-17.3`, `dev-17`
+* `dev-16`, `dev-16.9`, `dev-16.9.X-BUILD`
+* `dev-17`, `dev-17.3`, `dev-17.3.X-BUILD`
 
-Where **X** is the patch version number, and **BUILD** is the build number (look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions)
+Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **BUILD** is the build number (look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions)
 
 # Dockerfile
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
-
-# Targets and limits of this project
-- On-Premise quick automatic a repeatable deploy of "small" PBX Systems (by default max 50 concurrent calls)
-- On the Cloud single deploy for every VM. No multi containers setup works out of the box right now (technical limits of how Docker and SIP UDP RTP traffic works)
 
 # Features
 - 60 secs install from zero to a running full features PBX system.
@@ -49,12 +45,19 @@ Where **X** is the patch version number, and **BUILD** is the build number (look
   - izpbx-asterisk: Asterisk Engine + FreePBX Frontend + others services
   - mariadb: Database Backend
 
+# Targets of this project
+- On-Premise fast, automatic a repeatable deploy of "small" PBX Systems (by default max 50 concurrent calls)
+
+# Limits of this project
+- On the Cloud single deploy for every VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
+- Docker Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function)
+  
 # How to use this image
 Using docker-compose is the suggested method:
 
 - Install your prefered Linux OS into a VM o a baremetal appliance
 
-- Install Docker Runtime and docker-compose utility from https://www.docker.com/get-started for you Operating System.
+- Install Docker Runtime and docker-compose utility from https://www.docker.com/get-started for your Operating System.
 
 - Update or create file `/etc/docker/daemon.json` with:  
 (useful to avoid docker proxy NAT of packets. Needed to make SIP/RTP UDP traffic works without problems)
@@ -66,7 +69,7 @@ Using docker-compose is the suggested method:
 
 - Restart Docker Engine: `systemctl restart docker`
 
-- Clone GIT repository or download latest release from: https://git.initzero.it/initzero/izdock-izpbx/releases and unpack it into a directory
+- Clone GIT repository or download latest release from: https://git.initzero.it/initzero/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`)
 
 - Copy `default.env` file in `.env`: `cp default.env .env`
 
@@ -92,16 +95,12 @@ Tested Host Operating Systems:
   - Debian 10
 
 # Container deploy upgrade path
-1. Verify latest available release from https://github.com/ugoviti/izdock-izpbx/releases
 
-2. Verify your current running version with `docker ps` and  follow this release path:
-  - `0.9.0` --> `0.9.x`
+1. Upgrade the version of izpbx deploy changing image tag into `docker-compose.yml` file (from git releases page, verify if upstream docker compose was updated)
 
-3. Upgrade the version of izpbx changing image tag into `docker-compose.yml`
+2. Run `docker-compose up -d` and wait the automatic download and restart of container
 
-4. Run `docker-compose up -d` and wait the automatic download and restart of container
-
-5. Open FreePBX Web URL and verify if exist upstream modules updates from **Admin --> Modules Admin** menù
+3. Open FreePBX Web URL and verify if exist upstream modules updates from **Admin --> Modules Admin** menù
 
 ## FreePBX upgrade path
 FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).

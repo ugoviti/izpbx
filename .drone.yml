@@ -13,14 +13,14 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
-clone:
-  disable: true
+#clone:
+#  disable: true
 
 steps:
-- name: clone
-  image: drone/git
-  when:
-    event: tag
+#- name: clone
+#  image: drone/git
+#  when:
+#    event: tag
 
 - name: build&publish
   image: plugins/docker
@@ -70,15 +70,15 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
-clone:
-  disable: true
+#clone:
+#  disable: true
 
 steps:
-- name: clone
-  image: drone/git
-  when:
-    event: push
-    branch: dev
+#- name: clone
+#  image: drone/git
+#  when:
+#    event: push
+#    branch: dev
 
 - name: prep
   image: alpine
