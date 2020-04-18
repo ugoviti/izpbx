@@ -52,7 +52,6 @@ steps:
     path: /var/lib/docker
   when:
     event: tag
-    branch: master
 
 ---
 
