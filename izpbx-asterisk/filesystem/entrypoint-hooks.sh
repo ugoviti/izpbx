@@ -985,7 +985,7 @@ cfgBashEnv() {
   
   [ ! -z "${APP_BUILD_DATE}" ] && APP_BUILD_DATE=$(date -d @${APP_BUILD_DATE} +"%Y-%m-%d")
   
-  echo -e "\E[1;36mizPBX \E[1;32m${APP_VER:-unknown}$([ ! -z "$APP_VER_BUILD" ] && echo "-${APP_VER_BUILD}")\E[1;36m (build: \E[1;32m${APP_BUILD_COMMIT:-unknown}\E[1;36m@\E[1;32m${APP_BUILD_DATE:-0000-00-00}\E[1;36m), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
+  echo -e "\E[1;36mizPBX \E[1;32m${APP_VER:-unknown}\E[1;36m (build: \E[1;32m$([ ! -z "$APP_VER_BUILD" ] && echo "${APP_VER_BUILD} ")${APP_BUILD_COMMIT:-unknown}\E[1;36m@\E[1;32m${APP_BUILD_DATE:-0000-00-00}\E[1;36m), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
   echo'
 }
 

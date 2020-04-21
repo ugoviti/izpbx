@@ -144,6 +144,7 @@ ENV ASTERISK_INSTALL_DEPS=' \
     fftw-libs \
     sudo \
     figlet \
+    nc \
   '
 # 20200415 disabled ffmpeg for broken dependencies
 #     ffmpeg \
