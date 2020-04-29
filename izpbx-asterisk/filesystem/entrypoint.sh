@@ -11,12 +11,14 @@ appHooks() {
   : ${MULTISERVICE:="false"}
   : ${APP_NAME:=CHANGEME}
   : ${APP_DESCRIPTION:=CHANGEME}
-  : ${APP_VER:=""}
-  : ${APP_VER_BUILD:=""}
-  : ${APP_BUILD_COMMIT:=""}
-  : ${APP_BUILD_DATE:="0000-00-00"}
+  : ${APP_VER:="latest"}
+  : ${APP_VER_BUILD:="unknown"}
+  : ${APP_BUILD_COMMIT:="unknown"}
+  : ${APP_BUILD_DATE:="unknown"}
 
-  echo "=> Starting container $APP_DESCRIPTION -> $APP_NAME:$APP_VER$([ ! -z "$APP_VER_BUILD" ] && echo "-${APP_VER_BUILD}") $([ ! -z "$APP_BUILD_COMMIT" ] && echo "(build: ${APP_BUILD_COMMIT}@${APP_BUILD_DATE})")"
+  [ "${APP_BUILD_DATE}" != "unknown" ] && APP_BUILD_DATE=$(date -d @${APP_BUILD_DATE} +"%Y-%m-%d")
+  
+  echo "=> Starting container $APP_DESCRIPTION -> $APP_NAME:$APP_VER (build:${APP_VER_BUILD} commit:${APP_BUILD_COMMIT} date:${APP_BUILD_DATE})"
   echo "==============================================================================="
   echo "=> Executing $APP_NAME hooks:"
   . /entrypoint-hooks.sh
