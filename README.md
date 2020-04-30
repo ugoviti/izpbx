@@ -10,8 +10,8 @@ Production Branch (Asterisk 16 + FreePBX 15):
 * `latest`, `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
 
 Development Branches:
-* `dev-16`, `dev-16.9`, `dev-16.9.X-BUILD`
-* `dev-17`, `dev-17.3`, `dev-17.3.X-BUILD`
+* `dev-16`, `dev-16.9`, `dev-16.9.X-BUILD`, `dev-16.9.X-COMMIT`
+* `dev-17`, `dev-17.3`, `dev-17.3.X-BUILD`, `dev-17.3.X-COMMIT`
 
 Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **BUILD** is the build number (look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions)
 
