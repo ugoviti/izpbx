@@ -7,14 +7,30 @@ MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 # default app args used during build step
 ARG APP_VER_MAJOR=0
 ARG APP_VER_MINOR=9
-ARG APP_VER_PATCH=2
+ARG APP_VER_PATCH=3
 
 # full app version
 ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 
-# components args
-ARG ASTERISK_VER=16.9.0
+# components app versions
+ARG ASTERISK_VER=16.10.0
 ARG FREEPBX_VER=15.0
+
+# https://downloads.asterisk.org/pub/telephony/asterisk/
+ENV ASTERISK_VER=${ASTERISK_VER}
+ENV FREEPBX_VER=${FREEPBX_VER}
+
+# http://sources.buildroot.net/spandsp/
+ARG SPANDSP_VER=20180108
+
+# https://github.com/BelledonneCommunications/bcg729/releases
+ARG BCG729_VER=1.0.4
+
+# https://www.fop2.com/download.php
+ARG FOP2_VER=2.31.27
+
+# https://github.com/irontec/sngrep/releases
+ARG SNGREP_VER=1.4.6
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
@@ -37,23 +53,6 @@ ENV APP_UID               1000
 ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
-
-## app components
-# https://downloads.asterisk.org/pub/telephony/asterisk/
-ENV ASTERISK_VER=${ASTERISK_VER}
-ENV FREEPBX_VER=${FREEPBX_VER}
-
-# http://sources.buildroot.net/spandsp/
-ARG SPANDSP_VER=20180108
-
-# https://github.com/BelledonneCommunications/bcg729/releases
-ARG BCG729_VER=1.0.4
-
-# https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.27
-
-# https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.6
 
 ## install packages
 ENV ASTERISK_INSTALL_DEPS=' \
