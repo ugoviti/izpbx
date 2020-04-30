@@ -82,6 +82,33 @@ Using docker-compose is the suggested method:
 Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range.  
 Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested).
 
+# Restart services
+
+### Command to restart Asterisk PBX
+`docker restart izpbx`
+
+### Command to restart MariaDB Database
+`docker restart izpbx-db`
+
+### If you want restart single services inside `izpbx` container
+Enter the container:  
+`docker exec -it izpbx bash`
+
+Restart Asterisk+FreePBX Framework:  
+`supervisorctl restart izpbx`
+
+To restart the others available service use `supervisorctl restart SERVICE`
+
+Available services:  
+  - `asterisk`
+  - `cron`
+  - `fail2ban`
+  - `fop2`
+  - `httpd`
+  - `izpbx`
+  - `postfix`
+  - `zabbix-agent`
+
 # Tested systems and host compatibility
 Tested Docker Runtime:
   - moby-engine 19.03
