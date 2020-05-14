@@ -17,6 +17,7 @@ steps:
 - name: build&publish
   image: plugins/docker
   environment:
+    APP_VER: "${DRONE_TAG}"
     APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
     APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
     APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
@@ -25,6 +26,7 @@ steps:
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
+    - APP_VER
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
@@ -61,16 +63,17 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
+      
+environment:
+  ASTERISK_VER: 16.10.0
+  APP_VER: dev
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
 
 steps:
 - name: prep
   image: alpine
-  environment: &setup_env
-    ASTERISK_VER: 16.10.0
-    APP_VER: dev
-    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   commands:
     - echo -e -n "dev-$${ASTERISK_VER%%.*}" > .tags
     - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
@@ -83,14 +86,13 @@ steps:
 
 - name: build&publish
   image: plugins/docker
-  environment:
-    <<: *setup_env
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
     - ASTERISK_VER
+    - APP_VER
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
@@ -122,15 +124,16 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
+environment: &setup_env
+  ASTERISK_VER: 17.4.0
+  APP_VER: dev
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+
 steps:
 - name: prep
   image: alpine
-  environment: &setup_env
-    ASTERISK_VER: 17.4.0
-    APP_VER: dev
-    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   commands:
     - echo -e -n "dev-$${ASTERISK_VER%%.*}" > .tags
     - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
@@ -143,14 +146,13 @@ steps:
 
 - name: build&publish
   image: plugins/docker
-  environment:
-    <<: *setup_env
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
     - ASTERISK_VER
+    - APP_VER
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
