@@ -13,15 +13,7 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
-#clone:
-#  disable: true
-
 steps:
-#- name: clone
-#  image: drone/git
-#  when:
-#    event: tag
-
 - name: build&publish
   image: plugins/docker
   environment:
