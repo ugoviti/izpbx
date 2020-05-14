@@ -105,6 +105,7 @@ declare -A fpbxSipSettings=(
 #: ${FOP2_AMI_PORT:="5038"}
 #: ${FOP2_AMI_USERNAME:="admin"}
 #: ${FOP2_AMI_PASSWORD:="amp111"}
+
 # apache httpd configuration
 : ${HTTPD_HTTPS_ENABLED:="true"}
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
@@ -942,7 +943,6 @@ cfgService_fop2 () {
 
   if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ];then
     # obtain asterisk manager configs from freepbx
-    
     : ${FOP2_AMI_HOST:="$(fwconsole setting ASTMANAGERHOST | awk -F"[][{}]" '{print $2}')"}
     : ${FOP2_AMI_PORT:="$(fwconsole setting ASTMANAGERPORT | awk -F"[][{}]" '{print $2}')"}
     : ${FOP2_AMI_USERNAME:="$(fwconsole setting AMPMGRUSER | awk -F"[][{}]" '{print $2}')"}
@@ -953,6 +953,21 @@ cfgService_fop2 () {
     sed "s|^manager_port.*=.*|manager_port=${FOP2_AMI_PORT}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     sed "s|^manager_user.*=.*|manager_user=${FOP2_AMI_USERNAME}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     sed "s|^manager_secret.*=.*|manager_secret=${FOP2_AMI_PASSWORD}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    
+    # FOP2 License Code registration
+    if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
+      if [ -z "${FOP2_LICENSE_CODE}" ]; then
+          echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in trial mode"
+        else
+          echo "--> INFO: Registering FOP2 with code: ${FOP2_LICENSE_CODE}"
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --code ${FOP2_LICENSE_CODE}
+          echo "--> INFO: FOP2 license code status:"
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo
+      fi
+      else
+        echo "--> INFO: FOP2 license code status:"
+        ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo
+    fi
   fi
 }
 
@@ -962,9 +977,6 @@ cfgService_fop2_install() {
   wget -O - http://download.fop2.com/install_fop2.sh | bash
   pkill fop2_server
   fwconsole stop
-
-  # FIXME: right now you must run that command from an exec shell into your container
-  # ${appDataDirs[FOP2APPDIR]}/fop2_server --code ${FOP2_LICENSE_CODE}
 }
 
 cfgBashEnv() {
