@@ -65,7 +65,6 @@ ENV ASTERISK_INSTALL_DEPS=' \
     supervisor \
     curl \
     opus \
-    whois \
     logrotate \
     fail2ban-server \
     fail2ban-mail \
@@ -144,11 +143,12 @@ ENV ASTERISK_INSTALL_DEPS=' \
     sudo \
     figlet \
     nc \
+    ffmpeg \
   '
-# 20200415 disabled ffmpeg for broken dependencies
-#     ffmpeg \
+# 20200514 disabled for broken dependencies
+#    whois \
 
-# 20200320 disabled zabbix agent from random repo download problems
+# 20200320 disabled zabbix agent because random repo download problems
 #     zabbix-agent \
 #     zabbix-sender \
   
