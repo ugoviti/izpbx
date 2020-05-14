@@ -5,12 +5,13 @@ FROM ${IMAGE_FROM}
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
 # default app args used during build step
-ARG APP_VER_MAJOR=0
-ARG APP_VER_MINOR=9
-ARG APP_VER_PATCH=3
+#ARG APP_VER_MAJOR=0
+#ARG APP_VER_MINOR=9
+#ARG APP_VER_PATCH=3
 
 # full app version
-ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+#ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
 
 # components app versions
