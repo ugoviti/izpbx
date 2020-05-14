@@ -67,6 +67,7 @@ steps:
   image: alpine
   environment: &setup_env
     ASTERISK_VER: 16.10.0
+    APP_VER: dev
     APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
     APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
     APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
@@ -90,6 +91,7 @@ steps:
     context: izpbx-asterisk
     build_args_from_env:
     - ASTERISK_VER
+    - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
     username:
@@ -125,6 +127,7 @@ steps:
   image: alpine
   environment: &setup_env
     ASTERISK_VER: 17.4.0
+    APP_VER: dev
     APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
     APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
     APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
@@ -148,6 +151,7 @@ steps:
     context: izpbx-asterisk
     build_args_from_env:
     - ASTERISK_VER
+    - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
     username:
