@@ -954,7 +954,7 @@ cfgService_fop2 () {
     sed "s|^manager_user.*=.*|manager_user=${FOP2_AMI_USERNAME}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     sed "s|^manager_secret.*=.*|manager_secret=${FOP2_AMI_PASSWORD}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     
-    # FOP2 License Code registration
+    # FOP2 License Code Management
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
       if [ -z "${FOP2_LICENSE_CODE}" ]; then
           echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in trial mode"
@@ -977,7 +977,7 @@ cfgService_fop2 () {
       else
         FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo)"
         if [ ! -z "$(echo $FOP2_LICENSE_STATUS | grep "Not Found")" ]; then
-          echo "--> WARNING reactivating FOP2 license because:"
+          echo "--> WARNING: Reactivating FOP2 license because:"
           echo $FOP2_LICENSE_STATUS
           set -x
           ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate
