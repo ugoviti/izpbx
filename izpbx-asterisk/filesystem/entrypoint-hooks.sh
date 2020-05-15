@@ -981,10 +981,10 @@ cfgService_fop2 () {
           echo $FOP2_LICENSE_STATUS
           set -x
           ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate
+          set +x
         fi
         echo "--> INFO: FOP2 license code status:"
         ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo
-        set +x
     fi
   fi
 }
