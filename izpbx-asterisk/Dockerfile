@@ -5,12 +5,14 @@ FROM ${IMAGE_FROM}
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
 # default app args used during build step
-ARG APP_VER_MAJOR=0
-ARG APP_VER_MINOR=9
-ARG APP_VER_PATCH=3
+#ARG APP_VER_MAJOR=0
+#ARG APP_VER_MINOR=9
+#ARG APP_VER_PATCH=3
 
 # full app version
-ENV APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+#ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
+ARG APP_VER=dev
+ENV APP_VER=${APP_VER}
 
 # components app versions
 ARG ASTERISK_VER=16.10.0
@@ -65,7 +67,6 @@ ENV ASTERISK_INSTALL_DEPS=' \
     supervisor \
     curl \
     opus \
-    whois \
     logrotate \
     fail2ban-server \
     fail2ban-mail \
@@ -144,11 +145,12 @@ ENV ASTERISK_INSTALL_DEPS=' \
     sudo \
     figlet \
     nc \
+    ffmpeg \
   '
-# 20200415 disabled ffmpeg for broken dependencies
-#     ffmpeg \
+# 20200514 disabled for broken dependencies
+#    whois \
 
-# 20200320 disabled zabbix agent from random repo download problems
+# 20200320 disabled zabbix agent because random repo download problems
 #     zabbix-agent \
 #     zabbix-sender \
   

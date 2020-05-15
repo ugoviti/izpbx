@@ -958,9 +958,11 @@ cfgService_fop2 () {
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
       if [ -z "${FOP2_LICENSE_CODE}" ]; then
           echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in trial mode"
+      elif [ -z "${FOP2_LICENSE_NAME}" ] ; then
+          echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_NAME' variable defined... running in trial mode"
         else
-          echo "--> INFO: Registering FOP2 with code: ${FOP2_LICENSE_CODE}"
-          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --code ${FOP2_LICENSE_CODE}
+          echo "--> INFO: Registering FOP2 for '${FOP2_LICENSE_NAME}' with code '${FOP2_LICENSE_CODE}'"
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}"
           echo "--> INFO: FOP2 license code status:"
           ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo
       fi
