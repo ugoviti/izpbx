@@ -977,10 +977,11 @@ cfgService_fop2 () {
       else
         FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo)"
         if [ ! -z "$(echo $FOP2_LICENSE_STATUS | grep "Not Found")" ]; then
-        echo "--> WARNING reactivating FOP2 license because:"
-        echo $FOP2_LICENSE_STATUS
-        set -x
-        ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate
+          echo "--> WARNING reactivating FOP2 license because:"
+          echo $FOP2_LICENSE_STATUS
+          set -x
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate
+        fi
         echo "--> INFO: FOP2 license code status:"
         ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo
         set +x
