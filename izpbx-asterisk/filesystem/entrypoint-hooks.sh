@@ -961,14 +961,30 @@ cfgService_fop2 () {
       elif [ -z "${FOP2_LICENSE_NAME}" ] ; then
           echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_NAME' variable defined... running in trial mode"
         else
-          echo "--> INFO: Registering FOP2 for '${FOP2_LICENSE_NAME}' with code '${FOP2_LICENSE_CODE}'"
-          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}"
+          echo "--> INFO: Registering FOP2"
+          echo "---> NAME: ${FOP2_LICENSE_NAME}"
+          echo "---> CODE: ${FOP2_LICENSE_CODE}"
+          if [ ! -z "${FOP2_LICENSE_IFACE}" ];then
+            FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
+            echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
+          fi
+          set -x
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
+          set +x
           echo "--> INFO: FOP2 license code status:"
           ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo
       fi
       else
+        FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo)"
+        if [ ! -z "$(echo $FOP2_LICENSE_STATUS | grep "Not Found")" ]; then
+          echo "--> WARNING reactivating FOP2 license because:"
+          echo $FOP2_LICENSE_STATUS
+          set -x
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate
+        fi
         echo "--> INFO: FOP2 license code status:"
         ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo
+        set +x
     fi
   fi
 }
