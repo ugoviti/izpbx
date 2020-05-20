@@ -7,7 +7,7 @@ networks:
 services:
   izpbx:
     container_name: izpbx
-    hostname: ${APP_FQDN}
+    #hostname: ${APP_FQDN}
     image: izdock/izpbx-asterisk:0.9
     restart: always
     depends_on:

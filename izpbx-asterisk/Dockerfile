@@ -5,9 +5,9 @@ FROM ${IMAGE_FROM}
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
 # default app args used during build step
-#ARG APP_VER_MAJOR=0
-#ARG APP_VER_MINOR=9
-#ARG APP_VER_PATCH=3
+#ARG APP_VER_MAJOR=
+#ARG APP_VER_MINOR=
+#ARG APP_VER_PATCH=
 
 # full app version
 #ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
@@ -146,6 +146,8 @@ ENV ASTERISK_INSTALL_DEPS=' \
     figlet \
     nc \
     ffmpeg \
+    zabbix-agent \
+    zabbix-sender \
   '
 # 20200514 disabled for broken dependencies
 #    whois \
@@ -167,7 +169,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     # zabbix agent repo
-    #rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/7/x86_64/zabbix-release-5.0-1.el7.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     \
@@ -179,7 +181,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/8/x86_64/zabbix-release-4.4-1.el8.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/8/x86_64/zabbix-release-5.0-1.el8.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
     # repo for lame command
@@ -241,8 +243,8 @@ ARG APP_DEBUG=0
 ADD build/ /usr/src/
 
 # install zabbix with predownloaded packages because their repositories have many problems
-RUN set -xe && \
-  rpm -Uhv /usr/src/zabbix-*.rpm
+#RUN set -xe && \
+#  rpm -Uhv /usr/src/zabbix-*.rpm
 
 RUN set -xe && \
   . /etc/os-release && \
@@ -308,6 +310,7 @@ RUN set -xe && \
   if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
+  \
   : "---------- START Build libresample ----------" && \
   cd /usr/src && \
   mkdir libresample && \
@@ -336,6 +339,7 @@ RUN set -xe && \
   make install && \
   ldconfig && \
   : "---------- END Build ----------" && \
+  \
   : "---------- START Build iksemel ----------" && \
   cd /usr/src && \
   mkdir iksemel && \
