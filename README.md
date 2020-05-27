@@ -2,7 +2,7 @@
 izPBX Cloud Native Telephony System
 
 # Description
-izPBX is a Cloud Native Telephony System powered by Asterisk Engine and FreePBX Management GUI
+izPBX is a Turnkey Cloud Native Telephony System powered by Asterisk Engine and FreePBX Management GUI
 
 # Supported tags
 
@@ -19,26 +19,26 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
 # Features
-- 60 secs install from zero to a running full features PBX system.
-- Really fast initial bootstrap to deploy a full stack Asterisk+FreePBX system
-- Small image footprint
+- 60 secs install from zero to a running turnkey PBX system.
+- Really fast initial bootstrap to deploy a full features Asterisk+FreePBX system
 - CentOS 8 64bit powered
+- Small image footprint
 - Asterisk PBX Engine (compiled from scratch)
 - FreePBX WEB Management GUI (with predownloaded modules for quicker initial deploy)
-- First automatic installation managed when deploying the izpbx, subsequent updates managed by FreePBX Official Version Upgrade
-- Persistent storage mode for configuration data (define APP_DATA variable to enable)
-- Misc izpbx scripts (into container shell digit izpbx+TAB to discover)
-- tcpdump and sngrep utility to debug VoIP packets
-- fail2ban as security monitor to block SIP and HTTP brute force attacks
-- supervisord as services management with monitoring and automatic restart
-- postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
-- cron daemon
-- Apache 2.4 and PHP 7.3 (mpm_prefork+mod_php configuration mode)
-- Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
-- Commercial SSL Certificates support
-- Logrotating of services logs
+- Automatic installation managed when deploying izpbx for the first time, successive updates will be managed by FreePBX Official Version Upgrade
+- Persistent storage mode for configuration and not volatile data
+- Fail2ban as security monitor to block SIP and HTTP brute force attacks
 - FOP2 Operator Panel (optional)
 - Integrated Asterisk Zabbix agent for active health monitoring
+- Misc izpbx-* scripts (like izpbx-callstats)
+- tcpdump and sngrep utility to debug VoIP calls
+- supervisord as services management with monitoring and automatic restart when services fail
+- postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
+- Integrated cron daemon for running scheduled tasks
+- Apache 2.4 and PHP 7.3 (mpm_prefork+mod_php configuration mode)
+- Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
+- Custom commercial SSL Certificates support
+- Logrotating of services logs
 - All Bootstrap configurations made via single central `.env` file
 - Many customizable variables to use (look inside `default.env` file)
 - Two containers setup: (antipattern docker design but needed by the FreePBX ecosystem to works)
@@ -53,14 +53,14 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - Docker Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function)
   
 # How to use this image
-Using docker-compose is the suggested method:
+Using **docker-compose** is the suggested method:
 
-- Install your prefered Linux OS into a VM o a baremetal appliance
+- Install your prefered Linux OS into VM or Baremetal Server
 
 - Install Docker Runtime and docker-compose utility from https://www.docker.com/get-started for your Operating System.
 
 - Update or create file `/etc/docker/daemon.json` with:  
-(useful to avoid docker proxy NAT of packets. Needed to make SIP/RTP UDP traffic works without problems)
+(useful to avoid docker proxy NAT of packets. Needed to make SIP/RTP UDP traffic works without troubles)
 ```
 {
   "userland-proxy": false
@@ -77,10 +77,10 @@ Using docker-compose is the suggested method:
 
 - Start izpbx deploy with: `docker-compose up -d`
 
-- Point your web browser to the IP address of your docker host and follow initial startup guide
+- Wait 60 seconds and point your web browser to the IP address of your docker host and follow initial startup guide
 
 Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range.  
-Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested).
+Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested. there will be problems with RTP traffic).
 
 # Restart services
 
@@ -97,7 +97,7 @@ Enter the container:
 Restart Asterisk+FreePBX Framework:  
 `supervisorctl restart izpbx`
 
-To restart the others available service use `supervisorctl restart SERVICE`
+To restart the others available services use `supervisorctl restart SERVICE`
 
 Available services:  
   - `asterisk`
@@ -129,21 +129,31 @@ Tested Host Operating Systems:
 
 3. Open FreePBX Web URL and verify if exist upstream modules updates from **Admin --> Modules Admin** menù
 
-## FreePBX upgrade path
+## FreePBX major release upgrade path
 FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).
 
-Later container updates will not upgrade FreePBX. After initial install, Upgrading FreePBX Core and Modules is possible only via official upgrade source path: 
-
-  - FreePBX Menù **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
+Later container updates will not upgrade FreePBX (just Asterisk engine will be updated).  
+After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
+  - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
 
 So, only Asterisk core engine will be updated on container image update.
 
 # Environment default variables
 ```
-## mandatory options
+# database configurations
 # WARNING: security passwords... please change the default
 MYSQL_ROOT_PASSWORD=CHANGEM3
 MYSQL_PASSWORD=CHANGEM3
+
+# WARNING: if the docker-compose use "network_mode: bridge" specify: db
+#MYSQL_SERVER=db
+# WARNING: if the docker-compose use "network_mode: host" specify: 127.0.0.1 or the address of a remote database
+MYSQL_SERVER=127.0.0.1
+MYSQL_DATABASE=asterisk
+MYSQL_USER=asterisk
+
+# enable persistent data storage (comment if you want disable persistence of data) (default: /data)
+APP_DATA=/data
 
 # cron notifications mail address (default: root@localhost)
 #ROOT_MAILTO=
@@ -166,37 +176,25 @@ MYSQL_PASSWORD=CHANGEM3
 # redirect unencrypted http connetions to https (default: false)
 #HTTPD_REDIRECT_HTTP_TO_HTTPS=false
 
-# enable if the pbx is exposed to internet and want generate an SSL Let's Encrypt certificates (default: false)
+# auto generate Let's Encrypt SSL certificates if the pbx is exposed to internet and want enable https protocol (default: false)
 #LETSENCRYPT_ENABLED=false
 
-# by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security
+# by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security (default: 0.0.0.0/0)
 #HTTPD_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 
-# enable persistent external data storage (comment if you want disable persistence of data) (default: /data)
-APP_DATA=/data
+## fop2 configuration (https://www.fop2.com/docs/)
+#FOP2_LICENSE_NAME=<put here your corporation name>
+#FOP2_LICENSE_CODE=<put here your license code>
+#FOP2_LICENSE_IFACE=docker0
 
-# database configurations
-# WARNING: if the docker-compose use "network_mode: bridge" specify: db
-#MYSQL_SERVER=db
-# WARNING: if the docker-compose use "network_mode: host" specify: 127.0.0.1 or the address of the external database
-MYSQL_SERVER=127.0.0.1
-MYSQL_DATABASE=asterisk
-MYSQL_USER=asterisk
+# the following variables are not mandatory, you can leave commented (FOP2_AMI_PASSWORD will be a random hash)
+#FOP2_AMI_HOST=localhost
+#FOP2_AMI_PORT=5038
+#FOP2_AMI_USERNAME=admin
+#FOP2_AMI_PASSWORD=amp111
 
-## network ports
-# webserver and freepbx ports
-APP_PORT_HTTP=80
-APP_PORT_HTTPS=443
-# asterisk ports
-APP_PORT_PJSIP=5160
-APP_PORT_SIP=5060
-APP_PORT_IAX=4569
-APP_PORT_RTP_START=10000
-APP_PORT_RTP_END=10200
-APP_PORT_FOP2=4445
-APP_PORT_ZABBIX=10050
-# database port
-APP_PORT_MYSQL=3306
+## zabbix configuration
+#ZABBIX_SERVER=monitor.example.com
 
 # fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
 FAIL2BAN_ENABLED=true
@@ -231,29 +229,34 @@ FREEPBX_PHPTIMEZONE=Europe/Rome
 #FREEPBX_BRAND_IMAGE_FREEPBX_LINK_LEFT=http://www.freepbx.org
 #FREEPBX_BRAND_IMAGE_FREEPBX_LINK_FOOT=http://www.freepbx.org
 #FREEPBX_BRAND_IMAGE_SPONSOR_LINK_FOOT=http://www.sangoma.com
+#FREEPBX_RSSFEEDS=
 
 # WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
 FREEPBX_SIGNATURECHECK=0
 
-## zabbix configuration
-#ZABBIX_SERVER=127.0.0.1
+## network ports
+# webserver and freepbx ports
+APP_PORT_HTTP=80
+APP_PORT_HTTPS=443
+# asterisk ports
+APP_PORT_PJSIP=5160
+APP_PORT_SIP=5060
+APP_PORT_IAX=4569
+APP_PORT_RTP_START=10000
+APP_PORT_RTP_END=10200
+APP_PORT_FOP2=4445
+APP_PORT_ZABBIX=10050
+# database port
+APP_PORT_MYSQL=3306
 
-# fop2 configuration (https://www.fop2.com/docs/)
-#FOP2_LICENSE_CODE=<put here your license code>
-## the following variables are not mandatory, you can leave commented
-#FOP2_AMI_HOST=localhost
-#FOP2_AMI_PORT=5038
-#FOP2_AMI_USERNAME=admin
-#FOP2_AMI_PASSWORD=amp111
-
-# services
+# container services
 POSTFIX_ENABLED=true
 CRON_ENABLED=true
 HTTPD_ENABLED=true
 IZPBX_ENABLED=true
 FAIL2BAN_ENABLED=true
-#ZABBIX_ENABLED=true
 #FOP2_ENABLED=true
+#ZABBIX_ENABLED=true
 ```
 
 # Zabbix Agent Configuration
@@ -308,11 +311,10 @@ Consult official repository page for installation and configuration of Asterisk 
   - Simply remove the `data` directory created by deploy, and start over to make a new clean and empty installation
     
 # TODO / Future Development
-- Hylafax+ Server
-- IAXModem
-- macOS host support? (edit docker-compose.yml and comment localtime volume)
-- Windows host support (need to use docker volume instead local directory path)
-- Kubernetes deploy via Helm Chart
+- Hylafax+ Server + IAXModem
+- macOS host support? (edit docker-compose.yml and comment localtime volume?)
+- Windows host support (need to use docker volume instead local directory path?)
+- Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation)
 
 # Quick reference
 - **Developed and maintained by**:

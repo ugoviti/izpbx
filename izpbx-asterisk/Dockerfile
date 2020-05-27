@@ -57,7 +57,7 @@ ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
 ## install packages
-ENV ASTERISK_INSTALL_DEPS=' \
+ENV APP_INSTALL_DEPS=' \
     rsync \
     net-tools \
     iftop \
@@ -146,14 +146,10 @@ ENV ASTERISK_INSTALL_DEPS=' \
     figlet \
     nc \
     ffmpeg \
+    zabbix-agent \
+    zabbix-sender \
   '
-# 20200514 disabled for broken dependencies
-#    whois \
 
-# 20200320 disabled zabbix agent because random repo download problems
-#     zabbix-agent \
-#     zabbix-sender \
-  
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
@@ -167,7 +163,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     # zabbix agent repo
-    #rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/7/x86_64/zabbix-release-4.4-1.el7.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/7/x86_64/zabbix-release-5.0-1.el7.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     \
@@ -179,7 +175,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/4.4/rhel/8/x86_64/zabbix-release-4.4-1.el8.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/8/x86_64/zabbix-release-5.0-1.el8.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
     # repo for lame command
@@ -214,9 +210,9 @@ RUN set -xe && \
   dnf upgrade -y && \
   # install mandatory packages
   dnf install -y \
-  $ASTERISK_INSTALL_DEPS \
+  $APP_INSTALL_DEPS \
   && \
-  dnf mark install $ASTERISK_INSTALL_DEPS && \
+  dnf mark install $APP_INSTALL_DEPS && \
   \
   : "---------- generate selfsigned certificate for 100 years duration ----------" && \
   mkdir -p /etc/pki/izpbx && \
@@ -241,8 +237,8 @@ ARG APP_DEBUG=0
 ADD build/ /usr/src/
 
 # install zabbix with predownloaded packages because their repositories have many problems
-RUN set -xe && \
-  rpm -Uhv /usr/src/zabbix-*.rpm
+#RUN set -xe && \
+#  rpm -Uhv /usr/src/zabbix-*.rpm
 
 RUN set -xe && \
   . /etc/os-release && \
@@ -558,7 +554,7 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -o /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END Install ----------" && \
-  : "---------- START Install Asterisk Zabbix Agents by InitZero b6 ----------" && \
+  : "---------- START Install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/master.tar.gz | tar xz --strip 3 zabbix-templates-master/asterisk/zabbix_agentd.d && \
   : "---------- END Install ----------"
