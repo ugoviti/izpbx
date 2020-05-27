@@ -123,11 +123,15 @@ Tested Host Operating Systems:
 
 # Container deploy upgrade path
 
-1. Upgrade the version of izpbx deploy changing image tag into `docker-compose.yml` file (from git releases page, verify if upstream docker compose was updated)
+1. Upgrade the version of izpbx deploy changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated)
 
-2. Run `docker-compose up -d` and wait the automatic download and restart of container
+2. Upgrade the deploy with: 
+```
+docker-compose pull
+docker-compose up -d
+```
 
-3. Open FreePBX Web URL and verify if exist upstream modules updates from **Admin --> Modules Admin** menù
+3. Open FreePBX Web URL and verify if exist modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
 
 ## FreePBX major release upgrade path
 FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).
