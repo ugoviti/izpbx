@@ -730,8 +730,8 @@ Charset=utf8" > /etc/odbc.ini
   # FIXME: 20200318 freepbx 15.x warnings workaround
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
   sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
-  # FIXME: 20200322 https://issues.freepbx.org/browse/FREEPBX-21317
-  [ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
+  # FIXME: 20200322 https://issues.freepbx.org/browse/FREEPBX-21317 (NOT MORE NEEDED)
+  #[ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
 }
 
 cfgService_freepbx_install() {
