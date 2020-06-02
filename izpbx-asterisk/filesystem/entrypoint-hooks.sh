@@ -15,7 +15,7 @@
 : ${ASTERISK_VER:=""}
 : ${FREEPBX_VER:=""}
 
-# override default data directory used by container apps (used for stateful aps)
+# override default data directory used by container apps (used by stateful apps)
 : ${APP_DATA:=""}
 
 # default directory and config files paths arrays used for persistent data
@@ -309,8 +309,6 @@ chkService() {
   fi
   sed "s/autostart=.*/autostart=$autostart/" -i ${SUPERVISOR_DIR}/$SERVICE_DAEMON.ini
 }
-
-## exec entrypoint hooks
 
 ## postfix service
 cfgService_postfix() {

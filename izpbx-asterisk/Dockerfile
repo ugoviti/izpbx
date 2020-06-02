@@ -304,6 +304,7 @@ RUN set -xe && \
   if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
+  \
   : "---------- START Build libresample ----------" && \
   cd /usr/src && \
   mkdir libresample && \
@@ -332,6 +333,7 @@ RUN set -xe && \
   make install && \
   ldconfig && \
   : "---------- END Build ----------" && \
+  \
   : "---------- START Build iksemel ----------" && \
   cd /usr/src && \
   mkdir iksemel && \
