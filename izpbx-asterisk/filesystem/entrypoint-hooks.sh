@@ -726,7 +726,7 @@ Charset=utf8" > /etc/odbc.ini
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
 
-    echo "--> FIXME: Temporary Workarounds for FreePBX broken modules and configs..."
+  echo "--> FIXME: Temporary Workarounds for FreePBX broken modules and configs..."
   # FIXME: 20200318 freepbx 15.x warnings workaround
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
   sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf

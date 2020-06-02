@@ -1,5 +1,5 @@
 # Name
-izPBX Cloud Native Telephony System
+[<img src="https://www.initzero.it/images/initzero-logo-izpbx-48x48.png">](https://www.initzero.it) izPBX Cloud Native Telephony System
 
 # Description
 izPBX is a Turnkey Cloud Native Telephony System powered by Asterisk Engine and FreePBX Management GUI
@@ -30,7 +30,8 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - Fail2ban as security monitor to block SIP and HTTP brute force attacks
 - FOP2 Operator Panel (optional)
 - Integrated Asterisk Zabbix agent for active health monitoring
-- Misc izpbx-* scripts (like izpbx-callstats)
+- Misc `izpbx-*` scripts (like `izpbx-callstats`)
+- izsynth utility - TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems
 - tcpdump and sngrep utility to debug VoIP calls
 - supervisord as services management with monitoring and automatic restart when services fail
 - postfix MTA daemon for sending mails (notifications, voicemails and FAXes)

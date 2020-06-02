@@ -18,7 +18,7 @@ ENV APP_VER=${APP_VER}
 ARG ASTERISK_VER=16.10.0
 ARG FREEPBX_VER=15.0
 
-# https://downloads.asterisk.org/pub/telephony/asterisk/
+# https://downloads.asterisk.org/pub/telephony/asterisk/releases
 ENV ASTERISK_VER=${ASTERISK_VER}
 ENV FREEPBX_VER=${FREEPBX_VER}
 
@@ -32,7 +32,7 @@ ARG BCG729_VER=1.0.4
 ARG FOP2_VER=2.31.27
 
 # https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.6
+ARG SNGREP_VER=1.4.7
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
@@ -346,7 +346,7 @@ RUN set -xe && \
   : "---------- START Build ASTERISK ----------" && \
   cd /usr/src && \
   mkdir asterisk && \
-  curl -fSL --connect-timeout 30 https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
+  curl -fSL --connect-timeout 30 http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
   cd asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
@@ -483,11 +483,10 @@ RUN set -xe && \
   : "---------- ALL builds finished ----------" 
 
 # NOTE: asterisk build
-# to get the options passed below: menuselect/menuselect --list-options
+# to get the options passed above: menuselect/menuselect --list-options
 
-## download freepbx and modules for offline install
-# modules xml url: http://mirror1.freepbx.org/modules-15.0.xml
-# php -r 'echo json_encode(simplexml_load_file("modules-15.0.xml"));' | jq
+## download freepbx and modules for offline install:
+# php -r 'echo json_encode(simplexml_load_file("http://mirror1.freepbx.org/modules-15.0.xml"));' | jq
 # curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
 # curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
@@ -547,7 +546,7 @@ RUN set -xe && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key" && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
 
-# install other componets
+# install other components
 RUN set -xe && \
   : "---------- START Install izsynth ----------" && \
   cd /usr/src && \
