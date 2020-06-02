@@ -15,7 +15,7 @@
 : ${ASTERISK_VER:=""}
 : ${FREEPBX_VER:=""}
 
-# override default data directory used by container apps (used for statefll aps)
+# override default data directory used by container apps (used for stateful aps)
 : ${APP_DATA:=""}
 
 # default directory and config files paths arrays used for persistent data
