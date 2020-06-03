@@ -40,7 +40,7 @@ steps:
       - ${DRONE_TAG%.*}
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
-      - ${DRONE_TAG}-${DRONE_COMMIT_SHA:0:7}
+      - ${DRONE_COMMIT_SHA:0:7}
   volumes:
   - name: docker
     path: /var/lib/docker
@@ -75,11 +75,11 @@ steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${ASTERISK_VER%%.*}" > .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n "dev-$${DRONE_COMMIT_SHA:0:7}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
   when:
     event: push
     branch: dev
@@ -135,11 +135,11 @@ steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${ASTERISK_VER%%.*}" > .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n "dev-$${DRONE_COMMIT_SHA:0:7}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
   when:
     event: push
     branch: dev
