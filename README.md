@@ -31,7 +31,7 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - FOP2 Operator Panel (optional)
 - Integrated Asterisk Zabbix agent for active health monitoring
 - Misc `izpbx-*` scripts (like `izpbx-callstats`)
-- izsynth utility - TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems
+- `izsynth` utility - TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems
 - tcpdump and sngrep utility to debug VoIP calls
 - supervisord as services management with monitoring and automatic restart when services fail
 - postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
@@ -39,15 +39,15 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - Apache 2.4 and PHP 7.3 (mpm_prefork+mod_php configuration mode)
 - Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
 - Custom commercial SSL Certificates support
-- Logrotating of services logs
+- Logrotating of service logs
 - All Bootstrap configurations made via single central `.env` file
 - Many customizable variables to use (look inside `default.env` file)
 - Two containers setup: (antipattern docker design but needed by the FreePBX ecosystem to works)
-  - izpbx-asterisk: Asterisk Engine + FreePBX Frontend + others services
-  - mariadb: Database Backend
+  - **izpbx** (izpbx-asterisk container: Asterisk Engine + FreePBX Frontend + others services)
+  - **izpbx-db** (mariadb container: Database Backend)
 
 # Targets of this project
-- On-Premise fast, automatic a repeatable deploy of "small" PBX Systems (by default max 50 concurrent calls)
+- On-Premise fast, automatic a repeatable deploy of "small" PBX Systems (by default max 50 concurrent calls... it's based on default 200 RTP port range.. tune it!)
 
 # Limits of this project
 - On the Cloud single deploy for every VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
@@ -58,7 +58,7 @@ Using **docker-compose** is the suggested method:
 
 - Install your prefered Linux OS into VM or Baremetal Server
 
-- Install Docker Runtime and docker-compose utility from https://www.docker.com/get-started for your Operating System.
+- Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
 
 - Update or create file `/etc/docker/daemon.json` with:  
 (useful to avoid docker proxy NAT of packets. Needed to make SIP/RTP UDP traffic works without troubles)
@@ -72,7 +72,7 @@ Using **docker-compose** is the suggested method:
 
 - Clone GIT repository or download latest release from: https://git.initzero.it/initzero/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`)
 
-- Copy `default.env` file in `.env`: `cp default.env .env`
+- Copy `default.env` file to `.env`: `cp default.env .env`
 
 - Customize `.env` variables, specially the security section of mysql passwords
 
@@ -80,10 +80,10 @@ Using **docker-compose** is the suggested method:
 
 - Wait 60 seconds and point your web browser to the IP address of your docker host and follow initial startup guide
 
-Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range.  
+Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
 Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested. there will be problems with RTP traffic).
 
-# Restart services
+# Services Management
 
 ### Command to restart Asterisk PBX
 `docker restart izpbx`
@@ -134,14 +134,14 @@ docker-compose up -d
 
 3. Open FreePBX Web URL and verify if exist modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
 
-## FreePBX major release upgrade path
-FreePBX will be installed into persistent data dir only on first bootstrap (when no installations already exist).
+## FreePBX upgrade path to a major release
+FreePBX will be installed into persistent data dir only on first izpbx deploy (when no installations already exist).
 
-Later container updates will not upgrade FreePBX (just Asterisk engine will be updated).  
+Following container updates will not upgrade the FreePBX Framework (just Asterisk engine will be updated).  
 After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
   - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
 
-So, only Asterisk core engine will be updated on container image update.
+Recap: only Asterisk core engine will be updated on container image update.
 
 # Environment default variables
 ```
@@ -307,8 +307,8 @@ Consult official repository page for installation and configuration of Asterisk 
   * Global Language: **Italian**
 
 # Trobleshooting
-- FreePBX is slow to reload
-  - enter into container and run:  
+- FreePBX is slow to reload (at 2020-06-14)
+  - Enter into izpbx container and run:  
     `docker exec -it izpbx bash`  
     `fwconsole setting SIGNATURECHECK 0`
 
@@ -316,7 +316,7 @@ Consult official repository page for installation and configuration of Asterisk 
   - Simply remove the `data` directory created by deploy, and start over to make a new clean and empty installation
     
 # TODO / Future Development
-- Hylafax+ Server + IAXModem
+- Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possibile using FreePBX FAX Module)
 - macOS host support? (edit docker-compose.yml and comment localtime volume?)
 - Windows host support (need to use docker volume instead local directory path?)
 - Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation)
