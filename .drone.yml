@@ -65,7 +65,7 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
       
 environment:
-  ASTERISK_VER: 16.10.0
+  ASTERISK_VER: 16.11.1
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -125,7 +125,7 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
 environment: &setup_env
-  ASTERISK_VER: 17.4.0
+  ASTERISK_VER: 17.5.1
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
