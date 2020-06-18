@@ -941,16 +941,17 @@ Server=${ZABBIX_SERVER}
 cfgService_fop2 () {
   [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
 
-  if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ];then
+  if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ]; then
   
-    # fop2 version upgrade management
+    # fop2 version upgrade check
     [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_CUR=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v 2>/dev/null | awk '{print $3}')
     if   [ $(check_version $FOP2_VER_CUR) -lt $(check_version $FOP2_VER) ]; then
+      echo "=> INFO: FOP2 update detected... upgrading from $FOP2_VER_CUR to $FOP2_VER"
       cfgService_fop2_upgrade
     elif [ $(check_version $FOP2_VER_CUR) -gt $(check_version $FOP2_VER) ]; then
       echo "=> WARNING: Specified FOP2_VER=$FOP2_VER is older than installed version: $FOP2_VER_CUR"
      else
-      echo "=> INFO Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
+      echo "=> INFO: Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
     fi
      
     # obtain asterisk manager configs from freepbx
@@ -1016,7 +1017,6 @@ cfgService_fop2_install() {
 }
 
 cfgService_fop2_upgrade() {
-  echo "=> FOP2 Upgrade Detected... upgrading from $FOP2_VER_OLD to $FOP2_VER"
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
   cd /usr/src/fop2 && make install
 }
