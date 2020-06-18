@@ -14,13 +14,15 @@ MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
 
-# components app versions
-ARG ASTERISK_VER=16.10.0
+## components app versions
+# https://downloads.asterisk.org/pub/telephony/asterisk/releases
+ARG ASTERISK_VER=16.11.1
+
+# https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
 
-# https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ENV ASTERISK_VER=${ASTERISK_VER}
-ENV FREEPBX_VER=${FREEPBX_VER}
+# https://www.fop2.com/download.php
+ARG FOP2_VER=2.31.28
 
 # http://sources.buildroot.net/spandsp/
 ARG SPANDSP_VER=20180108
@@ -28,11 +30,13 @@ ARG SPANDSP_VER=20180108
 # https://github.com/BelledonneCommunications/bcg729/releases
 ARG BCG729_VER=1.0.4
 
-# https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.27
-
 # https://github.com/irontec/sngrep/releases
 ARG SNGREP_VER=1.4.7
+
+## save vars for later and container usage
+ENV ASTERISK_VER=${ASTERISK_VER}
+ENV FREEPBX_VER=${FREEPBX_VER}
+ENV FOP2_VER=${FOP2_VER}
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"

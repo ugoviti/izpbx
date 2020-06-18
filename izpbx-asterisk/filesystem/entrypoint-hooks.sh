@@ -988,11 +988,21 @@ cfgService_fop2 () {
 }
 
 cfgService_fop2_install() {
-  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FOP2"
+  echo "=> !!! NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2"
   fwconsole start
-  wget -O - http://download.fop2.com/install_fop2.sh | bash
+  if [ -z "$FOP2_VER" ]; then
+    wget -O - http://download.fop2.com/install_fop2.sh | bash
+   else
+    curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
+  fi
+  
   pkill fop2_server
   fwconsole stop
+}
+
+cfgService_fop2_update() {
+  echo "=> FOP2 Update Detected... updating from $FOP2_VER_OLD to $FOP2_VER"
+  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
 }
 
 cfgBashEnv() {
