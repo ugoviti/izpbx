@@ -943,8 +943,15 @@ cfgService_fop2 () {
 
   if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ];then
   
-    [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_OLD=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v | awk '{print $3}')
-    [ $(check_version $FOP2_VER_OLD) -lt $(check_version $FOP2_VER) ] && cfgService_fop2_upgrade
+    # fop2 version upgrade management
+    [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_CUR=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v 2>/dev/null | awk '{print $3}')
+    if   [ $(check_version $FOP2_VER_CUR) -lt $(check_version $FOP2_VER) ]; then
+      cfgService_fop2_upgrade
+    elif [ $(check_version $FOP2_VER_CUR) -gt $(check_version $FOP2_VER) ]; then
+      echo "=> WARNING: Specified FOP2_VER=$FOP2_VER is older than installed version: $FOP2_VER_CUR"
+     else
+      echo "=> INFO Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
+    fi
      
     # obtain asterisk manager configs from freepbx
     : ${FOP2_AMI_HOST:="$(fwconsole setting ASTMANAGERHOST | awk -F"[][{}]" '{print $2}')"}
