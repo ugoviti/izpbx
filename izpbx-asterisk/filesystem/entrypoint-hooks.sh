@@ -181,6 +181,8 @@ fi
 
 
 ## misc functions
+check_version() { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); }
+
 print_path() {
   echo ${@%/*}
 }
@@ -736,7 +738,7 @@ cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FreePBX for the first time... try:[$n/$t]"
+  echo "=> !!! FreePBX NEW INSTALLATION DETECTED !!! Installing for the first time... try:[$n/$t]"
   cd /usr/src/freepbx
   
   # start asterisk if it's not running
@@ -940,6 +942,10 @@ cfgService_fop2 () {
   [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
 
   if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ];then
+  
+    [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_OLD=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v | awk '{print $3}')
+    [ $(check_version $FOP2_VER_OLD) -lt $(check_version $FOP2_VER) ] && cfgService_fop2_upgrade
+     
     # obtain asterisk manager configs from freepbx
     : ${FOP2_AMI_HOST:="$(fwconsole setting ASTMANAGERHOST | awk -F"[][{}]" '{print $2}')"}
     : ${FOP2_AMI_PORT:="$(fwconsole setting ASTMANAGERPORT | awk -F"[][{}]" '{print $2}')"}
@@ -988,21 +994,24 @@ cfgService_fop2 () {
 }
 
 cfgService_fop2_install() {
-  echo "=> !!! NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2"
+  echo "=> !!! FOP2 NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2..."
   fwconsole start
   if [ -z "$FOP2_VER" ]; then
+    # automatic installation of latest version
     wget -O - http://download.fop2.com/install_fop2.sh | bash
    else
     curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
+    cd /usr/src/fop2 && make install && /usr/local/fop2/generate_override_contexts.pl -write
   fi
   
   pkill fop2_server
   fwconsole stop
 }
 
-cfgService_fop2_update() {
-  echo "=> FOP2 Update Detected... updating from $FOP2_VER_OLD to $FOP2_VER"
+cfgService_fop2_upgrade() {
+  echo "=> FOP2 Upgrade Detected... upgrading from $FOP2_VER_OLD to $FOP2_VER"
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
+  cd /usr/src/fop2 && make install
 }
 
 cfgBashEnv() {
