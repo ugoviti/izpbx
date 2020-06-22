@@ -14,13 +14,15 @@ MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
 
-# components app versions
-ARG ASTERISK_VER=16.10.0
+## components app versions
+# https://downloads.asterisk.org/pub/telephony/asterisk/releases
+ARG ASTERISK_VER=16.11.1
+
+# https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
 
-# https://downloads.asterisk.org/pub/telephony/asterisk/
-ENV ASTERISK_VER=${ASTERISK_VER}
-ENV FREEPBX_VER=${FREEPBX_VER}
+# https://www.fop2.com/download.php
+ARG FOP2_VER=2.31.27
 
 # http://sources.buildroot.net/spandsp/
 ARG SPANDSP_VER=20180108
@@ -28,11 +30,13 @@ ARG SPANDSP_VER=20180108
 # https://github.com/BelledonneCommunications/bcg729/releases
 ARG BCG729_VER=1.0.4
 
-# https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.27
-
 # https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.6
+ARG SNGREP_VER=1.4.7
+
+## save vars for later and container usage
+ENV ASTERISK_VER=${ASTERISK_VER}
+ENV FREEPBX_VER=${FREEPBX_VER}
+ENV FOP2_VER=${FOP2_VER}
 
 ## app name
 ENV APP_NAME              "izpbx-asterisk"
@@ -57,7 +61,7 @@ ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
 ## install packages
-ENV ASTERISK_INSTALL_DEPS=' \
+ENV APP_INSTALL_DEPS=' \
     rsync \
     net-tools \
     iftop \
@@ -149,13 +153,7 @@ ENV ASTERISK_INSTALL_DEPS=' \
     zabbix-agent \
     zabbix-sender \
   '
-# 20200514 disabled for broken dependencies
-#    whois \
 
-# 20200320 disabled zabbix agent because random repo download problems
-#     zabbix-agent \
-#     zabbix-sender \
-  
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
@@ -216,9 +214,9 @@ RUN set -xe && \
   dnf upgrade -y && \
   # install mandatory packages
   dnf install -y \
-  $ASTERISK_INSTALL_DEPS \
+  $APP_INSTALL_DEPS \
   && \
-  dnf mark install $ASTERISK_INSTALL_DEPS && \
+  dnf mark install $APP_INSTALL_DEPS && \
   \
   : "---------- generate selfsigned certificate for 100 years duration ----------" && \
   mkdir -p /etc/pki/izpbx && \
@@ -354,7 +352,7 @@ RUN set -xe && \
   : "---------- START Build ASTERISK ----------" && \
   cd /usr/src && \
   mkdir asterisk && \
-  curl -fSL --connect-timeout 30 https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
+  curl -fSL --connect-timeout 30 http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
   cd asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
@@ -491,11 +489,10 @@ RUN set -xe && \
   : "---------- ALL builds finished ----------" 
 
 # NOTE: asterisk build
-# to get the options passed below: menuselect/menuselect --list-options
+# to get the options passed above: menuselect/menuselect --list-options
 
-## download freepbx and modules for offline install
-# modules xml url: http://mirror1.freepbx.org/modules-15.0.xml
-# php -r 'echo json_encode(simplexml_load_file("modules-15.0.xml"));' | jq
+## download freepbx and modules for offline install:
+# php -r 'echo json_encode(simplexml_load_file("http://mirror1.freepbx.org/modules-15.0.xml"));' | jq
 # curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
 # curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
@@ -555,14 +552,14 @@ RUN set -xe && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key" && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
 
-# install other componets
+# install other components
 RUN set -xe && \
   : "---------- START Install izsynth ----------" && \
   cd /usr/src && \
   curl -fSL --connect-timeout 30 https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -o /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END Install ----------" && \
-  : "---------- START Install Asterisk Zabbix Agents by InitZero b6 ----------" && \
+  : "---------- START Install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/master.tar.gz | tar xz --strip 3 zabbix-templates-master/asterisk/zabbix_agentd.d && \
   : "---------- END Install ----------"
@@ -600,7 +597,7 @@ ARG APP_VER_BUILD
 ARG APP_BUILD_COMMIT
 ARG APP_BUILD_DATE
 
-# define other build variables
+# CI envs
 ENV APP_FQDN=""
 ENV APP_VER_BUILD="${APP_VER_BUILD}"
 ENV APP_BUILD_COMMIT="${APP_BUILD_COMMIT}"

@@ -13,14 +13,15 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
+environment:
+  APP_VER: "${DRONE_TAG}"
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+      
 steps:
 - name: build&publish
   image: plugins/docker
-  environment:
-    APP_VER: "${DRONE_TAG}"
-    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
@@ -40,7 +41,7 @@ steps:
       - ${DRONE_TAG%.*}
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
-      - ${DRONE_TAG}-${DRONE_COMMIT_SHA:0:7}
+      - ${DRONE_COMMIT_SHA:0:7}
   volumes:
   - name: docker
     path: /var/lib/docker
@@ -65,7 +66,7 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
       
 environment:
-  ASTERISK_VER: 16.10.0
+  ASTERISK_VER: 16.11.1
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -75,16 +76,16 @@ steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${ASTERISK_VER%%.*}" > .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n "dev-$${DRONE_COMMIT_SHA:0:7}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
   when:
     event: push
     branch: dev
 
-- name: build&publish
+- name: build-publish
   image: plugins/docker
   settings:
     repo: izdock/izpbx-asterisk
@@ -124,8 +125,8 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
-environment: &setup_env
-  ASTERISK_VER: 17.4.0
+environment:
+  ASTERISK_VER: 17.5.1
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -135,11 +136,11 @@ steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${ASTERISK_VER%%.*}" > .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n "dev-$${DRONE_COMMIT_SHA:0:7}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
   when:
     event: push
     branch: dev

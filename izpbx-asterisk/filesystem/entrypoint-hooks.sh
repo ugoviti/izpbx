@@ -181,6 +181,8 @@ fi
 
 
 ## misc functions
+check_version() { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); }
+
 print_path() {
   echo ${@%/*}
 }
@@ -724,19 +726,19 @@ Charset=utf8" > /etc/odbc.ini
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
 
-    echo "--> FIXME: Temporary Workarounds for FreePBX broken modules and configs..."
+  echo "--> FIXME: Temporary Workarounds for FreePBX broken modules and configs..."
   # FIXME: 20200318 freepbx 15.x warnings workaround
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
   sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
-  # FIXME: 20200322 https://issues.freepbx.org/browse/FREEPBX-21317
-  [ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
+  # FIXME: 20200322 https://issues.freepbx.org/browse/FREEPBX-21317 (NOT MORE NEEDED)
+  #[ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
 }
 
 cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FreePBX for the first time... try:[$n/$t]"
+  echo "=> !!! FreePBX NEW INSTALLATION DETECTED !!! Installing for the first time... try:[$n/$t]"
   cd /usr/src/freepbx
   
   # start asterisk if it's not running
@@ -939,7 +941,19 @@ Server=${ZABBIX_SERVER}
 cfgService_fop2 () {
   [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
 
-  if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ];then
+  if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ]; then
+  
+    # fop2 version upgrade check
+    [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_CUR=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v 2>/dev/null | awk '{print $3}')
+    if   [ $(check_version $FOP2_VER_CUR) -lt $(check_version $FOP2_VER) ]; then
+      echo "=> INFO: FOP2 update detected... upgrading from $FOP2_VER_CUR to $FOP2_VER"
+      cfgService_fop2_upgrade
+    elif [ $(check_version $FOP2_VER_CUR) -gt $(check_version $FOP2_VER) ]; then
+      echo "=> WARNING: Specified FOP2_VER=$FOP2_VER is older than installed version: $FOP2_VER_CUR"
+     else
+      echo "=> INFO: Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
+    fi
+     
     # obtain asterisk manager configs from freepbx
     : ${FOP2_AMI_HOST:="$(fwconsole setting ASTMANAGERHOST | awk -F"[][{}]" '{print $2}')"}
     : ${FOP2_AMI_PORT:="$(fwconsole setting ASTMANAGERPORT | awk -F"[][{}]" '{print $2}')"}
@@ -988,11 +1002,23 @@ cfgService_fop2 () {
 }
 
 cfgService_fop2_install() {
-  echo "=> !!! NEW INSTALLATION DETECTED !!! Installing FOP2"
+  echo "=> !!! FOP2 NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2..."
   fwconsole start
-  wget -O - http://download.fop2.com/install_fop2.sh | bash
+  if [ -z "$FOP2_VER" ]; then
+    # automatic installation of latest version
+    wget -O - http://download.fop2.com/install_fop2.sh | bash
+   else
+    curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
+    cd /usr/src/fop2 && make install && /usr/local/fop2/generate_override_contexts.pl -write
+  fi
+  
   pkill fop2_server
   fwconsole stop
+}
+
+cfgService_fop2_upgrade() {
+  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
+  cd /usr/src/fop2 && make install
 }
 
 cfgBashEnv() {
@@ -1011,6 +1037,11 @@ cfgBashEnv() {
   echo -e -n "\E[1;34m"
   figlet -w 120 "izPBX"
 
+  : ${APP_VER:="unknown"}
+  : ${APP_VER_BUILD:="unknown"}
+  : ${APP_BUILD_COMMIT:="unknown"}
+  : ${APP_BUILD_DATE:="unknown"}
+  
   [ "${APP_BUILD_DATE}" != "unknown" ] && APP_BUILD_DATE=$(date -d @${APP_BUILD_DATE} +"%Y-%m-%d")
   
   echo -e "\E[1;36mizPBX \E[1;32m${APP_VER}\E[1;36m (build: \E[1;32m${APP_VER_BUILD}\E[1;36m commit: \E[1;32m${APP_BUILD_COMMIT}\E[1;36m date: \E[1;32m${APP_BUILD_DATE}\E[1;36m), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
