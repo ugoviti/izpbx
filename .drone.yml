@@ -13,14 +13,15 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
+environment:
+  APP_VER: "${DRONE_TAG}"
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+      
 steps:
 - name: build&publish
   image: plugins/docker
-  environment:
-    APP_VER: "${DRONE_TAG}"
-    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
@@ -84,7 +85,7 @@ steps:
     event: push
     branch: dev
 
-- name: build&publish
+- name: build-publish
   image: plugins/docker
   settings:
     repo: izdock/izpbx-asterisk
@@ -124,7 +125,7 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
-environment: &setup_env
+environment:
   ASTERISK_VER: 17.5.1
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
