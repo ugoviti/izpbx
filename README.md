@@ -36,6 +36,7 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - supervisord as services management with monitoring and automatic restart when services fail
 - postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
 - Integrated cron daemon for running scheduled tasks
+- TFTP server for autoprovisioning VoIP Phones
 - Apache 2.4 and PHP 7.3 (mpm_prefork+mod_php configuration mode)
 - Automatic Let's Encrypt HTTPS Certificate management for exposed PBXs to internet
 - Custom commercial SSL Certificates support
@@ -249,6 +250,7 @@ APP_PORT_SIP=5060
 APP_PORT_IAX=4569
 APP_PORT_RTP_START=10000
 APP_PORT_RTP_END=10200
+APP_PORT_RTP_TFTP=69
 APP_PORT_FOP2=4445
 APP_PORT_ZABBIX=10050
 # database port
@@ -260,6 +262,7 @@ CRON_ENABLED=true
 HTTPD_ENABLED=true
 IZPBX_ENABLED=true
 FAIL2BAN_ENABLED=true
+#TFTPD_ENABLED=true
 #FOP2_ENABLED=true
 #ZABBIX_ENABLED=true
 ```
