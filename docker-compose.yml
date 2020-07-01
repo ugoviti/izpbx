@@ -1,6 +1,5 @@
 version: '3'
 
-# if 'network_mode: host' is disabled, comment out the following lines
 networks:
   izpbx:
 
@@ -12,23 +11,26 @@ services:
     restart: always
     depends_on:
     - db
+    env_file:
+    - .env
     ports:
     - ${APP_PORT_HTTP}:${APP_PORT_HTTP}
     - ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
-    - ${APP_PORT_FOP2}:${APP_PORT_FOP2}
     - ${APP_PORT_IAX}:${APP_PORT_IAX}
-    - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
-    - ${APP_PORT_SIP}:${APP_PORT_SIP}
     - ${APP_PORT_IAX}:${APP_PORT_IAX}/udp
+    - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
     - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}/udp
     - ${APP_PORT_SIP}:${APP_PORT_SIP}/udp
-    - ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}
+    - ${APP_PORT_SIP}:${APP_PORT_SIP}
+    #- ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}
     - ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
+    - ${APP_PORT_TFTP}:${APP_PORT_TFTP}
+    - ${APP_PORT_TFTP}:${APP_PORT_TFTP}/udp
+    - ${APP_PORT_FOP2}:${APP_PORT_FOP2}
+    - ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}
     volumes:
     - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx:/data
-    env_file:
-    - .env
     ### fail2ban need privileged mode to manage iptables
     cap_add:
     - NET_ADMIN

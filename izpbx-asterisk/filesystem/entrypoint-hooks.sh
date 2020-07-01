@@ -34,6 +34,7 @@ declare -A appDataDirs=(
   [FOP2APPDIR]=/usr/local/fop2
   [SSLCRTDIR]=/etc/pki/izpbx
   [ROOTHOME]=/root
+  [TFTPDIR]=/var/lib/tftpboot
 )
 
 declare -A appFilesConf=(
@@ -128,6 +129,7 @@ declare -A fpbxSipSettings=(
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
 : ${POSTFIX_ENABLED:="true"}
+: ${TFTPD_ENABLED:="false"}
 : ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
 
@@ -911,6 +913,12 @@ cfgService_freepbx_install() {
   fi
 }
 
+## tftpd service
+cfgService_tftpd() {
+  # nothing to do
+  tftpd=1
+}
+
 ## zabbix service
 cfgService_zabbix() {
   # comment zabbix global config
@@ -1090,6 +1098,8 @@ runHooks() {
       # echo FILE=$file
       symlinkFile "${file}" "${APP_DATA}${file}"
     done
+   else
+    echo "=> WARNING: No Persistent storage path detected... the configurations will be lost on container restart"
   fi
 
   # check files and directory permissions
@@ -1117,6 +1127,7 @@ runHooks() {
   chkService HTTPD_ENABLED
   chkService ASTERISK_ENABLED
   chkService IZPBX_ENABLED
+  chkService TFTPD_ENABLED
   chkService ZABBIX_ENABLED
   chkService FOP2_ENABLED
   

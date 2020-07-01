@@ -150,6 +150,7 @@ ENV APP_INSTALL_DEPS=' \
     figlet \
     nc \
     ffmpeg \
+    tftp-server \
     zabbix-agent \
     zabbix-sender \
   '
