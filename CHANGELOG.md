@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - updated `default.env` with APP_PORT_TFTP (don't forget to accordingly update your `.env` file)
 - updated `docker-compose.yml` with APP_PORT_TFTP
+- fix asterisk logs rotating
 
 ### Removed
 - nothing
