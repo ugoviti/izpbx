@@ -1,9 +1,9 @@
 /var/log/asterisk/full
+/var/log/asterisk/messages
 /var/log/asterisk/security
-/var/log/asterisk/freepbx.log
-/var/log/asterisk/freepbx_security.log
-/var/log/asterisk/ucp_err.log
-/var/log/asterisk/ucp_out.log {
+/var/log/asterisk/freepbx_dbug
+/var/log/asterisk/*_log
+/var/log/asterisk/*.log {
     daily
     rotate 7
     compress
