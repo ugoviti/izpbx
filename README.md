@@ -108,6 +108,7 @@ Available services:
   - `fop2`
   - `httpd`
   - `izpbx`
+  - `tftpd`
   - `postfix`
   - `zabbix-agent`
 
