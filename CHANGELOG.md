@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - updated `default.env` with
   - NB. don't forget to accordingly update your `.env` file with the following lines:
   - APP_PORT_DHCP=67
-  - #DNSMASQ_ENABLED=true
   - #DHCP_ENABLED=true
   - #DHCP_POOL_START=10.1.1.10
   - #DHCP_POOL_END=10.1.1.250
@@ -24,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - updated `docker-compose.yml` with
   - NB. don't forget to accordingly update your `docker-compose.yml` file with the following lines:
   - ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
+- renamed TFTPD_ENABLED into TFTP_ENABLED
 
 ### Removed
 - tftp-server by kernel.org replaced with dnsmasq service
