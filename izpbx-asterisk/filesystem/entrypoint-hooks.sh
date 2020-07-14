@@ -34,6 +34,8 @@ declare -A appDataDirs=(
   [FOP2APPDIR]=/usr/local/fop2
   [SSLCRTDIR]=/etc/pki/izpbx
   [ROOTHOME]=/root
+  [DNSMASQDIR]=/etc/dnsmasq.d
+  [DNSMASQLEASEDIR]=/var/lib/dnsmasq
   [TFTPDIR]=/var/lib/tftpboot
 )
 
@@ -129,7 +131,9 @@ declare -A fpbxSipSettings=(
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
 : ${POSTFIX_ENABLED:="true"}
-: ${TFTPD_ENABLED:="false"}
+: ${DNSMASQ_ENABLED:="true"}
+: ${DHCP_ENABLED:="false"}
+: ${TFTP_ENABLED:="false"}
 : ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
 
@@ -913,10 +917,32 @@ cfgService_freepbx_install() {
   fi
 }
 
-## tftpd service
-cfgService_tftpd() {
-  # nothing to do
-  tftpd=1
+## dhcp service
+cfgService_dhcp() {
+  if [[ ! -z "$DHCP_POOL_START" || ! -z "$DHCP_POOL_END" || ! -z "$DHCP_POOL_LEASE" ]]; then
+    sed "s|^#dhcp-range=.*|dhcp-range=$DHCP_POOL_START,$DHCP_POOL_END,$DHCP_POOL_LEASE|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  else
+    echo "--> WARNING: DHCP server enabled but specify DHCP_POOL_START:[$DHCP_POOL_START] DHCP_POOL_END:[$DHCP_POOL_END] DHCP_POOL_LEASE:[$DHCP_POOL_LEASE]"
+  fi
+  
+  if [ ! -z "$DHCP_DOMAIN" ]; then
+    sed "s|^local=.*|local=/$DHCP_DOMAIN/|"   -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+    sed "s|^domain=.*|domain=/$DHCP_DOMAIN/|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+    sed "s|^dhcp-option=option:domain-name,.*|dhcp-option=option:domain-name,$DHCP_DOMAIN|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  fi
+
+  [ ! -z "$DHCP_DNS" ] && sed "s|^#dhcp-option=6,.*|dhcp-option=6,$DHCP_DNS|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  
+  [ ! -z "$DHCP_GW" ] && sed "s|^#dhcp-option=3,.*|dhcp-option=6,$DHCP_GW|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  
+  [ ! -z "$DHCP_NTP" ] && sed "s|^#dhcp-option=option:ntp-server,.*|dhcp-option=option:ntp-server,$DHCP_NTP|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+}
+
+## tftp service
+cfgService_tftp() {
+  sed "s|^#dhcp-option=66|dhcp-option=66|"                  -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  sed "s|^#enable-tftp|enable-tftp|"                        -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  sed "s|^#tftp-root=.*|tftp-root=${appDataDirs[TFTPDIR]}|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
 }
 
 ## zabbix service
@@ -1127,7 +1153,9 @@ runHooks() {
   chkService HTTPD_ENABLED
   chkService ASTERISK_ENABLED
   chkService IZPBX_ENABLED
-  chkService TFTPD_ENABLED
+  chkService DNSMASQ_ENABLED
+  chkService DHCP_ENABLED
+  chkService TFTP_ENABLED
   chkService ZABBIX_ENABLED
   chkService FOP2_ENABLED
   
