@@ -34,6 +34,8 @@ declare -A appDataDirs=(
   [FOP2APPDIR]=/usr/local/fop2
   [SSLCRTDIR]=/etc/pki/izpbx
   [ROOTHOME]=/root
+  [DNSMASQDIR]=/etc/dnsmasq.d
+  [DNSMASQLEASEDIR]=/var/lib/dnsmasq
   [TFTPDIR]=/var/lib/tftpboot
 )
 
@@ -129,7 +131,9 @@ declare -A fpbxSipSettings=(
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
 : ${POSTFIX_ENABLED:="true"}
-: ${TFTPD_ENABLED:="false"}
+: ${DNSMASQ_ENABLED:="false"}
+: ${DHCP_ENABLED:="false"}
+: ${TFTP_ENABLED:="false"}
 : ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
 
@@ -429,7 +433,7 @@ cfgService_letsencrypt() {
     echo "--> Let's Encrypt certificate already exist... trying to renew"
     certbot renew --standalone
   else
-    echo "--> Generating HTTPS Let's Encrypt certificate"
+    echo "--> generating HTTPS Let's Encrypt certificate"
     certbot certonly --standalone --expand -n --agree-tos --email ${ROOT_MAILTO} -d ${APP_FQDN}
   fi
   
@@ -609,7 +613,7 @@ cfgService_izpbx() {
 
   freepbx_reload() {
     # reload freepbx config
-    echo "--> Reloading FreePBX..."
+    echo "--> reloading FreePBX..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
   }
   
@@ -637,7 +641,7 @@ cfgService_izpbx() {
   ## rebase directory paths, based on APP_DATA and create/chown missing directories
   # process directories
   if [ ! -z "${APP_DATA}" ]; then
-    echo "--> Using '${APP_DATA}' as basedir for FreePBX install"
+    echo "--> using '${APP_DATA}' as basedir for FreePBX install"
     # process directories
     for k in ${!fpbxDirs[@]}; do
       v="${fpbxDirs[$k]}"
@@ -661,7 +665,7 @@ cfgService_izpbx() {
     done
   fi
 
-  echo "--> Configuring FreePBX ODBC"
+  echo "--> configuring FreePBX ODBC"
   # fix mysql odbc inst file path
   sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmaodbc.so/' /etc/odbcinst.ini
   # create mysql odbc
@@ -677,11 +681,11 @@ Charset=utf8" > /etc/odbc.ini
   # install freepbx or update configuration if already installed
   if [ ! -e "${appFilesConf[FPBXCFGFILE]}" ]; then
       # onetime: install freepbx if this is the first time we initialize the container
-      echo "---> Missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
+      echo "---> missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
       cfgService_freepbx_install
     else
       # update freepbx.conf file
-      echo "---> Reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
+      echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
       [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
       sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
@@ -689,7 +693,7 @@ Charset=utf8" > /etc/odbc.ini
       sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
-  echo "--> Applying Workarounds for FreePBX and Asterisk..."
+  echo "--> applying Workarounds for FreePBX and Asterisk..."
   # make missing log files
   [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${fpbxDirs[ASTLOGDIR]}/full"
   
@@ -698,7 +702,7 @@ Charset=utf8" > /etc/odbc.ini
   [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
   
   # reconfigure freepbx from env variables
-  echo "--> Reconfiguring FreePBX Advanced Settings if needed..."
+  echo "--> reconfiguring FreePBX Advanced Settings if needed..."
   set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_VER=" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
     k="$(echo $setting | awk '{print $1}')"
     v="$(echo $setting | awk '{print $2}')"
@@ -712,7 +716,7 @@ Charset=utf8" > /etc/odbc.ini
   done
 
   # reconfigure freepbx settings based on docker variables content using FreePBX API bootstrap
-  echo "--> Reconfiguring FreePBX SIP Settings if needed..."
+  echo "--> reconfiguring FreePBX SIP Settings if needed..."
   for k in ${!fpbxSipSettings[@]}; do
     v="${fpbxSipSettings[$k]}"
     cVal=$(echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); echo \$FreePBX->sipsettings->getConfig('${k}');?>" | php)
@@ -778,7 +782,7 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --ampcgibin=${fpbxDirs[AMPCGIBIN]}"
   FPBX_OPTS+=" --ampplayback=${fpbxDirs[AMPPLAYBACK]}"
 
-  echo "--> Installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
+  echo "--> installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
   echo "---> START install FreePBX @ $(date)"
   # https://github.com/FreePBX/announcement/archive/release/15.0.zip
   # if mysql run in a non standard port change the mysql server address
@@ -801,7 +805,7 @@ cfgService_freepbx_install() {
       for file in ${appFilesConf[@]}; do
         chown ${APP_USR}:${APP_GRP} "${file}"
       done
-      echo "--> Fixing directory system paths in db configuration..."
+      echo "--> fixing directory system paths in db configuration..."
       for k in ${!fpbxDirs[@]} ${!fpbxFilesLog[@]}; do
         fwconsole setting ${k} ${fpbxDirs[$k]}
       done
@@ -868,27 +872,27 @@ cfgService_freepbx_install() {
       weakpasswords
       ucp
     "}
-    echo "--> Enabling EXTENDED FreePBX repo..."
+    echo "--> enabling EXTENDED FreePBX repo..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
-    echo "--> Installing Prerequisite FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
+    echo "--> installing prerequisite FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_PRE}; do
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
 
     # fix freepbx and asterisk permissions
-    echo "--> Fixing FreePBX permissions..."
+    echo "--> fixing FreePBX permissions..."
     fwconsole chown
     freepbx_reload
     
-    echo "--> Installing Extra FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
+    echo "--> installing Extra FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_EXTRA}; do
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
 
     # fix freepbx and asterisk permissions
-    echo "--> Fixing FreePBX permissions..."
+    echo "--> fixing FreePBX permissions..."
     fwconsole chown
     freepbx_reload
 
@@ -900,23 +904,53 @@ cfgService_freepbx_install() {
       n=$t
     else
       let n+=1
-      echo "--> Problem detected... restarting in 10 seconds... try:[$n/$t]"
+      echo "--> problem detected... restarting in 10 seconds... try:[$n/$t]"
       sleep 10
   fi
   done
   
   # stop asterisk
   if asterisk -r -x "core show version" 2>/dev/null ; then 
-    echo "--> Stopping Asterisk"
+    echo "--> stopping Asterisk"
     asterisk -r -x "core stop now"
     echo "=> Finished installing FreePBX"
   fi
 }
 
-## tftpd service
-cfgService_tftpd() {
-  # nothing to do
-  tftpd=1
+## dnsmasq service
+cfgService_dnsmasq() {
+  [ "$DHCP_ENABLED" = "true" ] && cfgService_dhcp
+  [ "$TFTP_ENABLED" = "true" ] && cfgService_tftp
+}
+
+## dhcp service
+cfgService_dhcp() {
+  echo "--> configuring DHCP service"
+  if [[ ! -z "$DHCP_POOL_START" || ! -z "$DHCP_POOL_END" || ! -z "$DHCP_POOL_LEASE" ]]; then
+    sed "s|^#dhcp-range=.*|dhcp-range=$DHCP_POOL_START,$DHCP_POOL_END,$DHCP_POOL_LEASE|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  else
+    echo "--> WARNING: DHCP server enabled but specify DHCP_POOL_START:[$DHCP_POOL_START] DHCP_POOL_END:[$DHCP_POOL_END] DHCP_POOL_LEASE:[$DHCP_POOL_LEASE]"
+  fi
+  
+  if [ ! -z "$DHCP_DOMAIN" ]; then
+    sed "s|^local=.*|local=/$DHCP_DOMAIN/|"   -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+    sed "s|^domain=.*|domain=/$DHCP_DOMAIN/|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+    sed "s|^#dhcp-option=option:domain-name,.*|dhcp-option=option:domain-name,$DHCP_DOMAIN|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  fi
+
+  [ ! -z "$DHCP_DNS" ] && sed "s|^#dhcp-option=6,.*|dhcp-option=6,$DHCP_DNS|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  
+  [ ! -z "$DHCP_GW" ] && sed "s|^#dhcp-option=3,.*|dhcp-option=6,$DHCP_GW|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  
+  [ ! -z "$DHCP_NTP" ] && sed "s|^#dhcp-option=option:ntp-server,.*|dhcp-option=option:ntp-server,$DHCP_NTP|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+}
+
+## tftp service
+cfgService_tftp() {
+  echo "--> configuring TFTP service"
+  sed "s|^#dhcp-option=66|dhcp-option=66|"                  -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  sed "s|^#enable-tftp|enable-tftp|"                        -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  sed "s|^#tftp-root=.*|tftp-root=${appDataDirs[TFTPDIR]}|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
 }
 
 ## zabbix service
@@ -1058,7 +1092,7 @@ cfgBashEnv() {
 
 runHooks() {
   # configure supervisord
-  echo "--> Fixing supervisord config file..."
+  echo "--> fixing supervisord config file..."
   if   [ "$OS_RELEASE" = "debian" ]; then
     echo "---> Debian Linux detected"
     sed 's|^files = .*|files = /etc/supervisor/conf.d/*.ini|' -i /etc/supervisor/supervisord.conf
@@ -1084,7 +1118,7 @@ runHooks() {
       do
         dir="${APP_DATA}${dir}"
         if [ ! -e "${dir}" ];then
-          echo "--> Creating missing dir: '$dir'"
+          echo "--> creating missing dir: '$dir'"
           mkdir -p "${dir}"
         fi
       done
@@ -1103,7 +1137,7 @@ runHooks() {
   fi
 
   # check files and directory permissions
-#  echo "--> Verifying files permissions"
+#  echo "--> verifying files permissions"
 #   for dir in ${appDataDirs[@]}; do
 #     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
 #     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
@@ -1127,9 +1161,12 @@ runHooks() {
   chkService HTTPD_ENABLED
   chkService ASTERISK_ENABLED
   chkService IZPBX_ENABLED
-  chkService TFTPD_ENABLED
   chkService ZABBIX_ENABLED
   chkService FOP2_ENABLED
+  
+  # dnsmasq management
+  [[ "$DHCP_ENABLED" = "true" || "$TFTP_ENABLED" = "true" ]] && DNSMASQ_ENABLED=true
+  chkService DNSMASQ_ENABLED
   
   # generate SSL Certificates used for HTTPS
   [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt

@@ -108,6 +108,7 @@ Available services:
   - `fop2`
   - `httpd`
   - `izpbx`
+  - `tftpd`
   - `postfix`
   - `zabbix-agent`
 
@@ -250,7 +251,7 @@ APP_PORT_SIP=5060
 APP_PORT_IAX=4569
 APP_PORT_RTP_START=10000
 APP_PORT_RTP_END=10200
-APP_PORT_RTP_TFTP=69
+APP_PORT_TFTP=69
 APP_PORT_FOP2=4445
 APP_PORT_ZABBIX=10050
 # database port

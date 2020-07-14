@@ -24,6 +24,7 @@ services:
     - ${APP_PORT_SIP}:${APP_PORT_SIP}
     #- ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}
     - ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
+    - ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
     - ${APP_PORT_TFTP}:${APP_PORT_TFTP}
     - ${APP_PORT_TFTP}:${APP_PORT_TFTP}/udp
     - ${APP_PORT_FOP2}:${APP_PORT_FOP2}
@@ -48,14 +49,14 @@ services:
     image: mariadb:10.4
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: always
+    env_file:
+    - .env
     # database configurations (WARNING: if commented out, the database will be exposed outside the container)
     ports:
     - ${APP_PORT_MYSQL}:3306
     volumes:
     - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
-    env_file:
-    - .env
     environment:
     - MYSQL_ROOT_PASSWORD
     - MYSQL_DATABASE

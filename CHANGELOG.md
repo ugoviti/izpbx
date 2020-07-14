@@ -5,6 +5,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- DNSMASQ (DHCP+TFTP) service support
+
+### Changed
+- updated `default.env` with
+  - NB. don't forget to accordingly update your `.env` file with the following lines:
+  - APP_PORT_DHCP=67
+  - #DHCP_ENABLED=true
+  - #DHCP_POOL_START=10.1.1.10
+  - #DHCP_POOL_END=10.1.1.250
+  - #DHCP_POOL_LEASE=72h
+  - #DHCP_DOMAIN=izpbx.local
+  - #DHCP_DNS=10.1.1.1
+  - #DHCP_GW=10.1.1.1
+  - #DHCP_NTP=10.1.1.1
+- updated `docker-compose.yml` with
+  - NB. don't forget to accordingly update your `docker-compose.yml` file with the following lines:
+  - ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
+- renamed TFTPD_ENABLED into TFTP_ENABLED
+
+### Removed
+- tftp-server by kernel.org replaced with dnsmasq service
 
 
 ## [0.9.6] - 2020-07-01
@@ -16,9 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - updated `docker-compose.yml` with APP_PORT_TFTP
 - fix asterisk logs rotating
 
-### Removed
-- nothing
-
 
 ## [0.9.5] - 2020-06-25
 ### Added
@@ -26,9 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Asterisk 16.11.1
-
-### Removed
-- nothing
 
 
 ## [0.9.4] - 2020-05-15
@@ -38,19 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - updated `default.env`: added FOP2_LICENSE_NAME, FOP2_LICENSE_CODE (don't forget to accordingly update your `.env` file)
 
-### Removed
-- nothing
-
 
 ## [0.9.3] - 2020-04-30
-### Added
-- nothing
-
 ### Changed
 - Asterisk 16.10.0
-
-### Removed
-- nothing
 
 
 ## [0.9.2] - 2020-04-30
@@ -58,30 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Persistent root home dir support (to keep bash and asterisk console history)
 - Eye candy customizations for doker shell
 
-### Changed
-- nothing
-
-### Removed
-- nothing
-
 
 ## [0.9.1] - 2020-04-10
-### Added
-- nothing
-
 ### Changed
 - fix typo
-
-### Removed
-- nothing
 
 
 ## [0.9.0] - 2020-04-08
 ### Added
 - First Public Release
-
-### Changed
-- nothing
-
-### Removed
-- nothing
