@@ -17,8 +17,12 @@ Asterisk 17:
 
 ## Run
 
-Docker Run:  
-`docker run --rm -ti --name izpbx-asterisk izpbx-asterisk`
+### Docker Run:
+Start MySQL:  
+`docker run --rm -ti -v ./data/db:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.4`
 
-Docker Compose:  
+Start izPBX:  
+`docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ./data/izpbx:/data -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e APP_DATA=/data --name izpbx izpbx-asterisk:latest`
+
+### Docker Compose:
 `docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-16.yml up`
