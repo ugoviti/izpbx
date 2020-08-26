@@ -75,7 +75,7 @@ Using **docker-compose** is the suggested method:
 
 - Clone GIT repository or download latest release from: https://git.initzero.it/initzero/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`)
 
-- Copy `default.env` file to `.env`: `cp default.env .env`
+- Copy `default.env` file to `.env`: `cp default.env .env` (or make a symlink `ln -sf default.env .env`)
 
 - Customize `.env` variables, specially the security section of mysql passwords
 
