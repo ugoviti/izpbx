@@ -25,7 +25,7 @@ ARG FREEPBX_VER=15.0
 ARG FOP2_VER=2.31.28
 
 # http://sources.buildroot.net/spandsp/
-ARG SPANDSP_VER=3.0.0-6ec23e5a7e
+ARG SPANDSP_VER=20180108
 
 # https://github.com/BelledonneCommunications/bcg729/releases
 ARG BCG729_VER=1.0.4
@@ -90,6 +90,7 @@ ENV APP_INSTALL_DEPS=' \
     libtool \
     ncurses \
     libtiff \
+    libjpeg-turbo \
     audiofile \
     uuid \
     libtool-ltdl \
@@ -267,6 +268,7 @@ RUN set -xe && \
     ncurses-devel \
     libtermcap-devel \
     libtiff-devel \
+    libjpeg-turbo-devel \
     audiofile-devel \
     uuid-devel \
     libtool-ltdl-devel \
