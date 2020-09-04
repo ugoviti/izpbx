@@ -16,16 +16,16 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=16.12.0
+ARG ASTERISK_VER=16.13.0
 
 # https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
 
 # https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.27
+ARG FOP2_VER=2.31.28
 
 # http://sources.buildroot.net/spandsp/
-ARG SPANDSP_VER=20180108
+ARG SPANDSP_VER=3.0.0-6ec23e5a7e
 
 # https://github.com/BelledonneCommunications/bcg729/releases
 ARG BCG729_VER=1.0.4
