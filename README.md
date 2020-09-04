@@ -63,16 +63,6 @@ Using **docker-compose** is the suggested method:
 
 - Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
 
-- Update or create file `/etc/docker/daemon.json` with:  
-(useful to avoid docker proxy NAT of packets. Needed to make SIP/RTP UDP traffic works without troubles)
-```
-{
-  "userland-proxy": false
-}
-```
-
-- Restart Docker Engine: `systemctl restart docker`
-
 - Clone GIT repository or download latest release from: https://git.initzero.it/initzero/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`)
 
 - Copy `default.env` file to `.env`: `cp default.env .env`
