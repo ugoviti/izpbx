@@ -56,7 +56,7 @@ kind: pipeline
 name: izpbx-dev-16
 
 environment:
-  ASTERISK_VER: 16.12.0
+  ASTERISK_VER: 16.13.0
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -115,7 +115,7 @@ kind: pipeline
 name: izpbx-dev-17
 
 environment:
-  ASTERISK_VER: 17.6.0
+  ASTERISK_VER: 17.7.0
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
