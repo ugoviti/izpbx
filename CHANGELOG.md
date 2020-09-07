@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.8] - 2020-09-07
+### Changed
+- Asterisk 16.13.0
+- FOP2 2.31.28
+- added glibc-langpack-en to fix missing locale messages
 
 ## [0.9.7] - 2020-07-14
 ### Added

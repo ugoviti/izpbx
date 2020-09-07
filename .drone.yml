@@ -1,6 +1,16 @@
 kind: pipeline
 name: izpbx-release
 
+environment:
+  APP_VER: "${DRONE_TAG}"
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+
+trigger:
+  event:
+  - tag
+
 platform:
   os: linux
   arch: amd64
@@ -12,12 +22,6 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-
-environment:
-  APP_VER: "${DRONE_TAG}"
-  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
       
 steps:
 - name: build&publish
@@ -45,14 +49,25 @@ steps:
   volumes:
   - name: docker
     path: /var/lib/docker
-  when:
-    event: tag
 
 ---
 
 kind: pipeline
 name: izpbx-dev-16
 
+environment:
+  ASTERISK_VER: 16.13.0
+  APP_VER: dev
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+
+trigger:
+  event:
+  - push
+  branch:
+  - dev
+  
 platform:
   os: linux
   arch: amd64
@@ -64,26 +79,16 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-      
-environment:
-  ASTERISK_VER: 16.11.1
-  APP_VER: dev
-  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
 
 steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n "dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-  when:
-    event: push
-    branch: dev
 
 - name: build-publish
   image: plugins/docker
@@ -104,14 +109,23 @@ steps:
   volumes:
   - name: docker
     path: /var/lib/docker
-  when:
-    event: push
-    branch: dev
 
 ---
-
 kind: pipeline
 name: izpbx-dev-17
+
+environment:
+  ASTERISK_VER: 17.7.0
+  APP_VER: dev
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+
+trigger:
+  event:
+  - push
+  branch:
+  - dev
 
 platform:
   os: linux
@@ -125,25 +139,15 @@ volumes:
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
-environment:
-  ASTERISK_VER: 17.5.1
-  APP_VER: dev
-  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
-
 steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n "dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-  when:
-    event: push
-    branch: dev
 
 - name: build&publish
   image: plugins/docker
@@ -164,6 +168,3 @@ steps:
   volumes:
   - name: docker
     path: /var/lib/docker
-  when:
-    event: push
-    branch: dev
