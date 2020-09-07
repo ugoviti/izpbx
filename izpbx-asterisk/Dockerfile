@@ -152,6 +152,7 @@ ENV APP_INSTALL_DEPS=' \
     nc \
     ffmpeg \
     dnsmasq \
+    glibc-langpack-en \
     zabbix-agent \
     zabbix-sender \
   '
