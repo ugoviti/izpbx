@@ -413,9 +413,9 @@ postconf -e "message_size_limit = ${MESSAGE_SIZE_LIMIT}"
 # set from email address
 if [ ! -z "$SMTP_MAIL_FROM" ]; then
   echo "/.+/ $SMTP_MAIL_FROM" > /etc/postfix/sender_canonical_maps
-  echo "/From:.*/ REPLACE From: $SMTP_MAIL_FROM" > /etc/postfix/header_check
+  echo "/From:.*/ REPLACE From: $SMTP_MAIL_FROM" > /etc/postfix/header_checks
   postconf -e "sender_canonical_maps = regexp:/etc/postfix/sender_canonical_maps"
-  postconf -e "smtp_header_checks = regexp:/etc/postfix/header_check"
+  postconf -e "smtp_header_checks = regexp:/etc/postfix/header_checks"
 fi
 }
 
