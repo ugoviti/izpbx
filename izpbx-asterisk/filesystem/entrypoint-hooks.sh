@@ -145,6 +145,7 @@ declare -A fpbxSipSettings=(
 : ${SMTP_RELAYHOST_PASSWORD:=""}
 : ${SMTP_ALLOWED_SENDER_DOMAINS:=""}
 : ${SMTP_MESSAGE_SIZE_LIMIT:="0"}
+: ${SMTP_MAIL_FROM:=""}
 
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
 : ${RELAYHOST_USERNAME:="$RELAYHOST_USERNAME"}
@@ -408,6 +409,14 @@ postconf -e "inet_protocols = ipv4"
 # set max message size limit
 postconf -e "mailbox_size_limit = 0"
 postconf -e "message_size_limit = ${MESSAGE_SIZE_LIMIT}"
+
+# set from email address
+if [ ! -z "$SMTP_MAIL_FROM" ]; then
+  echo "/.+/ $SMTP_MAIL_FROM" > /etc/postfix/sender_canonical_maps
+  echo "/From:.*/ REPLACE From: $SMTP_MAIL_FROM" > /etc/postfix/header_check
+  postconf -e "sender_canonical_maps = regexp:/etc/postfix/sender_canonical_maps"
+  postconf -e "smtp_header_checks = regexp:/etc/postfix/header_check"
+fi
 }
 
 ## cron service
