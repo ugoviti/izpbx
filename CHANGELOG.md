@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.9] - 2020-09-07
+## [0.9.9] - 2020-09-20
 ### Changed
 - new configuration variable: SMTP_MAIL_FROM for setting the From address of outgoing emails
 
