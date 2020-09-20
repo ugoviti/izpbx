@@ -173,6 +173,7 @@ APP_DATA=/data
 #SMTP_RELAYHOST_PASSWORD=
 #SMTP_ALLOWED_SENDER_DOMAINS=
 #SMTP_MESSAGE_SIZE_LIMIT=
+#SMTP_MAIL_FROM=
 
 # enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
 #APP_FQDN=sip.example.com
