@@ -187,7 +187,7 @@ elif [ "$OS_RELEASE" = "alpine" ]; then
 elif [ "$OS_RELEASE" = "centos" ]; then
 : ${SUPERVISOR_DIR:="/etc/supervisord.d"}
 : ${HTTPD_CONF_DIR:="/etc/httpd"} # apache config dir
-: ${PMA_CONF_APACHE:="/etc/httpd/conf.d/phpMyadmin.conf"}
+: ${PMA_CONF_APACHE:="/etc/httpd/conf.d/phpMyAdmin.conf"}
 : ${ZABBIX_CONF:="/etc/zabbix/zabbix_agentd.conf"}
 : ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.d/local.conf"}
 fi
