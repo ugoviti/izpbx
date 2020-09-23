@@ -32,13 +32,13 @@ services:
     volumes:
     - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx:/data
-    ### fail2ban need privileged mode to manage iptables
+    ## fail2ban need privileged mode to manage iptables
     cap_add:
     - NET_ADMIN
     privileged: true
     # for simpler sip nat management use: 'network_mode: host'
     network_mode: host
-    # if 'network_mode: host' is disabled, comment out the following lines
+    ## if 'network_mode: host' is disabled, comment out the following lines
     #links: 
     #- db
     #networks:
@@ -46,12 +46,15 @@ services:
     
   db:
     container_name: izpbx-db
-    image: mariadb:10.4
+    image: mariadb:10.5.5
+    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
+    ## docker exec -it izpbx-db bash
+    ## mysql_upgrade -u root -p
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: always
     env_file:
     - .env
-    # database configurations (WARNING: if commented out, the database will be exposed outside the container)
+    ## database configurations (WARNING: if commented out, the database will be exposed outside the container)
     ports:
     - ${APP_PORT_MYSQL}:3306
     volumes:
