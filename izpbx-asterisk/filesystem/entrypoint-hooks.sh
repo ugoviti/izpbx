@@ -114,6 +114,11 @@ declare -A fpbxSipSettings=(
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
 : ${HTTPD_ALLOW_FROM:=""}
 
+# phpMyAdmin configuration
+: ${PMA_CONFIG:="/etc/phpMyAdmin/config.inc.php"}
+: ${PMA_ALIAS:="/admin/pma"}
+: ${PMA_ALLOW_FROM:="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16"}
+
 ## zabbix configuration
 : ${ZABBIX_USR:="zabbix"}
 : ${ZABBIX_GRP:="zabbix"}
@@ -136,6 +141,7 @@ declare -A fpbxSipSettings=(
 : ${TFTP_ENABLED:="false"}
 : ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
+: ${PMA_ENABLED:="false"}
 
 ## daemons configs
 
@@ -1052,6 +1058,29 @@ cfgService_fop2 () {
   fi
 }
 
+cfgService_pma() {
+  if [ "${PMA_ENABLED}" = "true" ]; then
+    echo "=> Enabling and Configuring phpMyAdmin"
+    # remove unused http alias
+    sed "/^Alias \/phpMyAdmin \/usr\/share\/phpMyAdmin/d" -i "${PMA_CONF_APACHE}"
+    # reconfigure the http alias
+    sed "s|^Alias /phpmyadmin /usr/share/phpMyAdmin|Alias ${PMA_ALIAS} /usr/share/phpMyAdmin|" -i "${PMA_CONF_APACHE}"
+    # allow connection from internal networks
+    #sed "s|Require local|Require ip ${PMA_ALLOW_FROM}|" -i "${PMA_CONF_APACHE}"
+    cat <<EOF >> "${PMA_CONF_APACHE}"
+<Directory /usr/share/phpMyAdmin/>
+   AddDefaultCharset UTF-8
+   Require ip ${PMA_ALLOW_FROM}
+</Directory>
+EOF
+    # configure database access
+    sed "s|'localhost';|'${MYSQL_SERVER}';|" -i "${PMA_CONFIG}"
+  else
+    # disable phpMyAdmin
+    mv "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf-disabled"
+  fi
+}
+
 cfgService_fop2_install() {
   echo "=> !!! FOP2 NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2..."
   fwconsole start
@@ -1172,13 +1201,16 @@ runHooks() {
   chkService IZPBX_ENABLED
   chkService ZABBIX_ENABLED
   chkService FOP2_ENABLED
-  
+
   # dnsmasq management
   [[ "$DHCP_ENABLED" = "true" || "$TFTP_ENABLED" = "true" ]] && DNSMASQ_ENABLED=true
   chkService DNSMASQ_ENABLED
   
   # generate SSL Certificates used for HTTPS
   [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
+  
+  # phpMyAdmin configuration
+  cfgService_pma
 }
 
 runHooks
