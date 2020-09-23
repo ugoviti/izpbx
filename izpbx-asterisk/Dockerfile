@@ -236,7 +236,7 @@ RUN set -xe && \
   groupadd -g ${APP_GID} ${APP_GRP} && \
   useradd -u ${APP_UID} -c "${APP_DESCRIPTION} User" -g ${APP_GRP} -s /sbin/nologin ${APP_USR} && \
   # add asterisk user to wheel and apache group
-  usermod -aG wheel,apache ${APP_USR} \
+  usermod -aG wheel,apache ${APP_USR} && \
   # fix phpMyAdmin apache group permissions
   chmod g+w /var/lib/phpMyAdmin/temp
 
