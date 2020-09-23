@@ -14,8 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added phpMyAdmin support
 - updated `default.env` with
   - NB. don't forget to accordingly update your `.env` file with the following lines:
-  - PMA_ALIAS="/admin/pma"
-  - PMA_ALLOW_FROM="127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16"
+  - PMA_ALIAS=/admin/pma
+  - PMA_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 
 ## [0.9.9] - 2020-09-20
 ### Changed
