@@ -254,11 +254,11 @@ symlinkDir() {
   local dirOriginal="$1"
   local dirCustom="$2"
 
-  echo "--> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
+  echo "---> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
-    echo "---> INFO: detected empty dir '$dirCustom'. copying '$dirOriginal' contents to '$dirCustom'..."
+    echo "---> empty dir '$dirCustom' detected copying '$dirOriginal' contents to '$dirCustom'..."
     rsync -a -q "$dirOriginal/" "$dirCustom/"
   fi
 
@@ -271,7 +271,7 @@ symlinkDir() {
   
   # rename directory
   if [ -e "$dirOriginal" ]; then
-      echo -e -n "---> renaming '${dirOriginal}' to '${dirOriginal}.dist'... "
+      echo -e "---> renaming '${dirOriginal}' to '${dirOriginal}.dist'"
       mv "$dirOriginal" "$dirOriginal".dist
   fi
   
@@ -292,7 +292,7 @@ symlinkFile() {
         echo "---> INFO: detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
         rsync -a -q "$fileOriginal" "$fileCustom"
       fi
-      echo -e -n "---> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
+      echo -e "---> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
       echo "---> WARNING: original data file doesn't exist... creating symlink from a not existing source: '$fileOriginal'"
@@ -628,11 +628,11 @@ cfgService_izpbx() {
 
   freepbx_reload() {
     # reload freepbx config
-    echo "--> reloading FreePBX..."
+    echo "---> reloading FreePBX..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
   }
   
-  echo "=> Verifing FreePBX configurations"
+  echo "---> verifing FreePBX configurations"
 
   # legend of freepbx install script:
   #    --webroot=WEBROOT            Filesystem location from which FreePBX files will be served [default: "/var/www/html"]
@@ -656,7 +656,7 @@ cfgService_izpbx() {
   ## rebase directory paths, based on APP_DATA and create/chown missing directories
   # process directories
   if [ ! -z "${APP_DATA}" ]; then
-    echo "--> using '${APP_DATA}' as basedir for FreePBX install"
+    echo "---> using '${APP_DATA}' as basedir for FreePBX install"
     # process directories
     for k in ${!fpbxDirs[@]}; do
       v="${fpbxDirs[$k]}"
@@ -693,13 +693,21 @@ Port = ${APP_PORT_MYSQL}
 option = 3
 Charset=utf8" > /etc/odbc.ini
 
-  # install freepbx or update configuration if already installed
-  if [ ! -e "${appFilesConf[FPBXCFGFILE]}" ]; then
-      # onetime: install freepbx if this is the first time we initialize the container
-      echo "---> missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
+  # workaround for legacy missing ${APP_DATA}/.initialized file nut already initialized izpbx deploy
+  if [[ -e "${appFilesConf[FPBXCFGFILE]}" && ! -e ${APP_DATA}/.initialized ]]; then
+    echo "--> INFO: found '${appFilesConf[FPBXCFGFILE]}' configuration file but missing '${APP_DATA}/.initialized'... creating it right now"
+    echo "--> NOTE: if you want make an initial install, remove '${appFilesConf[FPBXCFGFILE]}' and '${APP_DATA}/.initialized' file"
+    touch "${APP_DATA}/.initialized"
+  fi
+  
+  # initialize izpbx if not already deployed
+  if [ ! -e ${APP_DATA}/.initialized ]; then
+      # first run detected initialize izpbx
       cfgService_freepbx_install
     else
-      # update freepbx.conf file
+      echo "--> INFO: FreePBX installation DETECTED! found '${APP_DATA}/.initialized' file"
+      [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && echo "---> WARNING: missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
+      # izpbx is already initialized, update configuration files
       echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
       [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
       sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
@@ -708,7 +716,7 @@ Charset=utf8" > /etc/odbc.ini
       sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
-  echo "--> applying Workarounds for FreePBX and Asterisk..."
+  echo "---> applying workarounds for FreePBX and Asterisk..."
   # make missing log files
   [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${fpbxDirs[ASTLOGDIR]}/full"
   
@@ -717,7 +725,7 @@ Charset=utf8" > /etc/odbc.ini
   [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
   
   # reconfigure freepbx from env variables
-  echo "--> reconfiguring FreePBX Advanced Settings if needed..."
+  echo "---> reconfiguring FreePBX Advanced Settings if needed..."
   set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_VER=" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
     k="$(echo $setting | awk '{print $1}')"
     v="$(echo $setting | awk '{print $2}')"
@@ -731,7 +739,7 @@ Charset=utf8" > /etc/odbc.ini
   done
 
   # reconfigure freepbx settings based on docker variables content using FreePBX API bootstrap
-  echo "--> reconfiguring FreePBX SIP Settings if needed..."
+  echo "---> reconfiguring FreePBX SIP Settings if needed..."
   for k in ${!fpbxSipSettings[@]}; do
     v="${fpbxSipSettings[$k]}"
     cVal=$(echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); echo \$FreePBX->sipsettings->getConfig('${k}');?>" | php)
@@ -747,7 +755,7 @@ Charset=utf8" > /etc/odbc.ini
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
 
-  echo "--> FIXME: Temporary Workarounds for FreePBX broken modules and configs..."
+  echo "---> FIXME: temporary workarounds for FreePBX broken modules and configs..."
   # FIXME: 20200318 freepbx 15.x warnings workaround
   sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
   sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
@@ -759,7 +767,8 @@ cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> !!! FreePBX NEW INSTALLATION DETECTED !!! Installing for the first time... try:[$n/$t]"
+  echo "=> !!! FreePBX IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!!"
+  echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$n/$t]"
   cd /usr/src/freepbx
   
   # start asterisk if it's not running
@@ -910,6 +919,9 @@ cfgService_freepbx_install() {
     echo "--> fixing FreePBX permissions..."
     fwconsole chown
     freepbx_reload
+    
+    # make this installation initialized
+    touch "${APP_DATA}/.initialized"
 
     # DEBUG: pause forever here
     #while true ; do sleep 10 ; done
