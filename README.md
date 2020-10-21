@@ -19,7 +19,7 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
 # Features
-- 60 secs install from zero to a running turnkey PBX system.
+- 60 secs install from zero to a running turnkey PBX system
 - Really fast initial bootstrap to deploy a full features Asterisk+FreePBX system
 - CentOS 8 64bit powered
 - Small image footprint

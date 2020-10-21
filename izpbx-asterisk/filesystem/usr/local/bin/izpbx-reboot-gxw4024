@@ -1,7 +1,6 @@
 #!/bin/sh
  
 GXW_IPS="192.168.2.13 192.168.2.14"
-GXW_PWD="m0t0r4"
- 
- 
+GXW_PWD="PASSWORD"
+
 for GXW_IP in $GXW_IPS ; do curl -s -d "P2=$GXW_PWD" -c /tmp/curl.cookies -L http://$GXW_IP/cgi-bin/dologin http://$GXW_IP/cgi-bin/rs 1>/dev/null ; sleep 5 ; done
