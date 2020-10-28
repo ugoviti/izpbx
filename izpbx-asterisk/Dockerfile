@@ -384,6 +384,7 @@ RUN set -xe && \
     --enable app_confbridge \
     --enable app_macro \
     --enable app_meetme \
+    --enable app_mysql \
     --enable app_page \
     --enable binaural_rendering_in_bridge_softmix \
     --enable chan_motif \
@@ -408,7 +409,6 @@ RUN set -xe && \
     --disable BUILD_NATIVE \
     --disable app_ivrdemo \
     --disable app_meetme \
-    --disable app_mysql \
     --disable app_saycounted \
     --disable app_skel \
     --disable cdr_pgsql \

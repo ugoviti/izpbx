@@ -125,7 +125,7 @@ trigger:
   event:
   - push
   branch:
-  - dev
+  - dev-17
 
 platform:
   os: linux
