@@ -1067,7 +1067,7 @@ cfgService_fop2 () {
           echo "--> WARNING: Reactivating FOP2 license because:"
           echo $FOP2_LICENSE_STATUS
           set -x
-          ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate $FOP2_LICENSE_OPTS
           set +x
         fi
         echo "--> INFO: FOP2 license code status:"
