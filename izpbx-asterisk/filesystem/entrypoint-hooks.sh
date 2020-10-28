@@ -1035,11 +1035,16 @@ cfgService_fop2 () {
     sed "s|^manager_port.*=.*|manager_port=${FOP2_AMI_PORT}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     sed "s|^manager_user.*=.*|manager_user=${FOP2_AMI_USERNAME}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     sed "s|^manager_secret.*=.*|manager_secret=${FOP2_AMI_PASSWORD}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+   
+    # FOP2 License Code Management
+    
+    # license interface management
+    [ -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_IFACE=eth0
+    FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
     
     # modify fop2 command if interface name is specified
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
     
-    # FOP2 License Code Management
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
       if [ -z "${FOP2_LICENSE_CODE}" ]; then
           echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in trial mode"
@@ -1049,10 +1054,7 @@ cfgService_fop2 () {
           echo "--> INFO: Registering FOP2"
           echo "---> NAME: ${FOP2_LICENSE_NAME}"
           echo "---> CODE: ${FOP2_LICENSE_CODE}"
-          if [ ! -z "${FOP2_LICENSE_IFACE}" ];then
-            FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
-            echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
-          fi
+          echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
           set -x
           ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
           set +x
