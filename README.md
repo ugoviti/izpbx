@@ -19,7 +19,7 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
 # Features
-- 60 secs install from zero to a running turnkey PBX system.
+- 60 secs install from zero to a running turnkey PBX system
 - Really fast initial bootstrap to deploy a full features Asterisk+FreePBX system
 - CentOS 8 64bit powered
 - Small image footprint
@@ -149,22 +149,22 @@ Recap: only Asterisk core engine will be updated on container image update.
 
 # Environment default variables
 ```
-# database configurations
-# WARNING: security passwords... please change the default
+## database configurations
+## WARNING: security passwords... please change the default
 MYSQL_ROOT_PASSWORD=CHANGEM3
 MYSQL_PASSWORD=CHANGEM3
 
-# WARNING: if the docker-compose use "network_mode: bridge" specify: db
+## WARNING: if the docker-compose use "network_mode: bridge" specify: db
 #MYSQL_SERVER=db
-# WARNING: if the docker-compose use "network_mode: host" specify: 127.0.0.1 or the address of a remote database
+## WARNING: if the docker-compose use "network_mode: host" specify: 127.0.0.1 or the address of a remote database
 MYSQL_SERVER=127.0.0.1
 MYSQL_DATABASE=asterisk
 MYSQL_USER=asterisk
 
-# enable persistent data storage (comment if you want disable persistence of data) (default: /data)
+## enable persistent data storage (comment if you want disable persistence of data) (default: /data)
 APP_DATA=/data
 
-# cron notifications mail address (default: root@localhost)
+## cron notifications mail address (default: root@localhost)
 #ROOT_MAILTO=
 
 #SMTP SmartHost configuration. Specify DNS name or IP address for the SMTP RelayHost (default: none)
@@ -175,29 +175,33 @@ APP_DATA=/data
 #SMTP_MESSAGE_SIZE_LIMIT=
 #SMTP_MAIL_FROM=
 
-# enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
+## enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
 #APP_FQDN=sip.example.com
 
-# enable https protocols (default: true)
-# place your custom SSL certs in $APP_DATA/etc/pki/izpbx (use filename 'izpbx.crt' for public key and 'izpbx.key' for the private)
-# by default izpbx will use a self-signed certificate
+## enable https protocols (default: true)
+## place your custom SSL certs in $APP_DATA/etc/pki/izpbx (use filename 'izpbx.crt' for public key and 'izpbx.key' for the private)
+## by default izpbx will use a self-signed certificate
 #HTTPD_HTTPS_ENABLED=true
 
-# redirect unencrypted http connetions to https (default: false)
+## redirect unencrypted http connetions to https (default: false)
 #HTTPD_REDIRECT_HTTP_TO_HTTPS=false
 
-# auto generate Let's Encrypt SSL certificates if the pbx is exposed to internet and want enable https protocol (default: false)
+## auto generate Let's Encrypt SSL certificates if the pbx is exposed to internet and want enable https protocol (default: false)
 #LETSENCRYPT_ENABLED=false
 
-# by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security (default: 0.0.0.0/0)
+## by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security (default: 0.0.0.0/0)
 #HTTPD_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+
+## phpMyAdmin configuration
+#PMA_ALIAS=/admin/pma
+#PMA_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 
 ## fop2 configuration (https://www.fop2.com/docs/)
 #FOP2_LICENSE_NAME=<put here your corporation name>
 #FOP2_LICENSE_CODE=<put here your license code>
 #FOP2_LICENSE_IFACE=docker0
 
-# the following variables are not mandatory, you can leave commented (FOP2_AMI_PASSWORD will be a random hash)
+## the following variables are not mandatory, you can leave commented (FOP2_AMI_PASSWORD will be a random hash)
 #FOP2_AMI_HOST=localhost
 #FOP2_AMI_PORT=5038
 #FOP2_AMI_USERNAME=admin
@@ -206,7 +210,7 @@ APP_DATA=/data
 ## zabbix configuration
 #ZABBIX_SERVER=monitor.example.com
 
-# fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
+## fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
 FAIL2BAN_ENABLED=true
 FAIL2BAN_ASTERISK_ENABLED=true
 #FAIL2BAN_ASTERISK_LOGPATH=/var/log/asterisk/security
@@ -222,7 +226,7 @@ FAIL2BAN_RECIDIVE_FINDTIME=15552000
 FAIL2BAN_RECIDIVE_MAXRETRY=10
 
 ## freepbx advanced settings (prefix every FreePBX variable with FREEPBX_)
-# modules enabled on first startup
+## modules enabled on first startup
 #FREEPBX_MODULES_EXTRA=soundlang callrecording cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking phonebook presencestate printextensions queues cel timeconditions pm2
 FREEPBX_FREEPBX_SYSTEM_IDENT=izPBX
 FREEPBX_AS_DISPLAY_READONLY_SETTINGS=1
@@ -241,21 +245,21 @@ FREEPBX_PHPTIMEZONE=Europe/Rome
 #FREEPBX_BRAND_IMAGE_SPONSOR_LINK_FOOT=http://www.sangoma.com
 #FREEPBX_RSSFEEDS=
 
-# WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
+## WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
 FREEPBX_SIGNATURECHECK=0
 
-# DHCP server configuration
+## DHCP server configuration
 #DHCP_DOMAIN=izpbx.local
 #DHCP_POOL_START=10.1.1.10
 #DHCP_POOL_END=10.1.1.250
 #DHCP_POOL_LEASE=72h
-# leave commented to use docker container ip address
+## leave commented to use docker container ip address
 #DHCP_DNS=10.1.1.1
 #DHCP_GW=10.1.1.1
 #DHCP_NTP=10.1.1.1
 
 ## network ports
-# webserver and freepbx ports
+## webserver and freepbx ports
 APP_PORT_HTTP=80
 APP_PORT_HTTPS=443
 # asterisk ports
@@ -272,7 +276,7 @@ APP_PORT_TFTP=69
 APP_PORT_FOP2=4445
 APP_PORT_ZABBIX=10050
 
-# container services
+## container services
 POSTFIX_ENABLED=true
 CRON_ENABLED=true
 HTTPD_ENABLED=true
@@ -282,6 +286,7 @@ FAIL2BAN_ENABLED=true
 #TFTP_ENABLED=true
 #FOP2_ENABLED=true
 #ZABBIX_ENABLED=true
+#PMA_ENABLED=true
 ```
 
 # Zabbix Agent Configuration

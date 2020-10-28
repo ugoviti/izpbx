@@ -1,7 +1,7 @@
 #!/bin/sh
 # asterisk realtime calls status
 # written by Ugo Viti <ugo.viti@initzero.it>
-# version: 2017-03-17
+# version: 20170317
  
 izcallstats() {
  channels_file=/tmp/izcallstats.test
