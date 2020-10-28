@@ -25,6 +25,7 @@ declare -A appDataDirs=(
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTSPOOLDIR]=/var/spool/asterisk
+  [ASTRUNDIR]=/var/run/asterisk
   [HTTPDHOME]=/var/www
   [HTTPDLOGDIR]=/var/log/httpd
   [CERTBOTETCDIR]=/etc/letsencrypt
@@ -1192,10 +1193,10 @@ runHooks() {
 #     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
 #     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
 #   done
-  for dir in ${appCacheDirs[@]}; do
-    [ ! -e "${dir}" ] && mkdir -p "${dir}"
-    fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
-  done
+#   for dir in ${appCacheDirs[@]}; do
+#     [ ! -e "${dir}" ] && mkdir -p "${dir}"
+#     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
+#   done
 #   for file in ${appFilesConf[@]}; do
 #     [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
 #     fixOwner "${APP_USR}" "${APP_GRP}" "${file}"
