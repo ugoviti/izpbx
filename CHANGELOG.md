@@ -7,7 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.9.12] - 2020-XX-XX
 ### Changed
 
-
 ## [0.9.11] - 2020-10-28
 ### Changed
 - Asterisk 16.14.0
@@ -15,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - implemented the $APP_DATA/.initialized file to detect an already installed system
 - docker logs small refactoring
 - fix FOP2 registering when missing default eth0 interface
+- fix missing `/var/run/asterisk` needed by last FreePBX update
 ### Added
 - updated `default.env` with
   - APP_PORT_AMI=8088

@@ -1192,9 +1192,10 @@ runHooks() {
 #     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
 #     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
 #   done
-#   for dir in ${appCacheDirs[@]}; do
-#     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
-#   done
+  for dir in ${appCacheDirs[@]}; do
+    [ ! -e "${dir}" ] && mkdir -p "${dir}"
+    fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
+  done
 #   for file in ${appFilesConf[@]}; do
 #     [ ! -z "${APP_DATA}" ] && file="${APP_DATA}${file}"
 #     fixOwner "${APP_USR}" "${APP_GRP}" "${file}"
