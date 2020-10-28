@@ -121,11 +121,11 @@ environment:
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
   APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
 
-trigger:
-  event:
-  - push
-  branch:
-  - dev
+#trigger:
+  #event:
+  #- push
+  #branch:
+  #- dev
 
 platform:
   os: linux
