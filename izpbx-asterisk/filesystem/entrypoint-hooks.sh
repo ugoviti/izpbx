@@ -1049,6 +1049,7 @@ cfgService_fop2 () {
           if [ ! -z "${FOP2_LICENSE_IFACE}" ];then
             FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
             echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
+            sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
           fi
           set -x
           ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
