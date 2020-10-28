@@ -4,10 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.11] - 202X-XX-XX
+## [0.9.11] - 2020-10-28
 ### Changed
+- Asterisk 16.14.0
 - implemented the $APP_DATA/.initialized file to detect an already installed system
 - docker logs small refactoring
+- fix FOP2 registering when missing default eth0 interface
+### Added
+- updated `default.env` with
+  - APP_PORT_AMI=8088
 
 ## [0.9.10] - 2020-09-23
 ### Changed
