@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.12] - 2020-XX-XX
 ### Changed
+- FOP2 2.31.29
+- added perl-DBI, perl-DBD-mysql used by fop2 recording_fop2.pl
+- sngrep 1.4.8
+### Added
+- Asterisk 18.x build in dev branch
 
 ## [0.9.11] - 2020-10-28
 ### Changed

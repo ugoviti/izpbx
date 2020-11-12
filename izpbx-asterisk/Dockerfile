@@ -22,7 +22,7 @@ ARG ASTERISK_VER=16.14.0
 ARG FREEPBX_VER=15.0
 
 # https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.28
+ARG FOP2_VER=2.31.29
 
 # http://sources.buildroot.net/spandsp/
 ARG SPANDSP_VER=20180108
@@ -31,7 +31,7 @@ ARG SPANDSP_VER=20180108
 ARG BCG729_VER=1.0.4
 
 # https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.7
+ARG SNGREP_VER=1.4.8
 
 ## save vars for later and container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
@@ -154,6 +154,8 @@ ENV APP_INSTALL_DEPS=' \
     dnsmasq \
     glibc-langpack-en \
     phpMyAdmin \
+    perl-DBI \
+    perl-DBD-mysql \
     zabbix-agent \
     zabbix-sender \
   '

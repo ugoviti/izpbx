@@ -112,10 +112,10 @@ steps:
 
 ---
 kind: pipeline
-name: izpbx-dev-17
+name: izpbx-dev-18
 
 environment:
-  ASTERISK_VER: 17.8.0
+  ASTERISK_VER: 18.0.1
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -125,7 +125,7 @@ trigger:
   event:
   - push
   branch:
-  - dev-17
+  - dev
 
 platform:
   os: linux
