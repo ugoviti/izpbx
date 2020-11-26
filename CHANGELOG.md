@@ -4,8 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.12] - 2020-XX-XX
+## [0.9.13] - 2020-XX-XX
 ### Changed
+
+## [0.9.12] - 2020-11-26
+### Changed
+- Asterisk 16.15.0
+- FOP2 2.31.29
+- added perl-DBI, perl-DBD-mysql used by fop2 recording_fop2.pl
+- sngrep 1.4.8
+### Added
+- Asterisk 18.1.0 build in dev branch
 
 ## [0.9.11] - 2020-10-28
 ### Changed

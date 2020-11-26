@@ -16,22 +16,22 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=16.14.0
+ARG ASTERISK_VER=16.15.0
 
 # https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
 
 # https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.28
+ARG FOP2_VER=2.31.29
 
 # http://sources.buildroot.net/spandsp/
 ARG SPANDSP_VER=20180108
 
 # https://github.com/BelledonneCommunications/bcg729/releases
-ARG BCG729_VER=1.0.4
+ARG BCG729_VER=1.1.1
 
 # https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.7
+ARG SNGREP_VER=1.4.8
 
 ## save vars for later and container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
@@ -154,6 +154,8 @@ ENV APP_INSTALL_DEPS=' \
     dnsmasq \
     glibc-langpack-en \
     phpMyAdmin \
+    perl-DBI \
+    perl-DBD-mysql \
     zabbix-agent \
     zabbix-sender \
   '
@@ -311,6 +313,8 @@ RUN set -xe && \
     ilbc-devel \
     python2-devel \
     python3-devel \
+    libtool \
+    cmake \
   ' && \
   if [[ $VERSION_ID -le 7 ]]; then ASTERISK_BUILD_DEPS+="mysql-devel" ;fi && \
   if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
@@ -455,14 +459,13 @@ RUN set -xe && \
   mkdir bcg729 && \
   curl -fSL --connect-timeout 30 https://github.com/BelledonneCommunications/bcg729/archive/${BCG729_VER}.tar.gz | tar xz --strip 1 -C bcg729 && \
   cd bcg729 && \
-  ./autogen.sh && \
-  ./configure --prefix=/usr && \
+  cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH=/usr && \
   make && \
   make install && \
   ldconfig && \
   : "---------- END Build ----------" && \
   \
-  if [[ ${ASTERISK_VER%%.*} -le 17 ]]; then \
+  if [[ ${ASTERISK_VER%%.*} -le 18 ]]; then \
   : "---------- START Build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \

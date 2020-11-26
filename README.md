@@ -48,13 +48,13 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Targets of this project
-- On-Premise fast, automatic a repeatable deploy of PBX systems.  
-by default max 50 concurrent calls... it's based on default 200 ports RTP range (`10000-10200`)... fine-tune based on your needs!  
-you can use `10000-20000` range when using `network_mode: host` (default)
+- On-Premise fast, automatic and repeatable deploy of PBX systems.  
+by default max 50 concurrent calls... it's based on default 200 ports RTP range (`10000-10200`)... for best security, fine-tune based on your needs!  
+you can use the standard `10000-20000` range when using `network_mode: host` (default)
 
 # Limits of this project
-- One izPBX for every public IP or VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
-- Docker Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself)
+- Deploy 1 izPBX for every public IP or VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
+- Docker Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by docker pulls)
   
 # How to use this image
 Using **docker-compose** is the suggested method:
@@ -63,7 +63,7 @@ Using **docker-compose** is the suggested method:
 
 - Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
 
-- Clone GIT repository or download latest release from: https://git.initzero.it/initzero/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`)
+- Clone GIT repository or download latest release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`)
 
 - Copy `default.env` file to `.env`: `cp default.env .env`
 

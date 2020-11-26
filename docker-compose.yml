@@ -47,7 +47,7 @@ services:
     
   db:
     container_name: izpbx-db
-    image: mariadb:10.5.5
+    image: mariadb:10.5.8
     ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
     ## docker exec -it izpbx-db bash
     ## mysql_upgrade -u root -p
