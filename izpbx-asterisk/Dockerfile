@@ -313,6 +313,8 @@ RUN set -xe && \
     ilbc-devel \
     python2-devel \
     python3-devel \
+    libtool \
+    cmake \
   ' && \
   if [[ $VERSION_ID -le 7 ]]; then ASTERISK_BUILD_DEPS+="mysql-devel" ;fi && \
   if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
@@ -457,14 +459,13 @@ RUN set -xe && \
   mkdir bcg729 && \
   curl -fSL --connect-timeout 30 https://github.com/BelledonneCommunications/bcg729/archive/${BCG729_VER}.tar.gz | tar xz --strip 1 -C bcg729 && \
   cd bcg729 && \
-  ./autogen.sh && \
-  ./configure --prefix=/usr && \
+  cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH=/usr && \
   make && \
   make install && \
   ldconfig && \
   : "---------- END Build ----------" && \
   \
-  if [[ ${ASTERISK_VER%%.*} -le 17 ]]; then \
+  if [[ ${ASTERISK_VER%%.*} -le 18 ]]; then \
   : "---------- START Build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
