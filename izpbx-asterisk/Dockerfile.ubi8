@@ -1,4 +1,4 @@
-ARG IMAGE_FROM=centos:8
+ARG IMAGE_FROM=registry.access.redhat.com/ubi8/ubi
 
 FROM ${IMAGE_FROM}
 
@@ -65,12 +65,8 @@ ENV APP_INSTALL_DEPS=' \
     rsync \
     net-tools \
     iftop \
-    lsof \
-    strace \
-    tcpdump \
     supervisor \
     curl \
-    opus \
     logrotate \
     fail2ban-server \
     fail2ban-mail \
@@ -80,13 +76,11 @@ ENV APP_INSTALL_DEPS=' \
     sox \
     libxml2 \
     openssl \
-    newt \
     sqlite \
     libuuid \
     jansson \
     binutils \
     libedit \
-    opus \
     libtool \
     ncurses \
     libtiff \
@@ -99,10 +93,7 @@ ENV APP_INSTALL_DEPS=' \
     bzip2 \
     file \
     ilbc \
-    mariadb-connector-odbc \
-    mpg123 \
     nodejs \
-    libtiff-tools \
     cronie \
     httpd \
     certbot \
@@ -116,37 +107,27 @@ ENV APP_INSTALL_DEPS=' \
     php-json \
     php-gd \
     php-curl \
-    mariadb \
     diffutils \
     unzip \
     zip \
     uriparser \
     jq \
-    speex \
-    speexdsp \
     portaudio \
-    libsrtp \
     unbound-libs \
     freetds \
     freetds-libs \
     libevent \
     net-snmp-libs \
     codec2 \
-    neon \
-    pakchois \
     libmodman \
     libproxy \
     net-snmp-agent-libs \
     lm_sensors-libs \
-    libical \
-    libical-devel \
     icu \
     gcc-c++ \
     make \
     python2 \
-    libnsl \
     which \
-    fftw-libs \
     sudo \
     figlet \
     nc \
@@ -155,37 +136,44 @@ ENV APP_INSTALL_DEPS=' \
     glibc-langpack-en \
     phpMyAdmin \
     perl-DBI \
-    perl-DBD-mysql \
     zabbix-agent \
     zabbix-sender \
+    opus \
+    mariadb-connector-odbc \
+    mpg123 \
+    libtiff-tools \
+    lsof \
+    strace \
+    tcpdump \
+    opus \
+    newt \
+    mariadb \
+    speex \
+    speexdsp \
+    libsrtp \
+    neon \
+    pakchois \
+    libical \
+    libnsl \
+    fftw-libs \
+    perl-DBD-mysql \
   '
 
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
   \
+  # disable rhel subscription manager
+  sed 's/^enabled=.*/enabled=0/' -i /etc/yum/pluginconf.d/subscription-manager.conf && \
   # install epel repository
-  dnf -y install epel-release && \
+  rpm -Uhv https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
   \
-  # centos 7 specific (legacy)
-  if [[ $VERSION_ID -le 7 ]]; then \
-    ln -s /usr/bin/yum /usr/bin/dnf && \
+  # UBI 8 specific
+  if [[ ${VERSION_ID/.*/} -ge 8 ]]; then \
     # repo for php 7.x
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
+    #rpm -Uhv https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/7/x86_64/zabbix-release-5.0-1.el7.noarch.rpm && \
-    # repo for ffmpeg
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
-    \
-    yum-config-manager --enable remi 1>/dev/null && \
-    yum-config-manager --enable remi-php73 1>/dev/null ;fi && \
-  \
-  # centos 8 specific
-  if [[ $VERSION_ID -ge 8 ]]; then \
-    # repo for phpMyAdmin
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
-    # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/8/x86_64/zabbix-release-5.0-1.el8.noarch.rpm && \
+    rpm -Uhv https://repo.zabbix.com/zabbix/5.2/rhel/8/x86_64/zabbix-release-5.2-1.el8.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
     rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
@@ -198,10 +186,7 @@ RUN set -xe && \
     dnf -y install dnf-plugins-core && \
     # enable extra repository
     dnf config-manager --set-enabled \
-      powertools \
-      remi \
       rpmfusion-free-updates \
-      rpmfusion-nonfree-updates \
       forensics \
       gf-plus \
       gf-testing \
@@ -213,10 +198,10 @@ RUN set -xe && \
       postfix3 \
     && \
     # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
-    dnf config-manager --set-disabled forensics && \
+    dnf config-manager --set-disabled forensics forensics-splunk && \
     # enable php 7.3 module
     dnf module disable -y php && \
-    dnf module enable  -y php:remi-7.4 ;fi && \
+    dnf module enable  -y php:remi-7.3 ;fi && \
   \
   # upgrade the system
   dnf upgrade -y && \
@@ -317,9 +302,9 @@ RUN set -xe && \
     python3-devel \
     libtool \
     cmake \
+    libical-devel \
   ' && \
-  if [[ $VERSION_ID -le 7 ]]; then ASTERISK_BUILD_DEPS+="mysql-devel" ;fi && \
-  if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
+  if [[ ${VERSION_ID/.*/} -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
   \
