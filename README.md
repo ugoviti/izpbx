@@ -48,7 +48,7 @@ Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Targets of this project
-- On-Premise fast, automatic and repeatable deploy of PBX systems.  
+- On-Premise, fast, automatic and repeatable deploy of PBX systems.  
 by default max 50 concurrent calls... it's based on default 200 ports RTP range (`10000-10200`)... for best security, fine-tune based on your needs!  
 you can use the standard `10000-20000` range when using `network_mode: host` (default)
 
@@ -62,18 +62,29 @@ Using **docker-compose** is the suggested method:
 - Install your prefered Linux OS into VM or Baremetal Server
 
 - Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
+  - CentOS 8 Quick&Dirty commands:
+  ```
+sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+sudo dnf install docker-ce -y
+eval sudo curl -L "$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep browser_download_url | grep "docker-compose-$(uname -s)-$(uname -m)\"" | awk '{print $2}')" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
+sudo systemctl enable --now docker
+```
 
-- Clone GIT repository or download latest release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`)
+- Clone GIT repository or download latest release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`):
+  - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
 
-- Copy `default.env` file to `.env`: `cp default.env .env`
+- Copy `default.env` file to `.env`: `cp default.env .env`:
+  - `cp /opt/izpbx/default.env /opt/izpbx/.env`
 
-- Customize `.env` variables, specially the security section of mysql passwords
+- Customize `.env` variables, specially the security section of mysql passwords (look bellow for a full variables list):
+  - `vim /opt/izpbx/.env`
 
-- Start izpbx deploy with: `docker-compose up -d`
+- Start izpbx using docker-compose command:
+  - `docker-compose up -d`
 
 - Wait 60 seconds and point your web browser to the IP address of your docker host and follow initial startup guide
 
-Note: by default, to handle correctly SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
+Note: by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
 Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested. there will be problems with RTP traffic).
 
 If you want test izPBX without using docker-compose, you can use the following docker commands:
