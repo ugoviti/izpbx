@@ -63,7 +63,7 @@ Using **docker-compose** is the suggested method:
 
 - Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
   - CentOS 8 Quick&Dirty commands:
-  ```
+```
 sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 sudo dnf install docker-ce -y
 eval sudo curl -L "$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep browser_download_url | grep "docker-compose-$(uname -s)-$(uname -m)\"" | awk '{print $2}')" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
