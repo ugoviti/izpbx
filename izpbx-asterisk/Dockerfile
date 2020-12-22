@@ -218,7 +218,7 @@ RUN set -xe && \
     dnf config-manager --set-disabled forensics && \
     # enable php 7.3 module
     dnf module disable -y php && \
-    dnf module enable  -y php:remi-7.4 ;fi && \
+    dnf module enable  -y php:remi-7.3 ;fi && \
   \
   # upgrade the system
   dnf upgrade -y && \
