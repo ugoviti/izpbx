@@ -155,11 +155,10 @@ declare -A fpbxSipSettings=(
 : ${SMTP_MAIL_FROM:=""}
 
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
-: ${RELAYHOST_USERNAME:="$RELAYHOST_USERNAME"}
-: ${RELAYHOST_PASSWORD:="$RELAYHOST_PASSWORD"}
-: ${ALLOWED_SENDER_DOMAINS:="$ALLOWED_SENDER_DOMAINS"}
+: ${RELAYHOST_USERNAME:="$SMTP_RELAYHOST_USERNAME"}
+: ${RELAYHOST_PASSWORD:="$SMTP_RELAYHOST_PASSWORD"}
+: ${ALLOWED_SENDER_DOMAINS:="$SMTP_ALLOWED_SENDER_DOMAINS"}
 : ${MESSAGE_SIZE_LIMIT:="$SMTP_MESSAGE_SIZE_LIMIT"}
-
 
 # operating system specific variables
 ## detect current operating system
@@ -967,8 +966,10 @@ cfgService_dhcp() {
   fi
 
   [ ! -z "$DHCP_DNS" ] && sed "s|^#dhcp-option=6,.*|dhcp-option=6,$DHCP_DNS|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  [ ! -z "$DHCP_DNS" ] && sed "s|^dhcp-option=6,.*|dhcp-option=6,$DHCP_DNS|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
   
-  [ ! -z "$DHCP_GW" ] && sed "s|^#dhcp-option=3,.*|dhcp-option=6,$DHCP_GW|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  [ ! -z "$DHCP_GW" ] && sed "s|^#dhcp-option=3,.*|dhcp-option=3,$DHCP_GW|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  [ ! -z "$DHCP_GW" ] && sed "s|^dhcp-option=3,.*|dhcp-option=3,$DHCP_GW|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
   
   [ ! -z "$DHCP_NTP" ] && sed "s|^#dhcp-option=option:ntp-server,.*|dhcp-option=option:ntp-server,$DHCP_NTP|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
 }
