@@ -158,6 +158,8 @@ ENV APP_INSTALL_DEPS=' \
     perl-DBD-mysql \
     zabbix-agent \
     zabbix-sender \
+    cyrus-sasl-plain \
+    cyrus-sasl-md5 \
   '
 
 RUN set -xe && \
