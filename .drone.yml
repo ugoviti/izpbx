@@ -24,7 +24,7 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
       
 steps:
-- name: build&publish
+- name: build-publish
   image: plugins/docker
   settings:
     repo: izdock/izpbx-asterisk
