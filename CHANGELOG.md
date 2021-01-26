@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.9.14] - 2020-XX-XX
 ### Changed
+- Asterisk 16.16.0
+- Asterisk 18.2.0
 
 ## [0.9.13] - 2020-12-22
 ### Fixed
