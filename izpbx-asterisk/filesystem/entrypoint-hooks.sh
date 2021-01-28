@@ -904,7 +904,7 @@ cfgService_freepbx_install() {
     for module in ${FREEPBX_MODULES_PRE}; do
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
-
+    
     # fix freepbx and asterisk permissions
     echo "--> fixing FreePBX permissions..."
     fwconsole chown
@@ -914,7 +914,7 @@ cfgService_freepbx_install() {
     for module in ${FREEPBX_MODULES_EXTRA}; do
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
-
+    
     # fix freepbx and asterisk permissions
     echo "--> fixing FreePBX permissions..."
     fwconsole chown

@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=16.16.0
+ARG ASTERISK_VER=18.2.0
 
 # https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
@@ -24,11 +24,23 @@ ARG FREEPBX_VER=15.0
 # https://www.fop2.com/download.php
 ARG FOP2_VER=2.31.29
 
-# http://sources.buildroot.net/spandsp/
+# http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=20180108
+
+# https://github.com/holme-r/iksemel
+ARG IKSEMEL_VER=1.5.1.3
 
 # https://github.com/BelledonneCommunications/bcg729/releases
 ARG BCG729_VER=1.1.1
+
+# https://bitbucket.org/arkadi/asterisk-g72x
+ARG ASTERISK_G72X_VER=master
+
+# https://github.com/ugoviti/izsynth
+ARG IZSYNTH_VER=5.0
+
+# https://github.com/ugoviti/zabbix-templates
+ARG ZABBIX_TEMPLATE_VER=master
 
 # https://github.com/irontec/sngrep/releases
 ARG SNGREP_VER=1.4.8
@@ -175,7 +187,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/7/x86_64/zabbix-release-5.0-1.el7.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.2/rhel/7/x86_64/zabbix-release-5.2-1.el7.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     \
@@ -187,7 +199,7 @@ RUN set -xe && \
     # repo for phpMyAdmin
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.0/rhel/8/x86_64/zabbix-release-5.0-1.el8.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.2/rhel/8/x86_64/zabbix-release-5.2-1.el8.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
     rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
@@ -325,7 +337,7 @@ RUN set -xe && \
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
   \
-  : "---------- START Build libresample ----------" && \
+  : "---------- START build libresample ----------" && \
   cd /usr/src && \
   mkdir libresample && \
   tar zxf libresample-0.1.3.tgz --strip 1 -C libresample && \
@@ -341,9 +353,9 @@ RUN set -xe && \
   cp libresample.so /usr/lib64/ && \
   cp pkgconfig/libresample.pc /usr/lib64/pkgconfig/ && \
   ldconfig && \
-  : "---------- END Build ----------" && \
+  : "---------- END build ----------" && \
   \
-  : "---------- START Build spandsp ----------" && \
+  : "---------- START build spandsp ----------" && \
   cd /usr/src && \
   mkdir spandsp && \
   curl -fSL --connect-timeout 30 http://sources.buildroot.net/spandsp/spandsp-${SPANDSP_VER}.tar.gz | tar xz --strip 1 -C spandsp && \
@@ -352,20 +364,20 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  : "---------- END Build ----------" && \
+  : "---------- END build ----------" && \
   \
-  : "---------- START Build iksemel ----------" && \
+  : "---------- START build iksemel ----------" && \
   cd /usr/src && \
   mkdir iksemel && \
-  curl -fSL --connect-timeout 30 https://github.com/holme-r/iksemel/archive/master.tar.gz | tar xz --strip 1 -C iksemel && \
+  curl -fSL --connect-timeout 30 https://github.com/holme-r/iksemel/archive/${IKSEMEL_VER}.tar.gz | tar xz --strip 1 -C iksemel && \
   cd iksemel && \
   ./configure --prefix=/usr && \
   make && \
   make install && \
   ldconfig && \
-  : "---------- END Build ----------" && \
+  : "---------- END build ----------" && \
   \
-  : "---------- START Build ASTERISK ----------" && \
+  : "---------- START build ASTERISK ----------" && \
   cd /usr/src && \
   mkdir asterisk && \
   curl -fSL --connect-timeout 30 http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
@@ -456,9 +468,9 @@ RUN set -xe && \
   make config && \
   make samples && \
   ldconfig && \
-  : "---------- END Build ----------" && \
+  : "---------- END build ----------" && \
   \
-  : "---------- START Build bcg729 ----------" && \
+  : "---------- START build bcg729 ----------" && \
   cd /usr/src && \
   mkdir bcg729 && \
   curl -fSL --connect-timeout 30 https://github.com/BelledonneCommunications/bcg729/archive/${BCG729_VER}.tar.gz | tar xz --strip 1 -C bcg729 && \
@@ -467,22 +479,22 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  : "---------- END Build ----------" && \
+  : "---------- END build ----------" && \
   \
   if [[ ${ASTERISK_VER%%.*} -le 18 ]]; then \
-  : "---------- START Build asterisk-g72x ----------" && \
+  : "---------- START build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
-  curl -fSL --connect-timeout 30 https://bitbucket.org/arkadi/asterisk-g72x/get/master.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
+  curl -fSL --connect-timeout 30 https://bitbucket.org/arkadi/asterisk-g72x/get/${ASTERISK_G72X_VER}.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
   cd asterisk-g72x && \
   ./autogen.sh && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
   make && \
   make install && \
   ldconfig ;fi && \
-  : "---------- END Build ----------" && \
+  : "---------- END build ----------" && \
   \
-  : "---------- START Build sngrep ----------" && \
+  : "---------- START build sngrep ----------" && \
   cd /usr/src && \
   mkdir sngrep && \
   curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/archive/v${SNGREP_VER}.tar.gz | tar xz --strip 1 -C sngrep && \
@@ -493,7 +505,7 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  : "---------- END Build ----------" && \
+  : "---------- END build ----------" && \
   \
   if [[ ${APP_DEBUG} -eq 0 ]]; then \
   : "---------- Clean temporary files ----------" && \
@@ -569,15 +581,17 @@ RUN set -xe && \
 
 # install other components
 RUN set -xe && \
-  : "---------- START Install izsynth ----------" && \
+  : "---------- START install izsynth by InitZero ----------" && \
   cd /usr/src && \
-  curl -fSL --connect-timeout 30 https://raw.githubusercontent.com/ugoviti/izsynth/master/izsynth -o /usr/local/bin/izsynth && \
+  mkdir -p izsynth && \
+  curl -fSL --connect-timeout 30 https://github.com/ugoviti/izsynth/archive/${IZSYNTH_VER}.tar.gz | tar xz --strip 1 -C izsynth && \
+  cp -a izsynth/izsynth /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
-  : "---------- END Install ----------" && \
-  : "---------- START Install Asterisk Zabbix Agents by InitZero ----------" && \
+  : "---------- END install ----------" && \
+  : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
-  curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/master.tar.gz | tar xz --strip 3 zabbix-templates-master/asterisk/zabbix_agentd.d && \
-  : "---------- END Install ----------"
+  curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-master/asterisk/zabbix_agentd.d && \
+  : "---------- END install ----------"
 
 # set pemissions and sudo
 RUN set -xe && \
