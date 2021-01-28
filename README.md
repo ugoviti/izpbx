@@ -6,14 +6,27 @@ izPBX is a Turnkey Cloud Native Telephony System powered by Asterisk Engine and 
 
 # Supported tags
 
-Production Branch (Asterisk 16 + FreePBX 15):
-* `latest`, `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
+## Current Production Branch: (Asterisk 18 + FreePBX 15)
+* `latest`, `18`, `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT`
 
-Development Branches:
-* `dev-16`, `dev-16.10`, `dev-16.10.X-BUILD`, `dev-16.10.X-COMMIT`
-* `dev-17`, `dev-17.4`, `dev-17.4.X-BUILD`, `dev-17.4.X-COMMIT`
+## Previous Production Branch: (Asterisk 16 + FreePBX 15)
+* `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
 
-Where **X** is the patch version number, **COMMIT** is the GIT commit ID, and **BUILD** is the build number (look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions)
+## Development Branches:
+* `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
+* `dev-16`, `dev-16.X`, `dev-16.X.X-BUILD`, `dev-16.X.X-COMMIT`
+
+## Version notes
+
+Tags format: **Z.Y.X-[BUILD|COMMIT]**
+
+where:  
+  * **Z** = Engine based on Asterisk release
+  * **Y** = GUI based on FreePBX release
+  * **X** = izPBX release
+  * **BUILD** = build number | **COMMIT** = GIT commit ID
+
+Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions
 
 # Dockerfile
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
