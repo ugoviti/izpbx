@@ -12,7 +12,10 @@ function kill_app(){
 }
 trap "kill_app" SIGINT SIGTERM
 
-# Launch daemon
+# configure permissions before starting
+$command chown
+
+# start asterisk
 $command start -q
 sleep 2
 

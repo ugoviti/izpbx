@@ -4,9 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.9.15] - 2020-XX-XX
+## [1.X.X] - 2021-XX-XX
 ### Changed
 
+## [1.18.0] - 2021-01-28
+### Changed
+- First 1.x official release
+- Switched default PBX engine from Asterisk 16 LTS to Asterisk 18 LTS
+- New Versioning template: 
+  - izPBX 1.18.x = Latest release of Asterisk 18 LTS
+  - izPBX 0.9.x  = Latest release of Asterisk 16 LTS (not more supported)
+### Fixed
+- chown freepbx and asterisk files every time on startup to avoid permission denied errors
 
 ## [0.9.14] - 2021-01-21
 ### Changed
