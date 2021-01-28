@@ -13,18 +13,18 @@ izPBX is a Turnkey Cloud Native Telephony System powered by Asterisk Engine and 
 * `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
 
 ## Development Branches:
-* `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
-* `dev-16`, `dev-16.X`, `dev-16.X.X-BUILD`, `dev-16.X.X-COMMIT`
+* Asterisk 18 LTS + FreePBX 15: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
+* Asterisk 16 LTS + FreePBX 15: `dev-16`, `dev-16.X`, `dev-16.X.X-BUILD`, `dev-16.X.X-COMMIT`
 
-## Version notes
+## Version notes:
 
 Tags format: **Z.Y.X-[BUILD|COMMIT]**
 
 where:  
-  * **Z** = Engine based on Asterisk release
-  * **Y** = GUI based on FreePBX release
-  * **X** = izPBX release
-  * **BUILD** = build number | **COMMIT** = GIT commit ID
+  * **Z** = Asterisk release (PBX Engine)
+  * **Y** = FreePBX release (PBX GUI)
+  * **X** = izPBX release (PBX Distribution)
+  * **BUILD** = Build number | **COMMIT** = GIT commit ID
 
 Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions
 
@@ -75,7 +75,7 @@ Using **docker-compose** is the suggested method:
 - Install your prefered Linux OS into VM or Baremetal Server
 
 - Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
-  - CentOS 8 Quick&Dirty commands:
+  - CentOS 8 Quick&Dirty commands (skip if you use other distribution):
 ```
 sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 sudo dnf install docker-ce -y
@@ -86,11 +86,12 @@ sudo systemctl enable --now docker
 - Clone GIT repository or download latest release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`):
   - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
 
-- Copy `default.env` file to `.env`: `cp default.env .env`:
-  - `cp /opt/izpbx/default.env /opt/izpbx/.env`
+- Copy `default.env` file to `.env`:
+  - `cd /opt/izpbx`
+  - `cp default.env .env`
 
 - Customize `.env` variables, specially the security section of mysql passwords (look bellow for a full variables list):
-  - `vim /opt/izpbx/.env`
+  - `vim .env`
 
 - Start izpbx using docker-compose command:
   - `docker-compose up -d`

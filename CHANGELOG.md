@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - First 18.15.x official release
 - Switched default PBX engine from Asterisk 16 LTS to Asterisk 18 LTS
 - New Versioning template: 
-  - izPBX 18.15.x = Latest release of Asterisk 18 LTS + FreePBX 15
-  - izPBX 0.9.x  = Latest release of Asterisk 16 LTS (not more supported)
+  - izPBX 18.15.x = Latest release with Asterisk 18 LTS + FreePBX 15
+  - izPBX 0.9.x   = Latest release with Asterisk 16 LTS + FreePBX 15 (not more supported)
 ### Fixed
 - chown freepbx and asterisk files every time on startup to avoid permission denied errors
 
