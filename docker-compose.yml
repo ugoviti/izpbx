@@ -7,29 +7,30 @@ services:
   izpbx:
     container_name: izpbx
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:18.15.0
+    image: izdock/izpbx-asterisk:18.15.1
     restart: always
     depends_on:
     - db
     env_file:
     - .env
-    ports:
-    - ${APP_PORT_HTTP}:${APP_PORT_HTTP}
-    - ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
-    - ${APP_PORT_IAX}:${APP_PORT_IAX}
-    - ${APP_PORT_IAX}:${APP_PORT_IAX}/udp
-    - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
-    - ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}/udp
-    - ${APP_PORT_SIP}:${APP_PORT_SIP}/udp
-    - ${APP_PORT_SIP}:${APP_PORT_SIP}
-    - ${APP_PORT_AMI}:${APP_PORT_AMI}
+    ## ATTENTION: if 'network_mode: host' is disabled, comment out the following lines
+    #ports:
+    #- ${APP_PORT_HTTP}:${APP_PORT_HTTP}
+    #- ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
+    #- ${APP_PORT_IAX}:${APP_PORT_IAX}
+    #- ${APP_PORT_IAX}:${APP_PORT_IAX}/udp
+    #- ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
+    #- ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}/udp
+    #- ${APP_PORT_SIP}:${APP_PORT_SIP}/udp
+    #- ${APP_PORT_SIP}:${APP_PORT_SIP}
+    #- ${APP_PORT_AMI}:${APP_PORT_AMI}
     #- ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}
-    - ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
-    - ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
-    - ${APP_PORT_TFTP}:${APP_PORT_TFTP}
-    - ${APP_PORT_TFTP}:${APP_PORT_TFTP}/udp
-    - ${APP_PORT_FOP2}:${APP_PORT_FOP2}
-    - ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}
+    #- ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
+    #- ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
+    #- ${APP_PORT_TFTP}:${APP_PORT_TFTP}
+    #- ${APP_PORT_TFTP}:${APP_PORT_TFTP}/udp
+    #- ${APP_PORT_FOP2}:${APP_PORT_FOP2}
+    #- ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}
     volumes:
     - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx:/data
@@ -39,7 +40,7 @@ services:
     privileged: true
     # for simpler sip nat management use: 'network_mode: host'
     network_mode: host
-    ## if 'network_mode: host' is disabled, comment out the following lines
+    ## ATTENTION: if 'network_mode: host' is disabled, comment out the following lines
     #links: 
     #- db
     #networks:

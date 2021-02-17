@@ -62,8 +62,11 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 
 # Targets of this project
 - On-Premise, fast, automatic and repeatable deploy of PBX systems.  
-by default max 50 concurrent calls... it's based on default 200 ports RTP range (`10000-10200`)... for best security, fine-tune based on your needs!  
-you can use the standard `10000-20000` range when using `network_mode: host` (default)
+by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal docker network is used), so the default UDP RTP port range can be from 10000 to 20000.  
+If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpou usage and longer startup times), for example for 50 concurrent calls:  
+`APP_PORT_RTP_START=10000`  
+`APP_PORT_RTP_END=10200`  
+for best security, fine-tune based on your needs using not standard port ranges!  
 
 # Limits of this project
 - Deploy 1 izPBX for every public IP or VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
