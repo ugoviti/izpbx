@@ -5,14 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [18.15.X] - 2021-XX-XX
-### Added
-- added support for postfix TLS and relayhost port (close #9)
-- added new variables into `default.env` (update you .env copy):
-  - SMTP_STARTTLS=true
 
 ## [18.15.2] - 2021-11-03
 ### Changed
 - based on Asterisk 18.2.2 LTS
+### Added
+- added support for postfix TLS and relayhost port (close #9)
+- added new variables into `default.env` (update you .env copy):
+  - SMTP_STARTTLS=true
 
 ## [18.15.1] - 2021-02-17
 ### Changed
