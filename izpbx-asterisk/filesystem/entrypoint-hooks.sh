@@ -150,6 +150,7 @@ declare -A fpbxSipSettings=(
 : ${SMTP_RELAYHOST:=""}
 : ${SMTP_RELAYHOST_USERNAME:=""}
 : ${SMTP_RELAYHOST_PASSWORD:=""}
+: ${SMTP_STARTTLS:="true"}
 : ${SMTP_ALLOWED_SENDER_DOMAINS:=""}
 : ${SMTP_MESSAGE_SIZE_LIMIT:="0"}
 : ${SMTP_MAIL_FROM:=""}
@@ -372,15 +373,21 @@ fi
 #postmap $network_table
 #postconf -e mynetworks=hash:$network_table
 
-if [ ! -z "$MYNETWORKS" ]; then
-	postconf -e mynetworks=$MYNETWORKS
+if [ ! -z "$SMTP_MYNETWORKS" ]; then
+  echo -n "- enabling mynetworks: $SMTP_MYNETWORKS"
+  postconf -e mynetworks=$SMTP_MYNETWORKS
 else
-	postconf -e "mynetworks=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+  postconf -e "mynetworks=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+fi
+
+if [ "$SMTP_STARTTLS" = "true" ]; then
+  echo -n "- enabling TLS support as smtp client"
+  postconf -e smtp_use_tls=yes
 fi
 
 # split with space
 if [ ! -z "$ALLOWED_SENDER_DOMAINS" ]; then
-	echo -n "- Setting up allowed SENDER domains:"
+	echo -n "- Setting up allowed SENDER domains: $ALLOWED_SENDER_DOMAINS"
 	allowed_senders=/etc/postfix/allowed_senders
 	rm -f $allowed_senders $allowed_senders.db > /dev/null
 	touch $allowed_senders
@@ -400,6 +407,7 @@ else
 fi
 
 # Use 587 (submission)
+echo -n "- enabling submission protocol on port 587"
 sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 
 # configure /etc/aliases

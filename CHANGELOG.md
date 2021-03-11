@@ -5,21 +5,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [18.15.X] - 2021-XX-XX
+### Added
+- added support for postfix TLS and relayhost port (close #9)
+- added new variables into `default.env` (update you .env copy):
+  - SMTP_STARTTLS=true
 
 ## [18.15.2] - 2021-11-03
-- Based on Asterisk 18.2.2 LTS
+### Changed
+- based on Asterisk 18.2.2 LTS
 
 ## [18.15.1] - 2021-02-17
 ### Changed
-- Disabled ports in docker-compose.yml if 'network_mode: host' is used
-- Changed default from APP_PORT_RTP_END=10200 to APP_PORT_RTP_END=20000
+- disabled ports in docker-compose.yml if 'network_mode: host' is used
+- changed default from APP_PORT_RTP_END=10200 to APP_PORT_RTP_END=20000
 
 ## [18.15.0] - 2021-01-28
 ### Changed
-- Based on Asterisk 18.2.0 LTS
-- First 18.15.x official release
-- Switched default PBX engine from Asterisk 16 LTS to Asterisk 18 LTS
-- New Versioning template: 
+- based on Asterisk 18.2.0 LTS
+- first 18.15.x official release
+- switched default PBX engine from Asterisk 16 LTS to Asterisk 18 LTS
+- new Versioning template: 
   - izPBX 18.15.x = Latest release with Asterisk 18 LTS + FreePBX 15
   - izPBX 0.9.x   = Latest release with Asterisk 16 LTS + FreePBX 15 (not more supported)
 ### Fixed
@@ -38,10 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Asterisk 16.15.0
 - FOP2 2.31.29
-- added perl-DBI, perl-DBD-mysql used by fop2 recording_fop2.pl
 - sngrep 1.4.8
 ### Added
 - Asterisk 18.1.0 build in dev branch
+- Added perl-DBI, perl-DBD-mysql used by fop2 recording_fop2.pl
 
 ## [0.9.11] - 2020-10-28
 ### Changed
