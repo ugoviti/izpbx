@@ -164,7 +164,10 @@ docker-compose pull
 docker-compose up -d
 ```
 
-3. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
+3. If the mariadb database version was changed, rememeber to update tables schema with command  
+  `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+
+4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
 
 ## FreePBX upgrade path to a major release
 FreePBX will be installed into persistent data dir only on first izpbx deploy (when no installations already exist).
@@ -178,13 +181,13 @@ Recap: only Asterisk core engine will be updated on container image update.
 # Environment default variables
 ```
 ## database configurations
-## WARNING: security passwords... please change the default
+## WARNING: izPBX security passwords... please change the default
 MYSQL_ROOT_PASSWORD=CHANGEM3
 MYSQL_PASSWORD=CHANGEM3
 
-## WARNING: if the docker-compose use "network_mode: bridge" specify: db
+## WARNING: if docker-compose is configured with "network_mode: bridge" then use "MYSQL_SERVER=db"
+## WARNING: if docker-compose is configured with "network_mode: bridge" then use "MYSQL_SERVER=127.0.0.1" or the address of a remote database server
 #MYSQL_SERVER=db
-## WARNING: if the docker-compose use "network_mode: host" specify: 127.0.0.1 or the address of a remote database
 MYSQL_SERVER=127.0.0.1
 MYSQL_DATABASE=asterisk
 MYSQL_USER=asterisk
@@ -196,12 +199,13 @@ APP_DATA=/data
 #ROOT_MAILTO=
 
 #SMTP SmartHost configuration. Specify DNS name or IP address for the SMTP RelayHost (default: none)
-#SMTP_RELAYHOST=
-#SMTP_RELAYHOST_USERNAME=
-#SMTP_RELAYHOST_PASSWORD=
-#SMTP_ALLOWED_SENDER_DOMAINS=
-#SMTP_MESSAGE_SIZE_LIMIT=
-#SMTP_MAIL_FROM=
+#SMTP_RELAYHOST=[smtp.example.com]:587
+#SMTP_RELAYHOST_USERNAME=yourusername
+#SMTP_RELAYHOST_PASSWORD=yoursecurepassword
+#SMTP_STARTTLS=true
+#SMTP_ALLOWED_SENDER_DOMAINS=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+#SMTP_MESSAGE_SIZE_LIMIT=67108864
+#SMTP_MAIL_FROM=izpbx@example.com
 
 ## enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
 #APP_FQDN=sip.example.com
@@ -253,7 +257,7 @@ FAIL2BAN_RECIDIVE_BANTIME=1814400
 FAIL2BAN_RECIDIVE_FINDTIME=15552000
 FAIL2BAN_RECIDIVE_MAXRETRY=10
 
-## freepbx advanced settings (prefix every FreePBX variable with FREEPBX_)
+## freepbx advanced settings (prefix every FreePBX internal variable with FREEPBX_)
 ## modules enabled on first startup
 #FREEPBX_MODULES_EXTRA=soundlang callrecording cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking phonebook presencestate printextensions queues cel timeconditions pm2
 FREEPBX_FREEPBX_SYSTEM_IDENT=izPBX
@@ -294,8 +298,10 @@ APP_PORT_HTTPS=443
 APP_PORT_PJSIP=5160
 APP_PORT_SIP=5060
 APP_PORT_IAX=4569
+APP_PORT_AMI=8088
+## WARNING: tune the APP_PORT_RTP_END to a lower value (ex. 10200) if 'network_mode: host' is not used
 APP_PORT_RTP_START=10000
-APP_PORT_RTP_END=10200
+APP_PORT_RTP_END=20000
 # database port
 APP_PORT_MYSQL=3306
 # other services ports

@@ -4,9 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.15.X] - 2021-XX-XX
+## [18.15.3] - 2021-XX-XX
+### Changed
+- updated mariadb from 10.5.8 to 10.5.9
+  - upgrade tables with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+- misc optimizations on first installation
 
-## [18.15.2] - 2021-11-03
+## [18.15.2] - 2021-03-11
 ### Changed
 - based on Asterisk 18.2.2 LTS
 ### Added

@@ -775,7 +775,11 @@ cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
-  echo "=> !!! FreePBX IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!!"
+  echo
+  echo "====================================================================="
+  echo "=> !!! FreePBX IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!! <="
+  echo "====================================================================="
+  echo
   echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$n/$t]"
   cd /usr/src/freepbx
   
@@ -843,7 +847,7 @@ cfgService_freepbx_install() {
       done
     fi
    
-    : ${FREEPBX_MODULES_CORE="
+    : ${FREEPBX_MODULES_CORE:="
       framework
       core
       dashboard
@@ -854,6 +858,7 @@ cfgService_freepbx_install() {
     # ordered modules install
     : ${FREEPBX_MODULES_PRE:="
       userman
+      pm2
     "}
     
     : ${FREEPBX_MODULES_EXTRA:="
@@ -894,11 +899,10 @@ cfgService_freepbx_install() {
       queues
       cel
       timeconditions
-      pm2
     "}
 
     # disabled modules
-    : ${FREEPBX_MODULES_DISABLED="
+    : ${FREEPBX_MODULES_DISABLED:="
       bulkhandler
       speeddial
       weakpasswords
@@ -908,7 +912,7 @@ cfgService_freepbx_install() {
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
-    echo "--> installing prerequisite FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
+    echo "--> installing Prerequisite FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_PRE}; do
       su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
     done
@@ -1109,7 +1113,9 @@ EOF
 }
 
 cfgService_fop2_install() {
-  echo "=> !!! FOP2 NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2..."
+  echo
+  echo "=> !!! FOP2 IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2..."
+  echo
   fwconsole start
   if [ -z "$FOP2_VER" ]; then
     # automatic installation of latest version
