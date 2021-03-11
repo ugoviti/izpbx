@@ -5,7 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [18.15.X] - 2021-XX-XX
+
+## [18.15.2] - 2021-11-03
+- Based on Asterisk 18.2.2 LTS
+
+## [18.15.1] - 2021-02-17
 ### Changed
+- Disabled ports in docker-compose.yml if 'network_mode: host' is used
+- Changed default from APP_PORT_RTP_END=10200 to APP_PORT_RTP_END=20000
 
 ## [18.15.0] - 2021-01-28
 ### Changed

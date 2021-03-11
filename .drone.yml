@@ -50,6 +50,66 @@ steps:
   - name: docker
     path: /var/lib/docker
 
+
+---
+kind: pipeline
+name: izpbx-dev-18
+
+environment:
+  ASTERISK_VER: 18.2.2
+  APP_VER: dev
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+
+trigger:
+  event:
+  - push
+  branch:
+  - dev
+
+platform:
+  os: linux
+  arch: amd64
+
+concurrency:
+  limit: 1
+
+volumes:
+  - name: docker
+    host:
+      path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
+
+steps:
+- name: prep
+  image: alpine
+  commands:
+    - echo -e -n "dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
+
+- name: build&publish
+  image: plugins/docker
+  settings:
+    repo: izdock/izpbx-asterisk
+    dockerfile: izpbx-asterisk/Dockerfile
+    context: izpbx-asterisk
+    build_args_from_env:
+    - ASTERISK_VER
+    - APP_VER
+    - APP_VER_BUILD
+    - APP_BUILD_COMMIT
+    - APP_BUILD_DATE
+    username:
+      from_secret: DOCKER_USERNAME
+    password:
+      from_secret: DOCKER_PASSWORD
+  volumes:
+  - name: docker
+    path: /var/lib/docker
+
 ---
 
 kind: pipeline
@@ -66,7 +126,7 @@ trigger:
   event:
   - push
   branch:
-  - dev
+  - dev-deprecated
   
 platform:
   os: linux
@@ -86,9 +146,9 @@ steps:
   commands:
     - echo -e -n "dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
     - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
 
 - name: build-publish
   image: plugins/docker
@@ -110,61 +170,3 @@ steps:
   - name: docker
     path: /var/lib/docker
 
----
-kind: pipeline
-name: izpbx-dev-18
-
-environment:
-  ASTERISK_VER: 18.2.0
-  APP_VER: dev
-  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
-
-trigger:
-  event:
-  - push
-  branch:
-  - dev
-
-platform:
-  os: linux
-  arch: amd64
-
-concurrency:
-  limit: 1
-
-volumes:
-  - name: docker
-    host:
-      path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-
-steps:
-- name: prep
-  image: alpine
-  commands:
-    - echo -e -n "dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-
-- name: build&publish
-  image: plugins/docker
-  settings:
-    repo: izdock/izpbx-asterisk
-    dockerfile: izpbx-asterisk/Dockerfile
-    context: izpbx-asterisk
-    build_args_from_env:
-    - ASTERISK_VER
-    - APP_VER
-    - APP_VER_BUILD
-    - APP_BUILD_COMMIT
-    - APP_BUILD_DATE
-    username:
-      from_secret: DOCKER_USERNAME
-    password:
-      from_secret: DOCKER_PASSWORD
-  volumes:
-  - name: docker
-    path: /var/lib/docker
