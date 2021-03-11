@@ -63,7 +63,7 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 # Targets of this project
 - On-Premise, fast, automatic and repeatable deploy of PBX systems.  
 by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal docker network is used), so the default UDP RTP port range can be from 10000 to 20000.  
-If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpou usage and longer startup times), for example for 50 concurrent calls:  
+If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpu usage and longer startup times), for example for 50 concurrent calls:  
 `APP_PORT_RTP_START=10000`  
 `APP_PORT_RTP_END=10200`  
 for best security, fine-tune based on your needs using not standard port ranges!  

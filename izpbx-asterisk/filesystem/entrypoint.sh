@@ -33,7 +33,7 @@ appHooks() {
   fi
   
   echo "=> Executing $APP_NAME hooks:"
-  . /entrypoint-hooks.sh
+  [ -e "/entrypoint-hooks.sh" ] && . /entrypoint-hooks.sh
   echo "-------------------------------------------------------------------------------"
 }
 
