@@ -7,13 +7,20 @@ services:
   izpbx:
     container_name: izpbx
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:18.15.2
+    image: izdock/izpbx-asterisk:18.15.3
     restart: always
     depends_on:
     - db
     env_file:
     - .env
-    ## ATTENTION: if 'network_mode: host' is disabled, comment out the following lines
+    ## NOTE: for simpler sip nat management use: 'network_mode: host'
+    network_mode: host
+    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
+    #links: 
+    #- db
+    #networks:
+    #- izpbx
+    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
     #ports:
     #- ${APP_PORT_HTTP}:${APP_PORT_HTTP}
     #- ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
@@ -38,25 +45,18 @@ services:
     cap_add:
     - NET_ADMIN
     privileged: true
-    # for simpler sip nat management use: 'network_mode: host'
-    network_mode: host
-    ## ATTENTION: if 'network_mode: host' is disabled, comment out the following lines
-    #links: 
-    #- db
-    #networks:
-    #- izpbx
     
   db:
     container_name: izpbx-db
-    image: mariadb:10.5.8
+    image: mariadb:10.5.9
     ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
-    ## docker exec -it izpbx-db bash
-    ## mysql_upgrade -u root -p
+    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: always
     env_file:
     - .env
-    ## database configurations (WARNING: if commented out, the database will be exposed outside the container)
+    ## database configurations 
+    ## WARNING: if commented out, the database will be exposed outside the container
     ports:
     - ${APP_PORT_MYSQL}:3306
     volumes:
@@ -67,7 +67,8 @@ services:
     - MYSQL_DATABASE
     - MYSQL_USER
     - MYSQL_PASSWORD
+    ## NOTE: for simpler sip nat management use: 'network_mode: host'
     #network_mode: host
-    # if 'network_mode: host' is disabled, comment out the following lines
+    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
     networks:
     - izpbx

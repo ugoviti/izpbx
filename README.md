@@ -164,7 +164,9 @@ docker-compose pull
 docker-compose up -d
 ```
 
-3. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
+3. If the mariadb database version was changed, rememeber to update tables schema also with command `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+
+4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
 
 ## FreePBX upgrade path to a major release
 FreePBX will be installed into persistent data dir only on first izpbx deploy (when no installations already exist).
