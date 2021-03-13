@@ -450,23 +450,6 @@ cfgService_cron() {
   fi
 }
 
-## cron service
-cfgService_letsencrypt() {
-  if [ -e "/etc/letsencrypt/live/${APP_FQDN}/privkey.pem" ] ; then
-    echo "--> Let's Encrypt certificate already exist... trying to renew"
-    certbot renew --standalone
-  else
-    echo "--> generating HTTPS Let's Encrypt certificate"
-    certbot certonly --standalone --expand -n --agree-tos --email ${ROOT_MAILTO} -d ${APP_FQDN}
-  fi
-  
-  # create certbot renew cron and apache restart
-  echo '#!/bin/bash
-/usr/bin/certbot renew --noninteractive --no-random-sleep-on-renew --deploy-hook "/usr/bin/supervisorctl restart httpd"
-exit $?' > /etc/cron.daily/certbot && chmod 755 /etc/cron.daily/certbot
-}
-
-
 ## parse and edit ini config files based on SECTION and KEY=VALUE
 
 # input stream format: SECTION KEY=VALUE
@@ -602,7 +585,7 @@ $(print_AllowFrom)
 </VirtualHost>"
 fi)
 
-$(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "/etc/letsencrypt/live/${APP_FQDN}/cert.pem" ]]; then
+$(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "${appDataDirs[ASTETCDIR]}/keys/integration/webserver.crt" ]]; then
 echo "# HTTPS virtualhost
 <VirtualHost *:${APP_PORT_HTTPS}>
   ServerName ${APP_FQDN}
@@ -611,9 +594,8 @@ echo "# HTTPS virtualhost
   SSLHonorCipherOrder     on
   SSLCipherSuite          PROFILE=SYSTEM
   SSLProxyCipherSuite     PROFILE=SYSTEM
-  SSLCertificateChainFile /etc/letsencrypt/live/${APP_FQDN}/chain.pem
-  SSLCertificateFile      /etc/letsencrypt/live/${APP_FQDN}/cert.pem
-  SSLCertificateKeyFile   /etc/letsencrypt/live/${APP_FQDN}/privkey.pem
+  SSLCertificateFile      ${appDataDirs[ASTETCDIR]}/keys/integration/webserver.crt
+  SSLCertificateKeyFile   ${appDataDirs[ASTETCDIR]}/keys/integration/webserver.key
 
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
@@ -1239,10 +1221,7 @@ runHooks() {
   # dnsmasq management
   [[ "$DHCP_ENABLED" = "true" || "$TFTP_ENABLED" = "true" ]] && DNSMASQ_ENABLED=true
   chkService DNSMASQ_ENABLED
-  
-  # generate SSL Certificates used for HTTPS
-  [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
-  
+   
   # phpMyAdmin configuration
   cfgService_pma
 }
