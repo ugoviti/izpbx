@@ -1,5 +1,2 @@
 /data/
 /.env
-/docker-compose-dev-16.yml
-/docker-compose-dev-17.yml
-/docker-compose-dev-18.yml
