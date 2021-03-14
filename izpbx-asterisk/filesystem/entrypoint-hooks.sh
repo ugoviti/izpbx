@@ -1,6 +1,6 @@
 #!/bin/bash
 # written by Ugo Viti <ugo.viti@initzero.it>
-# version: 20200315
+# version: 20210313
 #set -ex
 
 ## default root mail adrdess
@@ -255,7 +255,7 @@ symlinkDir() {
   local dirOriginal="$1"
   local dirCustom="$2"
 
-  echo "---> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
+  echo "--> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
@@ -1184,7 +1184,7 @@ runHooks() {
 
   # check and create missing container directory
   if [ ! -z "${APP_DATA}" ]; then  
-    echo "=> Persistent storage path detected... relocating and reconfiguring system data and configuration files using base: ${APP_DATA}"
+    echo "=> Persistent storage path detected... relocating and reconfiguring system data and configuration files using basedir: ${APP_DATA}"
     for dir in ${appDataDirs[@]}
       do
         dir="${APP_DATA}${dir}"
