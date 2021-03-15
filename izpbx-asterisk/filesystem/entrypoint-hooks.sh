@@ -1224,6 +1224,12 @@ runHooks() {
    
   # phpMyAdmin configuration
   cfgService_pma
+
+  # Lets Encrypt certificate generation
+  if [[ ! -z "$APP_FQDN" && "$LETSENCRYPT_ENABLED" == "true" ]]; then
+    sh /letsencrypt.sh
+  fi
+
 }
 
 runHooks

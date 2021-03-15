@@ -32,7 +32,7 @@ echo 'Running DB container: ' $podname-db
 ### create db container
 podman run -d --name $podname-db --pod $podname \
     --runtime=/usr/lib/cri-o-runc/sbin/runc \
-    --env-file=pir.env \
+    --env-file=../.env \
     -v /$podname/db:/var/lib/mysql \
         docker.io/library/mariadb:10.5
 
@@ -40,7 +40,7 @@ echo 'Running APP container: ' $podname-app
 ### create app container - run attached to 
 podman run -d --name $podname-app --pod $podname \
     --runtime=/usr/lib/cri-o-runc/sbin/runc \
-    --env-file=pir.env \
+    --env-file=../.env \
     -v /$podname/data:/data \
     --cap-add=NET_ADMIN \
         docker.io/izdock/izpbx-asterisk:$version

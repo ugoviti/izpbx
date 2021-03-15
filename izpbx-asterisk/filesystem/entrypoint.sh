@@ -91,16 +91,4 @@ set -x
 
 exec $CMD
 
-# Generate SSL Certificates used for HTTPS
-if [ ! -z "$APP_FQDN" ] && [ "$LETSENCRYPT_ENABLED" = "true" ]; then
-  if [ -e "/etc/asterisk/keys/$APP_FQDN.pem" ]; then
-    echo "--> Let's Encrypt certificate already exists..."
-  else
-    echo "--> Generating HTTPS Let's Encrypt certificate"
-    fwconsole certificates --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
-    fwconsole certificates --default=$APP_FQDN
-  fi
-fi
-
-
 exit $?
