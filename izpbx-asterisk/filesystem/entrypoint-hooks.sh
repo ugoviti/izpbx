@@ -28,7 +28,6 @@ declare -A appDataDirs=(
   [ASTRUNDIR]=/var/run/asterisk
   [HTTPDHOME]=/var/www
   [HTTPDLOGDIR]=/var/log/httpd
-  [CERTBOTETCDIR]=/etc/letsencrypt
   [ASTLOGDIR]=/var/log/asterisk
   [F2BLOGDIR]=/var/log/fail2ban
   [F2BLIBDIR]=/var/lib/fail2ban
@@ -585,7 +584,7 @@ $(print_AllowFrom)
 </VirtualHost>"
 fi)
 
-$(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" && -e "${appDataDirs[ASTETCDIR]}/keys/integration/webserver.crt" ]]; then
+$(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]]; then
 echo "# HTTPS virtualhost
 <VirtualHost *:${APP_PORT_HTTPS}>
   ServerName ${APP_FQDN}
@@ -1227,7 +1226,20 @@ runHooks() {
 
   # Lets Encrypt certificate generation
   if [[ ! -z "$APP_FQDN" && "$LETSENCRYPT_ENABLED" == "true" ]]; then
-    sh /letsencrypt.sh
+    echo "--> Let's Encrypt $APP_FQDN"
+    if [ -e "/etc/asterisk/keys/$APP_FQDN.pem" ]; then
+      echo "----> certificate already exists..."
+    else
+      echo "----> generating HTTPS certificate"
+      httpd -k start
+      fwconsole certificates --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
+      result=$?
+      if [[ $result -eq 0 ]]; then
+        fwconsole certificates --default=$APP_FQDN
+        result=$?
+      fi
+      httpd -k stop
+    fi
   fi
 
 }

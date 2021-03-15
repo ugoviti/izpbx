@@ -1,5 +1,5 @@
 #!/bin/bash
-podname=pbx
+podname=izpbx
 version=18.15
 
 ### check configuration file
@@ -14,7 +14,7 @@ mkdir -p /$podname/backup
 
 echo 'Creating pod: ' $podname
 ### create pod
-podman pod create -n $podname --hostname odo.pir.lt \
+podman pod create -n $podname --hostname voip.chamber.ie \
     --runtime=/usr/lib/cri-o-runc/sbin/runc \
     --network static \
     -p 80:80 -p 443:443 \
@@ -43,4 +43,5 @@ podman run -d --name $podname-app --pod $podname \
     --env-file=../.env \
     -v /$podname/data:/data \
     --cap-add=NET_ADMIN \
-        docker.io/izdock/izpbx-asterisk:$version
+        al3nas/izpbx:183
+        #docker.io/izdock/izpbx-asterisk:$version
