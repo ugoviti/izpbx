@@ -117,7 +117,6 @@ ENV APP_INSTALL_DEPS=' \
     libtiff-tools \
     cronie \
     httpd \
-    certbot \
     mod_ssl \
     php \
     php-mysqlnd \
