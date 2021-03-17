@@ -56,13 +56,13 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - Logrotating of service logs
 - All configurations made via single central `.env` file
 - Many customizable variables to use (look inside `default.env` file)
-- Only two containers setup: (**Antipattern docker design** but needed by the FreePBX ecosystem to works)
+- Only two containers setup: (**Antipattern container design** but needed by the FreePBX ecosystem to works)
   - **izpbx** (izpbx-asterisk container: Asterisk Engine + FreePBX Frontend + others services)
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Targets of this project
 - On-Premise, fast, automatic and repeatable deploy of PBX systems.  
-by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal docker network is used), so the default UDP RTP port range can be from 10000 to 20000.  
+by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal container network is used), so the default UDP RTP port range can be from 10000 to 20000.  
 If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpu usage and longer startup times), for example for 50 concurrent calls:  
 `APP_PORT_RTP_START=10000`  
 `APP_PORT_RTP_END=10200`  
@@ -70,7 +70,7 @@ for best security, fine-tune based on your needs using not standard port ranges!
 
 # Limits of this project
 - Deploy 1 izPBX for every public IP or VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
-- Docker Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by docker pulls)
+- Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by docker pulls)
   
 # How to use this image
 Using **docker-compose** is the suggested method:
@@ -285,7 +285,7 @@ FREEPBX_SIGNATURECHECK=0
 #DHCP_POOL_START=10.1.1.10
 #DHCP_POOL_END=10.1.1.250
 #DHCP_POOL_LEASE=72h
-## leave commented to use docker container ip address
+## leave commented to use container ip address
 #DHCP_DNS=10.1.1.1
 #DHCP_GW=10.1.1.1
 #DHCP_NTP=10.1.1.1

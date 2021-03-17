@@ -1231,6 +1231,7 @@ runHooks() {
       echo "----> certificate already exists..."
     else
       echo "----> generating HTTPS certificate"
+      # apache web server must be running to complete the certbot handshake
       httpd -k start
       fwconsole certificates --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
       result=$?
@@ -1241,7 +1242,6 @@ runHooks() {
       httpd -k stop
     fi
   fi
-
 }
 
 runHooks

@@ -4,36 +4,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.4] - 2021-03-17
+### Changed
+- Enanched let's encrypt certificate generation using fwconsole tool (thanks to @alenas)
+- New version of asterisk.sh zabbix agent script with better active calls detection (now will be ignored the calls in Ringing state)
+
 ## [18.15.3] - 2021-03-14
 ### Changed
-- updated mariadb from 10.5.8 to 10.5.9
+- Updated mariadb from 10.5.8 to 10.5.9
   - upgrade tables with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
-- misc optimizations on first installation
-- zabbix agent script update with new features
+- Misc optimizations on first installation
+- Zabbix agent script update with new features
 
 ## [18.15.2] - 2021-03-11
 ### Changed
-- based on Asterisk 18.2.2 LTS
+- Based on Asterisk 18.2.2 LTS
 ### Added
-- added support for postfix TLS and relayhost port (close #9)
-- added new variables into `default.env` (update you .env copy):
+- Ddded support for postfix TLS and relayhost port (close #9)
+- Ddded new variables into `default.env` (update you .env copy):
   - SMTP_STARTTLS=true
 
 ## [18.15.1] - 2021-02-17
 ### Changed
-- disabled ports in docker-compose.yml if 'network_mode: host' is used
-- changed default from APP_PORT_RTP_END=10200 to APP_PORT_RTP_END=20000
+- Disabled ports in docker-compose.yml if 'network_mode: host' is used
+- Changed default from APP_PORT_RTP_END=10200 to APP_PORT_RTP_END=20000
 
 ## [18.15.0] - 2021-01-28
 ### Changed
-- based on Asterisk 18.2.0 LTS
-- first 18.15.x official release
-- switched default PBX engine from Asterisk 16 LTS to Asterisk 18 LTS
-- new Versioning template: 
+- Based on Asterisk 18.2.0 LTS
+- First 18.15.x official release
+- Switched default PBX engine from Asterisk 16 LTS to Asterisk 18 LTS
+- New Versioning template: 
   - izPBX 18.15.x = Latest release with Asterisk 18 LTS + FreePBX 15
   - izPBX 0.9.x   = Latest release with Asterisk 16 LTS + FreePBX 15 (not more supported)
 ### Fixed
-- chown freepbx and asterisk files every time on startup to avoid permission denied errors
+- Chown freepbx and asterisk files every time on startup to avoid permission denied errors
 
 ## [0.9.14] - 2021-01-21
 ### Changed
