@@ -123,9 +123,9 @@ declare -A fpbxSipSettings=(
 : ${ZABBIX_USR:="zabbix"}
 : ${ZABBIX_GRP:="zabbix"}
 : ${ZABBIX_SERVER:="127.0.0.1"}
-: ${ZABBIX_SERVER_ACTIVE:="127.0.0.1"}
-: ${ZABBIX_HOSTNAME:="${HOSTNAME}"}
-: ${ZABBIX_HOSTMETADATA:="Linux"}
+: ${ZABBIX_SERVER_ACTIVE:="${ZABBIX_SERVER}"}
+: ${ZABBIX_HOSTNAME:=""}
+: ${ZABBIX_HOSTMETADATA:="izPBX"}
 
 ## default supervisord services status
 #: ${SYSLOG_ENABLED:="true"}
@@ -991,14 +991,19 @@ cfgService_zabbix() {
 LogRemoteCommands=1
 LogType=console
 
-#Hostname=${ZABBIX_HOSTNAME}
-HostnameItem=system.hostname
-
 Server=${ZABBIX_SERVER}
-#ServerActive=${ZABBIX_SERVER_ACTIVE}
+ServerActive=${ZABBIX_SERVER_ACTIVE}
 
-#HostMetadataItem=system.uname
-#HostMetadata=${ZABBIX_HOSTMETADATA}
+$(if [ -z "${ZABBIX_HOSTNAME}" ]; then
+    echo "HostnameItem=system.hostname"
+  else
+    echo "Hostname=${ZABBIX_HOSTNAME}"
+fi)
+
+$(if [ ! -z "${ZABBIX_HOSTMETADATA}" ]; then
+  echo "HostMetadataItem=system.uname"
+  echo "HostMetadata=${ZABBIX_HOSTMETADATA}"
+fi)
 " > "$ZABBIX_CONF_LOCAL"
 }
 
@@ -1117,9 +1122,10 @@ cfgService_fop2_upgrade() {
 
 cfgBashEnv() {
   echo '. /etc/os-release
+  APP="izPBX"
   
   if [ -t 1 ]; then
-    export PS1="\e[1;34m[\e[1;33m\u@\e[1;32mdocker-\h\e[1;37m:\w\[\e[1;34m]\e[1;36m\\$ \e[0m"
+    export PS1="\e[1;34m[\e[1;33m\u@\e[1;32m\h\e[1;37m (${APP}): \w\[\e[1;34m]\e[1;36m\\$ \e[0m"
   fi
 
   # aliases
@@ -1129,7 +1135,7 @@ cfgBashEnv() {
   alias mv="mv -i"
 
   echo -e -n "\E[1;34m"
-  figlet -w 120 "izPBX"
+  figlet -w 120 "${APP}"
 
   : ${APP_VER:="unknown"}
   : ${APP_VER_BUILD:="unknown"}
@@ -1138,7 +1144,7 @@ cfgBashEnv() {
   
   [ "${APP_BUILD_DATE}" != "unknown" ] && APP_BUILD_DATE=$(date -d @${APP_BUILD_DATE} +"%Y-%m-%d")
   
-  echo -e "\E[1;36mizPBX \E[1;32m${APP_VER}\E[1;36m (build: \E[1;32m${APP_VER_BUILD}\E[1;36m commit: \E[1;32m${APP_BUILD_COMMIT}\E[1;36m date: \E[1;32m${APP_BUILD_DATE}\E[1;36m), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
+  echo -e "\E[1;36m${APP} \E[1;32m${APP_VER}\E[1;36m (build: \E[1;32m${APP_VER_BUILD}\E[1;36m commit: \E[1;32m${APP_BUILD_COMMIT}\E[1;36m date: \E[1;32m${APP_BUILD_DATE}\E[1;36m), Asterisk \E[1;32m${ASTERISK_VER:-unknown}\E[1;36m, FreePBX \E[1;32m${FREEPBX_VER:-unknown}\E[1;36m, ${NAME} \E[1;32m${VERSION_ID:-unknown}\E[1;36m, Kernel \E[1;32m$(uname -r)\E[0m"
   echo'
 }
 
@@ -1204,7 +1210,7 @@ runHooks() {
 #   done
 
   # customize bash env
-  cfgBashEnv > /etc/profile.d/iz.sh
+  cfgBashEnv > /etc/profile.d/izpbx.sh
   
   # enable/disable and configure services
   #chkService SYSLOG_ENABLED

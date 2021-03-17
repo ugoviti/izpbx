@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Enanched let's encrypt certificate generation using fwconsole tool (thanks to @alenas)
 - New version of asterisk.sh zabbix agent script with better active calls detection (now will be ignored the calls in Ringing state)
+- Container shell enhancements
+- Added new variables into `default.env` (update your .env copy):
+  - ZABBIX_HOSTNAME
+  - ZABBIX_HOSTMETADATA
 
 ## [18.15.3] - 2021-03-14
 ### Changed
@@ -20,8 +24,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Based on Asterisk 18.2.2 LTS
 ### Added
-- Ddded support for postfix TLS and relayhost port (close #9)
-- Ddded new variables into `default.env` (update you .env copy):
+- Added support for postfix TLS and relayhost port (close #9)
+- Added new variables into `default.env` (update your .env copy):
   - SMTP_STARTTLS=true
 
 ## [18.15.1] - 2021-02-17
