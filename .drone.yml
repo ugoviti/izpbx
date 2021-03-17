@@ -1,6 +1,12 @@
 kind: pipeline
 name: izpbx-release
 
+environment:
+  APP_VER: "${DRONE_TAG}"
+  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+
 platform:
   os: linux
   arch: amd64
@@ -12,19 +18,34 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-
-trigger:
-  event:
-  - tag
-
+      
 steps:
-- name: build&publish
+- name: docker-push
   image: plugins/docker
-  environment:
-    APP_VER: "${DRONE_TAG}"
-    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
+  settings:
+    repo: izdock/izpbx-asterisk
+    dockerfile: izpbx-asterisk/Dockerfile
+    context: izpbx-asterisk
+    build_args_from_env:
+    - APP_VER
+    - APP_VER_BUILD
+    - APP_BUILD_COMMIT
+    - APP_BUILD_DATE
+    username:
+      from_secret: DOCKER_USERNAME
+    password:
+      from_secret: DOCKER_PASSWORD
+    tags:
+      - ${DRONE_COMMIT_SHA:0:7}
+  volumes:
+  - name: docker
+    path: /var/lib/docker
+  when:
+    event: push
+    branch: master
+
+- name: docker-tagged
+  image: plugins/docker
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
@@ -44,13 +65,11 @@ steps:
       - ${DRONE_TAG%.*}
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
-      - ${DRONE_COMMIT_SHA:0:7}
   volumes:
   - name: docker
     path: /var/lib/docker
-  trigger:
-    event:
-    - tag
+  when:
+    event: tag
 
 ---
 kind: pipeline
