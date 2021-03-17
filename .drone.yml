@@ -12,7 +12,11 @@ volumes:
   - name: docker
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-      
+
+trigger:
+  event:
+  - tag
+
 steps:
 - name: build&publish
   image: plugins/docker
