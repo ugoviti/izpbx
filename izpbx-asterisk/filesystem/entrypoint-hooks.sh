@@ -498,8 +498,8 @@ cfgService_httpd() {
     sed "s/Group apache/Group ${APP_GRP}/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
     
-    # disable default ssl.conf and use virtual.conf instead if HTTPD_HTTPS_ENABLED=false
-    mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
+    # disable default ssl.conf and use virtual.conf instead of default ssl.conf
+    [ -e "${HTTPD_CONF_DIR}/conf.d/ssl.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
 
 
 print_AllowFrom() {
