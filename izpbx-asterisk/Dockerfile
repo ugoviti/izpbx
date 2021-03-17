@@ -587,7 +587,7 @@ RUN set -xe && \
   cp -a izsynth/izsynth /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END install ----------" && \
-  : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
+  : "---------- START install Asterisk Zabbix Agents by InitZero: 1.1.1 ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-master/asterisk/zabbix_agentd.d && \
   : "---------- END install ----------"
