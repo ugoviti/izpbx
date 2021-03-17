@@ -1,18 +1,6 @@
 kind: pipeline
 name: izpbx-release
 
-environment:
-  APP_VER: "${DRONE_TAG}"
-  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
-
-trigger:
-  event:
-  - tag
-  branch:
-  - master
-
 platform:
   os: linux
   arch: amd64
@@ -26,8 +14,13 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
       
 steps:
-- name: build-publish
+- name: build&publish
   image: plugins/docker
+  environment:
+    APP_VER: "${DRONE_TAG}"
+    APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
+    APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
+    APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
@@ -51,7 +44,9 @@ steps:
   volumes:
   - name: docker
     path: /var/lib/docker
-
+  trigger:
+    event:
+    - tag
 
 ---
 kind: pipeline
