@@ -618,7 +618,7 @@ EXPOSE \
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
 
 # add files to container
-ADD Dockerfile filesystem README.md /
+ADD rootfs Dockerfile README.md /
 
 # CI args
 ARG APP_VER_BUILD

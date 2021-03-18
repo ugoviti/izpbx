@@ -92,7 +92,7 @@ declare -A fpbxSipSettings=(
 ## other variables
 
 # hostname configuration
-[ ! -z ${APP_FQDN} ] && HOSTNAME="${APP_FQDN}" # set hostname to APP_FQDN if defined
+[ ! -z ${APP_FQDN} ] && hostname "${APP_FQDN}" # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
 
 # mysql configuration
@@ -124,7 +124,7 @@ declare -A fpbxSipSettings=(
 : ${ZABBIX_GRP:="zabbix"}
 : ${ZABBIX_SERVER:="127.0.0.1"}
 : ${ZABBIX_SERVER_ACTIVE:="${ZABBIX_SERVER}"}
-: ${ZABBIX_HOSTNAME:=""}
+: ${ZABBIX_HOSTNAME:="$HOSTNAME"}
 : ${ZABBIX_HOSTMETADATA:="izPBX"}
 
 ## default supervisord services status
@@ -373,20 +373,20 @@ fi
 #postconf -e mynetworks=hash:$network_table
 
 if [ ! -z "$SMTP_MYNETWORKS" ]; then
-  echo -n "- enabling mynetworks: $SMTP_MYNETWORKS"
+  echo "---> enabling mynetworks: $SMTP_MYNETWORKS"
   postconf -e mynetworks=$SMTP_MYNETWORKS
 else
   postconf -e "mynetworks=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
 fi
 
 if [ "$SMTP_STARTTLS" = "true" ]; then
-  echo -n "- enabling TLS support as smtp client"
+  echo "---> enabling TLS support as smtp client"
   postconf -e smtp_use_tls=yes
 fi
 
 # split with space
 if [ ! -z "$ALLOWED_SENDER_DOMAINS" ]; then
-	echo -n "- Setting up allowed SENDER domains: $ALLOWED_SENDER_DOMAINS"
+	echo -n "---> Setting up allowed SENDER domains: $ALLOWED_SENDER_DOMAINS"
 	allowed_senders=/etc/postfix/allowed_senders
 	rm -f $allowed_senders $allowed_senders.db > /dev/null
 	touch $allowed_senders
@@ -406,7 +406,7 @@ else
 fi
 
 # Use 587 (submission)
-echo -n "- enabling submission protocol on port 587"
+echo "---> enabling submission protocol on port 587"
 sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 
 # configure /etc/aliases
@@ -484,90 +484,131 @@ cfgService_fail2ban() {
 
 ## apache service
 cfgService_httpd() {
-  echo "--> setting Apache ServerName to ${SERVERNAME}"
-  if   [ "$OS_RELEASE" = "debian" ]; then
-    sed "s/#ServerName .*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/sites-enabled/000-default.conf"
-    echo "ServerName ${SERVERNAME}" >> "${HTTPD_CONF_DIR}/apache2.conf"
-  elif [ "$OS_RELEASE" = "alpine" ]; then
-    sed "s/^#ServerName.*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/httpd.conf"
-  elif [ "$OS_RELEASE" = "centos" ]; then
-    sed "s/#LoadModule mpm_prefork_module/LoadModule mpm_prefork_module/" -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
-    sed "s/LoadModule mpm_event_module/#LoadModule mpm_event_module/"     -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
-    sed "s/^#ServerName.*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    sed "s/User apache/User ${APP_USR}/"               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    sed "s/Group apache/Group ${APP_GRP}/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-    
-    # disable default ssl.conf and use virtual.conf instead of default ssl.conf
-    [ -e "${HTTPD_CONF_DIR}/conf.d/ssl.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
 
+  # local functions
+  print_AllowFrom() {
+    if [ ! -z "${HTTPD_ALLOW_FROM}" ]; then 
+        for IP in $(echo ${HTTPD_ALLOW_FROM} | sed -e "s/'//g") ; do
+          echo "    Require ip ${IP}"
+        done
+    else
+        echo "    Require all granted"
+    fi
+  }
 
-print_AllowFrom() {
-  if [ ! -z "${HTTPD_ALLOW_FROM}" ]; then 
-      for IP in $(echo ${HTTPD_ALLOW_FROM} | sed -e "s/'//g") ; do
-        echo "    Require ip ${IP}"
-      done
-  else
-      echo "    Require all granted"
-  fi
-}
+echo "--> setting Apache ServerName to ${SERVERNAME}"
+sed "s/#LoadModule mpm_prefork_module/LoadModule mpm_prefork_module/" -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
+sed "s/LoadModule mpm_event_module/#LoadModule mpm_event_module/"     -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
+sed "s/^#ServerName.*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+sed "s/User apache/User ${APP_USR}/"               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+sed "s/Group apache/Group ${APP_GRP}/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
 
-    echo "# default HTTP virtualhost
+# disable default ssl.conf and use virtual.conf
+[ -e "${HTTPD_CONF_DIR}/conf.d/ssl.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
+
+echo "--> configuring Apache VirtualHosting and creating empty ${HTTPD_CONF_DIR}/conf.d/virtual.conf file"
+echo "" > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+
+echo "# default virtualhost
+
 <VirtualHost *:${APP_PORT_HTTP}>
-  DocumentRoot /var/www/html
-$(if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
+  DocumentRoot /var/www/html" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+  
+if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
+echo "--> setting automatic redirect from http to https for default virtualhost"
 echo "  <IfModule mod_rewrite.c>
     RewriteEngine on
     RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
     RewriteCond %{HTTPS} off
     #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
     RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-  </IfModule>"
-fi)
+  </IfModule>" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+fi
+
+echo "
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
 $(print_AllowFrom)
   </Directory>
 </VirtualHost>
+" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
 
-$(if [ ! -z "${APP_FQDN}" ]; then
-echo "# HTTP virtualhost
-<VirtualHost *:${APP_PORT_HTTP}>
-  ServerName ${APP_FQDN}
-$(if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
-echo "# enable http to https automatic rewrite
+if [ ! -z "${APP_FQDN}" ]; then
+  echo "--> setting Apache VirtualHosting to: ${APP_FQDN} on port ${APP_PORT_HTTP}"
+  echo "# ${APP_FQDN} virtualhost
+  <VirtualHost *:${APP_PORT_HTTP}>
+    ServerName ${APP_FQDN}" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+    
+  if [ "${HTTPD_REDIRECT_HTTP_TO_HTTPS}" = "true" ]; then
+  echo "--> setting automatic redirect from http to https for ${APP_FQDN} virtualhost"
+  echo "# enable http to https automatic rewrite
 <IfModule mod_rewrite.c>
   RewriteEngine on
   RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
   RewriteCond %{HTTPS} off
   #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
   RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-</IfModule>"
-fi)
+</IfModule>
+" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+  fi
+  
+  # close virtualhost directive
+  echo "<Directory /var/www/html>
+    Options Includes FollowSymLinks MultiViews
+    AllowOverride All
+$(print_AllowFrom)
+  </Directory>
+</VirtualHost>
+" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+fi
+
+if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
+  echo "--> enabling Apache SSL engine"
+  echo "
+# enable HTTPS listening
+Listen ${APP_PORT_HTTPS} https
+SSLPassPhraseDialog    exec:/usr/libexec/httpd-ssl-pass-dialog
+SSLSessionCache        shmcb:/run/httpd/sslcache(512000)
+SSLSessionCacheTimeout 300
+SSLCryptoDevice        builtin
+" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+
+  if [[ -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]]; then
+    echo "--> WARNING: LETSENCRYPT_ENABLED=${LETSENCRYPT_ENABLED} but not APP_FQDN defined, please set APP_FQDN to a valid Internet FQDN domain name and retry... enabling self signed certificate instead"
+  fi
+
+  if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]]; then
+    echo "# enable ssl virtualhost using Let's Encrypt certificates
+<VirtualHost *:${APP_PORT_HTTPS}>
+  ServerName ${APP_FQDN}
+
+  ErrorLog                 logs/ssl_error_log
+  TransferLog              logs/ssl_access_log
+  LogLevel                 warn
+  
+  SSLEngine               on
+  SSLHonorCipherOrder     on
+  SSLCipherSuite          PROFILE=SYSTEM
+  SSLProxyCipherSuite     PROFILE=SYSTEM
+  SSLCertificateFile      ${fpbxDirs[CERTKEYLOC]}/integration/webserver.crt
+  SSLCertificateKeyFile   ${fpbxDirs[CERTKEYLOC]}/integration/webserver.key
+
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
 $(print_AllowFrom)
   </Directory>
-</VirtualHost>"
-fi)
-
-$(if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
-echo "# Enable HTTPS listening
-Listen ${APP_PORT_HTTPS} https
-SSLPassPhraseDialog    exec:/usr/libexec/httpd-ssl-pass-dialog
-SSLSessionCache        shmcb:/run/httpd/sslcache(512000)
-SSLSessionCacheTimeout 300
-SSLCryptoDevice        builtin"
-fi)
-
-$(if [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" != "true" ]]; then
-echo "# enable default ssl virtualhost with self signed certificate
+</VirtualHost>
+" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+  else
+    echo "# enable default ssl virtualhost with self signed certificate
 <VirtualHost _default_:${APP_PORT_HTTPS}>
   ErrorLog                 logs/ssl_error_log
   TransferLog              logs/ssl_access_log
   LogLevel                 warn
+  
   SSLEngine                on
   SSLHonorCipherOrder      on
   SSLCipherSuite           PROFILE=SYSTEM
@@ -581,31 +622,10 @@ echo "# enable default ssl virtualhost with self signed certificate
     AllowOverride All
 $(print_AllowFrom)
   </Directory>
-</VirtualHost>"
-fi)
-
-$(if [[ ! -z "${APP_FQDN}" && "${LETSENCRYPT_ENABLED}" = "true" ]]; then
-echo "# HTTPS virtualhost
-<VirtualHost *:${APP_PORT_HTTPS}>
-  ServerName ${APP_FQDN}
-
-  SSLEngine               on
-  SSLHonorCipherOrder     on
-  SSLCipherSuite          PROFILE=SYSTEM
-  SSLProxyCipherSuite     PROFILE=SYSTEM
-  SSLCertificateFile      ${appDataDirs[ASTETCDIR]}/keys/integration/webserver.crt
-  SSLCertificateKeyFile   ${appDataDirs[ASTETCDIR]}/keys/integration/webserver.key
-
-  <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
-    AllowOverride All
-$(print_AllowFrom)
-  </Directory>
-</VirtualHost>"
-fi)
-
-" > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+</VirtualHost>
+" >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
   fi
+fi
 }
 
 cfgService_asterisk() {
@@ -994,7 +1014,7 @@ LogType=console
 Server=${ZABBIX_SERVER}
 ServerActive=${ZABBIX_SERVER_ACTIVE}
 
-$(if [ -z "${ZABBIX_HOSTNAME}" ]; then
+$(if [ "${ZABBIX_HOSTNAME}" = "${HOSTNAME}" ]; then
     echo "HostnameItem=system.hostname"
   else
     echo "Hostname=${ZABBIX_HOSTNAME}"
@@ -1094,7 +1114,33 @@ EOF
     sed "s|'localhost';|'${MYSQL_SERVER}';|" -i "${PMA_CONFIG}"
   else
     # disable phpMyAdmin
-    mv "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf-disabled"
+    [ -e "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf-disabled"
+  fi
+}
+
+cfgService_letsencrypt() {
+  echo "=> Generating Let's Encrypt certificates for '$APP_FQDN'"
+  if   [ -z "$APP_FQDN" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because APP_FQDN is not defined"
+  elif [ -z "$LETSENCRYPT_COUNTRY_CODE" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_CODE is not defined"
+  elif [ -z "$LETSENCRYPT_COUNTRY_STATE" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_STATE is not defined"
+  elif [ -z "$ROOT_MAILTO" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because ROOT_MAILTO is not defined"
+  else
+    if [ -e "${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem" ]; then
+      echo "----> Let's Encrypt certificates for '$APP_FQDN' already exists..."
+    else
+      # generate let's encrypt certificates
+      # NOTE: apache web server must be running to complete the certbot handshake
+      httpd -k start
+      set -x
+      fwconsole certificates --generate --type=le --hostname=$APP_FQDN --san=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
+      set +x
+      [ $? -eq 0 ] && fwconsole certificates --default=$APP_FQDN
+      httpd -k stop
+    fi
   fi
 }
 
@@ -1231,23 +1277,7 @@ runHooks() {
   cfgService_pma
 
   # Lets Encrypt certificate generation
-  if [[ ! -z "$APP_FQDN" && "$LETSENCRYPT_ENABLED" == "true" ]]; then
-    echo "--> Let's Encrypt $APP_FQDN"
-    if [ -e "/etc/asterisk/keys/$APP_FQDN.pem" ]; then
-      echo "----> certificate already exists..."
-    else
-      echo "----> generating HTTPS certificate"
-      # apache web server must be running to complete the certbot handshake
-      httpd -k start
-      fwconsole certificates --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
-      result=$?
-      if [[ $result -eq 0 ]]; then
-        fwconsole certificates --default=$APP_FQDN
-        result=$?
-      fi
-      httpd -k stop
-    fi
-  fi
+  cfgService_letsencrypt
 }
 
 runHooks
