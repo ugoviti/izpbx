@@ -596,7 +596,8 @@ SSLCryptoDevice        builtin
   SSLProxyCipherSuite     PROFILE=SYSTEM
   SSLCertificateFile      ${fpbxDirs[CERTKEYLOC]}/integration/webserver.crt
   SSLCertificateKeyFile   ${fpbxDirs[CERTKEYLOC]}/integration/webserver.key
-
+  SSLCertificateChainFile ${fpbxDirs[CERTKEYLOC]}/integration/certificate.pem
+  
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
@@ -1132,25 +1133,33 @@ cfgService_letsencrypt() {
     elif [ -z "$ROOT_MAILTO" ]; then
       echo "--> WARNING: skipping let's encrypt certificates request because ROOT_MAILTO is not defined"
     else
+      # generate let's encrypt certificates
+      # NOTE: apache web server must be running to complete the certbot handshake
+      # FIXME: if the FQDN address is different than outgoing address making the request, the certification process will fail with:
+      #        Error 'Requested host 'APP_FQDN' does not resolve to 'EXTERNAL OUTGOING IP' (Resolved to 'APP_FQDN RESOLVING IP' instead)' when requesting ....
+      CERTOK=1
+      
+      # renew existing certificate
       if [ -e "${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem" ]; then
-        echo "--> Let's Encrypt certificates for '$APP_FQDN' already exists..."
-      else
-       echo HOSTNAME=$HOSTNAME
-       hostname
-        # generate let's encrypt certificates
-        # NOTE: apache web server must be running to complete the certbot handshake
-        # FIXME: if the FQDN address is different than outgoing address making the request, the certification process will fail with:
-        #        Error 'Requested host 'APP_FQDN' does not resolve to 'EXTERNAL OUTGOING IP' (Resolved to 'APP_FQDN RESOLVING IP' instead)' when requesting ....
+        echo "--> Let's Encrypt certificates for '$APP_FQDN' already exists... Check and update all certificates"
         httpd -k start
-        set -x
-        fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
-        local RETVAL=$?
-        set +x
-        if [ $RETVAL -eq 0 ];then
-          echo "--> setting default FreePBX certificate to $APP_FQDN"
-          fwconsole certificates --default=$APP_FQDN
-        fi
+        fwconsole certificates --updateall
+        [ $? -eq 0 ] && CERTOK=0
+        [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
+        [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
         httpd -k stop
+      fi
+
+      # request new certificate
+      if [ $CERTOK -eq 1 ]; then
+        set -x
+        httpd -k start
+        fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
+        [ $? -eq 0 ] && CERTOK=0
+        [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
+        [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
+        httpd -k stop
+        set +x
       fi
     fi
   fi
@@ -1181,9 +1190,11 @@ cfgService_fop2_upgrade() {
 cfgBashEnv() {
   echo '. /etc/os-release
   APP="izPBX"
+  DOMAIN="$(hostname | cut -d'.' -f2)"
+  if [ ! -z "$DOMAIN" ];then DOMAIN=".${DOMAIN}" ; fi
   
   if [ -t 1 ]; then
-    export PS1="\e[1;34m[\e[1;33m\u@\e[1;32m\h\e[1;37m (${APP}): \w\[\e[1;34m]\e[1;36m\\$ \e[0m"
+    export PS1="(${APP})\e[1;34m[\e[1;33m\u@\e[1;32m\h\e[2m$DOMAIN\e[0m: \e[1;37m\w\[\e[1;34m]\e[1;36m\\$ \e[0m"
   fi
 
   # aliases
