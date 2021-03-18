@@ -156,9 +156,14 @@ Tested Host Operating Systems:
   - Debian 10
   - Ubuntu 20.04
 
-# Container deploy upgrade path
+# Upgrading izPBX
 
-1. Upgrade the version of izpbx deploy changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated)
+1. Upgrade the version of izpbx downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
+```
+cd /opt/izpbx
+git pull
+git checkout refs/tags/$(git tag | tail -1)
+```
 
 2. Upgrade the **izpbx** deploy with:  
 (NB. **First** verify if `docker-compose.yml` and `default.env` was updated a make the same changes in your `.env` file)
@@ -171,6 +176,8 @@ docker-compose up -d
   `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
 4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
+
+That's all
 
 ## FreePBX upgrade path to a major release
 FreePBX will be installed into persistent data dir only on first izpbx deploy (when no installations already exist).

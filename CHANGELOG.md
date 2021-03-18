@@ -4,10 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.15.5] - 2021-03-XX
+## [18.15.5] - 2021-03-18
 ### Changed
 - Enhanced let's encrypt management and enabling automatic daily renew check via cronjob (/etc/cron.daily/freepbx-le-renew)
-- Apache Config rework
+- Apache config rework
 - Minor entrypoint improvements
 
 ## [18.15.4] - 2021-03-17
