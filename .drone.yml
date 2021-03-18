@@ -24,12 +24,12 @@ volumes:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
       
 steps:
-- name: env
+- name: print-env
   image: alpine/git
   commands:
   - set
 
-- name: build-publish
+- name: build-docker
   image: plugins/docker
   settings:
     repo: izdock/izpbx-asterisk
