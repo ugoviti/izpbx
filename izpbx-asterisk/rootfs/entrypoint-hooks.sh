@@ -92,7 +92,7 @@ declare -A fpbxSipSettings=(
 ## other variables
 
 # hostname configuration
-[ ! -z ${APP_FQDN} ] && hostname "${APP_FQDN}" # set hostname to APP_FQDN if defined
+[ ! -z ${APP_FQDN} ] && hostname "${APP_FQDN}" && export HOSTNAME=${HOSTNAME} # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
 
 # mysql configuration
@@ -520,6 +520,7 @@ echo "--> setting automatic redirect from http to https for default virtualhost"
 echo "  <IfModule mod_rewrite.c>
     RewriteEngine on
     RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
+    RewriteCond %{REQUEST_URI} !\.freepbx-known
     RewriteCond %{HTTPS} off
     #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
     RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
@@ -547,6 +548,7 @@ if [ ! -z "${APP_FQDN}" ]; then
 <IfModule mod_rewrite.c>
   RewriteEngine on
   RewriteCond %{REQUEST_URI} !\.well-known/acme-challenge
+  RewriteCond %{REQUEST_URI} !\.freepbx-known
   RewriteCond %{HTTPS} off
   #RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
   RewriteRule .? https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
@@ -1119,27 +1121,37 @@ EOF
 }
 
 cfgService_letsencrypt() {
-  echo "=> Generating Let's Encrypt certificates for '$APP_FQDN'"
-  if   [ -z "$APP_FQDN" ]; then
-    echo "--> WARNING: skipping let's encrypt certificates request because APP_FQDN is not defined"
-  elif [ -z "$LETSENCRYPT_COUNTRY_CODE" ]; then
-    echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_CODE is not defined"
-  elif [ -z "$LETSENCRYPT_COUNTRY_STATE" ]; then
-    echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_STATE is not defined"
-  elif [ -z "$ROOT_MAILTO" ]; then
-    echo "--> WARNING: skipping let's encrypt certificates request because ROOT_MAILTO is not defined"
-  else
-    if [ -e "${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem" ]; then
-      echo "----> Let's Encrypt certificates for '$APP_FQDN' already exists..."
+  if [ "${LETSENCRYPT_ENABLED}" = "true" ]; then
+    echo "=> Generating Let's Encrypt certificates for '$APP_FQDN'"
+    if   [ -z "$APP_FQDN" ]; then
+      echo "--> WARNING: skipping let's encrypt certificates request because APP_FQDN is not defined"
+    elif [ -z "$LETSENCRYPT_COUNTRY_CODE" ]; then
+      echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_CODE is not defined"
+    elif [ -z "$LETSENCRYPT_COUNTRY_STATE" ]; then
+      echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_STATE is not defined"
+    elif [ -z "$ROOT_MAILTO" ]; then
+      echo "--> WARNING: skipping let's encrypt certificates request because ROOT_MAILTO is not defined"
     else
-      # generate let's encrypt certificates
-      # NOTE: apache web server must be running to complete the certbot handshake
-      httpd -k start
-      set -x
-      fwconsole certificates --generate --type=le --hostname=$APP_FQDN --san=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
-      set +x
-      [ $? -eq 0 ] && fwconsole certificates --default=$APP_FQDN
-      httpd -k stop
+      if [ -e "${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem" ]; then
+        echo "--> Let's Encrypt certificates for '$APP_FQDN' already exists..."
+      else
+       echo HOSTNAME=$HOSTNAME
+       hostname
+        # generate let's encrypt certificates
+        # NOTE: apache web server must be running to complete the certbot handshake
+        # FIXME: if the FQDN address is different than outgoing address making the request, the certification process will fail with:
+        #        Error 'Requested host 'APP_FQDN' does not resolve to 'EXTERNAL OUTGOING IP' (Resolved to 'APP_FQDN RESOLVING IP' instead)' when requesting ....
+        httpd -k start
+        set -x
+        fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
+        local RETVAL=$?
+        set +x
+        if [ $RETVAL -eq 0 ];then
+          echo "--> setting default FreePBX certificate to $APP_FQDN"
+          fwconsole certificates --default=$APP_FQDN
+        fi
+        httpd -k stop
+      fi
     fi
   fi
 }
