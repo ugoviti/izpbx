@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced let's encrypt management and enabling automatic daily renew check via cronjob (/etc/cron.daily/freepbx-le-renew)
 - Apache config rework
 - Minor entrypoint improvements
+- Added new variables into `default.env` (update your `.env` copy):
+  - LETSENCRYPT_COUNTRY_CODE
+  - LETSENCRYPT_COUNTRY_STATE
 
 ## [18.15.4] - 2021-03-17
 ### Changed
