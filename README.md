@@ -88,9 +88,12 @@ sudo systemctl enable --now docker
 
 - Clone GIT repository or download latest release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`):
   - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
+  - `cd /opt/izpbx`
+
+Checkout latest official release:
+  - `git checkout refs/tags/$(git tag | tail -1)`
 
 - Copy `default.env` file to `.env`:
-  - `cd /opt/izpbx`
   - `cp default.env .env`
 
 - Customize `.env` variables, specially the security section of mysql passwords (look bellow for a full variables list):
@@ -99,7 +102,7 @@ sudo systemctl enable --now docker
 - Start izpbx using docker-compose command:
   - `docker-compose up -d`
 
-- Wait 60 seconds and point your web browser to the IP address of your docker host and follow initial startup guide
+- Wait the pull to finish (60 seconds with fast lines) and point your web browser to the IP address of your docker host and follow initial startup guide
 
 Note: by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
 Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested. there will be problems with RTP traffic).
