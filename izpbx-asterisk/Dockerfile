@@ -171,6 +171,7 @@ ENV APP_INSTALL_DEPS=' \
     zabbix-sender \
     cyrus-sasl-plain \
     cyrus-sasl-md5 \
+    libresample \
   '
 
 RUN set -xe && \
@@ -330,29 +331,12 @@ RUN set -xe && \
     python3-devel \
     libtool \
     cmake \
+    libresample-devel \
   ' && \
   if [[ $VERSION_ID -le 7 ]]; then ASTERISK_BUILD_DEPS+="mysql-devel" ;fi && \
   if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
-  \
-  : "---------- START build libresample ----------" && \
-  cd /usr/src && \
-  mkdir libresample && \
-  tar zxf libresample-0.1.3.tgz --strip 1 -C libresample && \
-  cd libresample && \
-  patch -s --fuzz=0 --no-backup-if-mismatch < ../libresample_shared-libs.patch && \
-  mkdir pkgconfig && \
-  cp ../libresample.pc pkgconfig/ && \
-  ./configure --prefix=/usr && \
-  make VERBOSE=1 && \
-  cp tests/resample-sndfile /usr/bin/ && \
-  cp libresample.so.0 /usr/lib64/ && \
-  cp include/libresample.h /usr/include/ && \
-  cp libresample.so /usr/lib64/ && \
-  cp pkgconfig/libresample.pc /usr/lib64/pkgconfig/ && \
-  ldconfig && \
-  : "---------- END build ----------" && \
   \
   : "---------- START build spandsp ----------" && \
   cd /usr/src && \

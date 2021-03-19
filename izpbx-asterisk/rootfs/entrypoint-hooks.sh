@@ -705,10 +705,10 @@ Port = ${APP_PORT_MYSQL}
 option = 3
 Charset=utf8" > /etc/odbc.ini
 
-  # workaround for legacy missing ${APP_DATA}/.initialized file nut already initialized izpbx deploy
+  # LEGACY: workaround for missing ${APP_DATA}/.initialized file nut already initialized izpbx deploy
   if [[ -e "${appFilesConf[FPBXCFGFILE]}" && ! -e ${APP_DATA}/.initialized ]]; then
     echo "--> INFO: found '${appFilesConf[FPBXCFGFILE]}' configuration file but missing '${APP_DATA}/.initialized'... creating it right now"
-    echo "--> NOTE: if you want make an initial install, remove '${appFilesConf[FPBXCFGFILE]}' and '${APP_DATA}/.initialized' file"
+    echo "--> NOTE: if you want deploy izPBX from scratch, remove '${appFilesConf[FPBXCFGFILE]}' and '${APP_DATA}/.initialized' file"
     touch "${APP_DATA}/.initialized"
   fi
   
