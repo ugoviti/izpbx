@@ -411,7 +411,14 @@ sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 
 # configure /etc/aliases
 [ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
-[ ${ROOT_MAILTO} ] && echo "root: ${ROOT_MAILTO}" >> /etc/aliases && newaliases
+
+if   ! grep ^"root:" /etc/aliases 2>&1 >/dev/null; then 
+  echo "root: ${ROOT_MAILTO}" >> /etc/aliases
+  newaliases
+elif ! grep ^"root:.*${ROOT_MAILTO}" /etc/aliases 2>&1 >/dev/null; then 
+  echo sed "s/^root:.*/root: ${ROOT_MAILTO}/" -i /etc/aliases
+  newaliases
+fi
 
 # enable logging to stdout
 postconf -e "maillog_file = /dev/stdout"
