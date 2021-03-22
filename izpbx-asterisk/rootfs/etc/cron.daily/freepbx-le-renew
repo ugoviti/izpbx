@@ -1,7 +1,13 @@
 #!/bin/sh
 # script to renew let's encrypt certificates using freepbx fwconsole command
 
-if [ "$LETSENCRYPT_ENABLED" == "true" ]; then
+if [[ "${HTTPD_HTTPS_ENABLED}" == "true" && "${LETSENCRYPT_ENABLED}" == "true" ]]; then
+  # FIXME detect default certificate instead forcing to APP_FQDN variable
+  FNGR_OLD=$(openssl x509 -noout -fingerprint -in /etc/asterisk/keys/$APP_FQDN.crt)
   fwconsole certificates --updateall -q
-  [ $? -eq 0 ] && supervisorctl restart httpd 1>/dev/null 
+  FNGR_NEW=$(openssl x509 -noout -fingerprint -in /etc/asterisk/keys/$APP_FQDN.crt)
+  if [ "$FNGR_OLD" != "$FNGR_NEW" ]; then
+    supervisorctl restart httpd 1>/dev/null
+    fwconsole restart
+  fi
 fi
