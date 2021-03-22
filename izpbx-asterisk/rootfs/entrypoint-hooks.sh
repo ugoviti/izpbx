@@ -99,6 +99,7 @@ declare -A fpbxSipSettings=(
 : ${MYSQL_SERVER:="db"}
 : ${MYSQL_ROOT_PASSWORD:=""}
 : ${MYSQL_DATABASE:="asterisk"}
+: ${MYSQL_DATABASE_CDR:="asteriskcdrdb"}
 : ${MYSQL_USER:="asterisk"}
 : ${MYSQL_PASSWORD:=""}
 : ${APP_PORT_MYSQL:="3306"}
@@ -645,10 +646,53 @@ cfgService_asterisk() {
 ## freepbx+asterisk service
 cfgService_izpbx() {
 
-  freepbx_reload() {
-    # reload freepbx config
+  freepbxReload() {
     echo "---> reloading FreePBX..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
+  }
+  
+  freepbxChown() {
+    echo "---> setting FreePBX Permission..."
+    fwconsole chown
+  }
+  
+  freepbxSettingsFix() {
+    # reload freepbx config 
+    echo "---> FIXME: apply workarounds for FreePBX broken modules and configs..."
+
+    # make missing log files
+    [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${fpbxDirs[ASTLOGDIR]}/full"
+    
+    # fix paths and relink fwconsole and amportal if not exist
+    [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[AMPBIN]}/fwconsole /usr/sbin/fwconsole
+    [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
+
+    # reset FreePBX config file permissions
+    for file in ${appFilesConf[@]}; do
+      chown ${APP_USR}:${APP_GRP} "${file}"
+    done
+
+    # fix freepbx directory paths
+    if [ ! -z "${APP_DATA}" ]; then
+      echo "----> fixing directory system paths in db configuration..."
+      for k in ${!fpbxDirs[@]} ${!fpbxFilesLog[@]}; do
+        su - ${APP_USR} -s /bin/bash -c "fwconsole setting ${k} ${fpbxDirs[$k]}"
+      done
+    fi
+    
+    # FIXME @20200318 freepbx 15.x warnings workaround
+    sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
+    sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
+    
+    # FIXME @20200322 https://issues.freepbx.org/browse/FREEPBX-21317 (NOT MORE NEEDED)
+    #[ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
+    
+    # FIXME @20210321 FreePBX doesn't configure into configuration DB the non default 'asteriskcdrdb' DB
+    su - ${APP_USR} -s /bin/bash -c "fwconsole setting CDRDBNAME ${MYSQL_DATABASE_CDR}"
+    
+    
+    ## fix Asterisk/FreePBX file permissions
+    freepbxChown
   }
   
   echo "---> verifing FreePBX configurations"
@@ -672,7 +716,7 @@ cfgService_izpbx() {
   #for k in ${!fpbxDirsExtra[@]} ; do eval $k=${fpbxDirsExtra[$k]} ;done
   #for k in ${!fpbxFilesLog[@]}  ; do eval $k=${fpbxFilesLog[$k]}  ;done    
 
-  ## rebase directory paths, based on APP_DATA and create/chown missing directories
+  ## enable PERSISTENCE and rebase directory paths, based on APP_DATA and create/chown missing directories
   # process directories
   if [ ! -z "${APP_DATA}" ]; then
     echo "---> using '${APP_DATA}' as basedir for FreePBX install"
@@ -699,20 +743,21 @@ cfgService_izpbx() {
     done
   fi
 
+  # configure CDR ODBC
   echo "--> configuring FreePBX ODBC"
   # fix mysql odbc inst file path
   sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmaodbc.so/' /etc/odbcinst.ini
   # create mysql odbc
   echo "[MySQL-asteriskcdrdb]
-Description = MariaDB connection to 'asteriskcdrdb' database
+Description = MariaDB connection to '${MYSQL_DATABASE_CDR}' CDR database
 driver = MySQL
 server = ${MYSQL_SERVER}
-database = asteriskcdrdb
+database = ${MYSQL_DATABASE_CDR}
 Port = ${APP_PORT_MYSQL}
 option = 3
 Charset=utf8" > /etc/odbc.ini
 
-  # LEGACY: workaround for missing ${APP_DATA}/.initialized file nut already initialized izpbx deploy
+  # LEGACY: workaround for missing ${APP_DATA}/.initialized file but already initialized izpbx deploy
   if [[ -e "${appFilesConf[FPBXCFGFILE]}" && ! -e ${APP_DATA}/.initialized ]]; then
     echo "--> INFO: found '${appFilesConf[FPBXCFGFILE]}' configuration file but missing '${APP_DATA}/.initialized'... creating it right now"
     echo "--> NOTE: if you want deploy izPBX from scratch, remove '${appFilesConf[FPBXCFGFILE]}' and '${APP_DATA}/.initialized' file"
@@ -735,13 +780,8 @@ Charset=utf8" > /etc/odbc.ini
       sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
-  echo "---> applying workarounds for FreePBX and Asterisk..."
-  # make missing log files
-  [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${fpbxDirs[ASTLOGDIR]}/full"
-  
-  # relink fwconsole and amportal if not exist
-  [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[AMPBIN]}/fwconsole /usr/sbin/fwconsole
-  [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[AMPBIN]}/amportal  /usr/sbin/amportal
+  # apply workarounds and fix for FreePBX bugs
+  freepbxSettingsFix
   
   # reconfigure freepbx from env variables
   echo "---> reconfiguring FreePBX Advanced Settings if needed..."
@@ -769,17 +809,11 @@ Charset=utf8" > /etc/odbc.ini
   done
 
   # FIXME: 20200315 iaxsettings doesn't works right now
+  #echo "---> reconfiguring FreePBX IAX2 settings if needed..."
   #for k in ${!freepbxIaxSettings[@]}; do
   #  v="${freepbxIaxSettings[$k]}"
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
-
-  echo "---> FIXME: temporary workarounds for FreePBX broken modules and configs..."
-  # FIXME: 20200318 freepbx 15.x warnings workaround
-  sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
-  sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
-  # FIXME: 20200322 https://issues.freepbx.org/browse/FREEPBX-21317 (NOT MORE NEEDED)
-  #[ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
 }
 
 cfgService_freepbx_install() {
@@ -799,6 +833,7 @@ cfgService_freepbx_install() {
   
   # verify and wait if mysql is ready
   myn=1 ; myt=10
+  
   until [ $myn -eq $myt ]; do
     mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "SELECT 1;" >/dev/null
     RETVAL=$?
@@ -811,10 +846,10 @@ cfgService_freepbx_install() {
     fi
   done
   
-  # FIXME: allow asterisk user to manage asteriskcdrdb database
-  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS asteriskcdrdb"
-  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO 'asterisk'@'%' WITH GRANT OPTION;"
-
+  echo "--> installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
+  echo "---> START install FreePBX @ $(date)"
+  # https://github.com/FreePBX/announcement/archive/release/15.0.zip
+  
   # set default freepbx install options
   FPBX_OPTS+=" --webroot=${fpbxDirs[AMPWEBROOT]}"
   FPBX_OPTS+=" --astetcdir=${fpbxDirs[ASTETCDIR]}"
@@ -828,14 +863,21 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --ampsbin=${fpbxDirs[AMPSBIN]}"
   FPBX_OPTS+=" --ampcgibin=${fpbxDirs[AMPCGIBIN]}"
   FPBX_OPTS+=" --ampplayback=${fpbxDirs[AMPPLAYBACK]}"
-
-  echo "--> installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
-  echo "---> START install FreePBX @ $(date)"
-  # https://github.com/FreePBX/announcement/archive/release/15.0.zip
+  
   # if mysql run in a non standard port change the mysql server address
   [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
   set -x
-  ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} ${FPBX_OPTS}
+  
+  # FIXME allow asterisk user to manage asteriskcdrdb database
+  # freepbx config db
+  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE}"
+  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
+  # freepbx cdr db
+  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE_CDR}"
+  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE_CDR}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
+  
+  # install freepbx
+  ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} --dbname=${MYSQL_DATABASE} --cdrdbname=${MYSQL_DATABASE_CDR} ${FPBX_OPTS}
   RETVAL=$?
   set +x
   echo "---> END install FreePBX @ $(date)"
@@ -843,20 +885,9 @@ cfgService_freepbx_install() {
  
   # if the install success exec
   if [ $RETVAL = 0 ]; then
-    # fix paths and relink fwconsole and amportal if not exist
-    [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[ASTVARLIBDIR]}/bin/fwconsole /usr/sbin/fwconsole
-    [ ! -e "/usr/sbin/amportal" ]  && ln -s ${fpbxDirs[ASTVARLIBDIR]}/bin/amportal  /usr/sbin/amportal
-      
-    # fix freepbx config file permissions
-    if [ ! -z "${APP_DATA}" ]; then
-      for file in ${appFilesConf[@]}; do
-        chown ${APP_USR}:${APP_GRP} "${file}"
-      done
-      echo "--> fixing directory system paths in db configuration..."
-      for k in ${!fpbxDirs[@]} ${!fpbxFilesLog[@]}; do
-        fwconsole setting ${k} ${fpbxDirs[$k]}
-      done
-    fi
+    # apply workarounds and fix for FreePBX open bugs
+    freepbxSettingsFix
+    #freepbxChown
    
     : ${FREEPBX_MODULES_CORE:="
       framework
@@ -919,35 +950,31 @@ cfgService_freepbx_install() {
       weakpasswords
       ucp
     "}
+    
     echo "--> enabling EXTENDED FreePBX repo..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
     echo "--> installing Prerequisite FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_PRE}; do
-      su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
+      echo "---> installing module: ${module}"
+      # the pre-modules need be installed as root
+      su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
     done
-    
-    # fix freepbx and asterisk permissions
-    echo "--> fixing FreePBX permissions..."
-    fwconsole chown
-    freepbx_reload
     
     echo "--> installing Extra FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_EXTRA}; do
-      su - ${APP_USR} -s /bin/bash -c "echo \"---> installing module: ${module}\" && fwconsole ma install ${module}"
+      echo "---> installing module: ${module}"
+      su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
     done
+
+    echo "--> reloading FreePBX..." && freepbxReload
     
-    # fix freepbx and asterisk permissions
-    echo "--> fixing FreePBX permissions..."
-    fwconsole chown
-    freepbx_reload
-    
-    # make this installation initialized
+    # make this deploy initialized
     touch "${APP_DATA}/.initialized"
 
-    # DEBUG: pause forever here
-    #while true ; do sleep 10 ; done
+    # DEBUG: pause here
+    #sleep 300
   fi
 
   if [ $RETVAL = 0 ]; then
@@ -1116,8 +1143,8 @@ cfgService_pma() {
     #sed "s|Require local|Require ip ${PMA_ALLOW_FROM}|" -i "${PMA_CONF_APACHE}"
     cat <<EOF >> "${PMA_CONF_APACHE}"
 <Directory /usr/share/phpMyAdmin/>
-   AddDefaultCharset UTF-8
-   Require ip ${PMA_ALLOW_FROM}
+  AddDefaultCharset UTF-8
+$(for FROM in ${PMA_ALLOW_FROM}; do echo "    Require ip $FROM"; done)
 </Directory>
 EOF
     # configure database access
@@ -1129,45 +1156,43 @@ EOF
 }
 
 cfgService_letsencrypt() {
-  if [ "${LETSENCRYPT_ENABLED}" = "true" ]; then
-    echo "=> Generating Let's Encrypt certificates for '$APP_FQDN'"
-    if   [ -z "$APP_FQDN" ]; then
-      echo "--> WARNING: skipping let's encrypt certificates request because APP_FQDN is not defined"
-    elif [ -z "$LETSENCRYPT_COUNTRY_CODE" ]; then
-      echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_CODE is not defined"
-    elif [ -z "$LETSENCRYPT_COUNTRY_STATE" ]; then
-      echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_STATE is not defined"
-    elif [ -z "$ROOT_MAILTO" ]; then
-      echo "--> WARNING: skipping let's encrypt certificates request because ROOT_MAILTO is not defined"
-    else
-      # generate let's encrypt certificates
-      # NOTE: apache web server must be running to complete the certbot handshake
-      # FIXME: if the FQDN address is different than outgoing address making the request, the certification process will fail with:
-      #        Error 'Requested host 'APP_FQDN' does not resolve to 'EXTERNAL OUTGOING IP' (Resolved to 'APP_FQDN RESOLVING IP' instead)' when requesting ....
-      CERTOK=1
-      
-      # renew existing certificate
-      if [ -e "${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem" ]; then
-        echo "--> Let's Encrypt certificates for '$APP_FQDN' already exists... Check and update all certificates"
-        httpd -k start
-        fwconsole certificates --updateall
-        [ $? -eq 0 ] && CERTOK=0
-        [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
-        [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
-        httpd -k stop
-      fi
+  echo "=> Generating Let's Encrypt certificates for '$APP_FQDN'"
+  if   [ -z "$APP_FQDN" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because APP_FQDN is not defined"
+  elif [ -z "$LETSENCRYPT_COUNTRY_CODE" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_CODE is not defined"
+  elif [ -z "$LETSENCRYPT_COUNTRY_STATE" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_STATE is not defined"
+  elif [ -z "$ROOT_MAILTO" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because ROOT_MAILTO is not defined"
+  else
+    # generate let's encrypt certificates
+    # NOTE: apache web server must be running to complete the certbot handshake
+    # FIXME: if the FQDN address is different than outgoing address making the request, the certification process will fail with:
+    #        Error 'Requested host 'APP_FQDN' does not resolve to 'EXTERNAL OUTGOING IP' (Resolved to 'APP_FQDN RESOLVING IP' instead)' when requesting ....
+    CERTOK=1
+    
+    # renew existing certificate
+    if [ -e "${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem" ]; then
+      echo "--> Let's Encrypt certificates for '$APP_FQDN' already exists... Check and update all certificates"
+      httpd -k start
+      fwconsole certificates --updateall
+      [ $? -eq 0 ] && CERTOK=0
+      [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
+      [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
+      httpd -k stop
+    fi
 
-      # request new certificate
-      if [ $CERTOK -eq 1 ]; then
-        set -x
-        httpd -k start
-        fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
-        [ $? -eq 0 ] && CERTOK=0
-        [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
-        [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
-        httpd -k stop
-        set +x
-      fi
+    # request new certificate
+    if [ $CERTOK -eq 1 ]; then
+      set -x
+      httpd -k start
+      fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
+      [ $? -eq 0 ] && CERTOK=0
+      [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
+      [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
+      httpd -k stop
+      set +x
     fi
   fi
 }
@@ -1304,10 +1329,10 @@ runHooks() {
   chkService DNSMASQ_ENABLED
    
   # phpMyAdmin configuration
-  cfgService_pma
+  [ "${PMA_ENABLED}" = "true" ] && cfgService_pma
 
   # Lets Encrypt certificate generation
-  cfgService_letsencrypt
+  [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
 }
 
 runHooks

@@ -262,9 +262,6 @@ RUN set -xe && \
 # Development Debug mode
 ARG APP_DEBUG=0
 
-# copy external sources files
-ADD build/ /usr/src/
-
 # install zabbix with predownloaded packages because their repositories have many problems
 #RUN set -xe && \
 #  rpm -Uhv /usr/src/zabbix-*.rpm

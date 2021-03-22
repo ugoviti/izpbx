@@ -6,8 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.15.6] - 2021-XX-XX
 ### Changed
-- removed shipped libresample archive used for building, and using now the official centos repository package
-- fixed /etc/aliases management
+- Removed shipped libresample archive used for building, and using now the official centos repository package
+- Fixed /etc/aliases management
+- Enanched first deployment
+- Allow custom 'asterisk' and 'asteriskcdrdb' DB name during initial deploy
+- Added new variables into `default.env` (update your `.env` copy):
+  - MYSQL_DATABASE_CDR
 
 ## [18.15.5] - 2021-03-18
 ### Changed
