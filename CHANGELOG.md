@@ -4,11 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.6] - 2021-XX-XX
+### Changed
+- Removed shipped libresample archive used for building, and using now the official centos repository package
+- Fixed /etc/aliases management
+- Enanched first deployment
+- Allow custom 'asterisk' and 'asteriskcdrdb' DB name during initial deploy
+- Added new variables into `default.env` (update your `.env` copy):
+  - MYSQL_DATABASE_CDR
+
 ## [18.15.5] - 2021-03-18
 ### Changed
 - Enhanced let's encrypt management and enabling automatic daily renew check via cronjob (/etc/cron.daily/freepbx-le-renew)
 - Apache config rework
 - Minor entrypoint improvements
+- Added new variables into `default.env` (update your `.env` copy):
+  - LETSENCRYPT_COUNTRY_CODE
+  - LETSENCRYPT_COUNTRY_STATE
 
 ## [18.15.4] - 2021-03-17
 ### Changed
