@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.15.6] - 2021-XX-XX
+## [18.15.6] - 2021-03-25
 ### Changed
 - Removed shipped libresample archive used for building, and using now the official centos repository package
 - Fixed /etc/aliases management
@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allow custom 'asterisk' and 'asteriskcdrdb' DB name during initial deploy
 - Added new variables into `default.env` (update your `.env` copy):
   - MYSQL_DATABASE_CDR
+### Added
+- Added opusfile-devel as build deps
+### Fixed
+- Restored missing codec_opus support
 
 ## [18.15.5] - 2021-03-18
 ### Changed
