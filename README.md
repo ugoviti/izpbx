@@ -62,7 +62,7 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 
 # Targets of this project
 - On-Premise, fast, automatic and repeatable deploy of PBX systems.  
-by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal container network is used), so the default UDP RTP port range can be from 10000 to 20000.  
+by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal container network is used), so the default UDP RTP port range can be from `10000` to `20000`.  
 If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpu usage and longer startup times), for example for 50 concurrent calls:  
 `APP_PORT_RTP_START=10000`  
 `APP_PORT_RTP_END=10200`  
@@ -90,7 +90,7 @@ sudo systemctl enable --now docker
   - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
   - `cd /opt/izpbx`
 
-Checkout latest official release:
+- Checkout latest official release:
   - `git checkout refs/tags/$(git tag | tail -1)`
 
 - Copy `default.env` file to `.env`:
@@ -200,6 +200,7 @@ MYSQL_PASSWORD=CHANGEM3
 #MYSQL_SERVER=db
 MYSQL_SERVER=127.0.0.1
 MYSQL_DATABASE=asterisk
+MYSQL_DATABASE_CDR=asteriskcdrdb
 MYSQL_USER=asterisk
 
 ## enable persistent data storage (comment if you want disable persistence of data) (default: /data)
@@ -218,7 +219,7 @@ APP_DATA=/data
 #SMTP_MAIL_FROM=izpbx@example.com
 
 ## enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
-#APP_FQDN=sip.example.com
+#APP_FQDN=izpbx.example.com
 
 ## enable https protocols (default: true)
 ## place your custom SSL certs in $APP_DATA/etc/pki/izpbx (use filename 'izpbx.crt' for public key and 'izpbx.key' for the private)
@@ -229,7 +230,10 @@ APP_DATA=/data
 #HTTPD_REDIRECT_HTTP_TO_HTTPS=false
 
 ## auto generate Let's Encrypt SSL certificates if the pbx is exposed to internet and want enable https protocol (default: false)
-#LETSENCRYPT_ENABLED=false
+## To use LETSENCRYPT make sure ROOT_MAILTO, APP_FQDN above are set to correct values
+#LETSENCRYPT_ENABLED=true
+#LETSENCRYPT_COUNTRY_CODE=IT
+#LETSENCRYPT_COUNTRY_STATE=Rome
 
 ## by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security (default: 0.0.0.0/0)
 #HTTPD_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
@@ -249,8 +253,10 @@ APP_DATA=/data
 #FOP2_AMI_USERNAME=admin
 #FOP2_AMI_PASSWORD=amp111
 
-## zabbix configuration
-#ZABBIX_SERVER=monitor.example.com
+## zabbix configuration (for automatic discovery leave ZABBIX_HOSTNAME commented)
+#ZABBIX_SERVER=zabbixserver.example.com
+#ZABBIX_HOSTNAME=izpbx.example.com
+#ZABBIX_HOSTMETADATA=izPBX CHANGEM3WithAS3cur3HA$H
 
 ## fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
 FAIL2BAN_ENABLED=true
@@ -295,7 +301,7 @@ FREEPBX_SIGNATURECHECK=0
 #DHCP_POOL_START=10.1.1.10
 #DHCP_POOL_END=10.1.1.250
 #DHCP_POOL_LEASE=72h
-## leave commented to use container ip address
+## leave commented to use docker container ip address
 #DHCP_DNS=10.1.1.1
 #DHCP_GW=10.1.1.1
 #DHCP_NTP=10.1.1.1
@@ -376,31 +382,31 @@ Consult official repository page for installation and configuration of Asterisk 
   * Global Language: **Italian**
 
 # Trobleshooting
-- FreePBX is slow to reload (at 2020-06-14)
+- FreePBX is slow to reload (https://issues.freepbx.org/browse/FREEPBX-20559)
   - As temporary WORKAROUND enter into izpbx container shell and run:  
     `docker exec -it izpbx bash`  
     `fwconsole setting SIGNATURECHECK 0`
 
 - Factory Reset / Start from scratch a clean configurations:
   - `docker-compose down`
-  - Remove the `data` directory created by deploy
+  - `rm -rf data`
   - `docker-compose up -d`
     
-# TODO / Future Development
+# TODO / Future Development by priority
+- Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possibile using FreePBX FAX Module)
 - macOS host support? (edit docker-compose.yml and comment localtime volume?)
 - Windows host support (need to use docker volume instead local directory path?)
-- Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 
 # Quick reference
 - **Developed and maintained by**:
-  [Ugo Viti](https://github.com/ugoviti)
+  [Ugo Viti](https://github.com/ugoviti/izdock-izpbx) @ InitZero S.r.l.
 
 - **Where to file issues**:
   [https://github.com/ugoviti/izdock-izpbx/issues](https://github.com/ugoviti/izdock-izpbx/issues)
 
 - **Where to get commercial help**:
-  [InitZero Support](https://www.initzero.it/)
+  email: [support@initzero.it](mailto:support@initzero.it) - web: [InitZero Support](https://www.initzero.it/)
   
 - **Supported architectures**:
   [`amd64`]
