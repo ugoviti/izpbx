@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Removed shipped libresample archive used for building, and using now the official centos repository package
 - Fixed /etc/aliases management
-- Enanched first deployment
+- Enhanced first deployment
 - Allow custom 'asterisk' and 'asteriskcdrdb' DB name during initial deploy
 - Added new variables into `default.env` (update your `.env` copy):
   - MYSQL_DATABASE_CDR
@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.15.4] - 2021-03-17
 ### Changed
-- Enanched let's encrypt certificate generation using fwconsole tool (thanks to @alenas)
+- Enhanced let's encrypt certificate generation using fwconsole tool (thanks to @alenas)
 - New version of asterisk.sh zabbix agent script with better active calls detection (now will be ignored the calls in Ringing state)
 - Container shell enhancements
 - Added new variables into `default.env` (update your `.env` copy):
