@@ -680,6 +680,14 @@ cfgService_izpbx() {
       done
     fi
     
+    # fixing missing documentation that prevent loading extra codecs (like codec_opus)
+    if [ ! -z "${APP_DATA}" ]; then
+      if [ "$(ls -1 "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty/")" != "$(ls -1 "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty/")" ]; then
+        echo "----> fixing asterisk documentation directory... ${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty"
+        rsync -a -P "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty/"
+      fi
+    fi
+    
     # FIXME @20200318 freepbx 15.x warnings workaround
     sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
     sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
@@ -774,10 +782,10 @@ Charset=utf8" > /etc/odbc.ini
       # izpbx is already initialized, update configuration files
       echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
       [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
-      sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
-      sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '${MYSQL_SERVER}';/"   -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
   # apply workarounds and fix for FreePBX bugs

@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.6] - 2021-xx-xx
+### Fixed
+- fixed missing asterisk documentation (/data/var/lib/asterisk/documentation/thirdparty/) that prevent loading extra codecs (like codec_opus)
+
 ## [18.15.6] - 2021-03-25
 ### Changed
 - Removed shipped libresample archive used for building, and using now the official centos repository package
