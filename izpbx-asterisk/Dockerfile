@@ -98,7 +98,6 @@ ENV APP_INSTALL_DEPS=' \
     jansson \
     binutils \
     libedit \
-    opus \
     libtool \
     ncurses \
     libtiff \
@@ -284,6 +283,7 @@ RUN set -xe && \
     libedit-devel \
     svn \
     opus-devel \
+    opusfile-devel \
     unixODBC-devel \
     ncurses-devel \
     libtermcap-devel \
