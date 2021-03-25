@@ -50,7 +50,7 @@ steps:
       - ${DRONE_TAG%.*}
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
-      - ${DRONE_COMMIT_SHA:0:7}
+      #- ${DRONE_COMMIT_SHA:0:7}
   volumes:
   - name: docker
     path: /var/lib/docker
