@@ -76,6 +76,13 @@ ENV APP_GRP               "asterisk"
 ENV APP_INSTALL_DEPS=' \
     rsync \
     net-tools \
+    iptables \
+    libnetfilter_conntrack \
+    libnfnetlink \
+    conntrack-tools \
+    libnetfilter_cthelper \
+    libnetfilter_cttimeout \
+    libnetfilter_queue \
     iftop \
     lsof \
     strace \
