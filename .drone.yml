@@ -50,7 +50,7 @@ steps:
       - ${DRONE_TAG%.*}
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
-      - ${DRONE_COMMIT_SHA:0:7}
+      #- ${DRONE_COMMIT_SHA:0:7}
   volumes:
   - name: docker
     path: /var/lib/docker
@@ -60,7 +60,7 @@ kind: pipeline
 name: izpbx-dev-18
 
 environment:
-  ASTERISK_VER: 18.2.2
+  ASTERISK_VER: 18.3.0
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -88,11 +88,12 @@ steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+    - echo -e -n "$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
 
 - name: build&publish
   image: plugins/docker
@@ -120,7 +121,7 @@ kind: pipeline
 name: izpbx-dev-16
 
 environment:
-  ASTERISK_VER: 16.16.0
+  ASTERISK_VER: 16.17.0
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -148,11 +149,12 @@ steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n "dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+    - echo -e -n "$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
+#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
 
 - name: build-publish
   image: plugins/docker

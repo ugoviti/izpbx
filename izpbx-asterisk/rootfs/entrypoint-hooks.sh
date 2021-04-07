@@ -3,9 +3,6 @@
 # version: 20210313
 #set -ex
 
-## default root mail adrdess
-: ${ROOT_MAILTO:="root@localhost"} # default root mail address
-
 ## app specific variables
 : ${APP_DESCRIPTION:="izPBX Cloud Telephony System"}
 : ${APP_CHART:=""}
@@ -145,6 +142,8 @@ declare -A fpbxSipSettings=(
 : ${PMA_ENABLED:="false"}
 
 ## daemons configs
+# legacy config: if ROOT_MAILTO is defined, then set SMTP_MAIL_TO=$ROOT_MAILTO
+: ${SMTP_MAIL_TO:="$ROOT_MAILTO"}
 
 # postfix
 : ${SMTP_RELAYHOST:=""}
@@ -153,13 +152,21 @@ declare -A fpbxSipSettings=(
 : ${SMTP_STARTTLS:="true"}
 : ${SMTP_ALLOWED_SENDER_DOMAINS:=""}
 : ${SMTP_MESSAGE_SIZE_LIMIT:="0"}
-: ${SMTP_MAIL_FROM:=""}
+: ${SMTP_MAIL_FROM:="izpbx@localhost.localdomain"}
+: ${SMTP_MAIL_TO:="root@localhost.localdomain"}
 
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
 : ${RELAYHOST_USERNAME:="$SMTP_RELAYHOST_USERNAME"}
 : ${RELAYHOST_PASSWORD:="$SMTP_RELAYHOST_PASSWORD"}
 : ${ALLOWED_SENDER_DOMAINS:="$SMTP_ALLOWED_SENDER_DOMAINS"}
 : ${MESSAGE_SIZE_LIMIT:="$SMTP_MESSAGE_SIZE_LIMIT"}
+
+## default cron mail adrdess
+: ${ROOT_MAILTO:="$SMTP_MAIL_TO"} # default root mail address
+
+# fail2ban
+: ${FAIL2BAN_DEFAULT_SENDER:="$SMTP_MAIL_FROM"}
+: ${FAIL2BAN_DEFAULT_DESTEMAIL:="$SMTP_MAIL_TO"}
 
 # operating system specific variables
 ## detect current operating system
@@ -414,10 +421,10 @@ sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 [ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
 
 if   ! grep ^"root:" /etc/aliases 2>&1 >/dev/null; then 
-  echo "root: ${ROOT_MAILTO}" >> /etc/aliases
+  echo "root: ${SMTP_MAIL_TO}" >> /etc/aliases
   newaliases
-elif ! grep ^"root:.*${ROOT_MAILTO}" /etc/aliases 2>&1 >/dev/null; then 
-  echo sed "s/^root:.*/root: ${ROOT_MAILTO}/" -i /etc/aliases
+elif ! grep ^"root:.*${SMTP_MAIL_TO}" /etc/aliases 2>&1 >/dev/null; then 
+  echo sed "s/^root:.*/root: ${SMTP_MAIL_TO}/" -i /etc/aliases
   newaliases
 fi
 
@@ -680,6 +687,14 @@ cfgService_izpbx() {
       done
     fi
     
+    # fixing missing documentation that prevent loading extra codecs (like codec_opus)
+    if [ ! -z "${APP_DATA}" ]; then
+      if [ "$(ls -1 "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty/")" != "$(ls -1 "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty/")" ]; then
+        echo "----> fixing asterisk documentation directory... ${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty"
+        rsync -a -P "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty/"
+      fi
+    fi
+    
     # FIXME @20200318 freepbx 15.x warnings workaround
     sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
     sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
@@ -774,10 +789,10 @@ Charset=utf8" > /etc/odbc.ini
       # izpbx is already initialized, update configuration files
       echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
       [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
-      sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
-      sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '${MYSQL_SERVER}';/"   -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
   # apply workarounds and fix for FreePBX bugs
@@ -1163,8 +1178,8 @@ cfgService_letsencrypt() {
     echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_CODE is not defined"
   elif [ -z "$LETSENCRYPT_COUNTRY_STATE" ]; then
     echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_STATE is not defined"
-  elif [ -z "$ROOT_MAILTO" ]; then
-    echo "--> WARNING: skipping let's encrypt certificates request because ROOT_MAILTO is not defined"
+  elif [ -z "$SMTP_MAIL_TO" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because SMTP_MAIL_TO is not defined"
   else
     # generate let's encrypt certificates
     # NOTE: apache web server must be running to complete the certbot handshake
@@ -1187,7 +1202,7 @@ cfgService_letsencrypt() {
     if [ $CERTOK -eq 1 ]; then
       set -x
       httpd -k start
-      fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$ROOT_MAILTO
+      fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$SMTP_MAIL_TO
       [ $? -eq 0 ] && CERTOK=0
       [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
       [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"

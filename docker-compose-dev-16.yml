@@ -1,8 +1,0 @@
-version: '3'
-
-# use this docker-compose file for testing development versions of izPBX: docker-compose -f docker-compose.yml -f docker-compose-dev-16.yml up
-
-services:
-  izpbx:
-    image: izpbx-asterisk:dev-16
-

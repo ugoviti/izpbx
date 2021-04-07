@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.2.2
+ARG ASTERISK_VER=18.3.0
 
 # https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
@@ -76,6 +76,13 @@ ENV APP_GRP               "asterisk"
 ENV APP_INSTALL_DEPS=' \
     rsync \
     net-tools \
+    iptables \
+    libnetfilter_conntrack \
+    libnfnetlink \
+    conntrack-tools \
+    libnetfilter_cthelper \
+    libnetfilter_cttimeout \
+    libnetfilter_queue \
     iftop \
     lsof \
     strace \

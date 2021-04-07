@@ -4,11 +4,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.8] - 2021-04-XX
+### Changed
+- Based on Asterisk 18.3.0 LTS
+
+## [18.15.7] - 2021-03-30
+### Removed
+- ATTENTION: (Breaking Change) removed/deprecated a variables into `default.env` (remember to update your `.env` copy):
+  - `ROOT_MAILTO`
+### Added
+- ATTENTION: Added new variable into `default.env` (remember to update your `.env` copy):
+  - `SMTP_MAIL_TO`
+- Added `iptables` package
+- Added `conntrack-tools` package (you can use `conntrack -L` to list active connections and `conntrack -F` to purge)
+### Fixed
+- Fail2ban stopped working because was missing `iptables` package (thanks to @fa-at-pulsit)
+### Changed
+- defaulted `ROOT_MAILTO` to `SMTP_MAIL_TO` var content (anyway you can continue to use ROOT_MAILTO var in your old .env for legacy purpose)
+- by default fail2ban now use `$SMTP_MAIL_FROM` as sender and `$SMTP_MAIL_TO` as recipient address
+
 ## [18.15.6] - 2021-03-25
 ### Changed
 - Removed shipped libresample archive used for building, and using now the official centos repository package
 - Fixed /etc/aliases management
-- Enanched first deployment
+- Enhanced first deployment
 - Allow custom 'asterisk' and 'asteriskcdrdb' DB name during initial deploy
 - Added new variables into `default.env` (update your `.env` copy):
   - MYSQL_DATABASE_CDR
@@ -16,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added opusfile-devel as build deps
 ### Fixed
 - Restored missing codec_opus support
+- Fixed missing asterisk documentation (/data/var/lib/asterisk/documentation/thirdparty/) that prevent loading extra codecs (like codec_opus)
 
 ## [18.15.5] - 2021-03-18
 ### Changed
@@ -28,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.15.4] - 2021-03-17
 ### Changed
-- Enanched let's encrypt certificate generation using fwconsole tool (thanks to @alenas)
+- Enhanced let's encrypt certificate generation using fwconsole tool (thanks to @alenas)
 - New version of asterisk.sh zabbix agent script with better active calls detection (now will be ignored the calls in Ringing state)
 - Container shell enhancements
 - Added new variables into `default.env` (update your `.env` copy):
