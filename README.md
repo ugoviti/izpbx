@@ -190,7 +190,12 @@ Recap: only Asterisk core engine will be updated on container image update.
 
 # Environment default variables
 ```
-## database configurations
+### Persistent data management
+## enable persistent data storage (comment if you want disable persistence of data) (default: /data)
+APP_DATA=/data
+
+
+### Database
 ## WARNING: izPBX security passwords... please change the default
 MYSQL_ROOT_PASSWORD=CHANGEM3
 MYSQL_PASSWORD=CHANGEM3
@@ -203,21 +208,24 @@ MYSQL_DATABASE=asterisk
 MYSQL_DATABASE_CDR=asteriskcdrdb
 MYSQL_USER=asterisk
 
-## enable persistent data storage (comment if you want disable persistence of data) (default: /data)
-APP_DATA=/data
 
-## cron notifications mail address (default: root@localhost)
-#ROOT_MAILTO=
+### Email addreses and SMTP smarthost
+## outgoing mails will set as From as: (default: izpbx@localhost.localdomain)
+#SMTP_MAIL_FROM=izpbx@example.com
 
-#SMTP SmartHost configuration. Specify DNS name or IP address for the SMTP RelayHost (default: none)
+## outgoing mails will to send notifications, like cron, fail2ban, etc... (default: root@localhost.localdomain)
+#SMTP_MAIL_TO=admin@example.com
+
+## specify DNS name or IP address for the SMTP RelayHost (default: none)
 #SMTP_RELAYHOST=[smtp.example.com]:587
 #SMTP_RELAYHOST_USERNAME=yourusername
 #SMTP_RELAYHOST_PASSWORD=yoursecurepassword
 #SMTP_STARTTLS=true
 #SMTP_ALLOWED_SENDER_DOMAINS=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 #SMTP_MESSAGE_SIZE_LIMIT=67108864
-#SMTP_MAIL_FROM=izpbx@example.com
 
+
+### Webserver and HTTP/HTTPS
 ## enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
 #APP_FQDN=izpbx.example.com
 
@@ -230,7 +238,7 @@ APP_DATA=/data
 #HTTPD_REDIRECT_HTTP_TO_HTTPS=false
 
 ## auto generate Let's Encrypt SSL certificates if the pbx is exposed to internet and want enable https protocol (default: false)
-## To use LETSENCRYPT make sure ROOT_MAILTO, APP_FQDN above are set to correct values
+## To use LETSENCRYPT make sure SMTP_MAIL_TO, APP_FQDN above are set to correct values
 #LETSENCRYPT_ENABLED=true
 #LETSENCRYPT_COUNTRY_CODE=IT
 #LETSENCRYPT_COUNTRY_STATE=Rome
@@ -238,11 +246,13 @@ APP_DATA=/data
 ## by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security (default: 0.0.0.0/0)
 #HTTPD_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 
-## phpMyAdmin configuration
+
+### phpMyAdmin
 #PMA_ALIAS=/admin/pma
 #PMA_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 
-## fop2 configuration (https://www.fop2.com/docs/)
+
+### FOP2 configuration (https://www.fop2.com/docs/)
 #FOP2_LICENSE_NAME=<put here your corporation name>
 #FOP2_LICENSE_CODE=<put here your license code>
 #FOP2_LICENSE_IFACE=docker0
@@ -253,12 +263,17 @@ APP_DATA=/data
 #FOP2_AMI_USERNAME=admin
 #FOP2_AMI_PASSWORD=amp111
 
-## zabbix configuration (for automatic discovery leave ZABBIX_HOSTNAME commented)
+
+### Zabbix Network Monitoring
+## for automatic discovery of HOSTNAME leave ZABBIX_HOSTNAME commented
 #ZABBIX_SERVER=zabbixserver.example.com
 #ZABBIX_HOSTNAME=izpbx.example.com
 #ZABBIX_HOSTMETADATA=izPBX CHANGEM3WithAS3cur3HA$H
 
-## fail2ban (format: FAIL2BAN_SECTION_KEY=VALUE)
+
+### Fail2ban 
+## format: FAIL2BAN_SECTION_KEY=VALUE
+## by default izpbx will will use: FAIL2BAN_DEFAULT_SENDER=$SMTP_MAIL_FROM and FAIL2BAN_DEFAULT_DESTEMAIL=$SMTP_MAIL_TO, anyway you can override it bellow
 FAIL2BAN_ENABLED=true
 FAIL2BAN_ASTERISK_ENABLED=true
 #FAIL2BAN_ASTERISK_LOGPATH=/var/log/asterisk/security
@@ -273,7 +288,9 @@ FAIL2BAN_RECIDIVE_BANTIME=1814400
 FAIL2BAN_RECIDIVE_FINDTIME=15552000
 FAIL2BAN_RECIDIVE_MAXRETRY=10
 
-## freepbx advanced settings (prefix every FreePBX internal variable with FREEPBX_)
+
+### FreePBX Advanced Settings
+## prefix every FreePBX internal variable with FREEPBX_
 ## modules enabled on first startup
 #FREEPBX_MODULES_EXTRA=soundlang callrecording cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking phonebook presencestate printextensions queues cel timeconditions pm2
 FREEPBX_FREEPBX_SYSTEM_IDENT=izPBX
@@ -296,7 +313,8 @@ FREEPBX_PHPTIMEZONE=Europe/Rome
 ## WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
 FREEPBX_SIGNATURECHECK=0
 
-## DHCP server configuration
+
+### DHCP/NTP/TFTP Server
 #DHCP_DOMAIN=izpbx.local
 #DHCP_POOL_START=10.1.1.10
 #DHCP_POOL_END=10.1.1.250
@@ -306,7 +324,8 @@ FREEPBX_SIGNATURECHECK=0
 #DHCP_GW=10.1.1.1
 #DHCP_NTP=10.1.1.1
 
-## network ports
+
+### Container Network Ports
 ## webserver and freepbx ports
 APP_PORT_HTTP=80
 APP_PORT_HTTPS=443
@@ -326,7 +345,8 @@ APP_PORT_TFTP=69
 APP_PORT_FOP2=4445
 APP_PORT_ZABBIX=10050
 
-## container services
+
+### Container Services
 POSTFIX_ENABLED=true
 CRON_ENABLED=true
 HTTPD_ENABLED=true
