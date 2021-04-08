@@ -268,6 +268,9 @@ RUN set -xe && \
 # Development Debug mode
 ARG APP_DEBUG=0
 
+# copy external sources files
+ADD build/ /usr/src/
+
 # install zabbix with predownloaded packages because their repositories have many problems
 #RUN set -xe && \
 #  rpm -Uhv /usr/src/zabbix-*.rpm
@@ -373,6 +376,7 @@ RUN set -xe && \
   mkdir asterisk && \
   curl -fSL --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
   cd asterisk && \
+  tar zxvf /usr/src/asterisk-mp3.tar.gz -C addons && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
   \
   make menuselect/menuselect menuselect-tree menuselect.makeopts && \
