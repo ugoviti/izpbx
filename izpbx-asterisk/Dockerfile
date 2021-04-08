@@ -365,9 +365,11 @@ RUN set -xe && \
   : "---------- END build ----------" && \
   \
   : "---------- START build ASTERISK ----------" && \
+  # old asterisk url
+  # http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz
   cd /usr/src && \
   mkdir asterisk && \
-  curl -fSL --connect-timeout 30 http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
+  curl -fSL --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
   cd asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
