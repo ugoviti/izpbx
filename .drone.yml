@@ -103,6 +103,7 @@ steps:
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
+    - APP_DEBUG
     - ASTERISK_VER
     - APP_VER
     - APP_VER_BUILD
@@ -165,6 +166,7 @@ steps:
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
+    - APP_DEBUG
     - ASTERISK_VER
     - APP_VER
     - APP_VER_BUILD
