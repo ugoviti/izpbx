@@ -74,6 +74,7 @@ ENV APP_GRP               "asterisk"
 
 # development debug mode (keep development/build dependencies on filesystem)
 ARG APP_DEBUG=0
+DEV APP_DEBUG=${APP_DEBUG}
 
 ## install packages
 ENV APP_INSTALL_DEPS=' \
