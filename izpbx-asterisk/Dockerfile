@@ -72,6 +72,9 @@ ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
+# development debug mode (keep development/build dependencies on filesystem)
+ARG APP_DEBUG=0
+
 ## install packages
 ENV APP_INSTALL_DEPS=' \
     rsync \
@@ -255,7 +258,7 @@ RUN set -xe && \
   rm -rf /var/cache/{dnf,yum} ;fi && \
   : "---------- ALL install finished ----------" 
 
-## prep
+## prep users
 RUN set -xe && \
   groupadd -g ${APP_GID} ${APP_GRP} && \
   useradd -u ${APP_UID} -c "${APP_DESCRIPTION} User" -g ${APP_GRP} -s /sbin/nologin ${APP_USR} && \
@@ -264,17 +267,9 @@ RUN set -xe && \
   # fix phpMyAdmin apache group permissions
   chmod g+w /var/lib/phpMyAdmin/temp
 
-## build
-# Development Debug mode
-ARG APP_DEBUG=0
-
+## build stage
 # copy external sources files
 ADD build/ /usr/src/
-
-# install zabbix with predownloaded packages because their repositories have many problems
-#RUN set -xe && \
-#  rpm -Uhv /usr/src/zabbix-*.rpm
-
 RUN set -xe && \
   . /etc/os-release && \
   ASTERISK_BUILD_DEPS=' \
