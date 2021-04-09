@@ -60,6 +60,7 @@ kind: pipeline
 name: izpbx-dev-18
 
 environment:
+  APP_DEBUG: 1
   ASTERISK_VER: 18.3.0
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
@@ -121,6 +122,7 @@ kind: pipeline
 name: izpbx-dev-16
 
 environment:
+  APP_DEBUG: 1
   ASTERISK_VER: 16.17.0
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
