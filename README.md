@@ -61,10 +61,9 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Screenshots
-  
-[<img src="https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-console.png">]
+![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-console.png)
 
-[<img src="https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-dashboard.png">]
+![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-dashboard.png)
   
 # Targets of this project
 - On-Premise, fast, automatic and repeatable deploy of PBX systems.  
