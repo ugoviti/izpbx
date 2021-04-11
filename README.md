@@ -61,10 +61,10 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Screenshots
+![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-dashboard.png)
+
 ![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-console.png)
 
-![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-dashboard.png)
-  
 # Targets of this project
 - On-Premise, fast, automatic and repeatable deploy of PBX systems.  
 by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal container network is used), so the default UDP RTP port range can be from `10000` to `20000`.  
