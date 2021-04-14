@@ -367,12 +367,14 @@ RUN set -xe && \
   # http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz
   # @20210408 unreachable asterisk url - disable get_mp3_source.sh because need internet connection
   #./contrib/scripts/get_mp3_source.sh
+  # @20210414 reneabled get_mp3_source.sh
+  #tar zxvf /usr/src/asterisk-mp3.tar.gz -C addons
   cd /usr/src && \
   mkdir asterisk && \
   curl -fSL --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
   cd asterisk && \
   \
-  tar zxvf /usr/src/asterisk-mp3.tar.gz -C addons && \
+  ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
   \
   make menuselect/menuselect menuselect-tree menuselect.makeopts && \
