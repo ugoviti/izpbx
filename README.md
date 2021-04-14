@@ -39,6 +39,7 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - Asterisk PBX Engine (compiled from scratch)
 - FreePBX WEB Management GUI (with predownloaded modules for quicker initial deploy)
 - FreePBX automatic installation, managed when deploying izpbx for the first time, successive updates will be managed by FreePBX Official Version Upgrade itself
+- Automatic Remote XML PhoneBook support for compatible VoIP Phones (Yealink)
 - Persistent storage mode for configuration and not volatile data
 - Fail2ban as security monitor to block SIP and HTTP brute force attacks
 - FOP2 Operator Panel
@@ -396,6 +397,12 @@ Consult official repository page for installation and configuration of Asterisk 
   * Schedule and Maintinence-->Scheduling: Every: **Day** Minute: **00** Hour: **00**
   * Maintinence-->Delete After Runs: **0**
   * Maintinence-->Delete After Days: **14**
+
+* **Admin-->Contact Manager**
+  * External
+    * + Add New Group
+      * Name: **PhoneBook**
+      * Type: **External**
   
 * **Admin-->Caller ID Lookup Sources**
   * Source Description: **ContactManager**
@@ -406,6 +413,23 @@ Consult official repository page for installation and configuration of Asterisk 
 * **Admin-->Sound Languages-->Setttings**
   * Global Language: **Italian**
 
+# Configuring VoIP XML PhoneBook Lookup (tested on Yealink Phones)
+- Configure **Contact Manager** as reported above (the Contact Manager GroupName be MUST named **PhoneBook** otherwise doesn't works)
+- Open VoIP Phone GUI, for example for yealink phone:
+  - **Directory-->Remote Phone Book**
+    - Index 1 (URL XML Menu)
+      - RemoteURL: **http://PBX_ADDRESS/pb**
+      - Display Name: **PhoneBook**
+
+      - Otherwise you can define by hand the PhoneBooks:
+  - **Directory-->Remote Phone Book**
+    - Index 1 (URL Extensions PhoneBook)
+      - RemoteURL: **http://PBX_ADDRESS/pb/yealink/ext**
+      - Display Name: **Extensions**
+    - Index 2 (URL Shared PhoneBook)
+      - RemoteURL: **http://PBX_ADDRESS/pb/yealink/cm**
+      - Display Name: **Shared Phone Book**
+      
 # Trobleshooting
 - FreePBX is slow to reload (https://issues.freepbx.org/browse/FREEPBX-20559)
   - As temporary WORKAROUND enter into izpbx container shell and run:  

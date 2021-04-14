@@ -92,6 +92,18 @@ declare -A fpbxSipSettings=(
 [ ! -z ${APP_FQDN} ] && hostname "${APP_FQDN}" && export HOSTNAME=${HOSTNAME} # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
 
+# define PHONEBOOK_ADDRESS used in phonebook menu.xml.
+: ${PHONEBOOK_ADDRESS:=""}
+if [ -z "$PHONEBOOK_ADDRESS" ]; then
+  [ "$HTTPD_HTTPS_ENABLED" = "true" ] && PHONEBOOK_PROTO=https || PHONEBOOK_PROTO=http
+
+  if [ -z ${APP_FQDN} ]; then
+      PHONEBOOK_ADDRESS="$PHONEBOOK_PROTO://$(hostname -I | awk '{print $1}')"
+    else
+      PHONEBOOK_ADDRESS="$PHONEBOOK_PROTO://${APP_FQDN}"
+  fi
+fi
+
 # mysql configuration
 : ${MYSQL_SERVER:="db"}
 : ${MYSQL_ROOT_PASSWORD:=""}
@@ -140,6 +152,7 @@ declare -A fpbxSipSettings=(
 : ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
 : ${PMA_ENABLED:="false"}
+: ${PHONEBOOK_ENABLED:="true"}
 
 ## daemons configs
 # legacy config: if ROOT_MAILTO is defined, then set SMTP_MAIL_TO=$ROOT_MAILTO
@@ -190,7 +203,7 @@ elif [ "$OS_RELEASE" = "alpine" ]; then
 : ${PMA_CONF:="/etc/phpmyadmin/config.inc.php"}
 : ${PMA_CONF_APACHE:="/etc/apache2/conf.d/phpmyadmin.conf"}
 : ${PHP_CONF:="/etc/php/php.ini"}
-: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.conf.d/local.conf"}
+: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabPHONEBOOK_ADDRESSbix_agentd.conf.d/local.conf"}
 # centos paths
 elif [ "$OS_RELEASE" = "centos" ]; then
 : ${SUPERVISOR_DIR:="/etc/supervisord.d"}
@@ -501,7 +514,7 @@ cfgService_fail2ban() {
 cfgService_httpd() {
 
   # local functions
-  print_AllowFrom() {
+  print_ApacheAllowFrom() {
     if [ ! -z "${HTTPD_ALLOW_FROM}" ]; then 
         for IP in $(echo ${HTTPD_ALLOW_FROM} | sed -e "s/'//g") ; do
           echo "    Require ip ${IP}"
@@ -546,7 +559,7 @@ echo "
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -575,7 +588,7 @@ if [ ! -z "${APP_FQDN}" ]; then
   echo "<Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -616,7 +629,7 @@ SSLCryptoDevice        builtin
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -638,7 +651,7 @@ $(print_AllowFrom)
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -1148,7 +1161,6 @@ cfgService_fop2 () {
 }
 
 cfgService_pma() {
-  if [ "${PMA_ENABLED}" = "true" ]; then
     echo "=> Enabling and Configuring phpMyAdmin"
     # remove unused http alias
     sed "/^Alias \/phpMyAdmin \/usr\/share\/phpMyAdmin/d" -i "${PMA_CONF_APACHE}"
@@ -1164,10 +1176,35 @@ $(for FROM in ${PMA_ALLOW_FROM}; do echo "    Require ip $FROM"; done)
 EOF
     # configure database access
     sed "s|'localhost';|'${MYSQL_SERVER}';|" -i "${PMA_CONFIG}"
-  else
-    # disable phpMyAdmin
-    [ -e "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf-disabled"
-  fi
+}
+
+cfgService_phonebook() {
+    echo "=> Enabling Remote XML PhoneBook support"
+    
+    echo "Alias /pb /usr/local/share/phonebook
+
+<Directory /usr/local/share/phonebook>
+    AddDefaultCharset UTF-8
+    DirectoryIndex menu.xml index.php
+$(print_ApacheAllowFrom)
+</Directory>
+" > "${HTTPD_CONF_DIR}/conf.d/phonebook.conf"
+
+echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<CompanyIPPhoneMenu>
+    <!-- Title can show on the phone depending on settings in phone -->
+    <Title>PhoneBook</Title>
+    <MenuItem>
+       	<!-- This name shows in the menu when the button is pressed -->
+        <Name>Extensions</Name>
+        <URL>${PHONEBOOK_ADDRESS}/pb/yealink/ext</URL>
+    </MenuItem>
+    <MenuItem>
+        <Name>Shared PhoneBook</Name>
+        <URL>${PHONEBOOK_ADDRESS}/pb/yealink/cm</URL>
+    </MenuItem>
+</CompanyIPPhoneMenu>
+" > "/usr/local/share/phonebook/menu.xml"
 }
 
 cfgService_letsencrypt() {
@@ -1344,8 +1381,11 @@ runHooks() {
   chkService DNSMASQ_ENABLED
    
   # phpMyAdmin configuration
-  [ "${PMA_ENABLED}" = "true" ] && cfgService_pma
+  [ "${PMA_ENABLED}" = "true" ] && cfgService_pma || mv "${PMA_CONF_APACHE}" "${PMA_CONF_APACHE}-disabled"
 
+  # remote XML phonebook support
+  [ ${PHONEBOOK_ENABLED} = "true" ] && cfgService_phonebook
+  
   # Lets Encrypt certificate generation
   [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
 }

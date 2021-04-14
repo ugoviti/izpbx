@@ -136,6 +136,7 @@ ENV APP_INSTALL_DEPS=' \
     php-json \
     php-gd \
     php-curl \
+    php-ldap \
     mariadb \
     diffutils \
     unzip \
@@ -268,8 +269,11 @@ RUN set -xe && \
   chmod g+w /var/lib/phpMyAdmin/temp
 
 ## build stage
+
 # copy external sources files
 ADD build/ /usr/src/
+
+# build asterisk
 RUN set -xe && \
   . /etc/os-release && \
   ASTERISK_BUILD_DEPS=' \
@@ -515,13 +519,19 @@ RUN set -xe && \
 # curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
 # curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
+# copy external sources files again
+ADD build/ /usr/src/
+
 RUN set -xe && \
   \
   cd /usr/src && \
   mkdir freepbx && \
   curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
-  curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml && \
+  # download modules-*.xml file if not exist in local build dir
+  if [[ -e "/usr/src/modules-${FREEPBX_VER}.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.xml"; else \
+    curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml \
+  ;fi && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
       announcement \

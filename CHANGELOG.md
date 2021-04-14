@@ -4,9 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.10] - 2021-04-15
+### Added
+- Support for Remote Yealink XML PhoneBook, default URL (look README.md for configuring info):
+  - http://izpbxip/pb/menu.xml (PhoneBook Menu)
+  - http://izpbxip/pb/yealink/ext (Extensions PhoneBook)
+  - http://izpbxip/pb/yealink/cm (Contact Manager Shared PhoneBook)
+- ATTENTION: Added new variable into `default.env` (remember to update your `.env` copy):
+  - `PHONEBOOK_ENABLED="true"`
+  - `PHONEBOOK_ADDRESS=`
+- Added php-ldap package
+### Fixed
+- Fixed missing LDAP support for UserManager
+- Fixed SMTP_ALLOWED_SENDER_DOMAINS default var
+
 ## [18.15.9] - 2021-04-14
 ### Fixed
-- fixed codec_opus not enabled
+- Fixed codec_opus not enabled
 
 ## [18.15.8] - 2021-04-07
 ### Changed
