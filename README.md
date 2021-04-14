@@ -97,7 +97,7 @@ sudo systemctl enable --now docker
   - `cd /opt/izpbx`
 
 - Checkout latest official release:
-  - `git checkout refs/tags/$(git tag | tail -1)`
+  - `git checkout refs/tags/$(git tag | sort --version-sort | tail -1)`
 
 - Copy `default.env` file to `.env`:
   - `cp default.env .env`

@@ -1193,7 +1193,7 @@ $(print_ApacheAllowFrom)
 echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
 <CompanyIPPhoneMenu>
     <!-- Title can show on the phone depending on settings in phone -->
-    <Title>PhoneBook</Title>
+    <Title>PhoneBook Menu</Title>
     <MenuItem>
        	<!-- This name shows in the menu when the button is pressed -->
         <Name>Extensions</Name>
