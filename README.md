@@ -168,7 +168,7 @@ Tested Host Operating Systems:
 ```
 cd /opt/izpbx
 git pull
-git checkout refs/tags/$(git tag | tail -1)
+git checkout refs/tags/$(git tag | sort --version-sort | tail -1)
 ```
 
 2. Upgrade the **izpbx** deploy with:  
