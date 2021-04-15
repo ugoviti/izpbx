@@ -32,13 +32,13 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
 # Features
-- 60 secs install from zero to a running turnkey PBX system
 - Really fast initial bootstrap to deploy a full features Asterisk+FreePBX system
-- CentOS 8 64bit powered
-- Small image footprint
-- Asterisk PBX Engine (compiled from scratch)
-- FreePBX WEB Management GUI (with predownloaded modules for quicker initial deploy)
-- FreePBX automatic installation, managed when deploying izpbx for the first time, successive updates will be managed by FreePBX Official Version Upgrade itself
+- 60 secs install from zero to a running turnkey PBX system
+- Built-in PBX Engine based on Asterisk® project (compiled from scratch)
+- Built-in WEB Management GUI based on FreePBX® project (with default predownloaded modules for quicker initial deploy)
+- No vendor lock-in, you can migrare to izPBX and away simply importing/exporting FreePBX Backups
+- Based on Linux CentOS 8 64bit OS
+- Small container image footprint
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones (Yealink)
 - Persistent storage mode for configuration and not volatile data
 - Fail2ban as security monitor to block SIP and HTTP brute force attacks
@@ -186,13 +186,13 @@ docker-compose up -d
 That's all
 
 ## FreePBX upgrade path to a major release
-FreePBX will be installed into persistent data dir only on first izpbx deploy (when no installations already exist).
+FreePBX will be installed into persistent data dir on initial deploy only (when no installations already exist).
 
-Following container updates will not upgrade the FreePBX Framework (just Asterisk engine will be updated).  
+Successive container updates will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
 After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
   - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
 
-Recap: only Asterisk core engine will be updated on container image update.
+Recap: only Asterisk core engine will be updated on container image update. FreePBX will be updated only via Modules Update Menu.
 
 # Environment default variables
 ```
