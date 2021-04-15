@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [18.15.10] - 2021-04-15
 ### Added
 - Support for Remote Yealink XML PhoneBook, default URL (look README.md for configuring info):
-  - http://izpbxip/pb/menu.xml (PhoneBook Menu)
+  - http://izpbxip/pb (PhoneBook Menu)
   - http://izpbxip/pb/yealink/ext (Extensions PhoneBook)
   - http://izpbxip/pb/yealink/cm (Contact Manager Shared PhoneBook)
 - ATTENTION: Added new variable into `default.env` (remember to update your `.env` copy):

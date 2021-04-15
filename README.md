@@ -400,7 +400,7 @@ Consult official repository page for installation and configuration of Asterisk 
 
 * **Admin-->Contact Manager**
   * External
-    * + Add New Group
+    * Add New Group
       * Name: **PhoneBook**
       * Type: **External**
   
@@ -413,7 +413,9 @@ Consult official repository page for installation and configuration of Asterisk 
 * **Admin-->Sound Languages-->Setttings**
   * Global Language: **Italian**
 
-# Configuring VoIP XML PhoneBook Lookup (tested on Yealink Phones)
+# Configuring VoIP XML PhoneBook Lookup
+NOTE: tested on Yealink Phones
+
 - Configure **Contact Manager** as reported above (the Contact Manager GroupName be MUST named **PhoneBook** otherwise doesn't works)
 
 ## Option 1: PhoneBook Menu
