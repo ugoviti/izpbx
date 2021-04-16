@@ -1,15 +1,15 @@
 # Name
-[<img src="https://www.initzero.it/images/initzero-logo-izpbx-48x48.png">](https://www.initzero.it) izPBX Cloud Native Telephony System
+[<img src="https://www.initzero.it/images/initzero-logo-izpbx-48x48.png">](https://www.initzero.it) izPBX Cloud Native VoIP Telephony System
 
 # Description
-izPBX is a Turnkey Cloud Native Telephony System powered by Asterisk Engine and FreePBX Management GUI
+izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine and FreePBX Management GUI
 
 # Supported tags
 
-## Current Production Branch: (Asterisk 18 + FreePBX 15)
+## Production Branch: (Asterisk 18 + FreePBX 15)
 * `latest`, `18`, `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT`
 
-## Previous Production Branch: (Asterisk 16 + FreePBX 15)
+## Legacy Production Branch: (Asterisk 16 + FreePBX 15)
 * `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
 
 ## Development Branches:
@@ -17,7 +17,6 @@ izPBX is a Turnkey Cloud Native Telephony System powered by Asterisk Engine and 
 * Asterisk 16 LTS + FreePBX 15: `dev-16`, `dev-16.X`, `dev-16.X.X-BUILD`, `dev-16.X.X-COMMIT`
 
 ## Version notes:
-
 Tags format: **Z.Y.X-[BUILD|COMMIT]**
 
 where:  
@@ -32,8 +31,7 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
 
 # Features
-- Really fast initial bootstrap to deploy a full features Asterisk+FreePBX system
-- 60 secs install from zero to a running turnkey PBX system
+- Fast initial bootstrap to deploy a full features PBX system (60 secs install time from zero to a running turnkey PBX system)
 - Built-in PBX Engine based on Asterisk® project (compiled from scratch)
 - Built-in WEB Management GUI based on FreePBX® project (with default predownloaded modules for quicker initial deploy)
 - No vendor lock-in, you can migrare to izPBX and away simply importing/exporting FreePBX Backups
@@ -62,23 +60,28 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Screenshots
-![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-dashboard.png)
+izPBX FreePBX Dashboard:
+![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-dashboard.png)
 
-![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/images/izpbx-console.png)
+izPBX Zabbix Dashboard Monitoring:
+![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-zabbix-dashboard.png)
+
+izPBX CLI:
+![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-cli.png)
 
 # Targets of this project
-- On-Premise, fast, automatic and repeatable deploy of PBX systems.  
+On-Premise, fast, automatic and repeatable deploy of PBX systems.  
 by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal container network is used), so the default UDP RTP port range can be from `10000` to `20000`.  
 If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpu usage and longer startup times), for example for 50 concurrent calls:  
 `APP_PORT_RTP_START=10000`  
 `APP_PORT_RTP_END=10200`  
-for best security, fine-tune based on your needs using not standard port ranges!  
+for best security, fine-tune the ports range based on your needs by not using standard port ranges!  
 
 # Limits of this project
-- Deploy 1 izPBX for every public IP or VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
-- Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by docker pulls)
+- Deploy 1 izPBX for every external IP or single VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
+- Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by izPBX container updates)
   
-# How to use this image
+# How to use this image (Deploy)
 Using **docker-compose** is the suggested method:
 
 - Install your prefered Linux OS into VM or Baremetal Server
@@ -96,22 +99,22 @@ sudo systemctl enable --now docker
   - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
   - `cd /opt/izpbx`
 
-- Checkout latest official release:
+- Checkout into latest official release:
   - `git checkout refs/tags/$(git tag | sort --version-sort | tail -1)`
 
-- Copy `default.env` file to `.env`:
+- Copy default configuration file `default.env` into `.env`:
   - `cp default.env .env`
 
-- Customize `.env` variables, specially the security section of mysql passwords (look bellow for a full variables list):
+- Customize `.env` variables, specially the security section of default passwords (look bellow for a full variables list):
   - `vim .env`
 
-- Start izpbx using docker-compose command:
+- Deploy and start izpbx using docker-compose command:
   - `docker-compose up -d`
 
-- Wait the pull to finish (60 seconds with fast lines) and point your web browser to the IP address of your docker host and follow initial startup guide
+- Wait the pull to finish (~60 seconds with fast lines) and point your web browser to the IP address of your docker host and follow initial setup guide
 
 Note: by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
-Modify docker-compose.yml and comment `#network_mode: host` if you need to run multiple izpbx deploy in the same host (not tested. there will be problems with RTP traffic).
+Modify docker-compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not tested. there will be problems with RTP traffic).
 
 If you want test izPBX without using docker-compose, you can use the following docker commands:
 
@@ -134,10 +137,10 @@ Start izPBX:
 Enter the container:  
 `docker exec -it izpbx bash`
 
-Restart Asterisk+FreePBX Framework:  
+Restart izpbx service (Asterisk Engine):  
 `supervisorctl restart izpbx`
 
-To restart the others available services use `supervisorctl restart SERVICE`
+To restart others available services use `supervisorctl restart SERVICE`
 
 Available services:  
   - `asterisk`
@@ -158,13 +161,13 @@ Tested Docker Runtime:
 
 Tested Host Operating Systems:
   - CentOS 6/7/8
-  - Fedora Core 31/32
+  - Fedora Core >30
   - Debian 10
   - Ubuntu 20.04
 
 # Upgrading izPBX
 
-1. Upgrade the version of izpbx downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
+1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
 ```
 cd /opt/izpbx
 git pull
@@ -227,7 +230,7 @@ MYSQL_USER=asterisk
 #SMTP_RELAYHOST_USERNAME=yourusername
 #SMTP_RELAYHOST_PASSWORD=yoursecurepassword
 #SMTP_STARTTLS=true
-#SMTP_ALLOWED_SENDER_DOMAINS=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+#SMTP_ALLOWED_SENDER_DOMAINS=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
 #SMTP_MESSAGE_SIZE_LIMIT=67108864
 
 
@@ -319,6 +322,10 @@ FREEPBX_PHPTIMEZONE=Europe/Rome
 ## WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
 FREEPBX_SIGNATURECHECK=0
 
+### PhoneBook Settings
+## PhoneBook server address used by VoiP Phones.
+## You can specify IP or DNS name. If empty, will be used in order: 'http://$APP_FQDN' or 'http://PBXIP'. (default: null)
+#PHONEBOOK_ADDRESS=https://izpbx.example.com
 
 ### DHCP/NTP/TFTP Server
 #DHCP_DOMAIN=izpbx.local
@@ -363,6 +370,7 @@ FAIL2BAN_ENABLED=true
 #FOP2_ENABLED=true
 #ZABBIX_ENABLED=true
 #PMA_ENABLED=true
+PHONEBOOK_ENABLED=true
 ```
 
 # Zabbix Agent Configuration
@@ -435,13 +443,13 @@ NOTE: tested on Yealink Phones
       - RemoteURL: **http://PBX_ADDRESS/pb/yealink/cm**
       - Display Name: **Shared Phone Book**
       
-# Trobleshooting
+# FAQ / Trobleshooting
 - FreePBX is slow to reload (https://issues.freepbx.org/browse/FREEPBX-20559)
   - As temporary WORKAROUND enter into izpbx container shell and run:  
     `docker exec -it izpbx bash`  
     `fwconsole setting SIGNATURECHECK 0`
 
-- Factory Reset / Start from scratch a clean configurations:
+- Factory Reset / Start from scratch a clean configurations (WARNING! you persistent storage will be wiped!):
   - `docker-compose down`
   - `rm -rf data`
   - `docker-compose up -d`
