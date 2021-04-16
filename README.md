@@ -64,7 +64,7 @@ izPBX FreePBX Dashboard:
 ![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-dashboard.png)
 
 izPBX Operator Panel FOP2:
-![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-izpbx-operator-panel.png)
+![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-operator-panel.png)
 
 izPBX Zabbix Dashboard Monitoring:
 ![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-zabbix-dashboard.png)
