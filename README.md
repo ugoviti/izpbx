@@ -34,10 +34,10 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - Fast initial bootstrap to deploy a full features PBX system (60 secs install time from zero to a running turnkey PBX system)
 - Built-in PBX Engine based on Asterisk® project (compiled from scratch)
 - Built-in WEB Management GUI based on FreePBX® project (with default predownloaded modules for quicker initial deploy)
-- No vendor lock-in, you can migrare to izPBX and away simply importing/exporting FreePBX Backups
+- No vendor lock-in, you can migrare to and away izPBX simply importing/exporting FreePBX Backups
 - Based on Linux CentOS 8 64bit OS
 - Small container image footprint
-- Automatic Remote XML PhoneBook support for compatible VoIP Phones (Yealink)
+- Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and not volatile data
 - Fail2ban as security monitor to block SIP and HTTP brute force attacks
 - FOP2 Operator Panel
@@ -60,16 +60,16 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Screenshots
-#### izPBX FreePBX Dashboard:
+#### izPBX Dashboard (FreePBX):
 ![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-dashboard.png)
 
-#### izPBX Operator Panel FOP2:
+#### izPBX Operator Panel (FOP2):
 ![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-operator-panel.png)
 
-#### izPBX Zabbix Dashboard Monitoring:
+#### izPBX Monitoring Dashboard (Zabbix):
 ![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-zabbix-dashboard.png)
 
-#### izPBX CLI:
+#### izPBX CLI (Asterisk):
 ![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-cli.png)
 
 # Targets of this project
@@ -425,9 +425,9 @@ Consult official repository page for installation and configuration of Asterisk 
   * Global Language: **Italian**
 
 # Configuring VoIP XML PhoneBook Lookup
-NOTE: tested on Yealink Phones
+NOTE: Tested on Yealink Phones
 
-- Configure **Contact Manager** as reported above (the Contact Manager GroupName be MUST named **PhoneBook** otherwise doesn't works)
+- Configure **Contact Manager** as reported above (the Contact Manager GroupName be MUST named **PhoneBook** otherwise doesn't works by default)
 
 ## Option 1: PhoneBook Menu
 - Open VoIP Phone GUI (Yealink Phone GUI):
@@ -436,7 +436,7 @@ NOTE: tested on Yealink Phones
       - RemoteURL: **http://PBX_ADDRESS/pb**
       - Display Name: **PhoneBook**
 
-## Option 2: Define PhoneBook you want use
+## Option 2: Define every PhoneBook you want to use
 - Open VoIP Phone GUI (Yealink Phone GUI):
   - **Directory-->Remote Phone Book**
     - Index 1 (URL for Extensions PhoneBook)
