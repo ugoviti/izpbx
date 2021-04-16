@@ -60,16 +60,16 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
   - **izpbx-db** (mariadb container: Database Backend)
 
 # Screenshots
-### izPBX FreePBX Dashboard:
+#### izPBX FreePBX Dashboard:
 ![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-dashboard.png)
 
-### izPBX Operator Panel FOP2:
+#### izPBX Operator Panel FOP2:
 ![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-operator-panel.png)
 
-### izPBX Zabbix Dashboard Monitoring:
+#### izPBX Zabbix Dashboard Monitoring:
 ![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-zabbix-dashboard.png)
 
-### izPBX CLI:
+#### izPBX CLI:
 ![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-cli.png)
 
 # Targets of this project
