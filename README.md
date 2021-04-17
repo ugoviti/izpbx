@@ -166,7 +166,7 @@ Recap: only Asterisk core engine will be updated on container image update. Free
 ### Multi-Tenant VoIP PBX with dedicated Databases
 
 #### Objective
-- Run many izPBX instances into single docker host (you must allocate a private static IP for every izPBX backend/frontend)
+- Run many izPBX instances into single docker host (you must allocate an external static IP for every izPBX backend/frontend)
 - Dedicated Database for every izPBX instances
 
 #### Configuration
@@ -177,6 +177,7 @@ Example:
 mkdir yourgreatpbx
 cd yourgreatpbx
 vim docker-compose.yml
+vim .env
 ```
 
 NOTE:
@@ -184,9 +185,8 @@ NOTE:
   - `parent:` (must be specified your ethernet card)
   - `subnet:` (must match you intranet network range)
   - `ipv4_address:` (every izPBX frontend will must to have a different external IP)
-- Rembember to modify every `PBXNAME.env` file and set different variables for `MYSQL` (for best security use a different password for every instance), example:
-  - `MYSQL_SERVER=db`
-  - so on...
+- Modify `.env` and change according to your environment needs:
+  - `MYSQL_SERVER=db` (you can't use localhost here)
 
 ```yaml
 version: '3'
@@ -255,8 +255,8 @@ Enter in every directory containig configuration files and run:
 ### Multi-Tenant VoIP PBX with shared global Database and single docker-compose.yml file
 
 #### Objective
-- Run many izPBX instances into single docker host (you must allocate a private static IP for every izPBX backend/frontend)
-- Single Shared Database used by all izPBX instances
+- Run many izPBX instances into single docker host (you must allocate an external static IP for every izPBX backend/frontend)
+- Single Global Shared Database used by all izPBX instances
 
 #### Configuration
 Create a directory where you want deploy all izpbx data and create `docker-compose.yml` and a `PBXNAME.env` file for every izpbx deploy:
