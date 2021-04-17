@@ -197,7 +197,7 @@ networks:
   izpbx-ext:
     driver: macvlan
     driver_opts:
-      parent: enp0s13f0u3u1u3
+      parent: eth0
     ipam:
       config:
       - subnet: 10.1.1.0/24
@@ -292,7 +292,7 @@ networks:
   izpbx-ext:
     driver: macvlan
     driver_opts:
-      parent: enp0s13f0u3u1u3
+      parent: eth0
     ipam:
       config:
       - subnet: 10.1.1.0/24

@@ -3,10 +3,11 @@ version: '3'
 networks:
   izpbx:
     driver: bridge
+  ## if you want run other izpbx deploy in the same docker host enable the macvlan interface driver
   #izpbx-ext:
     #driver: macvlan
     #driver_opts:
-      #parent: enp0s13f0u3u1u3
+      #parent: eth0
     #ipam:
       #config:
       #- subnet: 10.1.1.0/24
@@ -34,7 +35,7 @@ services:
     #network_mode: host
     ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
     networks:
-    - izpbx
+      izpbx:
     ## WARNING: if commented out, the database will be exposed outside the container
     ports:
     - ${APP_PORT_MYSQL}:3306
@@ -58,11 +59,12 @@ services:
     ## NOTE: to avoid nat management use: 'network_mode: host'
     network_mode: host
     ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
-    #links: 
-    #- db
+    ## NOTE: if you want use macvlan network driver comment out 'izpbx-ext:'
     #networks:
-    #- izpbx
-    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
+    # izpbx:
+    # izpbx-ext:
+    #   ipv4_address: 10.1.1.221
+    ## NOTE: ports are not needed if using 'network_mode: host' or macvlan network driver
     #ports:
     #- ${APP_PORT_HTTP}:${APP_PORT_HTTP}
     #- ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
