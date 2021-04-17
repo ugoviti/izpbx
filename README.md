@@ -82,7 +82,7 @@ If you plan to disable `network_mode: host`, tune the port range (forwarding 100
 for best security, fine-tune the ports range based on your needs by not using standard port ranges!  
 
 # Limits of this project
-- Deploy 1 izPBX for every external IP or single VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
+- Deploy 1 izPBX instance for every host. No multi deploy works out of the box by default when using `network_mode: host` (look **Advanced Production Configuration Examples** section for Multi-Tenant Solutions)
 - Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by izPBX container updates)
   
 # Deploy izPBX
@@ -99,7 +99,7 @@ eval sudo curl -L "$(curl -s https://api.github.com/repos/docker/compose/release
 sudo systemctl enable --now docker
 ```
 
-- Clone GIT repository or download latest release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`):
+- Create a `docker-compose.yml`, or clone git repository, or download latest tarbal release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
   - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
   - `cd /opt/izpbx`
 
@@ -115,10 +115,11 @@ sudo systemctl enable --now docker
 - Deploy and start izpbx using docker-compose command:
   - `docker-compose up -d`
 
-- Wait the pull to finish (~60 seconds with fast lines) and point your web browser to the IP address of your docker host and follow initial setup guide
+- Wait the pull to finish (~60 seconds with fast internet connections) and point your web browser to the IP address of your docker host and follow initial setup guide
 
 Note: by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
 Modify docker-compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not tested. there will be problems with RTP traffic).
+Another available option is to disable `network_mode: host` and use macvlan network mode used for running izPBX into multi-tenant mode.
 
 If you want test izPBX without using docker-compose, you can use the following docker commands:
 
@@ -191,7 +192,7 @@ NOTE:
 version: '3'
 
 networks:
-  izpbx-int:
+  izpbx:
     driver: bridge
   izpbx-ext:
     driver: macvlan
@@ -202,26 +203,6 @@ networks:
       - subnet: 10.1.1.0/24
         
 services:
-  izpbx:
-    #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:18.15.10
-    restart: unless-stopped
-    depends_on:
-    - db
-    env_file:
-    - .env
-    volumes:
-    - /etc/localtime:/etc/localtime:ro
-    - ./data/izpbx:/data
-    cap_add:
-    - SYS_ADMIN
-    - NET_ADMIN
-    privileged: true
-    networks:
-     izpbx-int:
-     izpbx-ext:
-       ipv4_address: 10.1.1.221
-
   db:
     image: mariadb:10.5.9
     ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
@@ -240,13 +221,33 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     networks:
-     izpbx-int:
+     izpbx:
+
+  izpbx:
+    #hostname: ${APP_FQDN}
+    image: izdock/izpbx-asterisk:18.15.11
+    restart: unless-stopped
+    depends_on:
+    - db
+    env_file:
+    - .env
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/izpbx:/data
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    privileged: true
+    networks:
+     izpbx:
+     izpbx-ext:
+       ipv4_address: 10.1.1.221
 ```
 
 Repeat the procedure for every izPBX you want deploy. Remember to create a dedicated directory for every izpbx deploy.
 
 ##### Deploy
-Enter the directory containig configuration files and run:
+Enter in every directory containig configuration files and run:
 - `docker-compose up -d`
 
 #### Multi-Tenant VoIP PBX with shared global Database and single docker-compose.yml file
@@ -286,7 +287,7 @@ NOTE:
 version: '3'
 
 networks:
-  izpbx-int:
+  izpbx:
     driver: bridge
   izpbx-ext:
     driver: macvlan
@@ -315,11 +316,11 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     networks:
-     izpbx-int:
+     izpbx:
 
   izpbx1:
     #hostname: ${APP_FQDN}
-    #image: izdock/izpbx-asterisk:18.15.10
+    #image: izdock/izpbx-asterisk:18.15.11
     image: izpbx-asterisk:dev-18
     restart: unless-stopped
     depends_on:
@@ -334,7 +335,7 @@ services:
     - NET_ADMIN
     privileged: true
     networks:
-     izpbx-int:
+     izpbx:
      izpbx-ext:
        ipv4_address: 10.1.1.221
 
@@ -355,7 +356,7 @@ services:
     - NET_ADMIN
     privileged: true
     networks:
-     izpbx-int:
+     izpbx:
      izpbx-ext:
        ipv4_address: 10.1.1.222
 
@@ -376,7 +377,7 @@ services:
     - NET_ADMIN
     privileged: true
     networks:
-     izpbx-int:
+     izpbx:
      izpbx-ext:
        ipv4_address: 10.1.1.223
 ```
