@@ -163,13 +163,13 @@ Recap: only Asterisk core engine will be updated on container image update. Free
 
 # Advanced Production Configuration Examples
 
-#### Multi-Tenant VoIP PBX with dedicated Databases
+### Multi-Tenant VoIP PBX with dedicated Databases
 
-##### Objective
+#### Objective
 - Run many izPBX instances into single docker host (you must allocate a private static IP for every izPBX backend/frontend)
 - Dedicated Database for every izPBX instances
 
-##### Configuration
+#### Configuration
 Create a directory where you want deploy izpbx data and create `docker-compose.yml` and `.env` files:
 
 Example:
@@ -192,16 +192,18 @@ NOTE:
 version: '3'
 
 networks:
-  izpbx:
-    driver: bridge
-  izpbx-ext:
+  izpbx-0-ext:
     driver: macvlan
     driver_opts:
       parent: eth0
     ipam:
       config:
       - subnet: 10.1.1.0/24
-        
+        #ip_range: "10.1.1.221/30"
+        #gateway: 10.1.1.1
+  izpbx-1:
+    driver: bridge
+
 services:
   db:
     image: mariadb:10.5.9
@@ -221,7 +223,7 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     networks:
-     izpbx:
+      izpbx-1:
 
   izpbx:
     #hostname: ${APP_FQDN}
@@ -239,9 +241,9 @@ services:
     - NET_ADMIN
     privileged: true
     networks:
-     izpbx:
-     izpbx-ext:
-       ipv4_address: 10.1.1.221
+      izpbx-0-ext:
+        ipv4_address: 10.1.1.221
+      izpbx-1:
 ```
 
 Repeat the procedure for every izPBX you want deploy. Remember to create a dedicated directory for every izpbx deploy.
@@ -250,13 +252,13 @@ Repeat the procedure for every izPBX you want deploy. Remember to create a dedic
 Enter in every directory containig configuration files and run:
 - `docker-compose up -d`
 
-#### Multi-Tenant VoIP PBX with shared global Database and single docker-compose.yml file
+### Multi-Tenant VoIP PBX with shared global Database and single docker-compose.yml file
 
-##### Objective
+#### Objective
 - Run many izPBX instances into single docker host (you must allocate a private static IP for every izPBX backend/frontend)
 - Single Shared Database used by all izPBX instances
 
-##### Configuration
+#### Configuration
 Create a directory where you want deploy all izpbx data and create `docker-compose.yml` and a `PBXNAME.env` file for every izpbx deploy:
 
 Example:
@@ -287,16 +289,16 @@ NOTE:
 version: '3'
 
 networks:
-  izpbx:
-    driver: bridge
-  izpbx-ext:
+  izpbx-0-ext:
     driver: macvlan
     driver_opts:
-      parent: eth0
+      parent: enp0s13f0u3u1u3
     ipam:
       config:
       - subnet: 10.1.1.0/24
-       
+  izpbx-1:
+    driver: bridge
+
 services:
   db:
     image: mariadb:10.5.9
@@ -316,12 +318,11 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     networks:
-     izpbx:
+      izpbx-1:
 
   izpbx1:
     #hostname: ${APP_FQDN}
-    #image: izdock/izpbx-asterisk:18.15.11
-    image: izpbx-asterisk:dev-18
+    image: izdock/izpbx-asterisk:18.15.11
     restart: unless-stopped
     depends_on:
     - db
@@ -331,18 +332,16 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx1:/data
     cap_add:
-    - SYS_ADMIN
     - NET_ADMIN
     privileged: true
     networks:
-     izpbx:
-     izpbx-ext:
-       ipv4_address: 10.1.1.221
+      izpbx-0-ext:
+        ipv4_address: 10.1.1.221
+      izpbx-1:
 
   izpbx2:
     #hostname: ${APP_FQDN}
-    #image: izdock/izpbx-asterisk:18.15.10
-    image: izpbx-asterisk:dev-18
+    image: izdock/izpbx-asterisk:18.15.11
     restart: unless-stopped
     depends_on:
     - db
@@ -352,18 +351,16 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx2:/data
     cap_add:
-    - SYS_ADMIN
     - NET_ADMIN
     privileged: true
     networks:
-     izpbx:
-     izpbx-ext:
-       ipv4_address: 10.1.1.222
+      izpbx-0-ext:
+        ipv4_address: 10.1.1.222
+      izpbx-1:
 
   izpbx3:
     #hostname: ${APP_FQDN}
-    #image: izdock/izpbx-asterisk:18.15.10
-    image: izpbx-asterisk:dev-18
+    image: izdock/izpbx-asterisk:18.15.11
     restart: unless-stopped
     depends_on:
     - db
@@ -373,16 +370,15 @@ services:
     - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx3:/data
     cap_add:
-    - SYS_ADMIN
     - NET_ADMIN
     privileged: true
     networks:
-     izpbx:
-     izpbx-ext:
-       ipv4_address: 10.1.1.223
+      izpbx-0-ext:
+        ipv4_address: 10.1.1.223
+      izpbx-1:
 ```
 
-##### Deploy
+#### Deploy
 Enter the directory containig configuration files and run:
 - `docker-compose up -d`
 
@@ -688,6 +684,11 @@ NOTE: Tested on Yealink Phones
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possibile using FreePBX FAX Module)
 - macOS host support? (edit docker-compose.yml and comment localtime volume?)
 - Windows host support (need to use docker volume instead local directory path?)
+
+# BUGS
+- Unpredictable network interface order when running in Multi-Tenant mode. As workaround used, the network interface name must be named in alphabetical order
+  - https://gist.github.com/jfellus/cfee9efc1e8e1baf9d15314f16a46eca
+  - https://github.com/moby/moby/issues/20179
 
 # Quick reference
 - **Developed and maintained by**:
