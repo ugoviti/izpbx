@@ -2,18 +2,54 @@ version: '3'
 
 networks:
   izpbx:
+    name: izpbx
 
 services:
+  db:
+    container_name: izpbx-db
+    image: mariadb:10.5.9
+    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
+    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    restart: unless-stopped
+    env_file:
+    - .env
+    environment:
+    - MYSQL_ROOT_PASSWORD
+    - MYSQL_DATABASE
+    - MYSQL_USER
+    - MYSQL_PASSWORD
+    ## database configurations 
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/db:/var/lib/mysql
+    ## NOTE: to avoid nat management use: 'network_mode: host'
+    #network_mode: host
+    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
+    networks:
+    - izpbx
+    ## WARNING: if commented out, the database will be exposed outside the container
+    ports:
+    - ${APP_PORT_MYSQL}:3306
+
   izpbx:
     container_name: izpbx
     #hostname: ${APP_FQDN}
     image: izdock/izpbx-asterisk:18.15.10
-    restart: always
+    restart: unless-stopped
     depends_on:
     - db
     env_file:
     - .env
-    ## NOTE: for simpler sip nat management use: 'network_mode: host'
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/izpbx:/data
+    ## fail2ban need privileged mode to manage iptables
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    privileged: true
+    ## NOTE: to avoid nat management use: 'network_mode: host'
     network_mode: host
     ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
     #links: 
@@ -38,37 +74,3 @@ services:
     #- ${APP_PORT_TFTP}:${APP_PORT_TFTP}/udp
     #- ${APP_PORT_FOP2}:${APP_PORT_FOP2}
     #- ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}
-    volumes:
-    - /etc/localtime:/etc/localtime:ro
-    - ./data/izpbx:/data
-    ## fail2ban need privileged mode to manage iptables
-    cap_add:
-    - NET_ADMIN
-    privileged: true
-    
-  db:
-    container_name: izpbx-db
-    image: mariadb:10.5.9
-    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
-    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
-    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
-    restart: always
-    env_file:
-    - .env
-    ## database configurations 
-    ## WARNING: if commented out, the database will be exposed outside the container
-    ports:
-    - ${APP_PORT_MYSQL}:3306
-    volumes:
-    - /etc/localtime:/etc/localtime:ro
-    - ./data/db:/var/lib/mysql
-    environment:
-    - MYSQL_ROOT_PASSWORD
-    - MYSQL_DATABASE
-    - MYSQL_USER
-    - MYSQL_PASSWORD
-    ## NOTE: for simpler sip nat management use: 'network_mode: host'
-    #network_mode: host
-    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
-    networks:
-    - izpbx

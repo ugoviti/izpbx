@@ -37,6 +37,7 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - No vendor lock-in, you can migrare to and away izPBX simply importing/exporting FreePBX Backups
 - Based on Linux CentOS 8 64bit OS
 - Small container image footprint
+- Multi-Tenant PBX System Support (look into **Advanced Production Configuration Examples** section)
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and not volatile data
 - Fail2ban as security monitor to block SIP and HTTP brute force attacks
@@ -84,7 +85,7 @@ for best security, fine-tune the ports range based on your needs by not using st
 - Deploy 1 izPBX for every external IP or single VM. No multi containers setup works out of the box right now (caused by technical limits of how Docker and SIP UDP RTP traffic works)
 - Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by izPBX container updates)
   
-# How to use this image (Deploy)
+# Deploy izPBX
 Using **docker-compose** is the suggested method:
 
 - Install your prefered Linux OS into VM or Baremetal Server
@@ -127,6 +128,262 @@ Start MySQL:
 Start izPBX:  
 `docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ./data/izpbx:/data -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e APP_DATA=/data --name izpbx izpbx-asterisk:latest`
 
+# Upgrade izPBX
+
+1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
+```
+cd /opt/izpbx
+git pull
+git checkout refs/tags/$(git tag | sort --version-sort | tail -1)
+```
+
+2. Upgrade the **izpbx** deploy with:  
+(NB. **First** verify if `docker-compose.yml` and `default.env` was updated a make the same changes in your `.env` file)
+```
+docker-compose pull
+docker-compose up -d
+```
+
+3. If the mariadb database version was changed, rememeber to update tables schema with command  
+  `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+
+4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
+
+That's all
+
+### FreePBX upgrade path to a major release
+FreePBX will be installed into persistent data dir on initial deploy only (when no installations already exist).
+
+Successive container updates will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
+After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
+  - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
+
+Recap: only Asterisk core engine will be updated on container image update. FreePBX will be updated only via Modules Update Menu.
+
+# Advanced Production Configuration Examples
+
+#### Multi-Tenant VoIP PBX with dedicated Databases
+
+##### Objective
+- Run many izPBX instances into single docker host (you must allocate a private static IP for every izPBX backend/frontend)
+- Dedicated Database for every izPBX instances
+
+##### Configuration
+Create a directory where you want deploy izpbx data and create `docker-compose.yml` and `.env` files:
+
+Example:
+```
+mkdir yourgreatpbx
+cd yourgreatpbx
+vim docker-compose.yml
+```
+
+NOTE:
+- Modify `docker-compose.yml` and change according to your environment needs:
+  - `parent:` (must be specified your ethernet card)
+  - `subnet:` (must match you intranet network range)
+  - `ipv4_address:` (every izPBX frontend will must to have a different external IP)
+- Rembember to modify every `PBXNAME.env` file and set different variables for `MYSQL` (for best security use a different password for every instance), example:
+  - `MYSQL_SERVER=db`
+  - so on...
+
+```yaml
+version: '3'
+
+networks:
+  izpbx-int:
+    driver: bridge
+  izpbx-ext:
+    driver: macvlan
+    driver_opts:
+      parent: enp0s13f0u3u1u3
+    ipam:
+      config:
+      - subnet: 10.1.1.0/24
+        
+services:
+  izpbx:
+    #hostname: ${APP_FQDN}
+    image: izdock/izpbx-asterisk:18.15.10
+    restart: unless-stopped
+    depends_on:
+    - db
+    env_file:
+    - .env
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/izpbx:/data
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    privileged: true
+    networks:
+     izpbx-int:
+     izpbx-ext:
+       ipv4_address: 10.1.1.221
+
+  db:
+    image: mariadb:10.5.9
+    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
+    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    restart: unless-stopped
+    env_file:
+    - .env
+    environment:
+    - MYSQL_ROOT_PASSWORD
+    - MYSQL_DATABASE
+    - MYSQL_USER
+    - MYSQL_PASSWORD
+    ## database configurations 
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/db:/var/lib/mysql
+    networks:
+     izpbx-int:
+```
+
+Repeat the procedure for every izPBX you want deploy. Remember to create a dedicated directory for every izpbx deploy.
+
+##### Deploy
+Enter the directory containig configuration files and run:
+- `docker-compose up -d`
+
+#### Multi-Tenant VoIP PBX with shared global Database and single docker-compose.yml file
+
+##### Objective
+- Run many izPBX instances into single docker host (you must allocate a private static IP for every izPBX backend/frontend)
+- Single Shared Database used by all izPBX instances
+
+##### Configuration
+Create a directory where you want deploy all izpbx data and create `docker-compose.yml` and a `PBXNAME.env` file for every izpbx deploy:
+
+Example:
+```
+mkdir izpbx
+cd izpbx
+vim docker-compose.yml
+vim izpbx1.env
+vim izpbx2.env
+vim izpbx3.env
+```
+etc...
+
+NOTE:
+- Modify `docker-compose.yml` according to your environment needs, changing:
+  - `parent:` (must be specified your ethernet card)
+  - `subnet:` (must match you intranet network range)
+  - `ipv4_address:` (every izPBX frontend will must to have a different external IP)
+- Rembember to modify every `PBXNAME.env` file and set different variables for `MYSQL` (for best security use a different password for every deploy), example:
+  - `MYSQL_SERVER=db` (all deployes will use the same db name)
+  - `MYSQL_DATABASE=izpbx1_asterisk`
+  - `MYSQL_DATABASE_CDR=izpbx1_asteriskcdrdb`
+  - `MYSQL_USER=izpbx1_asterisk`
+  - `MYSQL_PASSWORD=izpbx1_AsteriskPasswordV3ryS3cur3`
+  - so on...
+
+```yaml
+version: '3'
+
+networks:
+  izpbx-int:
+    driver: bridge
+  izpbx-ext:
+    driver: macvlan
+    driver_opts:
+      parent: enp0s13f0u3u1u3
+    ipam:
+      config:
+      - subnet: 10.1.1.0/24
+       
+services:
+  db:
+    image: mariadb:10.5.9
+    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
+    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    restart: unless-stopped
+    env_file:
+    - db.env
+    environment:
+    - MYSQL_ROOT_PASSWORD
+    - MYSQL_DATABASE
+    - MYSQL_USER
+    - MYSQL_PASSWORD
+    ## database configurations 
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/db:/var/lib/mysql
+    networks:
+     izpbx-int:
+
+  izpbx1:
+    #hostname: ${APP_FQDN}
+    #image: izdock/izpbx-asterisk:18.15.10
+    image: izpbx-asterisk:dev-18
+    restart: unless-stopped
+    depends_on:
+    - db
+    env_file:
+    - izpbx1.env
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/izpbx1:/data
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    privileged: true
+    networks:
+     izpbx-int:
+     izpbx-ext:
+       ipv4_address: 10.1.1.221
+
+  izpbx2:
+    #hostname: ${APP_FQDN}
+    #image: izdock/izpbx-asterisk:18.15.10
+    image: izpbx-asterisk:dev-18
+    restart: unless-stopped
+    depends_on:
+    - db
+    env_file:
+    - izpbx2.env
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/izpbx2:/data
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    privileged: true
+    networks:
+     izpbx-int:
+     izpbx-ext:
+       ipv4_address: 10.1.1.222
+
+  izpbx3:
+    #hostname: ${APP_FQDN}
+    #image: izdock/izpbx-asterisk:18.15.10
+    image: izpbx-asterisk:dev-18
+    restart: unless-stopped
+    depends_on:
+    - db
+    env_file:
+    - izpbx3.env
+    volumes:
+    - /etc/localtime:/etc/localtime:ro
+    - ./data/izpbx3:/data
+    cap_add:
+    - SYS_ADMIN
+    - NET_ADMIN
+    privileged: true
+    networks:
+     izpbx-int:
+     izpbx-ext:
+       ipv4_address: 10.1.1.223
+```
+
+##### Deploy
+Enter the directory containig configuration files and run:
+- `docker-compose up -d`
 
 # Services Management
 
@@ -168,40 +425,8 @@ Tested Host Operating Systems:
   - Debian 10
   - Ubuntu 20.04
 
-# Upgrading izPBX
-
-1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
-```
-cd /opt/izpbx
-git pull
-git checkout refs/tags/$(git tag | sort --version-sort | tail -1)
-```
-
-2. Upgrade the **izpbx** deploy with:  
-(NB. **First** verify if `docker-compose.yml` and `default.env` was updated a make the same changes in your `.env` file)
-```
-docker-compose pull
-docker-compose up -d
-```
-
-3. If the mariadb database version was changed, rememeber to update tables schema with command  
-  `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
-
-4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
-
-That's all
-
-## FreePBX upgrade path to a major release
-FreePBX will be installed into persistent data dir on initial deploy only (when no installations already exist).
-
-Successive container updates will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
-After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
-  - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
-
-Recap: only Asterisk core engine will be updated on container image update. FreePBX will be updated only via Modules Update Menu.
-
 # Environment default variables
-```
+```bash
 ### Persistent data management
 ## enable persistent data storage (comment if you want disable persistence of data) (default: /data)
 APP_DATA=/data
