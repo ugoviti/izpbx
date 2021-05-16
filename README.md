@@ -181,11 +181,11 @@ vim .env
 ```
 
 NOTE:
-- Modify `docker-compose.yml` and change according to your environment needs:
+- Modify `docker-compose.yml` according to your environment needs:
   - `parent:` (must be specified your ethernet card)
   - `subnet:` (must match you intranet network range)
   - `ipv4_address:` (every izPBX frontend will must to have a different external IP)
-- Modify `.env` and change according to your environment needs:
+- Modify `.env` according to your environment needs:
   - `MYSQL_SERVER=db` (you can't use localhost here)
 
 ```yaml
@@ -248,7 +248,7 @@ services:
 
 Repeat the procedure for every izPBX you want deploy. Remember to create a dedicated directory for every izpbx deploy.
 
-##### Deploy
+#### Deploy
 Enter in every directory containig configuration files and run:
 - `docker-compose up -d`
 
@@ -423,180 +423,8 @@ Tested Host Operating Systems:
   - Ubuntu 20.04
 
 # Environment default variables
-```bash
-### Persistent data management
-## enable persistent data storage (comment if you want disable persistence of data) (default: /data)
-APP_DATA=/data
-
-
-### Database
-## WARNING: izPBX security passwords... please change the default
-MYSQL_ROOT_PASSWORD=CHANGEM3
-MYSQL_PASSWORD=CHANGEM3
-
-## WARNING: if docker-compose is configured with "network_mode: bridge" then use "MYSQL_SERVER=db"
-## WARNING: if docker-compose is configured with "network_mode: bridge" then use "MYSQL_SERVER=127.0.0.1" or the address of a remote database server
-#MYSQL_SERVER=db
-MYSQL_SERVER=127.0.0.1
-MYSQL_DATABASE=asterisk
-MYSQL_DATABASE_CDR=asteriskcdrdb
-MYSQL_USER=asterisk
-
-
-### Email addreses and SMTP smarthost
-## outgoing mails will set as From as: (default: izpbx@localhost.localdomain)
-#SMTP_MAIL_FROM=izpbx@example.com
-
-## outgoing mails will to send notifications, like cron, fail2ban, etc... (default: root@localhost.localdomain)
-#SMTP_MAIL_TO=admin@example.com
-
-## specify DNS name or IP address for the SMTP RelayHost (default: none)
-#SMTP_RELAYHOST=[smtp.example.com]:587
-#SMTP_RELAYHOST_USERNAME=yourusername
-#SMTP_RELAYHOST_PASSWORD=yoursecurepassword
-#SMTP_STARTTLS=true
-#SMTP_ALLOWED_SENDER_DOMAINS=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-#SMTP_MESSAGE_SIZE_LIMIT=67108864
-
-
-### Webserver and HTTP/HTTPS
-## enable if the pbx is exposed to internet and want autoconfigure virtualhosting based on the following FQDN (default: none)
-#APP_FQDN=izpbx.example.com
-
-## enable https protocols (default: true)
-## place your custom SSL certs in $APP_DATA/etc/pki/izpbx (use filename 'izpbx.crt' for public key and 'izpbx.key' for the private)
-## by default izpbx will use a self-signed certificate
-#HTTPD_HTTPS_ENABLED=true
-
-## redirect unencrypted http connetions to https (default: false)
-#HTTPD_REDIRECT_HTTP_TO_HTTPS=false
-
-## auto generate Let's Encrypt SSL certificates if the pbx is exposed to internet and want enable https protocol (default: false)
-## To use LETSENCRYPT make sure SMTP_MAIL_TO, APP_FQDN above are set to correct values
-#LETSENCRYPT_ENABLED=true
-#LETSENCRYPT_COUNTRY_CODE=IT
-#LETSENCRYPT_COUNTRY_STATE=Rome
-
-## by default everyone can connect to HTTP/HTTPS WEB interface, comment out to restrict the access and enhance the security (default: 0.0.0.0/0)
-#HTTPD_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-
-
-### phpMyAdmin
-#PMA_ALIAS=/admin/pma
-#PMA_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-
-
-### FOP2 configuration (https://www.fop2.com/docs/)
-#FOP2_LICENSE_NAME=<put here your corporation name>
-#FOP2_LICENSE_CODE=<put here your license code>
-#FOP2_LICENSE_IFACE=docker0
-
-## the following variables are not mandatory, you can leave commented (FOP2_AMI_PASSWORD will be a random hash)
-#FOP2_AMI_HOST=localhost
-#FOP2_AMI_PORT=5038
-#FOP2_AMI_USERNAME=admin
-#FOP2_AMI_PASSWORD=amp111
-
-
-### Zabbix Network Monitoring
-## for automatic discovery of HOSTNAME leave ZABBIX_HOSTNAME commented
-#ZABBIX_SERVER=zabbixserver.example.com
-#ZABBIX_HOSTNAME=izpbx.example.com
-#ZABBIX_HOSTMETADATA=izPBX CHANGEM3WithAS3cur3HA$H
-
-
-### Fail2ban 
-## format: FAIL2BAN_SECTION_KEY=VALUE
-## by default izpbx will will use: FAIL2BAN_DEFAULT_SENDER=$SMTP_MAIL_FROM and FAIL2BAN_DEFAULT_DESTEMAIL=$SMTP_MAIL_TO, anyway you can override it bellow
-FAIL2BAN_ENABLED=true
-FAIL2BAN_ASTERISK_ENABLED=true
-#FAIL2BAN_ASTERISK_LOGPATH=/var/log/asterisk/security
-#FAIL2BAN_DEFAULT_SENDER=fail2ban@example.com
-#FAIL2BAN_DEFAULT_DESTEMAIL=security@example.com
-FAIL2BAN_DEFAULT_IGNOREIP=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-FAIL2BAN_DEFAULT_BANTIME=300
-FAIL2BAN_DEFAULT_FINDTIME=3600
-FAIL2BAN_DEFAULT_MAXRETRY=10
-FAIL2BAN_RECIDIVE_ENABLED=true
-FAIL2BAN_RECIDIVE_BANTIME=1814400
-FAIL2BAN_RECIDIVE_FINDTIME=15552000
-FAIL2BAN_RECIDIVE_MAXRETRY=10
-
-
-### FreePBX Advanced Settings
-## prefix every FreePBX internal variable with FREEPBX_
-## modules enabled on first startup
-#FREEPBX_MODULES_EXTRA=soundlang callrecording cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking phonebook presencestate printextensions queues cel timeconditions pm2
-FREEPBX_FREEPBX_SYSTEM_IDENT=izPBX
-FREEPBX_AS_DISPLAY_READONLY_SETTINGS=1
-FREEPBX_AS_OVERRIDE_READONLY=1
-FREEPBX_ENABLECW=0
-FREEPBX_TONEZONE=it
-FREEPBX_PHPTIMEZONE=Europe/Rome
-#FREEPBX_BRAND_IMAGE_TANGO_LEFT=images/tango.png
-#FREEPBX_BRAND_IMAGE_FREEPBX_FOOT=images/freepbx_small.png
-#FREEPBX_BRAND_IMAGE_SPONSOR_FOOT=images/sangoma-horizontal_thumb.png
-#FREEPBX_BRAND_FREEPBX_ALT_LEFT=FreePBX
-#FREEPBX_BRAND_FREEPBX_ALT_FOOT=FreePBX®
-#FREEPBX_BRAND_SPONSOR_ALT_FOOT=www.sangoma.com
-#FREEPBX_BRAND_IMAGE_FREEPBX_LINK_LEFT=http://www.freepbx.org
-#FREEPBX_BRAND_IMAGE_FREEPBX_LINK_FOOT=http://www.freepbx.org
-#FREEPBX_BRAND_IMAGE_SPONSOR_LINK_FOOT=http://www.sangoma.com
-#FREEPBX_RSSFEEDS=
-
-## WORKAROUND @20200322 https://issues.freepbx.org/browse/FREEPBX-20559 : fwconsole setting SIGNATURECHECK 0
-FREEPBX_SIGNATURECHECK=0
-
-### PhoneBook Settings
-## PhoneBook server address used by VoiP Phones.
-## You can specify IP or DNS name. If empty, will be used in order: 'http://$APP_FQDN' or 'http://PBXIP'. (default: null)
-#PHONEBOOK_ADDRESS=https://izpbx.example.com
-
-### DHCP/NTP/TFTP Server
-#DHCP_DOMAIN=izpbx.local
-#DHCP_POOL_START=10.1.1.10
-#DHCP_POOL_END=10.1.1.250
-#DHCP_POOL_LEASE=72h
-## leave commented to use docker container ip address
-#DHCP_DNS=10.1.1.1
-#DHCP_GW=10.1.1.1
-#DHCP_NTP=10.1.1.1
-
-
-### Container Network Ports
-## webserver and freepbx ports
-APP_PORT_HTTP=80
-APP_PORT_HTTPS=443
-# asterisk ports
-APP_PORT_PJSIP=5160
-APP_PORT_SIP=5060
-APP_PORT_IAX=4569
-APP_PORT_AMI=8088
-## WARNING: tune the APP_PORT_RTP_END to a lower value (ex. 10200) if 'network_mode: host' is not used
-APP_PORT_RTP_START=10000
-APP_PORT_RTP_END=20000
-# database port
-APP_PORT_MYSQL=3306
-# other services ports
-APP_PORT_DHCP=67
-APP_PORT_TFTP=69
-APP_PORT_FOP2=4445
-APP_PORT_ZABBIX=10050
-
-
-### Container Services
-POSTFIX_ENABLED=true
-CRON_ENABLED=true
-HTTPD_ENABLED=true
-IZPBX_ENABLED=true
-FAIL2BAN_ENABLED=true
-#DHCP_ENABLED=true
-#TFTP_ENABLED=true
-#FOP2_ENABLED=true
-#ZABBIX_ENABLED=true
-#PMA_ENABLED=true
-PHONEBOOK_ENABLED=true
-```
+Consult the `default.env` file: 
+  - https://github.com/ugoviti/izdock-izpbx/blob/master/default.env
 
 # Zabbix Agent Configuration
 Consult official repository page for installation and configuration of Asterisk Zabbix Template in you Zabbix Server:
@@ -686,10 +514,12 @@ NOTE: Tested on Yealink Phones
 - Windows host support (need to use docker volume instead local directory path?)
 
 # BUGS
-- Unpredictable network interface order when running in Multi-Tenant mode. As workaround used, the network interface name must be named in alphabetical order
+- Unpredictable network interface order when running in Multi-Tenant mode. As workaround used, the network interface name must be named in lexical order. refs:
   - https://gist.github.com/jfellus/cfee9efc1e8e1baf9d15314f16a46eca
   - https://github.com/moby/moby/issues/20179
-
+- By default FreePBX use Signature Checking for modules packages, but this make very high deplays when reloading FreePBX, so by default is been disabled. refs:
+  - https://issues.freepbx.org/browse/FREEPBX-20559
+  
 # Quick reference
 - **Developed and maintained by**:
   [Ugo Viti](https://github.com/ugoviti/izdock-izpbx) @ InitZero S.r.l.

@@ -11,5 +11,7 @@
     ifempty
     missingok
     su asterisk asterisk
-    copytruncate
+    postrotate
+      /usr/sbin/asterisk -rx 'logger reload' >/dev/null || true
+    endscript
 }
