@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.13] - 2021-05-XX
+### Added
+- ATTENTION: Added new variable into `default.env` (remember to update your `.env` copy):
+  - `TZ=empty` (not set by default)
+### Changed
+- Updated Zabbix Agent 5.4.x
+
 ## [18.15.12] - 2021-05-16
 ### Changed
 - Updated to Asterisk 18.4.0 LTS

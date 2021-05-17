@@ -197,7 +197,7 @@ RUN set -xe && \
     # repo for php 7.x
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.2/rhel/7/x86_64/zabbix-release-5.2-1.el7.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/7/x86_64/zabbix-release-5.4-1.el7.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
     \
@@ -209,7 +209,7 @@ RUN set -xe && \
     # repo for phpMyAdmin
     rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
     # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.2/rhel/8/x86_64/zabbix-release-5.2-1.el8.noarch.rpm && \
+    rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
     # repo for ffmpeg
     rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
     rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
