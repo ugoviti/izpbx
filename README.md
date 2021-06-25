@@ -117,16 +117,17 @@ sudo systemctl enable --now docker
 
 - Wait the pull to finish (~60 seconds with fast internet connections) and point your web browser to the IP address of your docker host and follow initial setup guide
 
-Note: by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
-Modify docker-compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not tested. there will be problems with RTP traffic).
-Another available option is to disable `network_mode: host` and use macvlan network mode used for running izPBX into multi-tenant mode.
+**Note:** by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
+Modify docker-compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not production tested. There will be problems with RTP traffic).
+Another available option is to disable `network_mode: host` and use **macvlan** network mode used for running izPBX into multi-tenant mode.
 
+## Alternative deploy method via 'docker run' command (not suggested)
 If you want test izPBX without using docker-compose, you can use the following docker commands:
 
-Start MySQL:  
+1. Start MySQL:  
 `docker run --rm -ti -v ./data/db:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.4`
 
-Start izPBX:  
+2. Start izPBX:  
 `docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ./data/izpbx:/data -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e APP_DATA=/data --name izpbx izpbx-asterisk:latest`
 
 # Upgrade izPBX

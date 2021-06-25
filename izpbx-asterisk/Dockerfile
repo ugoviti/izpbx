@@ -16,13 +16,13 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.4.0
+ARG ASTERISK_VER=18.5.0
 
 # https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
 
 # https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.29
+ARG FOP2_VER=2.31.30
 
 # http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=20180108
@@ -43,7 +43,7 @@ ARG IZSYNTH_VER=5.0
 ARG ZABBIX_TEMPLATE_VER=master
 
 # https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.8
+ARG SNGREP_VER=1.4.9
 
 ## save vars for later and container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
