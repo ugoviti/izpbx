@@ -204,8 +204,8 @@ elif [ "$OS_RELEASE" = "alpine" ]; then
 : ${PMA_CONF_APACHE:="/etc/apache2/conf.d/phpmyadmin.conf"}
 : ${PHP_CONF:="/etc/php/php.ini"}
 : ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabPHONEBOOK_ADDRESSbix_agentd.conf.d/local.conf"}
-# centos paths
-elif [ "$OS_RELEASE" = "centos" ]; then
+# failback to RHEL based distro
+else
 : ${SUPERVISOR_DIR:="/etc/supervisord.d"}
 : ${HTTPD_CONF_DIR:="/etc/httpd"} # apache config dir
 : ${PMA_CONF_APACHE:="/etc/httpd/conf.d/phpMyAdmin.conf"}
@@ -464,7 +464,7 @@ fi
 cfgService_cron() {
   if   [ "$OS_RELEASE" = "debian" ]; then
     cronDir="/var/spool/cron/ing supervisord config fbs"
-  elif [ "$OS_RELEASE" = "centos" ]; then
+  else
     cronDir="/var/spool/cron"
   fi
   
@@ -1316,8 +1316,8 @@ runHooks() {
     mkdir -p /var/log/supervisor /var/log/proftpd /var/log/dbconfig-common /var/log/apt/ /var/log/apache2/ /var/run/nagios/
     touch /var/log/wtmp /var/log/lastlog
     [ ! -e /sbin/nologin ] && ln -s /usr/sbin/nologin /sbin/nologin
-  elif [ "$OS_RELEASE" = "centos" ]; then
-    echo "---> CentOS Linux detected"
+  else
+    echo "---> RHEL Linux based distro detected"
     mkdir -p /run/supervisor
     sed 's/\[supervisord\]/\[supervisord\]\nuser=root/' -i /etc/supervisord.conf
     sed 's|^file=.*|file=/run/supervisor/supervisor.sock|' -i /etc/supervisord.conf
