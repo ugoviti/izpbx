@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.15.14] - 2021-08-11
 ### Changed
+- Switched base OS image from CentOS 8 to RockyLinux 8
 - Updated Asterisk to 18.5.1 LTS
 - Updated MariaDB to 10.5.12
 ### Fixed
