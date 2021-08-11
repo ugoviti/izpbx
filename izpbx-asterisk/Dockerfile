@@ -1,4 +1,4 @@
-ARG IMAGE_FROM=centos:8
+ARG IMAGE_FROM=rockylinux/rockylinux:8
 
 FROM ${IMAGE_FROM}
 
@@ -191,56 +191,43 @@ RUN set -xe && \
   # install epel repository
   dnf -y install epel-release && \
   \
-  # centos 7 specific (legacy)
-  if [[ $VERSION_ID -le 7 ]]; then \
-    ln -s /usr/bin/yum /usr/bin/dnf && \
-    # repo for php 7.x
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
-    # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/7/x86_64/zabbix-release-5.4-1.el7.noarch.rpm && \
-    # repo for ffmpeg
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
-    \
-    yum-config-manager --enable remi 1>/dev/null && \
-    yum-config-manager --enable remi-php73 1>/dev/null ;fi && \
+  # repo for phpMyAdmin and php 7.3
+  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
+  # repo for zabbix agent
+  rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
+  # repo for ffmpeg
+  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
+  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
+  # repo for lame command
+  rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
+  # repo for posfix 3.5
+  rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-11.gf.el8.noarch.rpm && \
   \
-  # centos 8 specific
-  if [[ $VERSION_ID -ge 8 ]]; then \
-    # repo for phpMyAdmin
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
-    # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
-    # repo for ffmpeg
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
-    rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
-    # repo for lame command
-    rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
-    # repo for posfix 3.5
-    rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-11.gf.el8.noarch.rpm && \
-    \
-    # install dnf plugins
-    dnf -y install dnf-plugins-core && \
-    # enable extra repository
-    dnf config-manager --set-enabled \
-      powertools \
-      remi \
-      rpmfusion-free-updates \
-      rpmfusion-nonfree-updates \
-      forensics \
-      gf-plus \
-      gf-testing \
-    && \
-    # install not upstream packages
-    # postfix > 3.4.x needed for docker logging to stdout
-    dnf -y install \
-      lame \
-      postfix3 \
-    && \
-    # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
-    dnf config-manager --set-disabled forensics && \
-    # enable php 7.3 module
-    dnf module disable -y php && \
-    dnf module enable  -y php:remi-7.3 ;fi && \
+  # install dnf plugins
+  dnf -y install dnf-plugins-core && \
+  # enable extra repository
+  dnf config-manager --set-enabled \
+    powertools \
+    remi \
+    rpmfusion-free-updates \
+    rpmfusion-nonfree-updates \
+    forensics \
+    gf-plus \
+    gf-testing \
+  && \
+  # install not upstream packages
+  # postfix > 3.4.x needed for docker logging to stdout
+  dnf -y install \
+    lame \
+    postfix3 \
+  && \
+  # enable module php 7.3
+  #dnf module disable -y php && \
+  #dnf module enable  -y php:remi-7.3 && \
+  # enable module php 7.4
+  #dnf module enable php:7.4 && \
+  # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
+  dnf config-manager --set-disabled forensics && \
   \
   # upgrade the system
   dnf upgrade -y && \
@@ -338,9 +325,8 @@ RUN set -xe && \
     libtool \
     cmake \
     libresample-devel \
+    mariadb-devel \
   ' && \
-  if [[ $VERSION_ID -le 7 ]]; then ASTERISK_BUILD_DEPS+="mysql-devel" ;fi && \
-  if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
   \
