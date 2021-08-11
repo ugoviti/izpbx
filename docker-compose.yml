@@ -15,7 +15,7 @@ networks:
 services:
   db:
     container_name: izpbx-db
-    image: mariadb:10.5.11
+    image: mariadb:10.5.12
     ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
     ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
