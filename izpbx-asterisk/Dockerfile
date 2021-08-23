@@ -205,7 +205,7 @@ RUN set -xe && \
   # repo for lame command
   rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
   # repo for posfix 3.5
-  rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-11.gf.el8.noarch.rpm && \
+  rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-12.gf.el8.noarch.rpm && \
   \
   # install dnf plugins
   dnf -y install dnf-plugins-core && \
