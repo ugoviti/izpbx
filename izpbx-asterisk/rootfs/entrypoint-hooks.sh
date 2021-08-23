@@ -73,6 +73,7 @@ declare -A fpbxFilesLog=(
   [FPBXSECLOGFILE]=/var/log/asterisk/freepbx_security.log
 )
 
+# FreePBX SIP Settings
 declare -A fpbxSipSettings=(
   [rtpstart]=${APP_PORT_RTP_START}
   [rtpend]=${APP_PORT_RTP_END}
@@ -80,6 +81,11 @@ declare -A fpbxSipSettings=(
   [tcpport-0.0.0.0]=${APP_PORT_PJSIP}
   [bindport]=${APP_PORT_SIP}
 )
+
+
+# other FreePBX Settings
+: ${FREEPBX_HTTPBINDPORT:="$APP_PORT_AMI"}
+
 
 # 20200318 still not used
 #declare -A freepbxIaxSettings=(
@@ -1360,7 +1366,12 @@ runHooks() {
   fi
 
   # check files and directory permissions
-#  echo "--> verifying files permissions"
+  echo "--> verifying files permissions"
+  
+  # TFTPDIR permission and path fix
+  fixOwner "${APP_USR}" "${APP_GRP}" "${appDataDirs[TFTPDIR]}"
+  [ ! -e "/tftpboot" ] && ln -s "${appDataDirs[TFTPDIR]}" "/tftpboot"
+
 #   for dir in ${appDataDirs[@]}; do
 #     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
 #     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"

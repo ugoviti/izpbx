@@ -61,7 +61,7 @@ name: izpbx-dev-18
 
 environment:
   APP_DEBUG: 1
-  ASTERISK_VER: 18.5.1
+  ASTERISK_VER: 18.6.0
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"

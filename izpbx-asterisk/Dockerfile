@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.5.1
+ARG ASTERISK_VER=18.6.0
 
 # https://github.com/FreePBX/core/releases (only major version)
 ARG FREEPBX_VER=15.0
@@ -60,11 +60,14 @@ ENV APP_PORT_HTTPS        443
 ENV APP_PORT_PJSIP        5160
 ENV APP_PORT_SIP          5060
 ENV APP_PORT_IAX          4569
+ENV APP_PORT_AMI          8088
 ENV APP_PORT_RTP_START    10000
 ENV APP_PORT_RTP_END      10200
+ENV APP_PORT_MYSQL        3306
+ENV APP_PORT_DHCP         67
+ENV APP_PORT_TFTP         69
 ENV APP_PORT_FOP2         4445
 ENV APP_PORT_ZABBIX       10050
-ENV APP_PORT_MYSQL        3306
 
 ## app users
 ENV APP_UID               1000
@@ -182,6 +185,7 @@ ENV APP_INSTALL_DEPS=' \
     cyrus-sasl-plain \
     cyrus-sasl-md5 \
     libresample \
+    incron \
   '
 
 RUN set -xe && \
