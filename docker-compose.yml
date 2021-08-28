@@ -13,6 +13,7 @@ networks:
       #- subnet: 10.1.1.0/24
 
 services:
+  # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
   db:
     container_name: izpbx-db
     image: mariadb:10.5.12
@@ -40,6 +41,7 @@ services:
     ports:
     - ${APP_PORT_MYSQL}:3306
 
+  # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
   izpbx:
     container_name: izpbx
     #hostname: ${APP_FQDN}
@@ -56,15 +58,15 @@ services:
     cap_add:
     - NET_ADMIN
     privileged: true
-    ## NOTE: to avoid nat management use: 'network_mode: host'
+    ## NOTE: to avoid SIP-RTP NAT issues use: 'network_mode: host'
     network_mode: host
     ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
-    ## NOTE: if you want use macvlan network driver comment out 'izpbx-ext:'
+    ##          ports are not needed if using 'network_mode: host' or macvlan network driver
+    ##          if you want use macvlan network driver comment out 'izpbx-ext:' too and change exposed IP according your needs
     #networks:
     # izpbx:
     # izpbx-ext:
     #   ipv4_address: 10.1.1.221
-    ## NOTE: ports are not needed if using 'network_mode: host' or macvlan network driver
     #ports:
     #- ${APP_PORT_HTTP}:${APP_PORT_HTTP}
     #- ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}

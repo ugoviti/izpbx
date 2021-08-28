@@ -174,20 +174,23 @@ ENV APP_INSTALL_DEPS=' \
     sudo \
     figlet \
     nc \
-    ffmpeg \
     dnsmasq \
     glibc-langpack-en \
-    phpMyAdmin \
     perl-DBI \
     perl-DBD-mysql \
-    zabbix-agent \
-    zabbix-sender \
     cyrus-sasl-plain \
     cyrus-sasl-md5 \
     libresample \
     incron \
+    postfix \
+    phpMyAdmin \
+    zabbix-agent \
+    zabbix-sender \
+    ffmpeg \
+    lame \
   '
-
+  # NOTE: postfix > 3.4.x is needed for docker logging to stdout
+  
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
@@ -195,7 +198,7 @@ RUN set -xe && \
   # install epel repository
   dnf -y install epel-release && \
   \
-  # repo for phpMyAdmin and php 7.3
+  # repo for phpMyAdmin
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
   # repo for zabbix agent
   rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
@@ -203,9 +206,7 @@ RUN set -xe && \
   rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
   rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
   # repo for lame command
-  rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
-  # repo for posfix 3.5
-  rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-12.gf.el8.noarch.rpm && \
+  rpm -Uhv http://repo.okay.com.mx/centos/8/x86_64/release/okay-release-1-5.el8.noarch.rpm && \
   \
   # install dnf plugins
   dnf -y install dnf-plugins-core && \
@@ -215,23 +216,13 @@ RUN set -xe && \
     remi \
     rpmfusion-free-updates \
     rpmfusion-nonfree-updates \
-    forensics \
-    gf-plus \
-    gf-testing \
-  && \
-  # install not upstream packages
-  # postfix > 3.4.x needed for docker logging to stdout
-  dnf -y install \
-    lame \
-    postfix3 \
+    okay \
   && \
   # enable module php 7.3
   #dnf module disable -y php && \
   #dnf module enable  -y php:remi-7.3 && \
   # enable module php 7.4
   #dnf module enable php:7.4 && \
-  # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
-  dnf config-manager --set-disabled forensics && \
   \
   # upgrade the system
   dnf upgrade -y && \
