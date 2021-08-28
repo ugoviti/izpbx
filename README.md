@@ -9,7 +9,7 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 ## Production Branch: (Asterisk 18 + FreePBX 15)
 * `latest`, `18`, `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT`
 
-## Legacy Production Branch: (Asterisk 16 + FreePBX 15)
+## Legacy Branch: (Asterisk 16 + FreePBX 15)
 * `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
 
 ## Development Branches:
@@ -20,9 +20,9 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 Tags format: **Z.Y.X-[BUILD|COMMIT]**
 
 where:  
-  * **Z** = Asterisk release (PBX Engine)
+  * **Z** = Asterisk release (PBX engine)
   * **Y** = FreePBX release (PBX GUI)
-  * **X** = izPBX release (PBX Distribution)
+  * **X** = izPBX release (this project)
   * **BUILD** = Build number | **COMMIT** = GIT commit ID
 
 Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions
@@ -34,24 +34,24 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - Fast initial bootstrap to deploy a full features PBX system (60 secs install time from zero to a running turnkey PBX system)
 - Built-in PBX Engine based on Asterisk® project (compiled from scratch)
 - Built-in WEB Management GUI based on FreePBX® project (with default predownloaded modules for quicker initial deploy)
-- No vendor lock-in, you can migrare to and away izPBX simply importing/exporting FreePBX Backups
-- Based on Linux CentOS 8 64bit OS
-- Small container image footprint
+- No vendor lock-in, you can migrare to izPBX and away izPBX simply importing/exporting FreePBX Backups
+- Based on Rocky Linux 8 64bit OS (RHEL derivate with long term support)
+- Small container image footprint (~450 MB)
 - Multi-Tenant PBX System Support (look into **Advanced Production Configuration Examples** section)
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and not volatile data
 - Fail2ban as security monitor to block SIP and HTTP brute force attacks
 - FOP2 Operator Panel
-- Integrated Asterisk Zabbix agent for active health monitoring
-- Misc `izpbx-*` scripts (like `izpbx-callstats`)
+- Integrated Asterisk Zabbix agent for services health monitoring
+- Misc `izpbx-*` tools scripts (like `izpbx-callstats`)
 - `izsynth` utility - TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems
 - `tcpdump` and `sngrep` utility to debug VoIP calls
 - supervisord as services management with monitoring and automatic restart when services fail
 - postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
 - Integrated cron daemon for running scheduled tasks
 - TFTP and DHCP server powered by DNSMasq for autoprovisioning VoIP Phones
-- Apache 2.4 and PHP 7.3 (mpm_prefork+mod_php configuration mode)
-- Automatic Let's Encrypt HTTPS certificate management for exposed PBXs to internet
+- Apache 2.4 and PHP 7.2 (mpm_prefork+mod_php configuration mode)
+- Automatic Let's Encrypt HTTPS certificate management for exposed PBXs to Internet
 - Custom commercial SSL Certificates support
 - Logrotating of service logs
 - All configurations made via single central `.env` file
@@ -91,7 +91,7 @@ Using **docker-compose** is the suggested method:
 - Install your prefered Linux OS into VM or Baremetal Server
 
 - Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
-  - CentOS 8 Quick&Dirty commands (skip if you use other distribution):
+  - RHEL8 based distro Quick&Dirty commands (skip if you use other distribution):
 ```
 sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
 sudo dnf install docker-ce -y
@@ -418,7 +418,7 @@ Tested Docker Runtime:
   - docker-compose 1.25
 
 Tested Host Operating Systems:
-  - CentOS 6/7/8
+  - RHEL 6/7/8 based distro
   - Fedora Core >30
   - Debian 10
   - Ubuntu 20.04

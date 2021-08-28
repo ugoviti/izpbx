@@ -36,11 +36,13 @@ declare -A appDataDirs=(
   [TFTPDIR]=/var/lib/tftpboot
 )
 
+# configuration files
 declare -A appFilesConf=(
   [FPBXCFGFILE]=/etc/freepbx.conf
   [AMPCFGFILE]=/etc/amportal.conf
 )
 
+# cache directories
 declare -A appCacheDirs=(
   [ASTRUNDIR]=/var/run/asterisk
   [PHPOPCACHEDIR]=/var/lib/php/opcache
@@ -48,6 +50,7 @@ declare -A appCacheDirs=(
   [PHPWSDLDIR]=/var/lib/php/wsdlcache
 )
 
+# FreePBX directories
 declare -A fpbxDirs=(
   [AMPWEBROOT]=/var/www/html
   [ASTETCDIR]=/etc/asterisk
@@ -63,17 +66,22 @@ declare -A fpbxDirs=(
   [CERTKEYLOC]=/etc/asterisk/keys               
 )
 
+# asterisk extra directories
 declare -A fpbxDirsExtra=(
   [ASTMODDIR]=/usr/lib64/asterisk/modules
 )
 
+# FreePBX log files
 declare -A fpbxFilesLog=(
   [FPBXDBUGFILE]=/var/log/asterisk/freepbx-debug.log
   [FPBXLOGFILE]=/var/log/asterisk/freepbx.log
   [FPBXSECLOGFILE]=/var/log/asterisk/freepbx_security.log
 )
 
-# FreePBX SIP Settings
+# FreePBX customizable settings
+: ${FREEPBX_HTTPBINDPORT:="$APP_PORT_AMI"}
+
+# FreePBX customizable SIP settings
 declare -A fpbxSipSettings=(
   [rtpstart]=${APP_PORT_RTP_START}
   [rtpend]=${APP_PORT_RTP_END}
@@ -83,11 +91,7 @@ declare -A fpbxSipSettings=(
 )
 
 
-# other FreePBX Settings
-: ${FREEPBX_HTTPBINDPORT:="$APP_PORT_AMI"}
-
-
-# 20200318 still not used
+# 20200318 still can't be changed
 #declare -A freepbxIaxSettings=(
 #  [bindport]=${APP_PORT_IAX}
 #)
@@ -161,8 +165,10 @@ fi
 : ${PHONEBOOK_ENABLED:="true"}
 
 ## daemons configs
-# legacy config: if ROOT_MAILTO is defined, then set SMTP_MAIL_TO=$ROOT_MAILTO
+# legacy config: if ROOT_MAILTO is defined then set SMTP_MAIL_TO=$ROOT_MAILTO
 : ${SMTP_MAIL_TO:="$ROOT_MAILTO"}
+## default cron mail adrdess
+: ${ROOT_MAILTO:="$SMTP_MAIL_TO"} # default root mail address
 
 # postfix
 : ${SMTP_RELAYHOST:=""}
@@ -173,15 +179,12 @@ fi
 : ${SMTP_MESSAGE_SIZE_LIMIT:="0"}
 : ${SMTP_MAIL_FROM:="izpbx@localhost.localdomain"}
 : ${SMTP_MAIL_TO:="root@localhost.localdomain"}
-
+# smarthost config
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
 : ${RELAYHOST_USERNAME:="$SMTP_RELAYHOST_USERNAME"}
 : ${RELAYHOST_PASSWORD:="$SMTP_RELAYHOST_PASSWORD"}
 : ${ALLOWED_SENDER_DOMAINS:="$SMTP_ALLOWED_SENDER_DOMAINS"}
 : ${MESSAGE_SIZE_LIMIT:="$SMTP_MESSAGE_SIZE_LIMIT"}
-
-## default cron mail adrdess
-: ${ROOT_MAILTO:="$SMTP_MAIL_TO"} # default root mail address
 
 # fail2ban
 : ${FAIL2BAN_DEFAULT_SENDER:="$SMTP_MAIL_FROM"}
@@ -191,8 +194,9 @@ fi
 ## detect current operating system
 : ${OS_RELEASE:="$(cat /etc/os-release | grep ^"ID=" | sed 's/"//g' | awk -F"=" '{print $2}')"}
 
-# debian paths
+# operating system specific paths
 if   [ "$OS_RELEASE" = "debian" ]; then
+# debian paths
 : ${SUPERVISOR_DIR:="/etc/supervisor/conf.d/"}
 : ${PMA_DIR:="/var/www/html/admin/pma"}
 : ${PMA_CONF:="$PMA_DIR/config.inc.php"}
@@ -203,15 +207,15 @@ if   [ "$OS_RELEASE" = "debian" ]; then
 : ${NRPE_CONF_LOCAL:="/etc/nagios/nrpe_local.cfg"}
 : ${ZABBIX_CONF:="/etc/zabbix/zabbix_agentd.conf"}
 : ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.conf.d/local.conf"}
-# alpine paths
 elif [ "$OS_RELEASE" = "alpine" ]; then
+# alpine paths
 : ${SUPERVISOR_DIR:="/etc/supervisor.d"}
 : ${PMA_CONF:="/etc/phpmyadmin/config.inc.php"}
 : ${PMA_CONF_APACHE:="/etc/apache2/conf.d/phpmyadmin.conf"}
 : ${PHP_CONF:="/etc/php/php.ini"}
 : ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabPHONEBOOK_ADDRESSbix_agentd.conf.d/local.conf"}
-# failback to RHEL based distro
 else
+# failback to RHEL based distro
 : ${SUPERVISOR_DIR:="/etc/supervisord.d"}
 : ${HTTPD_CONF_DIR:="/etc/httpd"} # apache config dir
 : ${PMA_CONF_APACHE:="/etc/httpd/conf.d/phpMyAdmin.conf"}
