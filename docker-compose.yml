@@ -24,13 +24,12 @@ services:
     env_file:
     - .env
     environment:
+    - TZ
     - MYSQL_ROOT_PASSWORD
     - MYSQL_DATABASE
     - MYSQL_USER
     - MYSQL_PASSWORD
-    ## database configurations 
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     ## NOTE: to avoid nat management use: 'network_mode: host'
     #network_mode: host
@@ -52,7 +51,6 @@ services:
     env_file:
     - .env
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx:/data
     ## fail2ban need privileged mode to manage iptables
     cap_add:

@@ -109,7 +109,7 @@ sudo systemctl enable --now docker
 - Copy default configuration file `default.env` into `.env`:
   - `cp default.env .env`
 
-- Customize `.env` variables, specially the security section of default passwords (look bellow for a full variables list):
+- Customize `.env` variables, specially the security section of default passwords:
   - `vim .env`
 
 - Deploy and start izpbx using docker-compose command:

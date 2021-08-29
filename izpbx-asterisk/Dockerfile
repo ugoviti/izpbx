@@ -54,6 +54,9 @@ ENV FOP2_VER=${FOP2_VER}
 ENV APP_NAME              "izpbx-asterisk"
 ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System"
 
+# set default timezone
+ENV TZ                    "UTC"
+
 ## app ports
 ENV APP_PORT_HTTP         80
 ENV APP_PORT_HTTPS        443
@@ -75,7 +78,7 @@ ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
-# development debug mode (keep development/build dependencies on filesystem)
+# development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
 
 ## install packages
@@ -189,6 +192,7 @@ ENV APP_INSTALL_DEPS=' \
     ffmpeg \
     lame \
   '
+  
   # NOTE: postfix > 3.4.x is needed for docker logging to stdout
   
 RUN set -xe && \
