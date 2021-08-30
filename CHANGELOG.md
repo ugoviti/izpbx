@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ATTENTION: changed default variabile value: `TZ=UTC`
   (change or add into .env file, your right TimeZone location to avoid breaking asterisk's CDR and Time Conditions. ex. `TZ=Europe/Rome`)
 - ATTENTION: removed from docker-compose.yml the mounting of volume `/etc/localtime:/etc/localtime:ro`, so `TZ` variabile is used instead
+### Fixed
+- Fixed APP_PORT_HTTP wrong sostitution
 
 ## [18.15.15] - 2021-08-20
 ### Changed
