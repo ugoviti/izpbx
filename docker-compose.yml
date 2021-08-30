@@ -44,7 +44,7 @@ services:
   izpbx:
     container_name: izpbx
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:18.15.15
+    image: izdock/izpbx-asterisk:18.15.16
     restart: unless-stopped
     depends_on:
     - db
