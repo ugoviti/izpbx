@@ -30,6 +30,7 @@ services:
     - MYSQL_USER
     - MYSQL_PASSWORD
     volumes:
+    #- /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     ## NOTE: to avoid nat management use: 'network_mode: host'
     #network_mode: host
@@ -44,13 +45,14 @@ services:
   izpbx:
     container_name: izpbx
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:18.15.16
+    image: izdock/izpbx-asterisk:18.15.17
     restart: unless-stopped
     depends_on:
     - db
     env_file:
     - .env
     volumes:
+    #- /etc/localtime:/etc/localtime:ro
     - ./data/izpbx:/data
     ## fail2ban need privileged mode to manage iptables
     cap_add:

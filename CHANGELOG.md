@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.17] - 2021-08-31
+### Fixed
+- fixed timezone problem causing TimeConditions not working (Asterisk doesn't honour the TZ var)
+
 ## [18.15.16] - 2021-08-30
 ### Changed
 - ATTENTION: changed default variabile value: `TZ=UTC`

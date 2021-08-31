@@ -15,6 +15,11 @@
 # override default data directory used by container apps (used by stateful apps)
 : ${APP_DATA:=""}
 
+# timezone management workaround
+: ${TZ:="UTC"}
+[ -e "/etc/localtime" ] && rm -f /etc/localtime
+ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+
 # default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
   [CRONDIR]=/var/spool/cron
