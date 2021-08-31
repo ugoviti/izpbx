@@ -18,7 +18,10 @@
 # timezone management workaround
 : ${TZ:="UTC"}
 [ -e "/etc/localtime" ] && rm -f /etc/localtime
+[ -e "/etc/timezone" ] && rm -f /etc/timezone
 ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+echo "$TZ" > /etc/timezone
+
 
 # default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
