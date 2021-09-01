@@ -82,5 +82,6 @@ services:
     #- ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
     #- ${APP_PORT_TFTP}:${APP_PORT_TFTP}
     #- ${APP_PORT_TFTP}:${APP_PORT_TFTP}/udp
+    #- ${APP_PORT_NTP}:${APP_PORT_NTP}/udp
     #- ${APP_PORT_FOP2}:${APP_PORT_FOP2}
     #- ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}

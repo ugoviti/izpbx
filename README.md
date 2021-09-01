@@ -49,7 +49,8 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - supervisord as services management with monitoring and automatic restart when services fail
 - postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
 - Integrated cron daemon for running scheduled tasks
-- TFTP and DHCP server powered by DNSMasq for autoprovisioning VoIP Phones
+- Integrated TFTP and DHCP server powered by DNSMasq for autoprovisioning VoIP Phones
+- Integrated NTP Server
 - Apache 2.4 and PHP 7.2 (mpm_prefork+mod_php configuration mode)
 - Automatic Let's Encrypt HTTPS certificate management for exposed PBXs to Internet
 - Custom commercial SSL Certificates support

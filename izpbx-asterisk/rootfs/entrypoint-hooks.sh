@@ -81,7 +81,7 @@ declare -A fpbxDirsExtra=(
 
 # FreePBX log files
 declare -A fpbxFilesLog=(
-  [FPBXDBUGFILE]=/var/log/asterisk/freepbx-debug.log
+  [FPBXDBUGFILE]=/var/log/asterisk/freepbx_debug.log
   [FPBXLOGFILE]=/var/log/asterisk/freepbx.log
   [FPBXSECLOGFILE]=/var/log/asterisk/freepbx_security.log
 )
@@ -167,6 +167,7 @@ fi
 : ${DNSMASQ_ENABLED:="false"}
 : ${DHCP_ENABLED:="false"}
 : ${TFTP_ENABLED:="false"}
+: ${NTP_ENABLED:="false"}
 : ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
 : ${PMA_ENABLED:="false"}
@@ -713,8 +714,11 @@ cfgService_izpbx() {
     # fix freepbx directory paths
     if [ ! -z "${APP_DATA}" ]; then
       echo "----> fixing directory system paths in db configuration..."
-      for k in ${!fpbxDirs[@]} ${!fpbxFilesLog[@]}; do
-        su - ${APP_USR} -s /bin/bash -c "fwconsole setting ${k} ${fpbxDirs[$k]}"
+      for k in ${!fpbxDirs[@]}; do
+        [ "$(fwconsole setting ${k} | awk -F"[][{}]" '{print $2}')" != "${fpbxDirs[$k]}" ] && fwconsole setting ${k} ${fpbxDirs[$k]}
+      done
+      for k in ${!fpbxFilesLog[@]}; do
+        [ "$(fwconsole setting ${k} | awk -F"[][{}]" '{print $2}')" != "${fpbxFilesLog[$k]}" ] && fwconsole setting ${k} ${fpbxFilesLog[$k]}
       done
     fi
     
@@ -734,8 +738,7 @@ cfgService_izpbx() {
     #[ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
     
     # FIXME @20210321 FreePBX doesn't configure into configuration DB the non default 'asteriskcdrdb' DB
-    su - ${APP_USR} -s /bin/bash -c "fwconsole setting CDRDBNAME ${MYSQL_DATABASE_CDR}"
-    
+    [ "$(fwconsole setting CDRDBNAME | awk -F"[][{}]" '{print $2}')" != "${MYSQL_DATABASE_CDR}" ] && fwconsole setting CDRDBNAME ${MYSQL_DATABASE_CDR}
     
     ## fix Asterisk/FreePBX file permissions
     freepbxChown
@@ -1049,6 +1052,24 @@ cfgService_freepbx_install() {
 cfgService_dnsmasq() {
   [ "$DHCP_ENABLED" = "true" ] && cfgService_dhcp
   [ "$TFTP_ENABLED" = "true" ] && cfgService_tftp
+}
+
+## chronyd service (ntp server)
+cfgService_ntp() {
+  # disable default ntp pools addresses if NTP_SERVERS var is set
+  echo "# chronyd ntp server configuration
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+keyfile /etc/chrony.keys
+leapsectz right/UTC
+logdir /var/log/chrony
+
+bindcmdaddress 0.0.0.0
+$([ -z "$NTP_SERVERS" ] && echo "pool 2.pool.ntp.org iburst" || for server in $NTP_SERVERS ; do echo "pool $server iburst"; done)
+
+$(for subnet in $NTP_ALLOW_FROM ; do echo "allow $subnet"; done)
+" > /etc/chrony.conf
 }
 
 ## dhcp service
@@ -1410,6 +1431,7 @@ runHooks() {
   chkService IZPBX_ENABLED
   chkService ZABBIX_ENABLED
   chkService FOP2_ENABLED
+  chkService NTP_ENABLED
 
   # dnsmasq management
   [[ "$DHCP_ENABLED" = "true" || "$TFTP_ENABLED" = "true" ]] && DNSMASQ_ENABLED=true
