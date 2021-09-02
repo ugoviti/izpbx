@@ -222,7 +222,6 @@ services:
     - MYSQL_PASSWORD
     ## database configurations 
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     networks:
       izpbx-1:
@@ -236,7 +235,6 @@ services:
     env_file:
     - .env
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx:/data
     cap_add:
     - SYS_ADMIN
@@ -317,7 +315,6 @@ services:
     - MYSQL_PASSWORD
     ## database configurations 
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
     networks:
       izpbx-1:
@@ -331,7 +328,6 @@ services:
     env_file:
     - izpbx1.env
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx1:/data
     cap_add:
     - NET_ADMIN
@@ -350,7 +346,6 @@ services:
     env_file:
     - izpbx2.env
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx2:/data
     cap_add:
     - NET_ADMIN
@@ -369,7 +364,6 @@ services:
     env_file:
     - izpbx3.env
     volumes:
-    - /etc/localtime:/etc/localtime:ro
     - ./data/izpbx3:/data
     cap_add:
     - NET_ADMIN
