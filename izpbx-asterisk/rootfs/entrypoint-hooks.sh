@@ -163,7 +163,7 @@ fi
 : ${ASTERISK_ENABLED:="false"}
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
-: ${POSTFIX_ENABLED:="true"}
+: ${POSTFIX_ENABLED:="false"}
 : ${DNSMASQ_ENABLED:="false"}
 : ${DHCP_ENABLED:="false"}
 : ${TFTP_ENABLED:="false"}
