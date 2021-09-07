@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.19] - 2021-09-07
+### Fixed
+- disabled postfix by default to avoid mail loops and port conflicts when not correctly configured
+### Changed
+- updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
+  - from `POSTFIX_ENABLED=true` to `#POSTFIX_ENABLED=true`
+
+
 ## [18.15.18] - 2021-09-02
 ### Fixed
 - faster container startup time
