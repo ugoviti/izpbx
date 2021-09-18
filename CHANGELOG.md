@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `HTTPD_HTTPS_CERT_FILE`
   - `HTTPD_HTTPS_KEY_FILE`
   - `HTTPD_HTTPS_CHAIN_FILE`
-- automatically recreate default self-signed certificate to match APP_FQDN Common Name
+- automatically recreate default self-signed certificate to match Common Name of `APP_FQDN` variable
 - enhancements on self-signed certificate management
-- changed default https certs dir from '/etc/pki/izpbx' to '/etc/asterisk/keys' (remember to delete the old /etc/pki/izpbx dir because is not more used)
+- changed default https certs dir from `/etc/pki/izpbx` to `/etc/asterisk/keys` (remember to delete the old /etc/pki/izpbx dir because is not more used)
 - use default FreePBX SSL certs (NOTE: this will change default certificates for exposed https servers)
 
 ## [18.15.19] - 2021-09-07
