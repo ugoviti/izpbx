@@ -611,9 +611,6 @@ EXPOSE \
 # define volumes
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
 
-# add files to container
-ADD rootfs Dockerfile README.md /
-
 # CI args
 ARG APP_VER_BUILD
 ARG APP_BUILD_COMMIT
@@ -624,6 +621,9 @@ ENV APP_FQDN=""
 ENV APP_VER_BUILD="${APP_VER_BUILD}"
 ENV APP_BUILD_COMMIT="${APP_BUILD_COMMIT}"
 ENV APP_BUILD_DATE="${APP_BUILD_DATE}"
+
+# add files to container
+ADD rootfs Dockerfile README.md /
 
 # start the container process
 ENTRYPOINT ["/entrypoint.sh"]

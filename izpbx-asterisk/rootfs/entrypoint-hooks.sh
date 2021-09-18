@@ -142,6 +142,10 @@ fi
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
 : ${HTTPD_ALLOW_FROM:=""}
 
+: ${HTTPD_HTTPS_CERT_FILE:="${appDataDirs[SSLCRTDIR]}/izpbx.crt"}
+: ${HTTPD_HTTPS_KEY_FILE:="${appDataDirs[SSLCRTDIR]}/izpbx.key"}
+#: ${HTTPD_HTTPS_CHAIN_FILE:="${appDataDirs[SSLCRTDIR]}/chain.crt"}
+
 # phpMyAdmin configuration
 : ${PMA_CONFIG:="/etc/phpMyAdmin/config.inc.php"}
 : ${PMA_ALIAS:="/admin/pma"}
@@ -615,6 +619,22 @@ fi
 
 if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
   echo "--> enabling Apache SSL engine"
+  
+  # recreate self-signed cert if needed
+  [ -e "${HTTPD_HTTPS_CERT_FILE}" ] && local CERT_CN=$(openssl x509 -noout -subject -in ${HTTPD_HTTPS_CERT_FILE} | sed 's/.*CN = //;s/, .*//')
+  
+  if [[ ! -e "${HTTPD_HTTPS_CERT_FILE}" && ! -e "${HTTPD_HTTPS_KEY_FILE}" ]]; then
+    echo "---> WARNING: the specified certificate files (HTTPD_HTTPS_CERT_FILE=${HTTPD_HTTPS_CERT_FILE} HTTPD_HTTPS_KEY_FILE=${HTTPD_HTTPS_KEY_FILE}) doesn't exist, generating self-signed certs to avoid web server crashing"
+    openssl req -subj "/CN=$APP_FQDN" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
+  elif [[ ! -z "$APP_FQDN" && "$CERT_CN" = "izpbx" ]]; then
+    echo "---> WARNING: current certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
+    echo "----> generating new selfsigned certificate for 10 years duration"
+    openssl req -subj "/CN=$APP_FQDN" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
+  elif [[ ! -z "$APP_FQDN" && "$APP_FQDN" != "$CERT_CN" ]]; then
+    echo "---> WARNING: current certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
+    echo "----> NOTE: FIX IT REPLACING BY HAND THE WRONG CERTIFICATES"
+  fi
+  
   echo "
 # enable HTTPS listening
 Listen ${APP_PORT_HTTPS} https
@@ -663,9 +683,9 @@ $(print_ApacheAllowFrom)
   SSLHonorCipherOrder      on
   SSLCipherSuite           PROFILE=SYSTEM
   SSLProxyCipherSuite      PROFILE=SYSTEM
-  SSLCertificateFile       ${appDataDirs[SSLCRTDIR]}/izpbx.crt
-  SSLCertificateKeyFile    ${appDataDirs[SSLCRTDIR]}/izpbx.key
-  #SSLCertificateChainFile ${appDataDirs[SSLCRTDIR]}/chain.crt
+  SSLCertificateFile       ${HTTPD_HTTPS_CERT_FILE}
+  SSLCertificateKeyFile    ${HTTPD_HTTPS_KEY_FILE}
+  $([ ! -z "${HTTPD_HTTPS_CHAIN_FILE}" ] && echo "SSLCertificateChainFile  ${HTTPD_HTTPS_CHAIN_FILE}")
 
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
@@ -1278,14 +1298,14 @@ cfgService_letsencrypt() {
 
     # request new certificate
     if [ $CERTOK -eq 1 ]; then
-      set -x
       httpd -k start
+      set -x
       fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$SMTP_MAIL_TO
+      set +x
       [ $? -eq 0 ] && CERTOK=0
       [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
       [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
       httpd -k stop
-      set +x
     fi
   fi
 }

@@ -4,13 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.20] - 2021-09-18
+### Changed
+- updated `default.env` with the following new variables: (NOTE: don't forget to update your custom `.env` file)
+  - HTTPD_HTTPS_CERT_FILE
+  - HTTPD_HTTPS_KEY_FILE
+  - HTTPD_HTTPS_CHAIN_FILE
+- automatically recreate default self-signed certificate to match APP_FQDN Common Name
+- enhancements on self-signed certificate management
+
 ## [18.15.19] - 2021-09-07
 ### Fixed
 - disabled postfix by default to avoid mail loops and port conflicts when not correctly configured
 ### Changed
 - updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
   - from `POSTFIX_ENABLED=true` to `#POSTFIX_ENABLED=true`
-
 
 ## [18.15.18] - 2021-09-02
 ### Fixed
@@ -25,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - NTP_ENABLED
 - updated `docker-compose.yml` with the following lines: (NOTE: don't forget to update your custom `docker-compose.yml` file)
   - ${APP_PORT_NTP}:${APP_PORT_NTP}/udp
-
 
 ## [18.15.17] - 2021-08-31
 ### Fixed
