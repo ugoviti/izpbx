@@ -37,7 +37,6 @@ declare -A appDataDirs=(
   [F2BLOGDIR]=/var/log/fail2ban
   [F2BLIBDIR]=/var/lib/fail2ban
   [FOP2APPDIR]=/usr/local/fop2
-  [SSLCRTDIR]=/etc/pki/izpbx
   [ROOTHOME]=/root
   [DNSMASQDIR]=/etc/dnsmasq.d
   [DNSMASQLEASEDIR]=/var/lib/dnsmasq
@@ -142,9 +141,9 @@ fi
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
 : ${HTTPD_ALLOW_FROM:=""}
 
-: ${HTTPD_HTTPS_CERT_FILE:="${appDataDirs[SSLCRTDIR]}/izpbx.crt"}
-: ${HTTPD_HTTPS_KEY_FILE:="${appDataDirs[SSLCRTDIR]}/izpbx.key"}
-#: ${HTTPD_HTTPS_CHAIN_FILE:="${appDataDirs[SSLCRTDIR]}/chain.crt"}
+: ${HTTPD_HTTPS_CERT_FILE:="${fpbxDirs[CERTKEYLOC]}/default.crt"}
+: ${HTTPD_HTTPS_KEY_FILE:="${fpbxDirs[CERTKEYLOC]}/default.key"}
+#: ${HTTPD_HTTPS_CHAIN_FILE:="${fpbxDirs[CERTKEYLOC]}/default.chain.crt"}
 
 # phpMyAdmin configuration
 : ${PMA_CONFIG:="/etc/phpMyAdmin/config.inc.php"}
@@ -620,21 +619,26 @@ fi
 if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
   echo "--> enabling Apache SSL engine"
   
-  # recreate self-signed cert if needed
+  ## recreate self-signed cert if needed
+  # detect CN of specified cert
   [ -e "${HTTPD_HTTPS_CERT_FILE}" ] && local CERT_CN=$(openssl x509 -noout -subject -in ${HTTPD_HTTPS_CERT_FILE} | sed 's/.*CN = //;s/, .*//')
   
+  # define cert subject
+  [ -z "$APP_FQDN" ] && local CERT_SUBJ="/CN=izpbx" || SUBJ="/CN=$APP_FQDN"
+
   if [[ ! -e "${HTTPD_HTTPS_CERT_FILE}" && ! -e "${HTTPD_HTTPS_KEY_FILE}" ]]; then
-    echo "---> WARNING: the specified certificate files (HTTPD_HTTPS_CERT_FILE=${HTTPD_HTTPS_CERT_FILE} HTTPD_HTTPS_KEY_FILE=${HTTPD_HTTPS_KEY_FILE}) doesn't exist, generating self-signed certs to avoid web server crashing"
-    openssl req -subj "/CN=$APP_FQDN" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
+    echo "---> WARNING: the SSL certificate files (HTTPD_HTTPS_CERT_FILE=${HTTPD_HTTPS_CERT_FILE} HTTPD_HTTPS_KEY_FILE=${HTTPD_HTTPS_KEY_FILE}) doesn't exist"
+    echo "----> generating new self-signed certificate (with 10 years duration) to avoid web server crashing"
+    openssl req -subj "$CERT_SUBJ" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
   elif [[ ! -z "$APP_FQDN" && "$CERT_CN" = "izpbx" ]]; then
-    echo "---> WARNING: current certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
-    echo "----> generating new selfsigned certificate for 10 years duration"
-    openssl req -subj "/CN=$APP_FQDN" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
+    echo "---> WARNING: current SSL certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
+    echo "----> generating new self-signed certificate (with 10 years duration)"
+    openssl req -subj "$CERT_SUBJ" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
   elif [[ ! -z "$APP_FQDN" && "$APP_FQDN" != "$CERT_CN" ]]; then
-    echo "---> WARNING: current certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
-    echo "----> NOTE: FIX IT REPLACING BY HAND THE WRONG CERTIFICATES"
+    echo "---> WARNING: current SSL certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
+    echo "----> NOTE: FIX IT BY REPLACING THE WRONG CERTIFICATES"
   fi
-  
+
   echo "
 # enable HTTPS listening
 Listen ${APP_PORT_HTTPS} https

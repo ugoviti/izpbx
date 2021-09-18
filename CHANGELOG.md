@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.15.20] - 2021-09-18
+## [18.15.20] - 2021-09-19
 ### Changed
 - updated `default.env` with the following new variables: (NOTE: don't forget to update your custom `.env` file)
   - HTTPD_HTTPS_CERT_FILE
@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - HTTPD_HTTPS_CHAIN_FILE
 - automatically recreate default self-signed certificate to match APP_FQDN Common Name
 - enhancements on self-signed certificate management
+- changed default https certs dir from '/etc/pki/izpbx' to '/etc/asterisk/keys'
+- use default FreePBX SSL certs
 
 ## [18.15.19] - 2021-09-07
 ### Fixed
