@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [18.15.20] - 2021-09-19
 ### Changed
 - updated `default.env` with the following new variables: (NOTE: don't forget to update your custom `.env` file)
-  - HTTPD_HTTPS_CERT_FILE
-  - HTTPD_HTTPS_KEY_FILE
-  - HTTPD_HTTPS_CHAIN_FILE
+  - `HTTPD_HTTPS_CERT_FILE`
+  - `HTTPD_HTTPS_KEY_FILE`
+  - `HTTPD_HTTPS_CHAIN_FILE`
 - automatically recreate default self-signed certificate to match APP_FQDN Common Name
 - enhancements on self-signed certificate management
 - changed default https certs dir from '/etc/pki/izpbx' to '/etc/asterisk/keys' (remember to delete the old /etc/pki/izpbx dir because is not more used)
@@ -29,12 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - chronyd (NTP) service support
 ### Changed
 - updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
-  - NTP_SERVERS
-  - NTP_ALLOW_FROM
-  - APP_PORT_NTP
-  - NTP_ENABLED
+  - `NTP_SERVERS`
+  - `NTP_ALLOW_FROM`
+  - `APP_PORT_NTP`
+  - `NTP_ENABLED`
 - updated `docker-compose.yml` with the following lines: (NOTE: don't forget to update your custom `docker-compose.yml` file)
-  - ${APP_PORT_NTP}:${APP_PORT_NTP}/udp
+  - `${APP_PORT_NTP}:${APP_PORT_NTP}/udp`
 
 ## [18.15.17] - 2021-08-31
 ### Fixed
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated Asterisk to 18.6.0 LTS
 ### Fixed
-- Fixed APP_PORT_AMI variable
+- Fixed `APP_PORT_AMI` variable
 
 ## [18.15.14] - 2021-08-11
 ### Changed
@@ -98,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added php-ldap package
 ### Fixed
 - Fixed missing LDAP support for UserManager
-- Fixed SMTP_ALLOWED_SENDER_DOMAINS default var
+- Fixed `SMTP_ALLOWED_SENDER_DOMAINS` default var
 
 ## [18.15.9] - 2021-04-14
 ### Fixed
@@ -130,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced first deployment
 - Allow custom 'asterisk' and 'asteriskcdrdb' DB name during initial deploy
 - Added new variables into `default.env` (update your `.env` copy):
-  - MYSQL_DATABASE_CDR
+  - `MYSQL_DATABASE_CDR`
 ### Added
 - Added opusfile-devel as build deps
 ### Fixed
@@ -143,8 +143,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apache config rework
 - Minor entrypoint improvements
 - Added new variables into `default.env` (update your `.env` copy):
-  - LETSENCRYPT_COUNTRY_CODE
-  - LETSENCRYPT_COUNTRY_STATE
+  - `LETSENCRYPT_COUNTRY_CODE`
+  - `LETSENCRYPT_COUNTRY_STATE`
 
 ## [18.15.4] - 2021-03-17
 ### Changed
@@ -152,8 +152,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New version of asterisk.sh zabbix agent script with better active calls detection (now will be ignored the calls in Ringing state)
 - Container shell enhancements
 - Added new variables into `default.env` (update your `.env` copy):
-  - ZABBIX_HOSTNAME
-  - ZABBIX_HOSTMETADATA
+  - `ZABBIX_HOSTNAME`
+  - `ZABBIX_HOSTMETADATA`
 
 ## [18.15.3] - 2021-03-14
 ### Changed
@@ -168,7 +168,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Added support for postfix TLS and relayhost port (close #9)
 - Added new variables into `default.env` (update your `.env` copy):
-  - SMTP_STARTTLS=true
+  - `SMTP_STARTTLS=true`
 
 ## [18.15.1] - 2021-02-17
 ### Changed
@@ -214,7 +214,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fix missing `/var/run/asterisk` needed by last FreePBX update
 ### Added
 - updated `default.env` with
-  - APP_PORT_AMI=8088
+  - `APP_PORT_AMI=8088`
 
 ## [0.9.10] - 2020-09-23
 ### Changed
@@ -226,12 +226,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added phpMyAdmin support
 - updated `default.env` with
   - NB. don't forget to accordingly update your `.env` file with the following lines:
-  - PMA_ALIAS=/admin/pma
-  - PMA_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+  - `PMA_ALIAS=/admin/pma`
+  - `PMA_ALLOW_FROM=127.0.0.0/8 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16`
 
 ## [0.9.9] - 2020-09-20
 ### Changed
-- new configuration variable: SMTP_MAIL_FROM for setting the From address of outgoing emails
+- new configuration variable: `SMTP_MAIL_FROM` for setting the From address of outgoing emails
 
 ## [0.9.8] - 2020-09-07
 ### Changed
@@ -245,19 +245,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - updated `default.env` with
   - NB. don't forget to accordingly update your `.env` file with the following lines:
-  - APP_PORT_DHCP=67
-  - #DHCP_ENABLED=true
-  - #DHCP_POOL_START=10.1.1.10
-  - #DHCP_POOL_END=10.1.1.250
-  - #DHCP_POOL_LEASE=72h
-  - #DHCP_DOMAIN=izpbx.local
-  - #DHCP_DNS=10.1.1.1
-  - #DHCP_GW=10.1.1.1
-  - #DHCP_NTP=10.1.1.1
+  - `APP_PORT_DHCP=67`
+  - `#DHCP_ENABLED=true`
+  - `#DHCP_POOL_START=10.1.1.10`
+  - `#DHCP_POOL_END=10.1.1.250`
+  - `#DHCP_POOL_LEASE=72h`
+  - `#DHCP_DOMAIN=izpbx.local`
+  - `#DHCP_DNS=10.1.1.1`
+  - `#DHCP_GW=10.1.1.1`
+  - `#DHCP_NTP=10.1.1.1`
 - updated `docker-compose.yml` with
   - NB. don't forget to accordingly update your `docker-compose.yml` file with the following lines:
-  - ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
-- renamed TFTPD_ENABLED into TFTP_ENABLED
+  - `${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp`
+- renamed `TFTPD_ENABLED` into `TFTP_ENABLED`
 ### Removed
 - tftp-server by kernel.org replaced with dnsmasq service
 
@@ -265,8 +265,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - TFTPD Server support
 ### Changed
-- updated `default.env` with APP_PORT_TFTP (don't forget to accordingly update your `.env` file)
-- updated `docker-compose.yml` with APP_PORT_TFTP
+- updated `default.env` with `APP_PORT_TFTP` (don't forget to accordingly update your `.env` file)
+- updated `docker-compose.yml` with `APP_PORT_TFTP`
 - fix asterisk logs rotating
 
 ## [0.9.5] - 2020-06-25
@@ -279,7 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - FOP2 license code management
 ### Changed
-- updated `default.env`: added FOP2_LICENSE_NAME, FOP2_LICENSE_CODE (don't forget to accordingly update your `.env` file)
+- updated `default.env`: added `FOP2_LICENSE_NAME`, `FOP2_LICENSE_CODE` (don't forget to accordingly update your `.env` file)
 
 ## [0.9.3] - 2020-04-30
 ### Changed
