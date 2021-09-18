@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `HTTPD_HTTPS_CHAIN_FILE`
 - automatically recreate default self-signed certificate to match Common Name of `APP_FQDN` variable
 - enhancements on self-signed certificate management
-- changed default https certs dir from `/etc/pki/izpbx` to `/etc/asterisk/keys` (remember to delete the old /etc/pki/izpbx dir because is not more used)
+- changed default https certs dir from `/etc/pki/izpbx` to `/etc/asterisk/keys` (remember to delete the old `/etc/pki/izpbx` directory because it's not used anymore)
 - use default FreePBX SSL certs (NOTE: this will change default certificates for exposed https servers)
 
 ## [18.15.19] - 2021-09-07
@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.15.17] - 2021-08-31
 ### Fixed
-- fixed timezone problem causing TimeConditions not working (Asterisk doesn't honour the TZ var)
+- fixed timezone problem causing TimeConditions not working (Asterisk doesn't honour the `TZ` var)
 
 ## [18.15.16] - 2021-08-30
 ### Changed
