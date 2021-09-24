@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.21] - 2021-09-24
+### Fixed
+- moved the `[ASTRUNDIR]=/var/run/asterisk` outside persistent `/data` storage to avoid problems between startups
+### Changed
+- Updated mariadb from 10.5.12 to 10.6.4
+  - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+- updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
+  - default value for `HTTPD_HTTPS_ENABLED` from `true` to `false`
+
 ## [18.15.20] - 2021-09-19
 ### Changed
 - updated `default.env` with the following new variables: (NOTE: don't forget to update your custom `.env` file)

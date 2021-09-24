@@ -30,7 +30,6 @@ declare -A appDataDirs=(
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTSPOOLDIR]=/var/spool/asterisk
-  [ASTRUNDIR]=/var/run/asterisk
   [HTTPDHOME]=/var/www
   [HTTPDLOGDIR]=/var/log/httpd
   [ASTLOGDIR]=/var/log/asterisk
@@ -64,7 +63,6 @@ declare -A fpbxDirs=(
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTAGIDIR]=/var/lib/asterisk/agi-bin
   [ASTSPOOLDIR]=/var/spool/asterisk
-  [ASTRUNDIR]=/var/run/asterisk
   [ASTLOGDIR]=/var/log/asterisk
   [AMPBIN]=/var/lib/asterisk/bin
   [AMPSBIN]=/var/lib/asterisk/sbin
@@ -137,7 +135,7 @@ fi
 #: ${FOP2_AMI_PASSWORD:="amp111"}
 
 # apache httpd configuration
-: ${HTTPD_HTTPS_ENABLED:="true"}
+: ${HTTPD_HTTPS_ENABLED:="false"}
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
 : ${HTTPD_ALLOW_FROM:=""}
 
@@ -930,7 +928,7 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --astvarlibdir=${fpbxDirs[ASTVARLIBDIR]}"
   FPBX_OPTS+=" --astagidir=${fpbxDirs[ASTAGIDIR]}"
   FPBX_OPTS+=" --astspooldir=${fpbxDirs[ASTSPOOLDIR]}"
-  FPBX_OPTS+=" --astrundir=${fpbxDirs[ASTRUNDIR]}"
+  FPBX_OPTS+=" --astrundir=${appCacheDirs[ASTRUNDIR]}"
   FPBX_OPTS+=" --astlogdir=${fpbxDirs[ASTLOGDIR]}"
   FPBX_OPTS+=" --ampbin=${fpbxDirs[AMPBIN]}"
   FPBX_OPTS+=" --ampsbin=${fpbxDirs[AMPSBIN]}"
