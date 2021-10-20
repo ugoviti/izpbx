@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.22] - 2021-10-21
+### Changed
+- Updated Asterisk to 18.7.1 LTS
+
 ## [18.15.21] - 2021-09-24
 ### Fixed
 - moved the `[ASTRUNDIR]=/var/run/asterisk` outside persistent `/data` storage to avoid problems between startups

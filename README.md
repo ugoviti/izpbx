@@ -380,10 +380,13 @@ Enter the directory containig configuration files and run:
 
 # Services Management
 
-### Command to restart Asterisk PBX
+### Command to restart whole izPBX deploy
+`docker-compose restart izpbx`
+
+### Command to restart izPBX cntainer only
 `docker restart izpbx`
 
-### Command to restart MariaDB Database
+### Command to restart DB container only
 `docker restart izpbx-db`
 
 ### If you want restart single services inside `izpbx` container
