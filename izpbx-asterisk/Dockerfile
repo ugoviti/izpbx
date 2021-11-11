@@ -16,9 +16,9 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.7.1
+ARG ASTERISK_VER=18.8.0
 
-# https://github.com/FreePBX/core/releases (only major version)
+# https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=15.0
 
 # https://www.fop2.com/download.php
@@ -30,7 +30,7 @@ ARG SPANDSP_VER=20180108
 # https://github.com/holme-r/iksemel
 ARG IKSEMEL_VER=1.5.1.3
 
-# https://github.com/BelledonneCommunications/bcg729/releases
+# https://github.com/BelledonneCommunications/bcg729/tags
 ARG BCG729_VER=1.1.1
 
 # https://bitbucket.org/arkadi/asterisk-g72x
@@ -42,7 +42,7 @@ ARG IZSYNTH_VER=5.0
 # https://github.com/ugoviti/zabbix-templates
 ARG ZABBIX_TEMPLATE_VER=master
 
-# https://github.com/irontec/sngrep/releases
+# https://github.com/irontec/sngrep/tags
 ARG SNGREP_VER=1.4.9
 
 ## save vars for later and container usage
