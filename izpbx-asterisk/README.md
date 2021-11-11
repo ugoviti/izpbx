@@ -4,7 +4,7 @@ izPBX is a TurnKey Cloud Native Telephony System powered by Asterisk Engine and 
 
 for more info: https://github.com/ugoviti/izdock-izpbx
 
-# Docker Development
+# izPBX Development
 
 ## Build
 
@@ -19,7 +19,7 @@ Asterisk 16:
 
 ### Docker Run:
 Start MySQL:  
-`docker run --rm -ti -p 3306:3306 -v ${PWD}/data/db:/var/lib/mysql -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.5`
+`docker run --rm -ti -p 3306:3306 -v ${PWD}/data/db:/var/lib/mysql -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.6`
 
 Start izPBX:  
 `docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ${PWD}/data/izpbx:/data -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e APP_DATA=/data --name izpbx izpbx-asterisk:dev-18`
@@ -27,8 +27,8 @@ Start izPBX:
 
 ### Docker Compose:
 
-Asterisk 16:  
-`docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-16.yml up`
-
 Asterisk 18:  
 `docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-18.yml up`
+
+Asterisk 16:  
+`docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-16.yml up`
