@@ -19,11 +19,25 @@ concurrency:
   limit: 1
 
 volumes:
-  - name: docker
+  - name: cache
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
+
+workspace:
+  base: /drone
+  path: src
       
 steps:
+- name: restore-cache
+  image: drillster/drone-volume-cache
+  volumes:
+  - name: cache
+    path: /cache
+  settings:
+    restore: true
+    mount:
+    - /drone/docker
+
 - name: print-env
   image: alpine/git
   commands:
@@ -40,6 +54,7 @@ steps:
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
+    storage_path: /drone/docker
     username:
       from_secret: DOCKER_USERNAME
     password:
@@ -51,10 +66,17 @@ steps:
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
       #- ${DRONE_COMMIT_SHA:0:7}
-  volumes:
-  - name: docker
-    path: /var/lib/docker
 
+- name: rebuild-cache
+  image: drillster/drone-volume-cache
+  volumes:
+  - name: cache
+    path: /cache
+  settings:
+    rebuild: true
+    mount:
+    - /drone/docker
+      
 ---
 kind: pipeline
 name: izpbx-dev-18
@@ -81,11 +103,25 @@ concurrency:
   limit: 1
 
 volumes:
-  - name: docker
+  - name: cache
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
+workspace:
+  base: /drone
+  path: src
+      
 steps:
+- name: restore-cache
+  image: drillster/drone-volume-cache
+  volumes:
+  - name: cache
+    path: /cache
+  settings:
+    restore: true
+    mount:
+    - /drone/docker
+
 - name: prep
   image: alpine
   commands:
@@ -109,14 +145,22 @@ steps:
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
+    storage_path: /drone/docker
     username:
       from_secret: DOCKER_USERNAME
     password:
       from_secret: DOCKER_PASSWORD
-  volumes:
-  - name: docker
-    path: /var/lib/docker
 
+- name: rebuild-cache
+  image: drillster/drone-volume-cache
+  volumes:
+  - name: cache
+    path: /cache
+  settings:
+    rebuild: true
+    mount:
+    - /drone/docker
+    
 ---
 
 kind: pipeline
@@ -144,11 +188,25 @@ concurrency:
   limit: 1
 
 volumes:
-  - name: docker
+  - name: cache
     host:
       path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
 
+workspace:
+  base: /drone
+  path: src
+      
 steps:
+- name: restore-cache
+  image: drillster/drone-volume-cache
+  volumes:
+  - name: cache
+    path: /cache
+  settings:
+    restore: true
+    mount:
+    - /drone/docker
+
 - name: prep
   image: alpine
   commands:
@@ -172,11 +230,18 @@ steps:
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
+    storage_path: /drone/docker
     username:
       from_secret: DOCKER_USERNAME
     password:
       from_secret: DOCKER_PASSWORD
-  volumes:
-  - name: docker
-    path: /var/lib/docker
 
+- name: rebuild-cache
+  image: drillster/drone-volume-cache
+  volumes:
+  - name: cache
+    path: /cache
+  settings:
+    rebuild: true
+    mount:
+    - /drone/docker
