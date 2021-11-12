@@ -13,7 +13,7 @@ function kill_app(){
 trap "kill_app" SIGINT SIGTERM
 
 # configure permissions before starting
-$command chown
+#$command chown
 
 # start asterisk
 $command start -q

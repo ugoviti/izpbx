@@ -15,6 +15,14 @@
 # override default data directory used by container apps (used by stateful apps)
 : ${APP_DATA:=""}
 
+# timezone management workaround
+: ${TZ:="UTC"}
+[ -e "/etc/localtime" ] && rm -f /etc/localtime
+[ -e "/etc/timezone" ] && rm -f /etc/timezone
+ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+echo "$TZ" > /etc/timezone
+
+
 # default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
   [CRONDIR]=/var/spool/cron
@@ -22,25 +30,25 @@ declare -A appDataDirs=(
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTSPOOLDIR]=/var/spool/asterisk
-  [ASTRUNDIR]=/var/run/asterisk
   [HTTPDHOME]=/var/www
   [HTTPDLOGDIR]=/var/log/httpd
   [ASTLOGDIR]=/var/log/asterisk
   [F2BLOGDIR]=/var/log/fail2ban
   [F2BLIBDIR]=/var/lib/fail2ban
   [FOP2APPDIR]=/usr/local/fop2
-  [SSLCRTDIR]=/etc/pki/izpbx
   [ROOTHOME]=/root
   [DNSMASQDIR]=/etc/dnsmasq.d
   [DNSMASQLEASEDIR]=/var/lib/dnsmasq
   [TFTPDIR]=/var/lib/tftpboot
 )
 
+# configuration files
 declare -A appFilesConf=(
   [FPBXCFGFILE]=/etc/freepbx.conf
   [AMPCFGFILE]=/etc/amportal.conf
 )
 
+# cache directories
 declare -A appCacheDirs=(
   [ASTRUNDIR]=/var/run/asterisk
   [PHPOPCACHEDIR]=/var/lib/php/opcache
@@ -48,13 +56,13 @@ declare -A appCacheDirs=(
   [PHPWSDLDIR]=/var/lib/php/wsdlcache
 )
 
+# FreePBX directories
 declare -A fpbxDirs=(
   [AMPWEBROOT]=/var/www/html
   [ASTETCDIR]=/etc/asterisk
   [ASTVARLIBDIR]=/var/lib/asterisk
   [ASTAGIDIR]=/var/lib/asterisk/agi-bin
   [ASTSPOOLDIR]=/var/spool/asterisk
-  [ASTRUNDIR]=/var/run/asterisk
   [ASTLOGDIR]=/var/log/asterisk
   [AMPBIN]=/var/lib/asterisk/bin
   [AMPSBIN]=/var/lib/asterisk/sbin
@@ -63,16 +71,22 @@ declare -A fpbxDirs=(
   [CERTKEYLOC]=/etc/asterisk/keys               
 )
 
+# asterisk extra directories
 declare -A fpbxDirsExtra=(
   [ASTMODDIR]=/usr/lib64/asterisk/modules
 )
 
+# FreePBX log files
 declare -A fpbxFilesLog=(
-  [FPBXDBUGFILE]=/var/log/asterisk/freepbx-debug.log
+  [FPBXDBUGFILE]=/var/log/asterisk/freepbx_debug.log
   [FPBXLOGFILE]=/var/log/asterisk/freepbx.log
   [FPBXSECLOGFILE]=/var/log/asterisk/freepbx_security.log
 )
 
+# FreePBX customizable settings
+: ${FREEPBX_HTTPBINDPORT:="$APP_PORT_AMI"}
+
+# FreePBX customizable SIP settings
 declare -A fpbxSipSettings=(
   [rtpstart]=${APP_PORT_RTP_START}
   [rtpend]=${APP_PORT_RTP_END}
@@ -81,7 +95,8 @@ declare -A fpbxSipSettings=(
   [bindport]=${APP_PORT_SIP}
 )
 
-# 20200318 still not used
+
+# 20200318 still can't be changed
 #declare -A freepbxIaxSettings=(
 #  [bindport]=${APP_PORT_IAX}
 #)
@@ -91,6 +106,18 @@ declare -A fpbxSipSettings=(
 # hostname configuration
 [ ! -z ${APP_FQDN} ] && hostname "${APP_FQDN}" && export HOSTNAME=${HOSTNAME} # set hostname to APP_FQDN if defined
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
+
+# define PHONEBOOK_ADDRESS used in phonebook menu.xml.
+: ${PHONEBOOK_ADDRESS:=""}
+if [ -z "$PHONEBOOK_ADDRESS" ]; then
+  [ "$HTTPD_HTTPS_ENABLED" = "true" ] && PHONEBOOK_PROTO=https || PHONEBOOK_PROTO=http
+
+  if [ -z ${APP_FQDN} ]; then
+      PHONEBOOK_ADDRESS="$PHONEBOOK_PROTO://$(hostname -I | awk '{print $1}')"
+    else
+      PHONEBOOK_ADDRESS="$PHONEBOOK_PROTO://${APP_FQDN}"
+  fi
+fi
 
 # mysql configuration
 : ${MYSQL_SERVER:="db"}
@@ -108,9 +135,13 @@ declare -A fpbxSipSettings=(
 #: ${FOP2_AMI_PASSWORD:="amp111"}
 
 # apache httpd configuration
-: ${HTTPD_HTTPS_ENABLED:="true"}
+: ${HTTPD_HTTPS_ENABLED:="false"}
 : ${HTTPD_REDIRECT_HTTP_TO_HTTPS:="false"}
 : ${HTTPD_ALLOW_FROM:=""}
+
+: ${HTTPD_HTTPS_CERT_FILE:="${fpbxDirs[CERTKEYLOC]}/default.crt"}
+: ${HTTPD_HTTPS_KEY_FILE:="${fpbxDirs[CERTKEYLOC]}/default.key"}
+#: ${HTTPD_HTTPS_CHAIN_FILE:="${fpbxDirs[CERTKEYLOC]}/default.chain.crt"}
 
 # phpMyAdmin configuration
 : ${PMA_CONFIG:="/etc/phpMyAdmin/config.inc.php"}
@@ -133,17 +164,21 @@ declare -A fpbxSipSettings=(
 : ${ASTERISK_ENABLED:="false"}
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
-: ${POSTFIX_ENABLED:="true"}
+: ${POSTFIX_ENABLED:="false"}
 : ${DNSMASQ_ENABLED:="false"}
 : ${DHCP_ENABLED:="false"}
 : ${TFTP_ENABLED:="false"}
+: ${NTP_ENABLED:="false"}
 : ${ZABBIX_ENABLED:="false"}
 : ${FOP2_ENABLED:="false"}
 : ${PMA_ENABLED:="false"}
+: ${PHONEBOOK_ENABLED:="true"}
 
 ## daemons configs
-# legacy config: if ROOT_MAILTO is defined, then set SMTP_MAIL_TO=$ROOT_MAILTO
+# legacy config: if ROOT_MAILTO is defined then set SMTP_MAIL_TO=$ROOT_MAILTO
 : ${SMTP_MAIL_TO:="$ROOT_MAILTO"}
+## default cron mail adrdess
+: ${ROOT_MAILTO:="$SMTP_MAIL_TO"} # default root mail address
 
 # postfix
 : ${SMTP_RELAYHOST:=""}
@@ -154,15 +189,12 @@ declare -A fpbxSipSettings=(
 : ${SMTP_MESSAGE_SIZE_LIMIT:="0"}
 : ${SMTP_MAIL_FROM:="izpbx@localhost.localdomain"}
 : ${SMTP_MAIL_TO:="root@localhost.localdomain"}
-
+# smarthost config
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
 : ${RELAYHOST_USERNAME:="$SMTP_RELAYHOST_USERNAME"}
 : ${RELAYHOST_PASSWORD:="$SMTP_RELAYHOST_PASSWORD"}
 : ${ALLOWED_SENDER_DOMAINS:="$SMTP_ALLOWED_SENDER_DOMAINS"}
 : ${MESSAGE_SIZE_LIMIT:="$SMTP_MESSAGE_SIZE_LIMIT"}
-
-## default cron mail adrdess
-: ${ROOT_MAILTO:="$SMTP_MAIL_TO"} # default root mail address
 
 # fail2ban
 : ${FAIL2BAN_DEFAULT_SENDER:="$SMTP_MAIL_FROM"}
@@ -172,8 +204,9 @@ declare -A fpbxSipSettings=(
 ## detect current operating system
 : ${OS_RELEASE:="$(cat /etc/os-release | grep ^"ID=" | sed 's/"//g' | awk -F"=" '{print $2}')"}
 
-# debian paths
+# operating system specific paths
 if   [ "$OS_RELEASE" = "debian" ]; then
+# debian paths
 : ${SUPERVISOR_DIR:="/etc/supervisor/conf.d/"}
 : ${PMA_DIR:="/var/www/html/admin/pma"}
 : ${PMA_CONF:="$PMA_DIR/config.inc.php"}
@@ -184,15 +217,15 @@ if   [ "$OS_RELEASE" = "debian" ]; then
 : ${NRPE_CONF_LOCAL:="/etc/nagios/nrpe_local.cfg"}
 : ${ZABBIX_CONF:="/etc/zabbix/zabbix_agentd.conf"}
 : ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.conf.d/local.conf"}
-# alpine paths
 elif [ "$OS_RELEASE" = "alpine" ]; then
+# alpine paths
 : ${SUPERVISOR_DIR:="/etc/supervisor.d"}
 : ${PMA_CONF:="/etc/phpmyadmin/config.inc.php"}
 : ${PMA_CONF_APACHE:="/etc/apache2/conf.d/phpmyadmin.conf"}
 : ${PHP_CONF:="/etc/php/php.ini"}
-: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabbix_agentd.conf.d/local.conf"}
-# centos paths
-elif [ "$OS_RELEASE" = "centos" ]; then
+: ${ZABBIX_CONF_LOCAL:="/etc/zabbix/zabPHONEBOOK_ADDRESSbix_agentd.conf.d/local.conf"}
+else
+# failback to RHEL based distro
 : ${SUPERVISOR_DIR:="/etc/supervisord.d"}
 : ${HTTPD_CONF_DIR:="/etc/httpd"} # apache config dir
 : ${PMA_CONF_APACHE:="/etc/httpd/conf.d/phpMyAdmin.conf"}
@@ -451,7 +484,7 @@ fi
 cfgService_cron() {
   if   [ "$OS_RELEASE" = "debian" ]; then
     cronDir="/var/spool/cron/ing supervisord config fbs"
-  elif [ "$OS_RELEASE" = "centos" ]; then
+  else
     cronDir="/var/spool/cron"
   fi
   
@@ -501,7 +534,7 @@ cfgService_fail2ban() {
 cfgService_httpd() {
 
   # local functions
-  print_AllowFrom() {
+  print_ApacheAllowFrom() {
     if [ ! -z "${HTTPD_ALLOW_FROM}" ]; then 
         for IP in $(echo ${HTTPD_ALLOW_FROM} | sed -e "s/'//g") ; do
           echo "    Require ip ${IP}"
@@ -515,9 +548,9 @@ echo "--> setting Apache ServerName to ${SERVERNAME}"
 sed "s/#LoadModule mpm_prefork_module/LoadModule mpm_prefork_module/" -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
 sed "s/LoadModule mpm_event_module/#LoadModule mpm_event_module/"     -i "${HTTPD_CONF_DIR}/conf.modules.d/00-mpm.conf"
 sed "s/^#ServerName.*/ServerName ${SERVERNAME}/" -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-sed "s/User apache/User ${APP_USR}/"               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-sed "s/Group apache/Group ${APP_GRP}/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
-sed "s/Listen 80/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+sed "s/^User .*/User ${APP_USR}/"               -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+sed "s/^Group .*/Group ${APP_GRP}/"             -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
+sed "s/^Listen .*/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/httpd.conf"
 
 # disable default ssl.conf and use virtual.conf
 [ -e "${HTTPD_CONF_DIR}/conf.d/ssl.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
@@ -546,7 +579,7 @@ echo "
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -575,7 +608,7 @@ if [ ! -z "${APP_FQDN}" ]; then
   echo "<Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -583,6 +616,27 @@ fi
 
 if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
   echo "--> enabling Apache SSL engine"
+  
+  ## recreate self-signed cert if needed
+  # detect CN of specified cert
+  [ -e "${HTTPD_HTTPS_CERT_FILE}" ] && local CERT_CN=$(openssl x509 -noout -subject -in ${HTTPD_HTTPS_CERT_FILE} | sed 's/.*CN = //;s/, .*//')
+  
+  # define cert subject
+  [ -z "$APP_FQDN" ] && local CERT_SUBJ="/CN=izpbx" || SUBJ="/CN=$APP_FQDN"
+
+  if [[ ! -e "${HTTPD_HTTPS_CERT_FILE}" && ! -e "${HTTPD_HTTPS_KEY_FILE}" ]]; then
+    echo "---> WARNING: the SSL certificate files (HTTPD_HTTPS_CERT_FILE=${HTTPD_HTTPS_CERT_FILE} HTTPD_HTTPS_KEY_FILE=${HTTPD_HTTPS_KEY_FILE}) doesn't exist"
+    echo "----> generating new self-signed certificate (with 10 years duration) to avoid web server crashing"
+    openssl req -subj "$CERT_SUBJ" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
+  elif [[ ! -z "$APP_FQDN" && "$CERT_CN" = "izpbx" ]]; then
+    echo "---> WARNING: current SSL certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
+    echo "----> generating new self-signed certificate (with 10 years duration)"
+    openssl req -subj "$CERT_SUBJ" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
+  elif [[ ! -z "$APP_FQDN" && "$APP_FQDN" != "$CERT_CN" ]]; then
+    echo "---> WARNING: current SSL certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
+    echo "----> NOTE: FIX IT BY REPLACING THE WRONG CERTIFICATES"
+  fi
+
   echo "
 # enable HTTPS listening
 Listen ${APP_PORT_HTTPS} https
@@ -616,7 +670,7 @@ SSLCryptoDevice        builtin
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -631,14 +685,14 @@ $(print_AllowFrom)
   SSLHonorCipherOrder      on
   SSLCipherSuite           PROFILE=SYSTEM
   SSLProxyCipherSuite      PROFILE=SYSTEM
-  SSLCertificateFile       ${appDataDirs[SSLCRTDIR]}/izpbx.crt
-  SSLCertificateKeyFile    ${appDataDirs[SSLCRTDIR]}/izpbx.key
-  #SSLCertificateChainFile ${appDataDirs[SSLCRTDIR]}/chain.crt
+  SSLCertificateFile       ${HTTPD_HTTPS_CERT_FILE}
+  SSLCertificateKeyFile    ${HTTPD_HTTPS_KEY_FILE}
+  $([ ! -z "${HTTPD_HTTPS_CHAIN_FILE}" ] && echo "SSLCertificateChainFile  ${HTTPD_HTTPS_CHAIN_FILE}")
 
   <Directory /var/www/html>
     Options Includes FollowSymLinks MultiViews
     AllowOverride All
-$(print_AllowFrom)
+$(print_ApacheAllowFrom)
   </Directory>
 </VirtualHost>
 " >> "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
@@ -682,8 +736,11 @@ cfgService_izpbx() {
     # fix freepbx directory paths
     if [ ! -z "${APP_DATA}" ]; then
       echo "----> fixing directory system paths in db configuration..."
-      for k in ${!fpbxDirs[@]} ${!fpbxFilesLog[@]}; do
-        su - ${APP_USR} -s /bin/bash -c "fwconsole setting ${k} ${fpbxDirs[$k]}"
+      for k in ${!fpbxDirs[@]}; do
+        [ "$(fwconsole setting ${k} | awk -F"[][{}]" '{print $2}')" != "${fpbxDirs[$k]}" ] && fwconsole setting ${k} ${fpbxDirs[$k]}
+      done
+      for k in ${!fpbxFilesLog[@]}; do
+        [ "$(fwconsole setting ${k} | awk -F"[][{}]" '{print $2}')" != "${fpbxFilesLog[$k]}" ] && fwconsole setting ${k} ${fpbxFilesLog[$k]}
       done
     fi
     
@@ -703,8 +760,7 @@ cfgService_izpbx() {
     #[ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
     
     # FIXME @20210321 FreePBX doesn't configure into configuration DB the non default 'asteriskcdrdb' DB
-    su - ${APP_USR} -s /bin/bash -c "fwconsole setting CDRDBNAME ${MYSQL_DATABASE_CDR}"
-    
+    [ "$(fwconsole setting CDRDBNAME | awk -F"[][{}]" '{print $2}')" != "${MYSQL_DATABASE_CDR}" ] && fwconsole setting CDRDBNAME ${MYSQL_DATABASE_CDR}
     
     ## fix Asterisk/FreePBX file permissions
     freepbxChown
@@ -872,7 +928,7 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --astvarlibdir=${fpbxDirs[ASTVARLIBDIR]}"
   FPBX_OPTS+=" --astagidir=${fpbxDirs[ASTAGIDIR]}"
   FPBX_OPTS+=" --astspooldir=${fpbxDirs[ASTSPOOLDIR]}"
-  FPBX_OPTS+=" --astrundir=${fpbxDirs[ASTRUNDIR]}"
+  FPBX_OPTS+=" --astrundir=${appCacheDirs[ASTRUNDIR]}"
   FPBX_OPTS+=" --astlogdir=${fpbxDirs[ASTLOGDIR]}"
   FPBX_OPTS+=" --ampbin=${fpbxDirs[AMPBIN]}"
   FPBX_OPTS+=" --ampsbin=${fpbxDirs[AMPSBIN]}"
@@ -883,11 +939,16 @@ cfgService_freepbx_install() {
   [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
   set -x
   
-  # FIXME allow asterisk user to manage asteriskcdrdb database
-  # freepbx config db
+  ## create mysql users and databases if not exists
+  
+  # freepbx mysql user
+  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';"
+  
+  # freepbx asterisk config db
   mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE}"
   mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
-  # freepbx cdr db
+  
+  # freepbx asterisk cdr db
   mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE_CDR}"
   mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE_CDR}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
   
@@ -1015,6 +1076,24 @@ cfgService_dnsmasq() {
   [ "$TFTP_ENABLED" = "true" ] && cfgService_tftp
 }
 
+## chronyd service (ntp server)
+cfgService_ntp() {
+  # disable default ntp pools addresses if NTP_SERVERS var is set
+  echo "# chronyd ntp server configuration
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+keyfile /etc/chrony.keys
+leapsectz right/UTC
+logdir /var/log/chrony
+
+bindcmdaddress 0.0.0.0
+$([ -z "$NTP_SERVERS" ] && echo "pool 2.pool.ntp.org iburst" || for server in $NTP_SERVERS ; do echo "pool $server iburst"; done)
+
+$(for subnet in $NTP_ALLOW_FROM ; do echo "allow $subnet"; done)
+" > /etc/chrony.conf
+}
+
 ## dhcp service
 cfgService_dhcp() {
   echo "--> configuring DHCP service"
@@ -1083,18 +1162,6 @@ cfgService_fop2 () {
   [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
 
   if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ]; then
-  
-    # fop2 version upgrade check
-    [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_CUR=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v 2>/dev/null | awk '{print $3}')
-    if   [ $(check_version $FOP2_VER_CUR) -lt $(check_version $FOP2_VER) ]; then
-      echo "=> INFO: FOP2 update detected... upgrading from $FOP2_VER_CUR to $FOP2_VER"
-      cfgService_fop2_upgrade
-    elif [ $(check_version $FOP2_VER_CUR) -gt $(check_version $FOP2_VER) ]; then
-      echo "=> WARNING: Specified FOP2_VER=$FOP2_VER is older than installed version: $FOP2_VER_CUR"
-     else
-      echo "=> INFO: Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
-    fi
-     
     # obtain asterisk manager configs from freepbx
     : ${FOP2_AMI_HOST:="$(fwconsole setting ASTMANAGERHOST | awk -F"[][{}]" '{print $2}')"}
     : ${FOP2_AMI_PORT:="$(fwconsole setting ASTMANAGERPORT | awk -F"[][{}]" '{print $2}')"}
@@ -1108,13 +1175,22 @@ cfgService_fop2 () {
     sed "s|^manager_secret.*=.*|manager_secret=${FOP2_AMI_PASSWORD}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
    
     # FOP2 License Code Management
-    
-    # license interface management
+    # licensed interface
     [ -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_IFACE=eth0
     FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
-    
     # modify fop2 command if interface name is specified
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
+    
+    # fop2 version upgrade check
+    [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_CUR=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v 2>/dev/null | awk '{print $3}')
+    if   [ $(check_version $FOP2_VER_CUR) -lt $(check_version $FOP2_VER) ]; then
+      echo "=> INFO: FOP2 update detected... upgrading from $FOP2_VER_CUR to $FOP2_VER"
+      cfgService_fop2_upgrade
+    elif [ $(check_version $FOP2_VER_CUR) -gt $(check_version $FOP2_VER) ]; then
+      echo "=> WARNING: Specified FOP2_VER=$FOP2_VER is older than installed version: $FOP2_VER_CUR"
+     else
+      echo "=> INFO: Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
+    fi
     
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
       if [ -z "${FOP2_LICENSE_CODE}" ]; then
@@ -1148,7 +1224,6 @@ cfgService_fop2 () {
 }
 
 cfgService_pma() {
-  if [ "${PMA_ENABLED}" = "true" ]; then
     echo "=> Enabling and Configuring phpMyAdmin"
     # remove unused http alias
     sed "/^Alias \/phpMyAdmin \/usr\/share\/phpMyAdmin/d" -i "${PMA_CONF_APACHE}"
@@ -1164,10 +1239,35 @@ $(for FROM in ${PMA_ALLOW_FROM}; do echo "    Require ip $FROM"; done)
 EOF
     # configure database access
     sed "s|'localhost';|'${MYSQL_SERVER}';|" -i "${PMA_CONFIG}"
-  else
-    # disable phpMyAdmin
-    [ -e "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf" "${HTTPD_CONF_DIR}/conf.d/phpMyAdmin.conf-disabled"
-  fi
+}
+
+cfgService_phonebook() {
+    echo "=> Enabling Remote XML PhoneBook support"
+    
+    echo "Alias /pb /usr/local/share/phonebook
+
+<Directory /usr/local/share/phonebook>
+    AddDefaultCharset UTF-8
+    DirectoryIndex menu.xml index.php
+$(print_ApacheAllowFrom)
+</Directory>
+" > "${HTTPD_CONF_DIR}/conf.d/phonebook.conf"
+
+echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
+<CompanyIPPhoneMenu>
+    <!-- Title can show on the phone depending on settings in phone -->
+    <Title>PhoneBook Menu</Title>
+    <MenuItem>
+       	<!-- This name shows in the menu when the button is pressed -->
+        <Name>Extensions</Name>
+        <URL>${PHONEBOOK_ADDRESS}/pb/yealink/ext</URL>
+    </MenuItem>
+    <MenuItem>
+        <Name>Shared PhoneBook</Name>
+        <URL>${PHONEBOOK_ADDRESS}/pb/yealink/cm</URL>
+    </MenuItem>
+</CompanyIPPhoneMenu>
+" > "/usr/local/share/phonebook/menu.xml"
 }
 
 cfgService_letsencrypt() {
@@ -1200,14 +1300,14 @@ cfgService_letsencrypt() {
 
     # request new certificate
     if [ $CERTOK -eq 1 ]; then
-      set -x
       httpd -k start
+      set -x
       fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$SMTP_MAIL_TO
+      set +x
       [ $? -eq 0 ] && CERTOK=0
       [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
       [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
       httpd -k stop
-      set +x
     fi
   fi
 }
@@ -1230,6 +1330,10 @@ cfgService_fop2_install() {
 }
 
 cfgService_fop2_upgrade() {
+  # container workarounds
+  TERM=linux
+  echo "-i ${FOP2_LICENSE_IFACE}" > /etc/sysconfig/fop2
+  
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
   cd /usr/src/fop2 && make install
 }
@@ -1273,8 +1377,8 @@ runHooks() {
     mkdir -p /var/log/supervisor /var/log/proftpd /var/log/dbconfig-common /var/log/apt/ /var/log/apache2/ /var/run/nagios/
     touch /var/log/wtmp /var/log/lastlog
     [ ! -e /sbin/nologin ] && ln -s /usr/sbin/nologin /sbin/nologin
-  elif [ "$OS_RELEASE" = "centos" ]; then
-    echo "---> CentOS Linux detected"
+  else
+    echo "---> RHEL Linux based distro detected"
     mkdir -p /run/supervisor
     sed 's/\[supervisord\]/\[supervisord\]\nuser=root/' -i /etc/supervisord.conf
     sed 's|^file=.*|file=/run/supervisor/supervisor.sock|' -i /etc/supervisord.conf
@@ -1283,6 +1387,12 @@ runHooks() {
     # configure webserver security
     #echo unix_http_server username=admin | iniParser /etc/supervisord.conf
     #echo unix_http_server password=izpbx | iniParser /etc/supervisord.conf
+    
+#     echo "
+# [eventlistener:processes]
+# command=stop-supervisor.sh
+# events=PROCESS_STATE_STOPPED, PROCESS_STATE_EXITED, PROCESS_STATE_FATAL" >> /etc/supervisord.conf
+    
   fi
 
   # check and create missing container directory
@@ -1311,7 +1421,12 @@ runHooks() {
   fi
 
   # check files and directory permissions
-#  echo "--> verifying files permissions"
+  echo "--> verifying files permissions"
+  
+  # TFTPDIR permission and path fix
+  fixOwner "${APP_USR}" "${APP_GRP}" "${appDataDirs[TFTPDIR]}"
+  [ ! -e "/tftpboot" ] && ln -s "${appDataDirs[TFTPDIR]}" "/tftpboot"
+
 #   for dir in ${appDataDirs[@]}; do
 #     [ ! -z "${APP_DATA}" ] && dir="${APP_DATA}${dir}"
 #     fixOwner "${APP_USR}" "${APP_GRP}" "${dir}"
@@ -1338,14 +1453,18 @@ runHooks() {
   chkService IZPBX_ENABLED
   chkService ZABBIX_ENABLED
   chkService FOP2_ENABLED
+  chkService NTP_ENABLED
 
   # dnsmasq management
   [[ "$DHCP_ENABLED" = "true" || "$TFTP_ENABLED" = "true" ]] && DNSMASQ_ENABLED=true
   chkService DNSMASQ_ENABLED
    
   # phpMyAdmin configuration
-  [ "${PMA_ENABLED}" = "true" ] && cfgService_pma
+  [ "${PMA_ENABLED}" = "true" ] && cfgService_pma || mv "${PMA_CONF_APACHE}" "${PMA_CONF_APACHE}-disabled"
 
+  # remote XML phonebook support
+  [ ${PHONEBOOK_ENABLED} = "true" ] && cfgService_phonebook
+  
   # Lets Encrypt certificate generation
   [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
 }

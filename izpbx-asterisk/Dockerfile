@@ -1,4 +1,4 @@
-ARG IMAGE_FROM=centos:8
+ARG IMAGE_FROM=rockylinux/rockylinux:8
 
 FROM ${IMAGE_FROM}
 
@@ -16,13 +16,13 @@ ENV APP_VER=${APP_VER}
 
 ## components app versions
 # https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.3.0
+ARG ASTERISK_VER=18.8.0
 
-# https://github.com/FreePBX/core/releases (only major version)
+# https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=15.0
 
 # https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.29
+ARG FOP2_VER=2.31.30
 
 # http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=20180108
@@ -30,7 +30,7 @@ ARG SPANDSP_VER=20180108
 # https://github.com/holme-r/iksemel
 ARG IKSEMEL_VER=1.5.1.3
 
-# https://github.com/BelledonneCommunications/bcg729/releases
+# https://github.com/BelledonneCommunications/bcg729/tags
 ARG BCG729_VER=1.1.1
 
 # https://bitbucket.org/arkadi/asterisk-g72x
@@ -42,8 +42,8 @@ ARG IZSYNTH_VER=5.0
 # https://github.com/ugoviti/zabbix-templates
 ARG ZABBIX_TEMPLATE_VER=master
 
-# https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.8
+# https://github.com/irontec/sngrep/tags
+ARG SNGREP_VER=1.4.9
 
 ## save vars for later and container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
@@ -54,17 +54,8 @@ ENV FOP2_VER=${FOP2_VER}
 ENV APP_NAME              "izpbx-asterisk"
 ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System"
 
-## app ports
-ENV APP_PORT_HTTP         80
-ENV APP_PORT_HTTPS        443
-ENV APP_PORT_PJSIP        5160
-ENV APP_PORT_SIP          5060
-ENV APP_PORT_IAX          4569
-ENV APP_PORT_RTP_START    10000
-ENV APP_PORT_RTP_END      10200
-ENV APP_PORT_FOP2         4445
-ENV APP_PORT_ZABBIX       10050
-ENV APP_PORT_MYSQL        3306
+# set default timezone
+ENV TZ                    "UTC"
 
 ## app users
 ENV APP_UID               1000
@@ -72,7 +63,7 @@ ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
-# development debug mode (keep development/build dependencies on filesystem)
+# development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
 
 ## install packages
@@ -136,6 +127,7 @@ ENV APP_INSTALL_DEPS=' \
     php-json \
     php-gd \
     php-curl \
+    php-ldap \
     mariadb \
     diffutils \
     unzip \
@@ -170,19 +162,25 @@ ENV APP_INSTALL_DEPS=' \
     sudo \
     figlet \
     nc \
-    ffmpeg \
     dnsmasq \
     glibc-langpack-en \
-    phpMyAdmin \
     perl-DBI \
     perl-DBD-mysql \
-    zabbix-agent \
-    zabbix-sender \
     cyrus-sasl-plain \
     cyrus-sasl-md5 \
     libresample \
+    incron \
+    chrony \
+    postfix \
+    phpMyAdmin \
+    zabbix-agent \
+    zabbix-sender \
+    ffmpeg \
+    lame \
   '
-
+  
+  # NOTE: postfix > 3.4.x is needed for docker logging to stdout
+  
 RUN set -xe && \
   # import system information vars
   . /etc/os-release && \
@@ -190,56 +188,31 @@ RUN set -xe && \
   # install epel repository
   dnf -y install epel-release && \
   \
-  # centos 7 specific (legacy)
-  if [[ $VERSION_ID -le 7 ]]; then \
-    ln -s /usr/bin/yum /usr/bin/dnf && \
-    # repo for php 7.x
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-7.rpm && \
-    # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.2/rhel/7/x86_64/zabbix-release-5.2-1.el7.noarch.rpm && \
-    # repo for ffmpeg
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm && \
-    \
-    yum-config-manager --enable remi 1>/dev/null && \
-    yum-config-manager --enable remi-php73 1>/dev/null ;fi && \
+  # repo for phpMyAdmin
+  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
+  # repo for zabbix agent
+  rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
+  # repo for ffmpeg
+  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
+  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
+  # repo for lame command
+  rpm -Uhv http://repo.okay.com.mx/centos/8/x86_64/release/okay-release-1-5.el8.noarch.rpm && \
   \
-  # centos 8 specific
-  if [[ $VERSION_ID -ge 8 ]]; then \
-    # repo for phpMyAdmin
-    rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
-    # zabbix agent repo
-    rpm -Uvh https://repo.zabbix.com/zabbix/5.2/rhel/8/x86_64/zabbix-release-5.2-1.el8.noarch.rpm && \
-    # repo for ffmpeg
-    rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
-    rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
-    # repo for lame command
-    rpm -Uhv https://forensics.cert.org/cert-forensics-tools-release-el8.rpm && \
-    # repo for posfix 3.5
-    rpm -Uhv http://mirror.ghettoforge.org/distributions/gf/el/8/gf/x86_64/gf-release-8-11.gf.el8.noarch.rpm && \
-    \
-    # install dnf plugins
-    dnf -y install dnf-plugins-core && \
-    # enable extra repository
-    dnf config-manager --set-enabled \
-      powertools \
-      remi \
-      rpmfusion-free-updates \
-      rpmfusion-nonfree-updates \
-      forensics \
-      gf-plus \
-      gf-testing \
-    && \
-    # install not upstream packages
-    # postfix > 3.4.x needed for docker logging to stdout
-    dnf -y install \
-      lame \
-      postfix3 \
-    && \
-    # FIXME: forensics repo make conflicts with certbot, so we used it only to install lame
-    dnf config-manager --set-disabled forensics && \
-    # enable php 7.3 module
-    dnf module disable -y php && \
-    dnf module enable  -y php:remi-7.3 ;fi && \
+  # install dnf plugins
+  dnf -y install dnf-plugins-core && \
+  # enable extra repository
+  dnf config-manager --set-enabled \
+    powertools \
+    remi \
+    rpmfusion-free-updates \
+    rpmfusion-nonfree-updates \
+    okay \
+  && \
+  # enable module php 7.3
+  #dnf module disable -y php && \
+  #dnf module enable  -y php:remi-7.3 && \
+  # enable module php 7.4
+  #dnf module enable php:7.4 && \
   \
   # upgrade the system
   dnf upgrade -y && \
@@ -249,9 +222,6 @@ RUN set -xe && \
   && \
   dnf mark install $APP_INSTALL_DEPS && \
   \
-  : "---------- generate selfsigned certificate for 100 years duration ----------" && \
-  mkdir -p /etc/pki/izpbx && \
-  openssl req -subj '/CN=izpbx/O=InitZero/C=IT' -new -newkey rsa:2048 -sha256 -days 36500 -nodes -x509 -keyout /etc/pki/izpbx/izpbx.key -out /etc/pki/izpbx/izpbx.crt && \
   if [[ ${APP_DEBUG} -eq 0 ]]; then \
   : "---------- Clean temporary files ----------" && \
   dnf clean all && \
@@ -268,8 +238,11 @@ RUN set -xe && \
   chmod g+w /var/lib/phpMyAdmin/temp
 
 ## build stage
+
 # copy external sources files
 ADD build/ /usr/src/
+
+# build asterisk
 RUN set -xe && \
   . /etc/os-release && \
   ASTERISK_BUILD_DEPS=' \
@@ -334,9 +307,8 @@ RUN set -xe && \
     libtool \
     cmake \
     libresample-devel \
+    mariadb-devel \
   ' && \
-  if [[ $VERSION_ID -le 7 ]]; then ASTERISK_BUILD_DEPS+="mysql-devel" ;fi && \
-  if [[ $VERSION_ID -ge 8 ]]; then ASTERISK_BUILD_DEPS+="mariadb-devel" ;fi && \  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
   \
@@ -367,12 +339,14 @@ RUN set -xe && \
   # http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz
   # @20210408 unreachable asterisk url - disable get_mp3_source.sh because need internet connection
   #./contrib/scripts/get_mp3_source.sh
+  # @20210414 reneabled get_mp3_source.sh
+  #tar zxvf /usr/src/asterisk-mp3.tar.gz -C addons
   cd /usr/src && \
   mkdir asterisk && \
   curl -fSL --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
   cd asterisk && \
   \
-  tar zxvf /usr/src/asterisk-mp3.tar.gz -C addons && \
+  ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
   \
   make menuselect/menuselect menuselect-tree menuselect.makeopts && \
@@ -513,13 +487,19 @@ RUN set -xe && \
 # curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
 # curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
+# copy external sources files again
+ADD build/ /usr/src/
+
 RUN set -xe && \
   \
   cd /usr/src && \
   mkdir freepbx && \
   curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
-  curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml && \
+  # download modules-*.xml file if not exist in local build dir
+  if [[ -e "/usr/src/modules-${FREEPBX_VER}.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.xml"; else \
+    curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml \
+  ;fi && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
       announcement \
@@ -589,27 +569,44 @@ RUN set -xe && \
     /etc/asterisk \
     /var/lib/asterisk \
     /var/spool/asterisk
-  
+    
+## app ports
+ENV APP_PORT_HTTP         80
+ENV APP_PORT_HTTPS        443
+ENV APP_PORT_PJSIP        5160
+ENV APP_PORT_SIP          5060
+ENV APP_PORT_IAX          4569
+ENV APP_PORT_AMI          8088
+ENV APP_PORT_RTP_START    10000
+ENV APP_PORT_RTP_END      10200
+ENV APP_PORT_DHCP         67
+ENV APP_PORT_TFTP         69
+ENV APP_PORT_NTP          123
+ENV APP_PORT_FOP2         4445
+ENV APP_PORT_ZABBIX       10050
+
 # exposed ports
 EXPOSE \
   ${APP_PORT_HTTP}/tcp \
   ${APP_PORT_HTTPS}/tcp \
-  ${APP_PORT_PJSIP}/tcp \
-  ${APP_PORT_PJSIP}/udp \
   ${APP_PORT_IAX}/tcp \
   ${APP_PORT_IAX}/udp \
+  ${APP_PORT_PJSIP}/tcp \
+  ${APP_PORT_PJSIP}/udp \
   ${APP_PORT_SIP}/tcp \
   ${APP_PORT_SIP}/udp \
+  ${APP_PORT_AMI}/tcp \
+  ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/tcp \
   ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp \
+  ${APP_PORT_DHCP}/udp \
+  ${APP_PORT_TFTP}/tcp \
+  ${APP_PORT_TFTP}/udp \
+  ${APP_PORT_NTP}/udp \
   ${APP_PORT_FOP2}/tcp \
-  ${APP_PORT_ZABBIX}/tcp \
-  ${APP_PORT_MYSQL}/tcp
-  
+  ${APP_PORT_ZABBIX}/tcp
+
 # define volumes
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
-
-# add files to container
-ADD rootfs Dockerfile README.md /
 
 # CI args
 ARG APP_VER_BUILD
@@ -621,6 +618,9 @@ ENV APP_FQDN=""
 ENV APP_VER_BUILD="${APP_VER_BUILD}"
 ENV APP_BUILD_COMMIT="${APP_BUILD_COMMIT}"
 ENV APP_BUILD_DATE="${APP_BUILD_DATE}"
+
+# add files to container
+ADD rootfs Dockerfile README.md /
 
 # start the container process
 ENTRYPOINT ["/entrypoint.sh"]
