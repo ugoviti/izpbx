@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.15.24] - 2021-11-20
 ### Changed
-- enabled FreePBX modules autoupdate on firt deploy
+- enabled FreePBX modules autoupdate on first deploy
 - enabled FreePBX modules by default:
   - bulkhandler
   - speeddial

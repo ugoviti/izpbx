@@ -2,7 +2,6 @@ kind: pipeline
 name: izpbx-release
 
 environment:
-  DRONE_BUILD_NUMBER: 325
   APP_VER: "${DRONE_TAG}"
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
