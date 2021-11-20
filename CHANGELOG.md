@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.15.24] - 2021-11-20
+### Changed
+- enabled FreePBX modules autoupdate on firt deploy
+### Added
+- updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
+  - `FREEPBX_FIRSTRUN_AUTOUPDATE=true`
+  - `APP_PORT_WEBRTC=8089`
+  - `APP_PORT_UCP_HTTP=8001`
+  - `APP_PORT_UCP_HTTPS=8003`
+
 ## [18.15.23] - 2021-11-11
 ### Changed
 - Updated Asterisk to 18.8.0 LTS

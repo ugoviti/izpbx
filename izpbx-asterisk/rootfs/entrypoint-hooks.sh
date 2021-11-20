@@ -1031,20 +1031,26 @@ cfgService_freepbx_install() {
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
-    echo "--> installing Prerequisite FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
+    echo "--> installing Prerequisite FreePBX modules from local repo into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_PRE}; do
       echo "---> installing module: ${module}"
       # the pre-modules need be installed as root
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
     done
     
-    echo "--> installing Extra FreePBX modules from local install into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
+    echo "--> installing Extra FreePBX modules from local repo into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_EXTRA}; do
       echo "---> installing module: ${module}"
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
     done
 
-    echo "--> reloading FreePBX..." && freepbxReload
+    if [ "${FREEPBX_FIRSTRUN_AUTOUPDATE}" = "true" ]; then
+      echo "--> auto upgrading FreePBX modules"
+      su - ${APP_USR} -s /bin/bash -c "fwconsole ma upgradeall"
+    fi
+    
+    echo "--> reloading FreePBX..."
+    freepbxReload
     
     # make this deploy initialized
     touch "${APP_DATA}/.initialized"
