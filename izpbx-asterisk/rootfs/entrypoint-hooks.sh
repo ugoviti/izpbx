@@ -1017,14 +1017,14 @@ cfgService_freepbx_install() {
       queues
       cel
       timeconditions
-    "}
-
-    # disabled modules
-    : ${FREEPBX_MODULES_DISABLED:="
       bulkhandler
       speeddial
       weakpasswords
       ucp
+    "}
+
+    # disabled modules
+    : ${FREEPBX_MODULES_DISABLED:="
     "}
     
     echo "--> enabling EXTENDED FreePBX repo..."
