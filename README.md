@@ -28,7 +28,7 @@ where:
 Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions
 
 # Dockerfile
-- https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
+- https://github.com/ugoviti/izpbx/blob/master/izpbx-asterisk/Dockerfile
 
 # Features
 - Fast initial bootstrap to deploy a full features PBX system (60 secs install time from zero to a running turnkey PBX system)
@@ -63,16 +63,16 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 
 # Screenshots
 #### izPBX Dashboard (FreePBX):
-![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-dashboard.png)
+![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/master/screenshots/izpbx-dashboard.png)
 
 #### izPBX Operator Panel (FOP2):
-![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-operator-panel.png)
+![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izpbx/master/screenshots/izpbx-operator-panel.png)
 
 #### izPBX Monitoring Dashboard (Zabbix):
-![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-zabbix-dashboard.png)
+![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/master/screenshots/izpbx-zabbix-dashboard.png)
 
 #### izPBX CLI (Asterisk):
-![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-cli.png)
+![izpbx-console](https://raw.githubusercontent.com/ugoviti/izpbx/master/screenshots/izpbx-cli.png)
 
 # Targets of this project
 On-Premise, fast, automatic and repeatable deploy of PBX systems.  
@@ -100,8 +100,8 @@ eval sudo curl -L "$(curl -s https://api.github.com/repos/docker/compose/release
 sudo systemctl enable --now docker
 ```
 
-- Create a `docker-compose.yml`, or clone git repository, or download latest tarbal release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
-  - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
+- Create a `docker-compose.yml`, or clone git repository, or download latest tarbal release from: https://github.com/ugoviti/izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
+  - `git clone https://github.com/ugoviti/izpbx.git /opt/izpbx`
   - `cd /opt/izpbx`
 
 - Checkout into latest official release:
@@ -423,7 +423,7 @@ Tested Host Operating Systems:
 
 # Environment default variables
 Consult the `default.env` file: 
-  - https://github.com/ugoviti/izdock-izpbx/blob/master/default.env
+  - https://github.com/ugoviti/izpbx/blob/master/default.env
 
 # Zabbix Agent Configuration
 Consult official repository page for installation and configuration of Asterisk Zabbix Template in you Zabbix Server:
@@ -521,10 +521,10 @@ NOTE: Tested on Yealink Phones
   
 # Quick reference
 - **Developed and maintained by**:
-  [Ugo Viti](https://github.com/ugoviti/izdock-izpbx) @ InitZero S.r.l.
+  [Ugo Viti](https://github.com/ugoviti/izpbx) @ InitZero S.r.l.
 
 - **Where to file issues**:
-  [https://github.com/ugoviti/izdock-izpbx/issues](https://github.com/ugoviti/izdock-izpbx/issues)
+  [https://github.com/ugoviti/izpbx/issues](https://github.com/ugoviti/izpbx/issues)
 
 - **Where to get commercial help**:
   email: [support@initzero.it](mailto:support@initzero.it) - web: [InitZero Support](https://www.initzero.it/)
@@ -536,4 +536,4 @@ NOTE: Tested on Yealink Phones
   [the latest release](https://github.com/docker/docker-ce/releases/latest) (down to 1.6 on a best-effort basis)
 
 - **License**:
-  [GPL v3](https://github.com/ugoviti/izdock-izpbx/blob/master/LICENSE)
+  [GPL v3](https://github.com/ugoviti/izpbx/blob/master/LICENSE)
