@@ -70,6 +70,7 @@ ARG APP_DEBUG=0
 ENV APP_INSTALL_DEPS=' \
     rsync \
     net-tools \
+    procps-ng \
     iptables \
     libnetfilter_conntrack \
     libnfnetlink \
