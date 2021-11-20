@@ -28,7 +28,7 @@ where:
 Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions
 
 # Dockerfile
-- https://github.com/ugoviti/izpbx/blob/master/izpbx-asterisk/Dockerfile
+- https://github.com/ugoviti/izpbx/blob/main/izpbx-asterisk/Dockerfile
 
 # Features
 - Fast initial bootstrap to deploy a full features PBX system (60 secs install time from zero to a running turnkey PBX system)
@@ -423,11 +423,11 @@ Tested Host Operating Systems:
 
 # Environment default variables
 Consult the `default.env` file: 
-  - https://github.com/ugoviti/izpbx/blob/master/default.env
+  - https://github.com/ugoviti/izpbx/blob/main/default.env
 
 # Zabbix Agent Configuration
 Consult official repository page for installation and configuration of Asterisk Zabbix Template in you Zabbix Server:
-- https://github.com/ugoviti/zabbix-templates/tree/master/asterisk
+- https://github.com/ugoviti/zabbix-templates/tree/main/asterisk
 
 # FreePBX Configuration Best Practices
 * **Settings-->Advanced Settings**
@@ -536,4 +536,4 @@ NOTE: Tested on Yealink Phones
   [the latest release](https://github.com/docker/docker-ce/releases/latest) (down to 1.6 on a best-effort basis)
 
 - **License**:
-  [GPL v3](https://github.com/ugoviti/izpbx/blob/master/LICENSE)
+  [GPL v3](https://github.com/ugoviti/izpbx/blob/main/LICENSE)
