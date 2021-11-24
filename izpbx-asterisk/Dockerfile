@@ -212,8 +212,8 @@ RUN set -xe && \
     okay \
   && \
   ## enable module php 7.4 needed for FreePBX 16
-  #dnf module reset php -y && \
-  #dnf module enable php:7.4 -y && \
+  dnf module reset php -y && \
+  dnf module enable php:7.4 -y && \
   \
   ## upgrade the system
   dnf upgrade -y && \
@@ -573,12 +573,18 @@ RUN set -xe && \
     /var/spool/asterisk
 
 ### fixes and workarounds
+## patch FreePBX15 install on PHP 7.4
+## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php74 > php74.patch
+RUN cd /usr/src && patch -p1 -i php74.patch
+
 ## FIXME: FreePBX 16 upgrades error (20211121: MUST be removed in a future release)
 ## https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
 ## https://imlc.me/dh-key-too-small
-## this not working:
+
+## this doesn't works:
 #RUN echo -e "[system_default_sect]\nMinProtocol = TLSv1.2\nCipherString = DEFAULT@SECLEVEL=1" >> /etc/ssl/openssl.cnf
-# this works
+
+# this works:
 #RUN update-crypto-policies --set LEGACY
 ## other problem when upgrading to FreePBX 16: https://issues.freepbx.org/browse/FREEPBX-22842
 
