@@ -4,48 +4,48 @@ FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 
-# default app args used during build step
+### default app args used during build step
 #ARG APP_VER_MAJOR=
 #ARG APP_VER_MINOR=
 #ARG APP_VER_PATCH=
 
-# full app version
+## full app version
 #ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
 
-## components app versions
-# https://downloads.asterisk.org/pub/telephony/asterisk/releases
+### components app versions
+## https://downloads.asterisk.org/pub/telephony/asterisk/releases
 ARG ASTERISK_VER=18.8.0
 
-# https://github.com/FreePBX/core/tags (only major version)
+## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=15.0
 
-# https://www.fop2.com/download.php
+## https://www.fop2.com/download.php
 ARG FOP2_VER=2.31.30
 
-# http://sources.buildroot.net/spandsp
+## http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=20180108
 
-# https://github.com/holme-r/iksemel
+## https://github.com/holme-r/iksemel
 ARG IKSEMEL_VER=1.5.1.3
 
-# https://github.com/BelledonneCommunications/bcg729/tags
+## https://github.com/BelledonneCommunications/bcg729/tags
 ARG BCG729_VER=1.1.1
 
-# https://bitbucket.org/arkadi/asterisk-g72x
+## https://bitbucket.org/arkadi/asterisk-g72x
 ARG ASTERISK_G72X_VER=master
 
-# https://github.com/ugoviti/izsynth
+## https://github.com/ugoviti/izsynth
 ARG IZSYNTH_VER=5.0
 
-# https://github.com/ugoviti/zabbix-templates
-ARG ZABBIX_TEMPLATE_VER=master
+## https://github.com/ugoviti/zabbix-templates
+ARG ZABBIX_TEMPLATE_VER=main
 
-# https://github.com/irontec/sngrep/tags
+## https://github.com/irontec/sngrep/tags
 ARG SNGREP_VER=1.4.9
 
-## save vars for later and container usage
+### define variables for later container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
 ENV FREEPBX_VER=${FREEPBX_VER}
 ENV FOP2_VER=${FOP2_VER}
@@ -54,7 +54,7 @@ ENV FOP2_VER=${FOP2_VER}
 ENV APP_NAME              "izpbx-asterisk"
 ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System"
 
-# set default timezone
+## set default timezone
 ENV TZ                    "UTC"
 
 ## app users
@@ -63,7 +63,7 @@ ENV APP_GID               1000
 ENV APP_USR               "asterisk"
 ENV APP_GRP               "asterisk"
 
-# development debug mode (don't delete development and build dependencies on filesystem)
+## development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
 
 ## install packages
@@ -180,28 +180,30 @@ ENV APP_INSTALL_DEPS=' \
     lame \
   '
   
-  # NOTE: postfix > 3.4.x is needed for docker logging to stdout
+  #à NOTE: postfix > 3.4.x is required for docker logging to stdout
   
 RUN set -xe && \
-  # import system information vars
+  ## import system information vars
   . /etc/os-release && \
   \
-  # install epel repository
+  ## install epel repository
   dnf -y install epel-release && \
   \
-  # repo for phpMyAdmin
+  ## repo for phpMyAdmin
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
-  # repo for zabbix agent
+  ## repo for zabbix agent
   rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
-  # repo for ffmpeg
+  ## repo for ffmpeg
   rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
   rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
-  # repo for lame command
+  ## repo for lame command
   rpm -Uhv http://repo.okay.com.mx/centos/8/x86_64/release/okay-release-1-5.el8.noarch.rpm && \
+  ## fix wrong option
+  sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo && \
   \
-  # install dnf plugins
+  ## install dnf plugins
   dnf -y install dnf-plugins-core && \
-  # enable extra repository
+  ## enable extra repository
   dnf config-manager --set-enabled \
     powertools \
     remi \
@@ -209,15 +211,13 @@ RUN set -xe && \
     rpmfusion-nonfree-updates \
     okay \
   && \
-  # enable module php 7.3
-  #dnf module disable -y php && \
-  #dnf module enable  -y php:remi-7.3 && \
-  # enable module php 7.4
-  #dnf module enable php:7.4 && \
+  ## enable module php 7.4 needed for FreePBX 16
+  #dnf module reset php -y && \
+  #dnf module enable php:7.4 -y && \
   \
-  # upgrade the system
+  ## upgrade the system
   dnf upgrade -y && \
-  # install mandatory packages
+  ## install mandatory packages
   dnf install -y \
   $APP_INSTALL_DEPS \
   && \
@@ -229,21 +229,21 @@ RUN set -xe && \
   rm -rf /var/cache/{dnf,yum} ;fi && \
   : "---------- ALL install finished ----------" 
 
-## prep users
+### prep users
 RUN set -xe && \
   groupadd -g ${APP_GID} ${APP_GRP} && \
   useradd -u ${APP_UID} -c "${APP_DESCRIPTION} User" -g ${APP_GRP} -s /sbin/nologin ${APP_USR} && \
-  # add asterisk user to wheel and apache group
+  ## add asterisk user to wheel and apache group
   usermod -aG wheel,apache ${APP_USR} && \
-  # fix phpMyAdmin apache group permissions
+  ## fix phpMyAdmin apache group permissions
   chmod g+w /var/lib/phpMyAdmin/temp
 
-## build stage
+### build stage
 
-# copy external sources files
+## copy external sources files
 ADD build/ /usr/src/
 
-# build asterisk
+## build asterisk
 RUN set -xe && \
   . /etc/os-release && \
   ASTERISK_BUILD_DEPS=' \
@@ -336,11 +336,11 @@ RUN set -xe && \
   : "---------- END build ----------" && \
   \
   : "---------- START build ASTERISK ----------" && \
-  # @20210408 unreachable asterisk url
-  # http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz
-  # @20210408 unreachable asterisk url - disable get_mp3_source.sh because need internet connection
+  ## @20210408 unreachable asterisk url
+  ## http://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-${ASTERISK_VER}.tar.gz
+  ## @20210408 unreachable asterisk url - disable get_mp3_source.sh because need internet connection
   #./contrib/scripts/get_mp3_source.sh
-  # @20210414 reneabled get_mp3_source.sh
+  ## @20210414 reneabled get_mp3_source.sh
   #tar zxvf /usr/src/asterisk-mp3.tar.gz -C addons
   cd /usr/src && \
   mkdir asterisk && \
@@ -368,7 +368,6 @@ RUN set -xe && \
     --enable DONT_OPTIMIZE \
     --enable app_confbridge \
     --enable app_macro \
-    --enable app_meetme \
     --enable app_mysql \
     --enable app_page \
     --enable binaural_rendering_in_bridge_softmix \
@@ -392,10 +391,11 @@ RUN set -xe && \
     --disable-category MENUSELECT_EXTRA_SOUNDS \
     --disable-category MENUSELECT_MOH \
     --disable BUILD_NATIVE \
-    --disable app_ivrdemo \
     --disable app_meetme \
+    --disable app_ivrdemo \
     --disable app_saycounted \
     --disable app_skel \
+    --disable app_voicemail_imap \
     --disable cdr_pgsql \
     --disable cel_pgsql \
     --disable cdr_sqlite3_custom \
@@ -414,6 +414,7 @@ RUN set -xe && \
     --disable chan_ooh323 \
     --disable chan_mobile \
     --disable chan_unistim \
+    --disable res_ari_mailboxes \
     --disable res_digium_phone \
     --disable res_calendar_ews \
     --disable res_calendar_exchange \
@@ -480,15 +481,15 @@ RUN set -xe && \
   mkdir -p /usr/src /tmp && chmod 1777 /tmp ;fi && \
   : "---------- ALL builds finished ----------" 
 
-# NOTE: asterisk build
-# to get the options passed above: menuselect/menuselect --list-options
+### NOTE: asterisk build
+## to get the options passed above: menuselect/menuselect --list-options
 
 ## download freepbx and modules for offline install:
-# php -r 'echo json_encode(simplexml_load_file("http://mirror1.freepbx.org/modules-15.0.xml"));' | jq
-# curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
-# curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
+## php -r 'echo json_encode(simplexml_load_file("http://mirror1.freepbx.org/modules-15.0.xml"));' | jq
+## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
+## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
-# copy external sources files again
+## copy external sources files again
 ADD build/ /usr/src/
 
 RUN set -xe && \
@@ -497,7 +498,7 @@ RUN set -xe && \
   mkdir freepbx && \
   curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
-  # download modules-*.xml file if not exist in local build dir
+  ## download modules-*.xml file if not exist in local build dir
   if [[ -e "/usr/src/modules-${FREEPBX_VER}.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.xml"; else \
     curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml \
   ;fi && \
@@ -550,7 +551,7 @@ RUN set -xe && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key" && \
   su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
 
-# install other components
+## install other components
 RUN set -xe && \
   : "---------- START install izsynth by InitZero ----------" && \
   cd /usr/src && \
@@ -561,17 +562,28 @@ RUN set -xe && \
   : "---------- END install ----------" && \
   : "---------- START install Asterisk Zabbix Agents by InitZero: ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
-  curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-master/asterisk/zabbix_agentd.d && \
+  curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agentd.d && \
   : "---------- END install ----------"
 
-# set pemissions and sudo
+## set pemissions and sudo
 RUN set -xe && \
   chown -R ${APP_USR}:${APP_GRP} \
     /etc/asterisk \
     /var/lib/asterisk \
     /var/spool/asterisk
-    
-## app ports
+
+### fixes and workarounds
+## FIXME: FreePBX 16 upgrades error (20211121: MUST be removed in a future release)
+## https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
+## https://imlc.me/dh-key-too-small
+## this not working:
+#RUN echo -e "[system_default_sect]\nMinProtocol = TLSv1.2\nCipherString = DEFAULT@SECLEVEL=1" >> /etc/ssl/openssl.cnf
+# this works
+#RUN update-crypto-policies --set LEGACY
+## other problem when upgrading to FreePBX 16: https://issues.freepbx.org/browse/FREEPBX-22842
+
+
+### app ports
 ENV APP_PORT_HTTP         80
 ENV APP_PORT_HTTPS        443
 ENV APP_PORT_IAX          4569
@@ -589,7 +601,7 @@ ENV APP_PORT_NTP          123
 ENV APP_PORT_FOP2         4445
 ENV APP_PORT_ZABBIX       10050
 
-# exposed ports
+### exposed ports
 EXPOSE \
   ${APP_PORT_HTTP}/tcp \
   ${APP_PORT_HTTPS}/tcp \
@@ -612,23 +624,23 @@ EXPOSE \
   ${APP_PORT_FOP2}/tcp \
   ${APP_PORT_ZABBIX}/tcp
 
-# define volumes
+### define volumes
 #VOLUME [ "/var/spool/cron", "/var/www", "/etc/asterisk", "/var/lib/asterisk/sounds/custom" ]
 
-# CI args
+## CI args
 ARG APP_VER_BUILD
 ARG APP_BUILD_COMMIT
 ARG APP_BUILD_DATE
 
-# CI envs
+## CI envs
 ENV APP_FQDN=""
 ENV APP_VER_BUILD="${APP_VER_BUILD}"
 ENV APP_BUILD_COMMIT="${APP_BUILD_COMMIT}"
 ENV APP_BUILD_DATE="${APP_BUILD_DATE}"
 
-# add files to container
+## add files to container
 ADD rootfs Dockerfile README.md /
 
-# start the container process
+## start the container process
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisord.conf"]

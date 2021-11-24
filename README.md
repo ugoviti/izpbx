@@ -501,7 +501,7 @@ NOTE: Tested on Yealink Phones
     `docker exec -it izpbx bash`  
     `fwconsole setting SIGNATURECHECK 0`
 
-- Factory Reset / Start from scratch a clean configurations (WARNING! you persistent storage will be wiped!):
+- Factory Reset izPBX (WARNING! your persistent storage will be wiped!):
   - `docker-compose down`
   - `rm -rf data`
   - `docker-compose up -d`
@@ -516,7 +516,7 @@ NOTE: Tested on Yealink Phones
 - Unpredictable network interface order when running in Multi-Tenant mode. As workaround used, the network interface name must be named in lexical order. refs:
   - https://gist.github.com/jfellus/cfee9efc1e8e1baf9d15314f16a46eca
   - https://github.com/moby/moby/issues/20179
-- By default FreePBX use Signature Checking for modules packages, but this make very high deplays when reloading FreePBX, so by default is been disabled. refs:
+- By default FreePBX use Signature Checking for modules packages, but this make very high delays when reloading FreePBX, so by default is been disabled. refs:
   - https://issues.freepbx.org/browse/FREEPBX-20559
   
 # Quick reference
