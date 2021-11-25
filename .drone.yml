@@ -79,11 +79,12 @@ steps:
       
 ---
 kind: pipeline
-name: izpbx-dev-18
+name: izpbx-dev-18.16
 
 environment:
   APP_DEBUG: 1
   ASTERISK_VER: 18.8.0
+  FREEPBX_VER: 16
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -162,13 +163,13 @@ steps:
     - /drone/docker
     
 ---
-
 kind: pipeline
-name: izpbx-dev-16
+name: izpbx-dev-18.15
 
 environment:
   APP_DEBUG: 1
-  ASTERISK_VER: 16.17.0
+  ASTERISK_VER: 18.8.0
+  FREEPBX_VER: 15
   APP_VER: dev
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
@@ -178,8 +179,8 @@ trigger:
   event:
   - push
   branch:
-  - dev-deprecated
-  
+  - dev
+
 platform:
   os: linux
   arch: amd64
@@ -217,7 +218,7 @@ steps:
 #    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
 
-- name: build-publish
+- name: build&publish
   image: plugins/docker
   settings:
     repo: izdock/izpbx-asterisk

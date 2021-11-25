@@ -6,9 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.16.0] - 2021-11-xx
 ### Changed
-- disabled asterisk module: app_voicemail_imap
+- disabled Asterisk module: app_voicemail_imap
 - initial work perparing to FreePBX 16
-- upgraded from PHP 7.2 to PHP 7.4 (NOTE: before switching to this release remember to upgrade all FreePBX modules to latest release to avoid warnings about unsupported PHP version)
+- updated PHP from 7.2 to 7.4 (NOTE: before switching to this release remember to upgrade all FreePBX modules to latest release to avoid warnings about unsupported PHP version)
+- updated sngrep to 1.4.10
+- removed Asterisk 16 build support
 
 ## [18.15.24] - 2021-11-20
 ### Changed

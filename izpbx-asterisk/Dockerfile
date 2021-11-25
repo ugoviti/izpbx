@@ -19,7 +19,7 @@ ENV APP_VER=${APP_VER}
 ARG ASTERISK_VER=18.8.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
-ARG FREEPBX_VER=15.0
+ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
 ARG FOP2_VER=2.31.30
@@ -43,7 +43,7 @@ ARG IZSYNTH_VER=5.0
 ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/tags
-ARG SNGREP_VER=1.4.9
+ARG SNGREP_VER=1.4.10
 
 ### define variables for later container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
@@ -180,7 +180,7 @@ ENV APP_INSTALL_DEPS=' \
     lame \
   '
   
-  #à NOTE: postfix > 3.4.x is required for docker logging to stdout
+  # NOTE: postfix > 3.4.x is required for docker logging to stdout
   
 RUN set -xe && \
   ## import system information vars
@@ -193,7 +193,7 @@ RUN set -xe && \
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
   ## repo for zabbix agent
   rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
-  ## repo for ffmpeg
+  ## repo for ffmpeg command
   rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
   rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
   ## repo for lame command
@@ -212,8 +212,11 @@ RUN set -xe && \
     okay \
   && \
   ## enable module php 7.4 needed for FreePBX 16
+  if [[ "${FREEPBX_VER}" = "16" ]]; then \
+  : "---------- Enable PHP 7.4 ----------" && \
   dnf module reset php -y && \
-  dnf module enable php:7.4 -y && \
+  dnf module enable php:7.4 -y \
+  ;fi && \
   \
   ## upgrade the system
   dnf upgrade -y && \
@@ -486,7 +489,7 @@ RUN set -xe && \
 
 ## download freepbx and modules for offline install:
 ## php -r 'echo json_encode(simplexml_load_file("http://mirror1.freepbx.org/modules-15.0.xml"));' | jq
-## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
+## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx
 ## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
 ## copy external sources files again
@@ -496,11 +499,11 @@ RUN set -xe && \
   \
   cd /usr/src && \
   mkdir freepbx && \
-  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx && \
+  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
   ## download modules-*.xml file if not exist in local build dir
-  if [[ -e "/usr/src/modules-${FREEPBX_VER}.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.xml"; else \
-    curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml \
+  if [[ -e "/usr/src/modules-${FREEPBX_VER}.0.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.0.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.0.xml"; else \
+    curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.0.xml -o modules-${FREEPBX_VER}.0.xml \
   ;fi && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
@@ -541,7 +544,7 @@ RUN set -xe && \
       ; do \
   echo "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
-  MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
+  MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
   curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ && \
   curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz.gpg -o amp_conf/htdocs/admin/modules/_cache/$MODULE-${MODULE_VER}.tgz.gpg \
   ; done && \
@@ -575,7 +578,10 @@ RUN set -xe && \
 ### fixes and workarounds
 ## patch FreePBX15 install on PHP 7.4
 ## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php74 > php74.patch
-RUN cd /usr/src && patch -p1 -i php74.patch
+## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php74 >> php74.patch
+## copy external sources files
+#ADD patch/ /usr/src/
+#RUN cd /usr/src && patch -p0 -i php74.patch
 
 ## FIXME: FreePBX 16 upgrades error (20211121: MUST be removed in a future release)
 ## https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
