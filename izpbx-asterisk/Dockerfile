@@ -583,17 +583,10 @@ RUN set -xe && \
 #ADD patch/ /usr/src/
 #RUN cd /usr/src && patch -p0 -i php74.patch
 
-## FIXME: FreePBX 16 upgrades error (20211121: MUST be removed in a future release)
-## https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
-## https://imlc.me/dh-key-too-small
-
-## this doesn't works:
-#RUN echo -e "[system_default_sect]\nMinProtocol = TLSv1.2\nCipherString = DEFAULT@SECLEVEL=1" >> /etc/ssl/openssl.cnf
-
-# this works:
-#RUN update-crypto-policies --set LEGACY
+## FIXME: fix for FreePBX 16 upgrade error (20211121: MUST be removed in a future release for better security)
 ## other problem when upgrading to FreePBX 16: https://issues.freepbx.org/browse/FREEPBX-22842
-
+## references: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
+RUN sed 's/@SECLEVEL=2/@SECLEVEL=1/' -i /etc/crypto-policies/back-ends/opensslcnf.config
 
 ### app ports
 ENV APP_PORT_HTTP         80

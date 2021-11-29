@@ -158,7 +158,7 @@ That's all
 FreePBX will be installed into persistent data dir on initial deploy only (when no installations already exist).
 
 Successive container updates will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
-After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
+After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15 to 16) is possible **only** via **official FreePBX upgrade method**:
   - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
 
 Recap: only Asterisk core engine will be updated on container image update. FreePBX will be updated only via Modules Update Menu.

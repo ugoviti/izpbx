@@ -851,7 +851,7 @@ Charset=utf8" > /etc/odbc.ini
       sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
-  # apply workarounds and fix for FreePBX bugs
+  # apply workarounds and fixes for FreePBX bugs
   freepbxSettingsFix
   
   # reconfigure freepbx from env variables
@@ -885,16 +885,52 @@ Charset=utf8" > /etc/odbc.ini
   #  v="${freepbxIaxSettings[$k]}"
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
+  
+  # check if we need to upgrade FreePBX to a major version
+  if [ -e "${APP_DATA}/.initialized" ]; then
+    FREEPBX_VER_INSTALLED="$(fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
+    if [ $FREEPBX_VER_INSTALLED -lt $FREEPBX_VER ];then
+      echo
+      echo "=========================================================================================="
+      echo "==> !!! OLD major FreePBX version detetected - UPGRADING FreePBX from '${FREEPBX_VER_INSTALLED}' to '${FREEPBX_VER}' !!! <=="
+      echo "=========================================================================================="
+      echo
+      cfgService_freepbx_upgrade
+    fi
+  fi
 }
 
+cfgService_freepbx_upgrade() {
+  echo "FIXME: upgrade placeholder - doing nothing"
+}
+
+cfgService_freepbx_upgrade2() {
+  # FIXME: work in progress - not working as 2021-11-28
+  [ -e "/tmp/cron.error" ] && rm -f /tmp/cron.error
+  fwconsole ma upgradeall
+  fwconsole ma downloadinstall versionupgrade --skipchown
+  fwconsole reload
+  #fwconsole versionupgrade --check
+  fwconsole versionupgrade --upgrade
+  if [ $? != 0 ]; then
+    # fix for https://community.freepbx.org/t/2021-09-17-security-fixes-release-update/78054
+    fwconsole ma downloadinstall framework --tag=16.0.10.42
+    fwconsole ma upgradeall
+  fi
+  fwconsole chown
+  fwconsole reload
+  #fwconsole restart
+}
+
+# procedures to install FreePBX
 cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
   echo
-  echo "====================================================================="
-  echo "=> !!! FreePBX IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!! <="
-  echo "====================================================================="
+  echo "======================================================================"
+  echo "=> !!! FreePBX IS NOT INITIALIZED :: THIS IS A NEW INSTALLATION !!! <="
+  echo "======================================================================"
   echo
   echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$n/$t]"
   cd /usr/src/freepbx
