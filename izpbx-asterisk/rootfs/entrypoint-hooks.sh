@@ -1080,7 +1080,7 @@ cfgService_freepbx_install() {
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
     done
 
-    if [ "${FREEPBX_FIRSTRUN_AUTOUPDATE}" = "true" ]; then
+    if [ "${FREEPBX_AUTOUPDATE_MODULES_FIRSTDEPLOY}" = "true" ]; then
       echo "--> auto upgrading FreePBX modules"
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma upgradeall"
     fi
