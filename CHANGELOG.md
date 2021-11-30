@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
   - new: `FREEPBX_AUTOUPGRADE_CORE=false`
   - renamed: `FREEPBX_FIRSTRUN_AUTOUPDATE` to `FREEPBX_AUTOUPGRADE_MODULES`
+### Added
+- PHP 7.4 IonCube Loader support
 
 ## [18.15.24] - 2021-11-20
 ### Changed

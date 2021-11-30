@@ -563,10 +563,17 @@ RUN set -xe && \
   cp -a izsynth/izsynth /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END install ----------" && \
-  : "---------- START install Asterisk Zabbix Agents by InitZero: ----------" && \
+  : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agentd.d && \
-  : "---------- END install ----------"
+  : "---------- END install ----------" && \
+  ## enable module php 7.4 needed for FreePBX 16
+  if [[ "${FREEPBX_VER}" = "16" ]]; then \
+  : "---------- START install PHP IonCube Loader ----------" && \
+  curl -fSL --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_7.4.so && \
+  echo "zend_extension=ioncube_loader_lin_7.4.so" >> /etc/php.ini && \
+  : "---------- END install ----------" \
+  ;fi
 
 ## set pemissions and sudo
 RUN set -xe && \
@@ -580,8 +587,7 @@ RUN set -xe && \
 ## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php74 > php74.patch
 ## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php74 >> php74.patch
 ## copy external sources files
-#ADD patch/ /usr/src/
-#RUN cd /usr/src && patch -p0 -i php74.patch
+ADD patch/ /usr/src/
 
 ## FIXME: fix for FreePBX 16 upgrade error (20211121: MUST be removed in a future release for better security)
 ## other problem when upgrading to FreePBX 16: https://issues.freepbx.org/browse/FREEPBX-22842

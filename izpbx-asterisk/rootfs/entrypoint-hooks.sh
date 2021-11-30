@@ -840,7 +840,8 @@ Charset=utf8" > /etc/odbc.ini
       # first run detected initialize izpbx
       cfgService_freepbx_install
     else
-      echo "--> INFO: FreePBX installation DETECTED! found '${APP_DATA}/.initialized' file"
+      FREEPBX_VER_INSTALLED="$(${fpbxDirs[AMPBIN]}/fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
+      echo "--> INFO: found '${APP_DATA}/.initialized' file - Detected FreePBX version: $FREEPBX_VER_INSTALLED"
       [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && echo "---> WARNING: missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
       # izpbx is already initialized, update configuration files
       echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
@@ -856,7 +857,7 @@ Charset=utf8" > /etc/odbc.ini
   
   # reconfigure freepbx from env variables
   echo "---> reconfiguring FreePBX Advanced Settings if needed..."
-  set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_VER=" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
+  set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_AUTOUPGRADE_" -e ^"FREEPBX_VER" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
     k="$(echo $setting | awk '{print $1}')"
     v="$(echo $setting | awk '{print $2}')"
     currentVal=$(fwconsole setting $k | awk -F"[][{}]" '{print $2}')
@@ -887,39 +888,74 @@ Charset=utf8" > /etc/odbc.ini
   #done
   
   # check if we need to upgrade FreePBX to a major version
+  cfgService_freepbx_upgrade_check
+}
+
+cfgService_freepbx_upgrade_check() {
   if [ -e "${APP_DATA}/.initialized" ]; then
-    FREEPBX_VER_INSTALLED="$(fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
     if [ $FREEPBX_VER_INSTALLED -lt $FREEPBX_VER ];then
       echo
       echo "=========================================================================================="
-      echo "==> !!! OLD major FreePBX version detetected - UPGRADING FreePBX from '${FREEPBX_VER_INSTALLED}' to '${FREEPBX_VER}' !!! <=="
+      echo "==> !!! UPGRADABLE FreePBX installation detetected !!!"
       echo "=========================================================================================="
-      echo
-      cfgService_freepbx_upgrade
+      echo "==> Installed FreePBX version: ${FREEPBX_VER_INSTALLED}"
+      echo "==> Available FreePBX version: ${FREEPBX_VER}"
+      echo "=========================================================================================="
+      if [ "$FREEPBX_AUTOUPGRADE_CORE" = "true" ]; then
+        echo "==> INFO: FreePBX automatic upgrade ENABLED"
+        echo "==> ATTENTION: make sure to have backed up your installation before upgrading"
+        let UPGRADABLE=${FREEPBX_VER}-${FREEPBX_VER_INSTALLED}
+        if [ $UPGRADABLE = 1 ]; then
+            cfgService_freepbx_upgrade
+          else
+            echo
+            echo "==> WARNING: Unable to upgrade FreePBX directly from ${FREEPBX_VER_INSTALLED} to ${FREEPBX_VER} release"
+            echo "==>          You must upgrade to the previous major version before going to ${FREEPBX_VER} release"
+            echo
+        fi
+        else
+          echo "==> INFO: FreePBX automatic upgrade DISABLED"
+          echo
+      fi
     fi
   fi
 }
 
 cfgService_freepbx_upgrade() {
-  echo "FIXME: upgrade placeholder - doing nothing"
-}
-
-cfgService_freepbx_upgrade2() {
-  # FIXME: work in progress - not working as 2021-11-28
+  echo "=========================================================================================="
+  echo "==> START UPGRADING FreePBX from '${FREEPBX_VER_INSTALLED}' to '${FREEPBX_VER}'"
+  # FIXME: @20211128 workaround
   [ -e "/tmp/cron.error" ] && rm -f /tmp/cron.error
+  
+  # FIXME: @20211130 check on future version if this is still needed
+  echo "--> step:[1] FIXME: patching 'Encoding.php' for issue: https://issues.freepbx.org/browse/FREEPBX-21703"
+  patch "${fpbxDirs[AMPWEBROOT]}/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php" "/usr/src/php74.patch"
+  echo "--> step:[2] starting freepbx services"
+  fwconsole start
+  echo "--> step:[3] upgrading all modules"
   fwconsole ma upgradeall
-  fwconsole ma downloadinstall versionupgrade --skipchown
+  echo "--> step:[4] installing versionupgrade modules"
+  fwconsole ma downloadinstall versionupgrade
+  fwconsole chown
   fwconsole reload
+  echo "--> step:[5] upgrading from FreePBX $FREEPBX_VER_INSTALLED to $FREEPBX_VER"
   #fwconsole versionupgrade --check
   fwconsole versionupgrade --upgrade
   if [ $? != 0 ]; then
-    # fix for https://community.freepbx.org/t/2021-09-17-security-fixes-release-update/78054
+    # FIXME: @20211130 check on future version if this is still needed
+    echo "--> step:[5-b] FIXME: applying workaround for issue: https://issues.freepbx.org/browse/FREEPBX-22983"
+    # refs: https://community.freepbx.org/t/2021-09-17-security-fixes-release-update/78054
     fwconsole ma downloadinstall framework --tag=16.0.10.42
+    echo "--> step:[5-c] upgradind all modules again"
     fwconsole ma upgradeall
   fi
+  echo "--> step:[6] finalizing upgrade"
   fwconsole chown
   fwconsole reload
-  #fwconsole restart
+  fwconsole stop
+  echo "==> END UPGRADING FreePBX from '${FREEPBX_VER_INSTALLED}' to '${FREEPBX_VER}'"
+  echo "=========================================================================================="
+  echo
 }
 
 # procedures to install FreePBX
