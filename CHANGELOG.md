@@ -4,18 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.16.0] - 2021-11-xx
+## [18.16.0] - 2021-12-xx
 ### Changed
+- upgrade to FreePBX 16
 - disabled Asterisk module: app_voicemail_imap
-- initial work on preparing upgrade to FreePBX 16
-- updated PHP from 7.2 to 7.4 (NOTE: before switching to this release remember to upgrade all FreePBX modules to latest release to avoid warnings about unsupported PHP version)
+- updated PHP from 7.2 to 7.4 (NOTE: before switching to this release remember to upgrade all FreePBX modules to avoid warnings about unsupported PHP version)
 - updated sngrep to 1.4.10
-- removed Asterisk 16 build support
 - updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
-  - new: `FREEPBX_AUTOUPGRADE_CORE=false`
+  - new: `FREEPBX_AUTOUPGRADE_CORE=true`
   - renamed: `FREEPBX_FIRSTRUN_AUTOUPDATE` to `FREEPBX_AUTOUPGRADE_MODULES`
 ### Added
 - PHP 7.4 IonCube Loader support
+### Removed
+- removed Asterisk 16 build support
+
 
 ## [18.15.24] - 2021-11-20
 ### Changed
