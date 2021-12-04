@@ -843,7 +843,7 @@ Charset=utf8" > /etc/odbc.ini
       FREEPBX_VER_INSTALLED="$(${fpbxDirs[AMPBIN]}/fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
       
       # 'fwconsole -V' is not always reliable, reading current installed version directly from database
-      if [ -z "${num##*[!0-9]*}" ]; then
+      if [ -z "${FREEPBX_VER_INSTALLED##*[!0-9]*}" ]; then
         FREEPBX_VER_INSTALLED="$(mysql -h ${MYSQL_SERVER} -u ${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_DATABASE} --batch --skip-column-names --raw --execute="SELECT value FROM admin WHERE variable = 'version';" | awk '{print $NF}' | awk -F'.' '{print $1}')"
       fi
       
