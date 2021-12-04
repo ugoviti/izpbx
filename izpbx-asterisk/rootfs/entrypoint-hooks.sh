@@ -299,25 +299,25 @@ symlinkDir() {
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
-    echo "---> empty dir '$dirCustom' detected copying '$dirOriginal' contents to '$dirCustom'..."
+    echo "--> empty dir '$dirCustom' detected copying '$dirOriginal' contents to '$dirCustom'..."
     rsync -a -q "$dirOriginal/" "$dirCustom/"
   fi
 
   # make directory if not exist
   if [ ! -e "$dirOriginal" ]; then
       # make destination dir if not exist
-      echo "---> WARNING: original data directory doesn't exist... creating empty directory: '$dirOriginal'"
+      echo "--> WARNING: original data directory doesn't exist... creating empty directory: '$dirOriginal'"
       mkdir -p "$dirOriginal"
   fi
   
   # rename directory
   if [ -e "$dirOriginal" ]; then
-      echo -e "---> renaming '${dirOriginal}' to '${dirOriginal}.dist'"
+      echo -e "--> renaming '${dirOriginal}' to '${dirOriginal}.dist'"
       mv "$dirOriginal" "$dirOriginal".dist
   fi
   
   # symlink directory
-  echo "---> symlinking '$dirCustom' to '$dirOriginal'"
+  echo "--> symlinking '$dirCustom' to '$dirOriginal'"
   ln -s "$dirCustom" "$dirOriginal"
 }
 
@@ -330,17 +330,17 @@ symlinkFile() {
   if [ -e "$fileOriginal" ]; then
       # copy data files form original directory if destination is empty
       if [ ! -e "$fileCustom" ]; then
-        echo "---> INFO: detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
+        echo "--> INFO: detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
         rsync -a -q "$fileOriginal" "$fileCustom"
       fi
-      echo -e "---> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
+      echo -e "--> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
-      echo "---> WARNING: original data file doesn't exist... creating symlink from a not existing source: '$fileOriginal'"
+      echo "--> WARNING: original data file doesn't exist... creating symlink from a not existing source: '$fileOriginal'"
       #touch "$fileOriginal"
   fi
 
-  echo "---> symlinking '$fileCustom' to '$fileOriginal'"
+  echo "--> symlinking '$fileCustom' to '$fileOriginal'"
   # create parent dir if not exist
   [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
   ln -s "$fileCustom" "$fileOriginal"

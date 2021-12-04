@@ -7,8 +7,8 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 # Supported tags
 
 ## Production Branch:
-* `18`, `18.16`, `18.16.X`, `18.16.X-BUILD`, `18.16.X-COMMIT` (Asterisk 18 + FreePBX 16) (BETA)
-* `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT`,`latest` (Asterisk 18 + FreePBX 15)
+* `18`, `18.16`, `18.16.X`, `18.16.X-BUILD`, `18.16.X-COMMIT`,`latest` (Asterisk 18 + FreePBX 16)
+* `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT` (Asterisk 18 + FreePBX 15)
 
 ## Development Branches:
 * Asterisk 18 LTS: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
