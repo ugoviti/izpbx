@@ -7,7 +7,7 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 # Supported tags
 
 ## Production Branch:
-* `18`, `18.16`, `18.16.X`, `18.16.X-BUILD`, `18.16.X-COMMIT`,`latest` (Asterisk 18 + FreePBX 16)
+* `18.16`, `18.16.X`, `18.16.X-BUILD`, `18.16.X-COMMIT`,`18`, `latest` (Asterisk 18 + FreePBX 16)
 * `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT` (Asterisk 18 + FreePBX 15)
 
 ## Development Branches:
@@ -164,23 +164,21 @@ If you want upgrade FreePBX Framework/Core to a major release (example from 15 t
 
 ### method 1: Automatic upgrade using izPBX container release (suggested)
 * Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
-* Make sure you made a full backup (IMPORTANT!)
+* Make sure you made a full backup of `data` dir (IMPORTANT!)
 * Make sure you enabled `FREEPBX_AUTOUPGRADE_CORE=true` in the `.env` file
-* Make sure you are running the latest version of the current release before switching to the next release 
 * Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
 * izPBX should be detect an old FreePBX version installed and start the upgrade process
-* From the **FreePBX / Modules Admin** page, check if all modules are been updated
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated and enable again disabled modules
 
 ### method 2: Manual upgrade using FreePBX Upgrader tool
 * Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
-* Make sure you made a full backup (IMPORTANT!)
+* Make sure you made a full backup of `data` dir (IMPORTANT!)
 * Make sure you disabled `FREEPBX_AUTOUPGRADE_CORE=false` in the `.env` file
-* Make sure you are running the latest version of the current release before switching to the next release
 * Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
 * izPBX should start with the old FreePBX release but with all dependences installed and ready to complete the upgrade
 * Open FreePBX Menù: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
 * Follow these istructions: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
-* From the **FreePBX / Modules Admin** page, check if all modules are been updated
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated and enable again disabled modules
 
 # Advanced Production Configuration Examples
 

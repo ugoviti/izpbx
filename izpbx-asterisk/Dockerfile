@@ -587,9 +587,7 @@ RUN set -xe && \
     /var/spool/asterisk
 
 ### fixes and workarounds
-## patch FreePBX15 install on PHP 7.4
-## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php74 > php74.patch
-## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php74 >> php74.patch
+
 ## copy external sources files
 ADD patch/ /usr/src/
 
