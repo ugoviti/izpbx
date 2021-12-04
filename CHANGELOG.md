@@ -10,14 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - disabled Asterisk module: app_voicemail_imap
 - updated PHP from 7.2 to 7.4 (NOTE: before switching to this release remember to upgrade all FreePBX modules to avoid warnings about unsupported PHP version)
 - updated sngrep to 1.4.10
+- changed pjsip do be the default sip channel
 - updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
   - new: `FREEPBX_AUTOUPGRADE_CORE=true`
   - renamed: `FREEPBX_FIRSTRUN_AUTOUPDATE` to `FREEPBX_AUTOUPGRADE_MODULES`
+  - `APP_PORT_PJSIP=5060`
+  - `APP_PORT_SIP=5160`
 ### Added
-- PHP 7.4 IonCube Loader support
+- PHP 7.4 IonCube Loader support for commercial modules support
 ### Removed
 - removed Asterisk 16 build support
-
 
 ## [18.15.24] - 2021-11-20
 ### Changed

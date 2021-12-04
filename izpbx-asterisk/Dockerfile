@@ -178,6 +178,7 @@ ENV APP_INSTALL_DEPS=' \
     zabbix-sender \
     ffmpeg \
     lame \
+    libuv \
   '
   
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
@@ -312,6 +313,7 @@ RUN set -xe && \
     cmake \
     libresample-devel \
     mariadb-devel \
+    libuv-devel \
   ' && \
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
