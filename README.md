@@ -169,7 +169,7 @@ If you want upgrade FreePBX Framework/Core to a major release (example from 15 t
 * Make sure you are running the latest version of the current release before switching to the next release 
 * Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
 * izPBX should be detect an old FreePBX version installed and start the upgrade process
-* After the upgrade check if all modules are updated
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated
 
 ### method 2: Manual upgrade using FreePBX Upgrader tool
 * Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
@@ -180,6 +180,7 @@ If you want upgrade FreePBX Framework/Core to a major release (example from 15 t
 * izPBX should start with the old FreePBX release but with all dependences installed and ready to complete the upgrade
 * Open FreePBX Menù: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
 * Follow these istructions: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated
 
 # Advanced Production Configuration Examples
 
