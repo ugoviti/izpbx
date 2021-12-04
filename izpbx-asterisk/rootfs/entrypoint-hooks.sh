@@ -299,25 +299,25 @@ symlinkDir() {
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
-    echo "---> empty dir '$dirCustom' detected copying '$dirOriginal' contents to '$dirCustom'..."
+    echo "--> empty dir '$dirCustom' detected copying '$dirOriginal' contents to '$dirCustom'..."
     rsync -a -q "$dirOriginal/" "$dirCustom/"
   fi
 
   # make directory if not exist
   if [ ! -e "$dirOriginal" ]; then
       # make destination dir if not exist
-      echo "---> WARNING: original data directory doesn't exist... creating empty directory: '$dirOriginal'"
+      echo "--> WARNING: original data directory doesn't exist... creating empty directory: '$dirOriginal'"
       mkdir -p "$dirOriginal"
   fi
   
   # rename directory
   if [ -e "$dirOriginal" ]; then
-      echo -e "---> renaming '${dirOriginal}' to '${dirOriginal}.dist'"
+      echo -e "--> renaming '${dirOriginal}' to '${dirOriginal}.dist'"
       mv "$dirOriginal" "$dirOriginal".dist
   fi
   
   # symlink directory
-  echo "---> symlinking '$dirCustom' to '$dirOriginal'"
+  echo "--> symlinking '$dirCustom' to '$dirOriginal'"
   ln -s "$dirCustom" "$dirOriginal"
 }
 
@@ -330,17 +330,17 @@ symlinkFile() {
   if [ -e "$fileOriginal" ]; then
       # copy data files form original directory if destination is empty
       if [ ! -e "$fileCustom" ]; then
-        echo "---> INFO: detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
+        echo "--> INFO: detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
         rsync -a -q "$fileOriginal" "$fileCustom"
       fi
-      echo -e "---> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
+      echo -e "--> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
-      echo "---> WARNING: original data file doesn't exist... creating symlink from a not existing source: '$fileOriginal'"
+      echo "--> WARNING: original data file doesn't exist... creating symlink from a not existing source: '$fileOriginal'"
       #touch "$fileOriginal"
   fi
 
-  echo "---> symlinking '$fileCustom' to '$fileOriginal'"
+  echo "--> symlinking '$fileCustom' to '$fileOriginal'"
   # create parent dir if not exist
   [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
   ln -s "$fileCustom" "$fileOriginal"
@@ -840,8 +840,19 @@ Charset=utf8" > /etc/odbc.ini
       # first run detected initialize izpbx
       cfgService_freepbx_install
     else
-      echo "--> INFO: FreePBX installation DETECTED! found '${APP_DATA}/.initialized' file"
+      FREEPBX_VER_INSTALLED="$(${fpbxDirs[AMPBIN]}/fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
+      
+      # 'fwconsole -V' is not always reliable, reading current installed version directly from database
+      if [ -z "${FREEPBX_VER_INSTALLED##*[!0-9]*}" ]; then
+        FREEPBX_VER_INSTALLED="$(mysql -h ${MYSQL_SERVER} -u ${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_DATABASE} --batch --skip-column-names --raw --execute="SELECT value FROM admin WHERE variable = 'version';" | awk '{print $NF}' | awk -F'.' '{print $1}')"
+      fi
+      
+      # save version into .initialized file if empty
+      #[ -z "$(cat "${APP_DATA}/.initialized")" ] && ${fpbxDirs[AMPBIN]}/fwconsole -V > "${APP_DATA}/.initialized"
+      
+      echo "--> INFO: found '${APP_DATA}/.initialized' file - Detected FreePBX version: $FREEPBX_VER_INSTALLED"
       [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && echo "---> WARNING: missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
+      
       # izpbx is already initialized, update configuration files
       echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
       [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
@@ -851,12 +862,12 @@ Charset=utf8" > /etc/odbc.ini
       sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
-  # apply workarounds and fix for FreePBX bugs
+  # apply workarounds and fixes for FreePBX bugs
   freepbxSettingsFix
   
   # reconfigure freepbx from env variables
   echo "---> reconfiguring FreePBX Advanced Settings if needed..."
-  set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_VER=" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
+  set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_AUTOUPGRADE_" -e ^"FREEPBX_VER" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
     k="$(echo $setting | awk '{print $1}')"
     v="$(echo $setting | awk '{print $2}')"
     currentVal=$(fwconsole setting $k | awk -F"[][{}]" '{print $2}')
@@ -885,16 +896,87 @@ Charset=utf8" > /etc/odbc.ini
   #  v="${freepbxIaxSettings[$k]}"
   #  echo "<?php include '/etc/freepbx.conf'; \$FreePBX = FreePBX::Create(); \$FreePBX->iaxsettings->setConfig('${k}',${v}); needreload();?>" | php
   #done
+  
+  # check if we need to upgrade FreePBX to a major version
+  cfgService_freepbx_upgrade_check
 }
 
+cfgService_freepbx_upgrade_check() {
+  if [ -e "${APP_DATA}/.initialized" ]; then
+    if [ $FREEPBX_VER_INSTALLED -lt $FREEPBX_VER ];then
+      echo
+      echo "=========================================================================================="
+      echo "==> !!! UPGRADABLE FreePBX installation detetected !!!"
+      echo "=========================================================================================="
+      echo "==> Installed FreePBX version: ${FREEPBX_VER_INSTALLED}"
+      echo "==> Available FreePBX version: ${FREEPBX_VER}"
+      echo "=========================================================================================="
+      if [ "$FREEPBX_AUTOUPGRADE_CORE" = "true" ]; then
+        echo "==> INFO: FreePBX automatic upgrade ENABLED"
+        echo "==> ATTENTION: make sure to have backed up your installation before upgrading"
+        let UPGRADABLE=${FREEPBX_VER}-${FREEPBX_VER_INSTALLED}
+        if [ $UPGRADABLE = 1 ]; then
+            cfgService_freepbx_upgrade
+          else
+            echo
+            echo "==> WARNING: Unable to upgrade FreePBX directly from ${FREEPBX_VER_INSTALLED} to ${FREEPBX_VER} release"
+            echo "==>          You must upgrade to the previous major version before going to ${FREEPBX_VER} release"
+            echo
+        fi
+        else
+          echo "==> INFO: FreePBX automatic upgrade DISABLED"
+          echo
+      fi
+    fi
+  fi
+}
+
+cfgService_freepbx_upgrade() {
+  echo "=========================================================================================="
+  echo "==> START UPGRADING FreePBX from '${FREEPBX_VER_INSTALLED}' to '${FREEPBX_VER}'"
+  # FIXME: @20211128 workaround
+  [ -e "/tmp/cron.error" ] && rm -f /tmp/cron.error
+  
+  # FIXME: @20211130 check on future version if this is still needed
+  echo "--> step:[1] FIXME: patching 'Encoding.php' for issue: https://issues.freepbx.org/browse/FREEPBX-21703"
+  patch "${fpbxDirs[AMPWEBROOT]}/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php" "/usr/src/php74.patch"
+  echo "--> step:[2] starting freepbx services"
+  fwconsole start
+  echo "--> step:[3] upgrading all modules"
+  fwconsole ma upgradeall
+  echo "--> step:[4] installing versionupgrade modules"
+  fwconsole ma downloadinstall versionupgrade
+  fwconsole chown
+  fwconsole reload
+  echo "--> step:[5] upgrading from FreePBX $FREEPBX_VER_INSTALLED to $FREEPBX_VER"
+  #fwconsole versionupgrade --check
+  fwconsole versionupgrade --upgrade
+  if [ $? != 0 ]; then
+    # FIXME: @20211130 check on future version if this is still needed
+    echo "--> step:[5-b] FIXME: applying workaround for issue: https://issues.freepbx.org/browse/FREEPBX-22983"
+    # refs: https://community.freepbx.org/t/2021-09-17-security-fixes-release-update/78054
+    fwconsole ma downloadinstall framework --tag=16.0.10.42
+    echo "--> step:[5-c] upgradind all modules again"
+    fwconsole ma upgradeall
+  fi
+  echo "--> step:[6] finalizing upgrade"
+  fwconsole chown
+  fwconsole reload
+  fwconsole stop
+  echo "==> END UPGRADING FreePBX from '${FREEPBX_VER_INSTALLED}' to '${FREEPBX_VER}'"
+  echo "=========================================================================================="
+  echo
+}
+
+# procedures to install FreePBX
 cfgService_freepbx_install() {
   n=1 ; t=5
 
   until [ $n -eq $t ]; do
   echo
-  echo "====================================================================="
-  echo "=> !!! FreePBX IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!! <="
-  echo "====================================================================="
+  echo "======================================================================"
+  echo "=> !!! FreePBX IS NOT INITIALIZED :: THIS IS A NEW INSTALLATION !!! <="
+  echo "======================================================================"
   echo
   echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$n/$t]"
   cd /usr/src/freepbx
@@ -1044,7 +1126,7 @@ cfgService_freepbx_install() {
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
     done
 
-    if [ "${FREEPBX_FIRSTRUN_AUTOUPDATE}" = "true" ]; then
+    if [ "${FREEPBX_AUTOUPDATE_MODULES_FIRSTDEPLOY}" = "true" ]; then
       echo "--> auto upgrading FreePBX modules"
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma upgradeall"
     fi
@@ -1054,7 +1136,9 @@ cfgService_freepbx_install() {
     
     # make this deploy initialized
     touch "${APP_DATA}/.initialized"
-
+    # save current FreePBX version number
+    [ -z "$(cat "${APP_DATA}/.initialized")" ] && ${fpbxDirs[AMPBIN]}/fwconsole -V > "${APP_DATA}/.initialized"
+    
     # DEBUG: pause here
     #sleep 300
   fi

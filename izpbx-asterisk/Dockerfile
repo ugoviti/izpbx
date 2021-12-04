@@ -19,7 +19,7 @@ ENV APP_VER=${APP_VER}
 ARG ASTERISK_VER=18.8.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
-ARG FREEPBX_VER=15.0
+ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
 ARG FOP2_VER=2.31.30
@@ -43,7 +43,7 @@ ARG IZSYNTH_VER=5.0
 ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/tags
-ARG SNGREP_VER=1.4.9
+ARG SNGREP_VER=1.4.10
 
 ### define variables for later container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
@@ -178,9 +178,11 @@ ENV APP_INSTALL_DEPS=' \
     zabbix-sender \
     ffmpeg \
     lame \
+    libuv \
+    patch \
   '
   
-  #à NOTE: postfix > 3.4.x is required for docker logging to stdout
+  # NOTE: postfix > 3.4.x is required for docker logging to stdout
   
 RUN set -xe && \
   ## import system information vars
@@ -193,7 +195,7 @@ RUN set -xe && \
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
   ## repo for zabbix agent
   rpm -Uvh https://repo.zabbix.com/zabbix/5.4/rhel/8/x86_64/zabbix-release-5.4-1.el8.noarch.rpm && \
-  ## repo for ffmpeg
+  ## repo for ffmpeg command
   rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
   rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
   ## repo for lame command
@@ -212,8 +214,11 @@ RUN set -xe && \
     okay \
   && \
   ## enable module php 7.4 needed for FreePBX 16
-  #dnf module reset php -y && \
-  #dnf module enable php:7.4 -y && \
+  if [[ "${FREEPBX_VER}" = "16" ]]; then \
+  : "---------- Enable PHP 7.4 ----------" && \
+  dnf module reset php -y && \
+  dnf module enable php:7.4 -y \
+  ;fi && \
   \
   ## upgrade the system
   dnf upgrade -y && \
@@ -241,7 +246,7 @@ RUN set -xe && \
 ### build stage
 
 ## copy external sources files
-ADD build/ /usr/src/
+#ADD build/ /usr/src/
 
 ## build asterisk
 RUN set -xe && \
@@ -309,6 +314,7 @@ RUN set -xe && \
     cmake \
     libresample-devel \
     mariadb-devel \
+    libuv-devel \
   ' && \
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
@@ -486,21 +492,22 @@ RUN set -xe && \
 
 ## download freepbx and modules for offline install:
 ## php -r 'echo json_encode(simplexml_load_file("http://mirror1.freepbx.org/modules-15.0.xml"));' | jq
-## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx
+## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx
 ## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
 ## copy external sources files again
 ADD build/ /usr/src/
 
+## deploy freepbx
 RUN set -xe && \
   \
   cd /usr/src && \
   mkdir freepbx && \
-  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}-latest.tgz | tar xz --strip 1 -C freepbx && \
+  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
   ## download modules-*.xml file if not exist in local build dir
-  if [[ -e "/usr/src/modules-${FREEPBX_VER}.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.xml"; else \
-    curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.xml -o modules-${FREEPBX_VER}.xml \
+  if [[ -e "/usr/src/modules-${FREEPBX_VER}.0.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.0.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.0.xml"; else \
+    curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.0.xml -o modules-${FREEPBX_VER}.0.xml \
   ;fi && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   for MODULE in \
@@ -541,7 +548,7 @@ RUN set -xe && \
       ; do \
   echo "---------- PreDownloading module for offline install: $MODULE ----------" && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
-  MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
+  MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
   curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ && \
   curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz.gpg -o amp_conf/htdocs/admin/modules/_cache/$MODULE-${MODULE_VER}.tgz.gpg \
   ; done && \
@@ -560,10 +567,17 @@ RUN set -xe && \
   cp -a izsynth/izsynth /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END install ----------" && \
-  : "---------- START install Asterisk Zabbix Agents by InitZero: ----------" && \
+  : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agentd.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agentd.d && \
-  : "---------- END install ----------"
+  : "---------- END install ----------" && \
+  ## enable module php 7.4 needed for FreePBX 16
+  if [[ "${FREEPBX_VER}" = "16" ]]; then \
+  : "---------- START install PHP IonCube Loader ----------" && \
+  curl -fSL --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_7.4.so && \
+  echo "zend_extension=ioncube_loader_lin_7.4.so" >> /etc/php.ini && \
+  : "---------- END install ----------" \
+  ;fi
 
 ## set pemissions and sudo
 RUN set -xe && \
@@ -573,22 +587,23 @@ RUN set -xe && \
     /var/spool/asterisk
 
 ### fixes and workarounds
-## FIXME: FreePBX 16 upgrades error (20211121: MUST be removed in a future release)
-## https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
-## https://imlc.me/dh-key-too-small
-## this not working:
-#RUN echo -e "[system_default_sect]\nMinProtocol = TLSv1.2\nCipherString = DEFAULT@SECLEVEL=1" >> /etc/ssl/openssl.cnf
-# this works
-#RUN update-crypto-policies --set LEGACY
-## other problem when upgrading to FreePBX 16: https://issues.freepbx.org/browse/FREEPBX-22842
+## patch FreePBX15 install on PHP 7.4
+## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php freepbx/amp_conf/htdocs/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php74 > php74.patch
+## diff -Naur freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php freepbx/amp_conf/htdocs/admin/libraries/modulefunctions.class.php74 >> php74.patch
+## copy external sources files
+ADD patch/ /usr/src/
 
+## FIXME: fix for FreePBX 16 upgrade error (20211121: MUST be removed in a future release for better security)
+## other problem when upgrading to FreePBX 16: https://issues.freepbx.org/browse/FREEPBX-22842
+## references: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
+RUN sed 's/@SECLEVEL=2/@SECLEVEL=1/' -i /etc/crypto-policies/back-ends/opensslcnf.config
 
 ### app ports
 ENV APP_PORT_HTTP         80
 ENV APP_PORT_HTTPS        443
 ENV APP_PORT_IAX          4569
-ENV APP_PORT_PJSIP        5160
-ENV APP_PORT_SIP          5060
+ENV APP_PORT_PJSIP        5060
+ENV APP_PORT_SIP          5160
 ENV APP_PORT_WEBRTC       8089
 ENV APP_PORT_UCP_HTTP     8001
 ENV APP_PORT_UCP_HTTPS    8003

@@ -6,15 +6,13 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 
 # Supported tags
 
-## Production Branch: (Asterisk 18 + FreePBX 15)
-* `latest`, `18`, `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT`
-
-## Legacy Branch: (Asterisk 16 + FreePBX 15)
-* `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
+## Production Branch:
+* `18`, `18.16`, `18.16.X`, `18.16.X-BUILD`, `18.16.X-COMMIT`,`latest` (Asterisk 18 + FreePBX 16)
+* `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT` (Asterisk 18 + FreePBX 15)
 
 ## Development Branches:
-* Asterisk 18 LTS + FreePBX 15: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
-* Asterisk 16 LTS + FreePBX 15: `dev-16`, `dev-16.X`, `dev-16.X.X-BUILD`, `dev-16.X.X-COMMIT`
+* Asterisk 18 LTS: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
+* Asterisk 16 LTS: `dev-16`, `dev-16.X`, `dev-16.X.X-BUILD`, `dev-16.X.X-COMMIT`
 
 ## Version notes:
 Tags format: **Z.Y.X-[BUILD|COMMIT]**
@@ -150,18 +148,39 @@ docker-compose up -d
 3. If the mariadb database version was changed, rememeber to update tables schema with command  
   `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
-4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
+4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin --> Modules Admin --> Check Online --> Upgade all --> Process**
 
 That's all
 
-### FreePBX upgrade path to a major release
+### Upgrade path to a major FreePBX release
 FreePBX will be installed into persistent data dir on initial deploy only (when no installations already exist).
 
-Successive container updates will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
-After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
-  - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
+Successive container updates on the same release (example from 18.15.1 to 18.15.2) will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
 
-Recap: only Asterisk core engine will be updated on container image update. FreePBX will be updated only via Modules Update Menu.
+If you want upgrade FreePBX Framework/Core to a major release (example from 15 to 16), you have 2 options:  
+  
+1. Automatic upgrade using izPBX container release (example, switching from 18.15.x to 18.16.x release)
+2. Manual upgrade using **FreePBX Upgrader** tool
+
+### method 1: Automatic upgrade using izPBX container release (suggested)
+* Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
+* Make sure you made a full backup (IMPORTANT!)
+* Make sure you enabled `FREEPBX_AUTOUPGRADE_CORE=true` in the `.env` file
+* Make sure you are running the latest version of the current release before switching to the next release 
+* Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
+* izPBX should be detect an old FreePBX version installed and start the upgrade process
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated
+
+### method 2: Manual upgrade using FreePBX Upgrader tool
+* Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
+* Make sure you made a full backup (IMPORTANT!)
+* Make sure you disabled `FREEPBX_AUTOUPGRADE_CORE=false` in the `.env` file
+* Make sure you are running the latest version of the current release before switching to the next release
+* Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
+* izPBX should start with the old FreePBX release but with all dependences installed and ready to complete the upgrade
+* Open FreePBX Menù: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
+* Follow these istructions: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated
 
 # Advanced Production Configuration Examples
 
