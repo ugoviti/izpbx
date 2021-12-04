@@ -12,10 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - updated sngrep to 1.4.10
 - changed pjsip do be the default sip channel
 - updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
-  - new: `FREEPBX_AUTOUPGRADE_CORE=true`
+  - added: `FREEPBX_AUTOUPGRADE_CORE=true`
   - renamed: `FREEPBX_FIRSTRUN_AUTOUPDATE` to `FREEPBX_AUTOUPGRADE_MODULES`
-  - `APP_PORT_PJSIP=5060`
-  - `APP_PORT_SIP=5160`
+  - changed: `APP_PORT_PJSIP=5060`
+  - changed: `APP_PORT_SIP=5160`
+  - disabled: `FREEPBX_SIGNATURECHECK=0`
 ### Added
 - PHP 7.4 IonCube Loader support for commercial modules support
 ### Removed
