@@ -245,7 +245,7 @@ RUN set -xe && \
 ### build stage
 
 ## copy external sources files
-ADD build/ /usr/src/
+#ADD build/ /usr/src/
 
 ## build asterisk
 RUN set -xe && \
@@ -497,6 +497,7 @@ RUN set -xe && \
 ## copy external sources files again
 ADD build/ /usr/src/
 
+## deploy freepbx
 RUN set -xe && \
   \
   cd /usr/src && \
