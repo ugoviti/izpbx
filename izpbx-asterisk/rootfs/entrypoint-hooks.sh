@@ -1392,7 +1392,7 @@ cfgService_letsencrypt() {
     if [ $CERTOK -eq 1 ]; then
       httpd -k start
       set -x
-      fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$SMTP_MAIL_TO
+      fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$SMTP_MAIL_FROM
       set +x
       [ $? -eq 0 ] && CERTOK=0
       [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN

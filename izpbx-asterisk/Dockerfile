@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.8.0
+ARG ASTERISK_VER=18.9.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
@@ -42,7 +42,7 @@ ARG IZSYNTH_VER=5.0
 ## https://github.com/ugoviti/zabbix-templates
 ARG ZABBIX_TEMPLATE_VER=main
 
-## https://github.com/irontec/sngrep/tags
+## https://github.com/irontec/sngrep/releases
 ARG SNGREP_VER=1.4.10
 
 ### define variables for later container usage
