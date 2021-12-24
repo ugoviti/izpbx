@@ -180,6 +180,7 @@ ENV APP_INSTALL_DEPS=' \
     lame \
     libuv \
     patch \
+    iproute \
   '
   
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
