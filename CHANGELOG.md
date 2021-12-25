@@ -10,14 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.16.1] - 2021-12-15
 ### Changed
-- Updated Asterisk to 18.9.0 LTS (https://www.asterisk.org/asterisk-news/asterisk-18-9-0-now-available/)
+- Updated engine to Asterisk 18.9.0 LTS (https://www.asterisk.org/asterisk-news/asterisk-18-9-0-now-available/)
 - Let's Encrypt: changed used address from `SMTP_MAIL_TO` to `SMTP_MAIL_FROM` when requesting a certificate
 
 ## [18.16.0] - 2021-12-04
 ### Changed
-- MAJOR CHANGE: FreePBX 16 release (see README.md for upgrade istructions)
+- MAJOR CHANGE: Updated GUI to FreePBX 16 (see README.md for upgrade instructions)
 - MAJOR CHANGE: chan_pjsip is now the default sip channel driver
-- MAJOR CHANGE: updated PHP from 7.2 to 7.4 (NOTE: before switching to this release remember to upgrade all FreePBX modules to avoid warnings about unsupported PHP version)
+- MAJOR CHANGE: Updated PHP from 7.2 to 7.4 (NOTE: before switching to this release remember to upgrade all FreePBX modules to avoid warnings about unsupported PHP version)
 - disabled Asterisk module: app_voicemail_imap
 - updated sngrep to 1.4.10
 - updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
@@ -48,8 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.15.23] - 2021-11-11
 ### Changed
-- Updated Asterisk to 18.8.0 LTS
-- Updated mariadb from 10.6.4 to 10.6.5
+- Updated engine to Asterisk 18.8.0 LTS
+- Updated database to MariaDB 10.6.5
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
   
 ## [18.15.22] - 2021-10-21
