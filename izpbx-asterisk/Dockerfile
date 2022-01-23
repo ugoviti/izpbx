@@ -22,7 +22,7 @@ ARG ASTERISK_VER=18.9.0
 ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.30
+ARG FOP2_VER=2.31.31
 
 ## http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=20180108

@@ -25,10 +25,12 @@ services:
     - .env
     environment:
     - TZ
-    - MYSQL_ROOT_PASSWORD
     - MYSQL_DATABASE
     - MYSQL_USER
     - MYSQL_PASSWORD
+    - MYSQL_ROOT_PASSWORD
+    - MARIADB_RANDOM_ROOT_PASSWORD=${MYSQL_RANDOM_ROOT_PASSWORD}
+    - MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=${MYSQL_ALLOW_EMPTY_ROOT_PASSWORD}
     volumes:
     #- /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
@@ -45,7 +47,7 @@ services:
   izpbx:
     container_name: izpbx
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:18.16.2
+    image: izdock/izpbx-asterisk:18.16.3
     restart: unless-stopped
     depends_on:
     - db

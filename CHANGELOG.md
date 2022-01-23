@@ -4,13 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.16.3] - 2022-01-22
+### Changed
+- Updated FOP2 to 2.31.31
+- Portability enhancements: `MYSQL_ROOT_PASSWORD` is no longer mandatory. If you doesn't define it in the .env file, the `MYSQL_PASSWORD` will be used instead
+  WARNING: `asterisk` and `asteriskcdrdb` databases must exist and`MYSQL_USER` must have permissions to use them, otherwise the install step will fail.
+
 ## [18.16.2] - 2021-12-24
 ### Added
 - Added `iproute` package (used by SIP Settings when binding interface to SIP channel driver)
 
 ## [18.16.1] - 2021-12-15
 ### Changed
-- Updated engine to Asterisk 18.9.0 LTS (https://www.asterisk.org/asterisk-news/asterisk-18-9-0-now-available/)
+- Updated PBX engine to Asterisk 18.9.0 LTS (https://www.asterisk.org/asterisk-news/asterisk-18-9-0-now-available/)
 - Let's Encrypt: changed used address from `SMTP_MAIL_TO` to `SMTP_MAIL_FROM` when requesting a certificate
 
 ## [18.16.0] - 2021-12-04

@@ -121,11 +121,12 @@ fi
 
 # mysql configuration
 : ${MYSQL_SERVER:="db"}
-: ${MYSQL_ROOT_PASSWORD:=""}
 : ${MYSQL_DATABASE:="asterisk"}
 : ${MYSQL_DATABASE_CDR:="asteriskcdrdb"}
 : ${MYSQL_USER:="asterisk"}
 : ${MYSQL_PASSWORD:=""}
+: ${MYSQL_ROOT_USER:="root"}
+: ${MYSQL_ROOT_PASSWORD:=""}
 : ${APP_PORT_MYSQL:="3306"}
 
 # fop2 (automaticcally obtained quering freepbx settings)
@@ -622,11 +623,14 @@ if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
   [ -e "${HTTPD_HTTPS_CERT_FILE}" ] && local CERT_CN=$(openssl x509 -noout -subject -in ${HTTPD_HTTPS_CERT_FILE} | sed 's/.*CN = //;s/, .*//')
   
   # define cert subject
-  [ -z "$APP_FQDN" ] && local CERT_SUBJ="/CN=izpbx" || SUBJ="/CN=$APP_FQDN"
+  [ -z "$APP_FQDN" ] && local CERT_SUBJ="/CN=izpbx" || CERT_SUBJ="/CN=$APP_FQDN"
 
   if [[ ! -e "${HTTPD_HTTPS_CERT_FILE}" && ! -e "${HTTPD_HTTPS_KEY_FILE}" ]]; then
     echo "---> WARNING: the SSL certificate files (HTTPD_HTTPS_CERT_FILE=${HTTPD_HTTPS_CERT_FILE} HTTPD_HTTPS_KEY_FILE=${HTTPD_HTTPS_KEY_FILE}) doesn't exist"
     echo "----> generating new self-signed certificate (with 10 years duration) to avoid web server crashing"
+    # make dirs if not exists
+    [ ! -e "$(dirname "${HTTPD_HTTPS_CERT_FILE}")" ] && mkdir "$(dirname "${HTTPD_HTTPS_CERT_FILE}")"
+    [ ! -e "$(dirname "${HTTPD_HTTPS_KEY_FILE}")" ]  && mkdir "$(dirname "${HTTPD_HTTPS_KEY_FILE}")"
     openssl req -subj "$CERT_SUBJ" -new -newkey rsa:2048 -sha256 -days 3650 -nodes -x509 -keyout "${HTTPD_HTTPS_KEY_FILE}" -out "${HTTPD_HTTPS_CERT_FILE}"
   elif [[ ! -z "$APP_FQDN" && "$CERT_CN" = "izpbx" ]]; then
     echo "---> WARNING: current SSL certificate CN '$CERT_CN' (${HTTPD_HTTPS_CERT_FILE}) doesn't match configured APP_FQDN '$APP_FQDN' variable"
@@ -839,7 +843,10 @@ Charset=utf8" > /etc/odbc.ini
   if [ ! -e ${APP_DATA}/.initialized ]; then
       # first run detected initialize izpbx
       cfgService_freepbx_install
+      # save the current installed freepbx version
+      FREEPBX_VER_INSTALLED="$(${fpbxDirs[AMPBIN]}/fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
     else
+      # save the current installed freepbx version
       FREEPBX_VER_INSTALLED="$(${fpbxDirs[AMPBIN]}/fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
       
       # 'fwconsole -V' is not always reliable, reading current installed version directly from database
@@ -902,6 +909,7 @@ Charset=utf8" > /etc/odbc.ini
 }
 
 cfgService_freepbx_upgrade_check() {
+  #set -x
   if [ -e "${APP_DATA}/.initialized" ]; then
     if [ $FREEPBX_VER_INSTALLED -lt $FREEPBX_VER ];then
       echo
@@ -968,27 +976,44 @@ cfgService_freepbx_upgrade() {
   echo
 }
 
-# procedures to install FreePBX
+# install FreePBX if not installed
 cfgService_freepbx_install() {
-  n=1 ; t=5
 
+  mysqlQuery() {
+    mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u ${MYSQL_ROOT_USER} --password=${MYSQL_ROOT_PASSWORD} -N -B -e "$@"
+  }
+  
+  checkMysql() {
+    mysqlQuery "SELECT 1;" >/dev/null
+  }
+  
+  # counter for global attempts
+  n=1 ; t=5
+  
   until [ $n -eq $t ]; do
-  echo
-  echo "======================================================================"
-  echo "=> !!! FreePBX IS NOT INITIALIZED :: THIS IS A NEW INSTALLATION !!! <="
-  echo "======================================================================"
-  echo
-  echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$n/$t]"
   cd /usr/src/freepbx
+  echo
+  echo "====================================================================="
+  echo "=> !!! NEW INSTALLATION DETECTED :: FreePBX IS NOT INITIALIZED !!! <="
+  echo "====================================================================="
+  echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$n/$t]"
+
+  # use mysql user if MYSQL_ROOT_PASSWORD is not defined and skip initial MySQL deploy
+  if [ -z "${MYSQL_ROOT_PASSWORD}" ]; then
+    echo "--> NOTE: skipping MySQL init because not root user password defined"
+    MYSQL_ROOT_USER="${MYSQL_USER}"
+    MYSQL_ROOT_PASSWORD="${MYSQL_PASSWORD}"
+    SKIP_MYSQL_INIT="true"
+  fi
   
   # start asterisk if it's not running
   if ! asterisk -r -x "core show version" 2>/dev/null ; then ./start_asterisk start ; fi
   
-  # verify and wait if mysql is ready
+  # counter for connecting to MySQL database
   myn=1 ; myt=10
   
   until [ $myn -eq $myt ]; do
-    mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "SELECT 1;" >/dev/null
+    checkMysql
     RETVAL=$?
     if [ $RETVAL = 0 ]; then
         myn=$myt
@@ -998,6 +1023,9 @@ cfgService_freepbx_install() {
         sleep 10
     fi
   done
+  
+  # latest check if MySQL is reachable otherwhise exit and don't try to install FreePBX
+  checkMysql && [ $? != 0 ] && "=> ERROR: UNABLE TO CONNECT TO THE MYSQL DATABASE AFTER $myt ATTEMPTS. Check the db connection, username, password and permissions... exiting" && exit 1
   
   echo "--> installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
   echo "---> START install FreePBX @ $(date)"
@@ -1019,22 +1047,27 @@ cfgService_freepbx_install() {
   
   # if mysql run in a non standard port change the mysql server address
   [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
-  set -x
+  #set -x
   
   ## create mysql users and databases if not exists
+  if [ "$SKIP_MYSQL_INIT" != "true" ]; then
+    echo "---> creating and grantig access to FreePBX databases: ${MYSQL_DATABASE}, ${MYSQL_DATABASE_CDR}"
+    # freepbx mysql user
+    mysqlQuery "CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';"
+    # freepbx asterisk config db
+    mysqlQuery "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE}"
+    mysqlQuery "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
+    # freepbx asterisk cdr db
+    mysqlQuery "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE_CDR}"
+    mysqlQuery "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE_CDR}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
+  fi
   
-  # freepbx mysql user
-  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';"
-  
-  # freepbx asterisk config db
-  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE}"
-  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
-  
-  # freepbx asterisk cdr db
-  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE_CDR}"
-  mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u root --password=${MYSQL_ROOT_PASSWORD} -B -e "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE_CDR}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
+  # veirfy if databases exist and we can access
+  mysqlQuery "USE ${MYSQL_DATABASE};"     ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE} DB. Please check if exist and the permissions... exiting" && exit 1
+  mysqlQuery "USE ${MYSQL_DATABASE_CDR};" ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE_CDR} DB. Please check if exist and the permissions... exiting" && exit 1
   
   # install freepbx
+  set -x
   ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} --dbname=${MYSQL_DATABASE} --cdrdbname=${MYSQL_DATABASE_CDR} ${FPBX_OPTS}
   RETVAL=$?
   set +x
@@ -1131,7 +1164,7 @@ cfgService_freepbx_install() {
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma upgradeall"
     fi
     
-    echo "--> reloading FreePBX..."
+    # reload freePBX
     freepbxReload
     
     # make this deploy initialized
@@ -1147,7 +1180,7 @@ cfgService_freepbx_install() {
       n=$t
     else
       let n+=1
-      echo "--> problem detected... restarting in 10 seconds... try:[$n/$t]"
+      echo "--> problem detected when trying to install FreePBX... restarting in 10 seconds... try:[$n/$t]"
       sleep 10
   fi
   done
@@ -1158,6 +1191,7 @@ cfgService_freepbx_install() {
     asterisk -r -x "core stop now"
     echo "=> Finished installing FreePBX"
   fi
+  echo "======================================================================"
 }
 
 ## dnsmasq service
