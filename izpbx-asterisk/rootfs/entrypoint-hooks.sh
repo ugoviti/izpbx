@@ -134,6 +134,7 @@ fi
 #: ${FOP2_AMI_PORT:="5038"}
 #: ${FOP2_AMI_USERNAME:="admin"}
 #: ${FOP2_AMI_PASSWORD:="amp111"}
+: ${FOP2_AUTOUPGRADE:="false"}
 
 # apache httpd configuration
 : ${HTTPD_HTTPS_ENABLED:="false"}
@@ -1306,14 +1307,16 @@ cfgService_fop2 () {
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
     
     # fop2 version upgrade check
-    [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_CUR=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v 2>/dev/null | awk '{print $3}')
-    if   [ $(check_version $FOP2_VER_CUR) -lt $(check_version $FOP2_VER) ]; then
-      echo "=> INFO: FOP2 update detected... upgrading from $FOP2_VER_CUR to $FOP2_VER"
-      cfgService_fop2_upgrade
-    elif [ $(check_version $FOP2_VER_CUR) -gt $(check_version $FOP2_VER) ]; then
-      echo "=> WARNING: Specified FOP2_VER=$FOP2_VER is older than installed version: $FOP2_VER_CUR"
-     else
-      echo "=> INFO: Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
+    if [ "$FOP2_AUTOUPGRADE" = "true" ]; then
+      [ -e "${appDataDirs[FOP2APPDIR]}/fop2_server" ] && FOP2_VER_CUR=$("${appDataDirs[FOP2APPDIR]}/fop2_server" -v 2>/dev/null | awk '{print $3}')
+      if   [ $(check_version $FOP2_VER_CUR) -lt $(check_version $FOP2_VER) ]; then
+        echo "=> INFO: FOP2 update detected... upgrading from $FOP2_VER_CUR to $FOP2_VER"
+        cfgService_fop2_upgrade
+      elif [ $(check_version $FOP2_VER_CUR) -gt $(check_version $FOP2_VER) ]; then
+        echo "=> WARNING: Specified FOP2_VER=$FOP2_VER is older than installed version: $FOP2_VER_CUR"
+      else
+        echo "=> INFO: Specified FOP2_VER=$FOP2_VER, installed version: $FOP2_VER_CUR"
+      fi
     fi
     
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
@@ -1455,7 +1458,7 @@ cfgService_fop2_install() {
 
 cfgService_fop2_upgrade() {
   # container workarounds
-  TERM=linux
+  export TERM=linux
   echo "-i ${FOP2_LICENSE_IFACE}" > /etc/sysconfig/fop2
   
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated FOP2 to 2.31.31
 - Portability enhancements: `MYSQL_ROOT_PASSWORD` is no longer mandatory. If you doesn't define it in the .env file, the `MYSQL_PASSWORD` will be used instead
   WARNING: `asterisk` and `asteriskcdrdb` databases must exist and`MYSQL_USER` must have permissions to use them, otherwise the install step will fail.
+- Make by default not update FOP2 on izPBX new release, you must enable `FOP2_AUTOUPGRADE=true` in `.env` to upgrade FOP2 (require valid license file)
+### Added
+- updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
+  - `FOP2_AUTOUPGRADE` (default: `false`)
 
 ## [18.16.2] - 2021-12-24
 ### Added
