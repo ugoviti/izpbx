@@ -33,7 +33,7 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - Built-in WEB Management GUI based on FreePBX® project (with default predownloaded modules for quicker initial deploy)
 - No vendor lock-in, you can migrare to izPBX and away izPBX simply importing/exporting FreePBX Backups
 - Based on Rocky Linux 8 64bit OS (RHEL derivate with long term support)
-- Small container image footprint (~450 MB)
+- Small container image footprint (~450 MB vs 2300 MB of official FreePBX ISO distro file)
 - Multi-Tenant PBX System Support (look into **Advanced Production Configuration Examples** section)
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and not volatile data

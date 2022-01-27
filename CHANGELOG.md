@@ -4,15 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.16.4] - 2022-01-27
+### Fixes
+- FOP2: added new option `--rp=http` on fop2_server commands to bypass fop2 license problems when running inside a container
+
 ## [18.16.3] - 2022-01-22
 ### Changed
 - Updated FOP2 to 2.31.31
-- Portability enhancements: `MYSQL_ROOT_PASSWORD` is no longer mandatory. If you doesn't define it in the .env file, the `MYSQL_PASSWORD` will be used instead
-  WARNING: `asterisk` and `asteriskcdrdb` databases must exist and`MYSQL_USER` must have permissions to use them, otherwise the install step will fail.
-- Make by default not update FOP2 on izPBX new release, you must enable `FOP2_AUTOUPGRADE=true` in `.env` to upgrade FOP2 (require valid license file)
+- Portability enhancements: `MYSQL_ROOT_PASSWORD` is no longer mandatory.
+  If for security reasons it isn't defined in the `.env` file, the `MYSQL_PASSWORD` will be used instead
+  WARNING: you must manual pre provision the `asterisk` and `asteriskcdrdb` databases must exist and`MYSQL_USER` must have permissions to use them, otherwise the install step will fail.
+- by default do not update FOP2 on izPBX new release, you must enable `FOP2_AUTOUPGRADE=true` in `.env` to upgrade FOP2 (require valid license file)
 ### Added
 - updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
-  - `FOP2_AUTOUPGRADE` (default: `false`)
+  - added: `FOP2_AUTOUPGRADE` (default: `false`)
 
 ## [18.16.2] - 2021-12-24
 ### Added

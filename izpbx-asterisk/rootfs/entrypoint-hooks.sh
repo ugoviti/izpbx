@@ -1302,7 +1302,7 @@ cfgService_fop2 () {
     # FOP2 License Code Management
     # licensed interface
     [ -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_IFACE=eth0
-    FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
+    FOP2_LICENSE_OPTS+=" --rp=http --iface ${FOP2_LICENSE_IFACE}"
     # modify fop2 command if interface name is specified
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
     
@@ -1342,7 +1342,15 @@ cfgService_fop2 () {
           echo $FOP2_LICENSE_STATUS
           set -x
           ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate $FOP2_LICENSE_OPTS
+          local RETVAL=$?
           set +x
+          if [ $RETVAL != 0 ]; then
+            echo "echo --> ERROR: Failed to reactivating the license... trying to register it again:"
+            set -x
+            ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
+            set +x
+          fi
+          unset RETVAL
         fi
         echo "--> INFO: FOP2 license code status:"
         ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
@@ -1457,6 +1465,9 @@ cfgService_fop2_install() {
 }
 
 cfgService_fop2_upgrade() {
+  #:${FOP2_VER:=$1}
+  #[ -z "${FOP2_VER}" ] && echo "--> ERROR: No FOP2 upgrade version defined... define FOP2_VER var or give it as argument... exiting" && return
+  
   # container workarounds
   export TERM=linux
   echo "-i ${FOP2_LICENSE_IFACE}" > /etc/sysconfig/fop2
