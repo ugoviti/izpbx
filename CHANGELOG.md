@@ -4,9 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.16.4] - 2022-01-27
+## [18.16.4] - 2022-02-03
 ### Fixes
+- Updated FOP2 to 2.31.32 (this release fix a long standing FOP2 license issue when running inside docker container. On every restart the license got invalid and needed to be reactivated)
 - FOP2: added new option `--rp=http` on fop2_server commands to bypass fop2 license problems when running inside a container
+- FOP2: better license handling
 
 ## [18.16.3] - 2022-01-22
 ### Changed

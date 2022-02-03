@@ -511,7 +511,19 @@ NOTE: Tested on Yealink Phones
       - RemoteURL: **http://PBX_ADDRESS/pb/yealink/cm**
       - Display Name: **Shared Phone Book**
       
-# FAQ / Trobleshooting
+# FAQ / Troubleshooting
+- FOP2 useful commands:
+    NB. define interface name to associate the license, for example: `eth0`
+    - enter into izpbx container: `docker exec -it izpbx bash`
+    - register the license: `/usr/local/fop2/fop2_server --rp=http --register --iface eth0 --name "Company Name" --code "LICENSECODE"`
+    - get lincese detail: `/usr/local/fop2/fop2_server --rp=http --getinfo --iface eth0`
+    - reactivate the license: `/usr/local/fop2/fop2_server --rp=http --reactivate --iface eth0`
+    - revoke the license: `/usr/local/fop2/fop2_server --rp=http --revoke --iface eth0`
+
+- FOP2 is running in Demo mode because the license is invalid
+  - FOP2 soffer from a bug about the lincensing model (already comunicated many times to the FOP2 support without an official solution)
+    to workaround that problem, normally is required to **reactivate** the license, but some times doesn't works, so the only solution is to contact FOP2 support team
+
 - FreePBX is slow to reload (https://issues.freepbx.org/browse/FREEPBX-20559)
   - As temporary WORKAROUND enter into izpbx container shell and run:  
     `docker exec -it izpbx bash`  
