@@ -1320,23 +1320,21 @@ cfgService_fop2 () {
     fi
     
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
-      if [ -z "${FOP2_LICENSE_CODE}" ]; then
-          echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in trial mode"
-      elif [ -z "${FOP2_LICENSE_NAME}" ] ; then
-          echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_NAME' variable defined... running in trial mode"
-        else
-          echo "--> INFO: Registering FOP2"
-          echo "---> NAME: ${FOP2_LICENSE_NAME}"
-          echo "---> CODE: ${FOP2_LICENSE_CODE}"
-          echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
-          set -x
-          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
-          set +x
-          echo "--> INFO: FOP2 license code info:"
-          ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
-          echo "--> INFO: FOP2 license code status:"
-          ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
-      fi
+        if [ -z "${FOP2_LICENSE_CODE}" ]; then
+            echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in trial mode"
+          else
+            echo "--> INFO: Registering FOP2"
+            echo "---> NAME: ${FOP2_LICENSE_NAME}"
+            echo "---> CODE: ${FOP2_LICENSE_CODE}"
+            echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
+            set -x
+            ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
+            set +x
+            echo "--> INFO: FOP2 license code info:"
+            ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
+            echo "--> INFO: FOP2 license code status:"
+            ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
+        fi
       else
         #FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS)"
         FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS)"

@@ -102,7 +102,7 @@ sudo systemctl enable --now docker
   - `cd /opt/izpbx`
 
 - Checkout into latest official release:
-  - `git checkout refs/tags/$(git tag | sort --version-sort | tail -1)`
+  - `git checkout tags/$(git tag | sort --version-sort | tail -1)`
 
 - Copy default configuration file `default.env` into `.env`:
   - `cp default.env .env`
@@ -133,8 +133,10 @@ If you want test izPBX without using docker-compose, you can use the following d
 1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
 ```
 cd /opt/izpbx
+git checkout main
 git pull
-git checkout refs/tags/$(git tag | sort --version-sort | tail -1)
+git fetch --tags --all
+git checkout tags/$(git tag | sort --version-sort | tail -1)
 ```
 
 2. Upgrade the **izpbx** deploy with:  
