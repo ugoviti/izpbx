@@ -1321,7 +1321,7 @@ cfgService_fop2 () {
     
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
         if [ -z "${FOP2_LICENSE_CODE}" ]; then
-            echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in trial mode"
+            echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in Demo Mode"
           else
             echo "--> INFO: Registering FOP2"
             echo "---> NAME: ${FOP2_LICENSE_NAME}"

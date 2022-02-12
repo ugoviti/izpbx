@@ -135,7 +135,7 @@ If you want test izPBX without using docker-compose, you can use the following d
 cd /opt/izpbx
 git checkout main
 git pull
-git fetch --tags --all
+git fetch --tags --all -f
 git checkout tags/$(git tag | sort --version-sort | tail -1)
 ```
 
