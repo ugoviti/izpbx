@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.10.0
+ARG ASTERISK_VER=18.10.1
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
@@ -25,7 +25,7 @@ ARG FREEPBX_VER=16
 ARG FOP2_VER=2.31.32
 
 ## http://sources.buildroot.net/spandsp
-ARG SPANDSP_VER=20180108
+ARG SPANDSP_VER=3.0.0-6ec23e5a7e
 
 ## https://github.com/holme-r/iksemel
 ARG IKSEMEL_VER=1.5.1.3
