@@ -4,9 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
 ## [18.16.7] - 2022-03-31
 ### Changed
 - Updated PBX engine to Asterisk `18.11.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.11.1)
+- updated `default.env` with the following variables: (NOTE: don't forget to update your custom `.env` file)
+  - changed default value for `APP_PORT_SIP` from `5160` to `5061`
 
 ## [18.16.6] - 2022-03-12
 ### Changed
