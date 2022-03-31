@@ -4,17 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.16.7] - 2022-03-31
+### Changed
+- Updated PBX engine to Asterisk `18.11.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.11.1)
 
 ## [18.16.6] - 2022-03-12
 ### Changed
-- Updated PBX engine to Asterisk `18.10.1` LTS (https://www.asterisk.org/asterisk-news/asterisk-16-24-1-18-10-1-19-2-1-and-16-8-cert13-now-available-security//)
+- Updated PBX engine to Asterisk `18.10.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.10.1)
 - Updated SpanDSP to `3.0.0-6ec23e5a7e`
 - Updated database engine to MariaDB `10.6.7` LTS (https://mariadb.com/kb/en/mariadb-1067-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
 ## [18.16.5] - 2022-02-12
 ### Changed
-- Updated PBX engine to Asterisk `18.10.0` LTS (https://www.asterisk.org/asterisk-news/asterisk-18-10-0-now-available/)
+- Updated PBX engine to Asterisk `18.10.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.10.0)
 
 ## [18.16.4] - 2022-02-03
 ### Fixes
