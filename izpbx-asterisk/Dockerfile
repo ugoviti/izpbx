@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.11.1
+ARG ASTERISK_VER=18.12.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
@@ -43,7 +43,7 @@ ARG IZSYNTH_VER=5.0
 ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.4.10
+ARG SNGREP_VER=1.5.0
 
 ### define variables for later container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
@@ -181,6 +181,7 @@ ENV APP_INSTALL_DEPS=' \
     libuv \
     patch \
     iproute \
+    bc \
   '
   
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
