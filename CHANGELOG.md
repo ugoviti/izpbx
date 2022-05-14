@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated PBX engine to Asterisk `18.12.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.12.0)
 - Updated sngrep to `1.5.0`
+- Updated zabbix-agent to `6.0`
 
 ## [18.16.7] - 2022-03-31
 ### Changed
