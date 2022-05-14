@@ -401,7 +401,7 @@ Enter the directory containig configuration files and run:
 ### Command to restart whole izPBX deploy
 `docker-compose restart izpbx`
 
-### Command to restart izPBX cntainer only
+### Command to restart izPBX container only
 `docker restart izpbx`
 
 ### Command to restart DB container only
