@@ -77,6 +77,16 @@ steps:
     mount:
     - /drone/docker
       
+- name: notify
+  image: plugins/matrix
+  settings:
+    homeserver: https://quantico.in
+    roomid: UCuIdxzWsiiboEXriU:quantico.in
+    username:
+      from_secret: MATRIX_USERNAME
+    password:
+      from_secret: MATRIX_PASSWORD
+      
 ---
 kind: pipeline
 name: izpbx-dev-18.16
