@@ -527,7 +527,7 @@ NOTE: Tested on Yealink Phones
   - `rm -rf data`
   - `docker-compose up -d`
     
-# TODO / Future Development by priority
+# TODO / Future Development
 - Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possibile using FreePBX FAX Module)
 - macOS host support? (edit docker-compose.yml and comment localtime volume?)
