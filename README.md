@@ -78,10 +78,6 @@ If you plan to disable `network_mode: host`, tune the port range (forwarding 100
 `APP_PORT_RTP_START=10000`  
 `APP_PORT_RTP_END=10200`  
 for best security, fine-tune the ports range based on your needs by not using standard port ranges!  
-
-# Limits of this project
-- Deploy 1 izPBX instance for every host. No multi deploy works out of the box by default when using `network_mode: host` (look **Advanced Production Configuration Examples** section for Multi-Tenant Solutions)
-- Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by izPBX container updates)
   
 # Deploy izPBX
 Using **docker-compose** is the suggested method:
@@ -542,17 +538,19 @@ NOTE: Tested on Yealink Phones
 - macOS host support? (edit docker-compose.yml and comment localtime volume?)
 - Windows host support (need to use docker volume instead local directory path?)
 
-# BUGS
+# BUGS and Limits of this project
+- Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by izPBX container updates)
+- izPBX must be deploy 1 instance for every VM or Baremetal host. No multi deploy works out of the box by default when using `network_mode: host` (look **Advanced Production Configuration Examples** section for Multi-Tenant Solutions)
 - Unpredictable network interface order when running in Multi-Tenant mode. As workaround, used network interface name must be named in lexical order. refs:
   - https://gist.github.com/jfellus/cfee9efc1e8e1baf9d15314f16a46eca
   - https://github.com/moby/moby/issues/20179
 - By default FreePBX use Signature Checking for modules packages, but this make very high delays when reloading FreePBX, so by default is been disabled. refs:
   - https://issues.freepbx.org/browse/FREEPBX-20559
 - No commercial FreePBX modules can be installed
-  - sysadmin rpm module is missing, looking for a solution
+  - sysadmin rpm module is missing. Looking for a solution
 - Missing good EndPoint Manager for automatic phone provisioning
   - Looking fo a valid solution
-  
+
 # Quick reference
 - **Developed and maintained by**:
   [Ugo Viti](https://github.com/ugoviti/izpbx) @ InitZero S.r.l.
