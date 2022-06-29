@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.12.0
+ARG ASTERISK_VER=18.13.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
