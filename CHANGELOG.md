@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [18.16.9] - 2022-06-29
 ### Changed
 - Updated PBX engine to Asterisk `18.13.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.13.0)
+- Updated database engine to MariaDB `10.6.8` LTS (https://mariadb.com/kb/en/mariadb-1067-release-notes/)
+  - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
 ## [18.16.8] - 2022-05-14
 ### Changed
