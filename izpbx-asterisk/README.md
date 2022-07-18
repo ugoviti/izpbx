@@ -14,7 +14,6 @@ Asterisk 18 + FreePBX 16:
 Asterisk 18 + FreePBX 15:  
 `docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-18.15 --build-arg FREEPBX_VER=15 -t izpbx-asterisk:dev-18.15 .`
 
-
 ## Run
 
 ### Docker Run:

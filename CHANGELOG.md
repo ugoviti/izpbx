@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.16.10] - 2022-07-18
+### Added
+- Added Asterisk chan_dongle support (https://github.com/shalzz/asterisk-chan-dongle)
+### Changed
+- OS packages updates
+
 ## [18.16.9] - 2022-06-29
 ### Changed
 - Updated PBX engine to Asterisk `18.13.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.13.0)

@@ -36,6 +36,9 @@ ARG BCG729_VER=1.1.1
 ## https://bitbucket.org/arkadi/asterisk-g72x
 ARG ASTERISK_G72X_VER=master
 
+## https://github.com/shalzz/asterisk-chan-dongle
+ARG ASTERISK_CHAN_DONGLE_VER=master
+
 ## https://github.com/ugoviti/izsynth
 ARG IZSYNTH_VER=5.0
 
@@ -466,6 +469,18 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig ;fi && \
+  : "---------- END build ----------" && \
+  \
+  : "---------- START build asterisk-chan-dongle ----------" && \
+  cd /usr/src && \
+  mkdir asterisk-chan-dongle && \
+  curl -fSL --connect-timeout 30 https://github.com/shalzz/asterisk-chan-dongle/archive/${ASTERISK_CHAN_DONGLE_VER}.tar.gz | tar xz --strip 1 -C asterisk-chan-dongle && \
+  cd asterisk-chan-dongle && \
+  ./bootstrap && \
+  ./configure --with-astversion=${ASTERISK_VER} && \
+  make && \
+  make install && \
+  ldconfig && \
   : "---------- END build ----------" && \
   \
   : "---------- START build sngrep ----------" && \
