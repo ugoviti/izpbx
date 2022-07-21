@@ -579,7 +579,7 @@ fi
 
 echo "
   <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
+    Options Includes FollowSymLinks
     AllowOverride All
 $(print_ApacheAllowFrom)
   </Directory>
@@ -608,7 +608,7 @@ if [ ! -z "${APP_FQDN}" ]; then
   
   # close virtualhost directive
   echo "<Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
+    Options Includes FollowSymLinks
     AllowOverride All
 $(print_ApacheAllowFrom)
   </Directory>
@@ -673,7 +673,7 @@ SSLCryptoDevice        builtin
   SSLCertificateChainFile ${fpbxDirs[CERTKEYLOC]}/integration/certificate.pem
   
   <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
+    Options Includes FollowSymLinks
     AllowOverride All
 $(print_ApacheAllowFrom)
   </Directory>
@@ -695,7 +695,7 @@ $(print_ApacheAllowFrom)
   $([ ! -z "${HTTPD_HTTPS_CHAIN_FILE}" ] && echo "SSLCertificateChainFile  ${HTTPD_HTTPS_CHAIN_FILE}")
 
   <Directory /var/www/html>
-    Options Includes FollowSymLinks MultiViews
+    Options Includes FollowSymLinks
     AllowOverride All
 $(print_ApacheAllowFrom)
   </Directory>
