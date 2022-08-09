@@ -514,9 +514,9 @@ cfgService_cron() {
 iniParser() {
   ini="$@"
   while read setting ; do
-    section="$(echo $setting | awk -F" " '{print $1}')"
-    k=$(echo $setting | sed -e "s/^${section} //" | awk -F"=" '{print $1}' | tr '[:upper:]' '[:lower:]')
-    v=$(echo $setting | sed -e "s/'//g" | awk -F"=" '{print $2}')
+    section="$(echo $setting | cut -d" " -f1)"
+    k=$(echo $setting | sed -e "s/^${section} //" | cut -d"=" -f-1 | tr '[:upper:]' '[:lower:]')
+    v=$(echo $setting | sed -e "s/'//g" | cut -d"=" -f2-)
     sed -e "/^\[${section}\]$/I,/^\(\|;\|#\)\[/ s/^\(;\|#\)${k}/${k}/" -e "/^\[${section}\]$/I,/^\[/ s|^${k}.*=.*|${k}=${v}|I" -i "${ini}"
   done
 }
@@ -526,7 +526,7 @@ cfgService_fail2ban() {
   echo "--> reconfiguring Fail2ban settings..."
   # ini config file parse function
   # fix default log path
-  echo "DEFAULT LOGTARGET=/var/log/fail2ban/fail2ban.log" | iniParser /etc/fail2ban/fail2ban.conf
+  echo "DEFAULT LOGTARGET=/var/log/fail2ban/fail2ban.log" | iniParser "/etc/fail2ban/fail2ban.conf"
   touch /var/log/fail2ban/fail2ban.log
   # configure all settings
   set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | sed -e 's/_/ /' | iniParser "/etc/fail2ban/jail.d/99-local.conf"
