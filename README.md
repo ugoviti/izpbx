@@ -140,7 +140,7 @@ docker-compose up -d
 3. If the mariadb database version was changed, rememeber to update tables schema with command  
   `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
-4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin --> Modules Admin --> Check Online --> Upgade all --> Process**
+4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menu: **Admin --> Modules Admin --> Check Online --> Upgade all --> Process**
 
 That's all
 
@@ -168,7 +168,7 @@ If you want upgrade FreePBX Framework/Core to a major release (example from 15 t
 * Make sure you disabled `FREEPBX_AUTOUPGRADE_CORE=false` in the `.env` file
 * Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
 * izPBX should start with the old FreePBX release but with all dependences installed and ready to complete the upgrade
-* Open FreePBX Menù: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
+* Open FreePBX Menu: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
 * Follow these istructions: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
 * From the **FreePBX / Modules Admin** page, check if all modules are been updated and enable again disabled modules
 
