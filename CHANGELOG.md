@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated PBX engine to Asterisk `18.14.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.14.0)
 - Updated sngrep to `1.6.0` (https://github.com/irontec/sngrep/releases/tag/v1.6.0)
+### Fixed
+- Fix crond high cpu usage caused by missing ulimit setings into docker-compose.yml
 
 ## [18.16.12] - 2022-08-09
 ### Changed
