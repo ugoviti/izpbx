@@ -59,7 +59,13 @@ services:
     ## fail2ban need privileged mode to manage iptables
     cap_add:
     - NET_ADMIN
+    #security_opt:
+    #- seccomp=unconfined
     privileged: true
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 32768
     ## NOTE: to avoid SIP-RTP NAT issues use: 'network_mode: host'
     network_mode: host
     ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
