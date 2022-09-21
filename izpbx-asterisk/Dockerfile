@@ -310,7 +310,6 @@ RUN set -xe && \
     radcli-devel \
     uriparser-devel \
     uw-imap-devel \
-    xmlstarlet \
     sox-devel \
     ilbc-devel \
     python2-devel \
@@ -321,6 +320,8 @@ RUN set -xe && \
     mariadb-devel \
     libuv-devel \
   ' && \
+  #xmlstarlet \
+  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
   \
