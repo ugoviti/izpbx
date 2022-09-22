@@ -360,11 +360,9 @@ RUN set -xe && \
   cd /usr/src && \
   mkdir asterisk && \
   curl -fSL --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
-  cd asterisk 
-
-  #&& \
+  cd asterisk && \
   # step debug to avoid reinstall every time the development packages during debug sessions (COMMENT BEFORE FINAL BUILD TO AVOID ANOTHER CONTAINER LAYER)
-RUN set -xe && \
+  #RUN set -xe && \
    cd /usr/src/asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
