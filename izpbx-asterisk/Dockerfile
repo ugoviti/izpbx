@@ -362,8 +362,7 @@ RUN set -xe && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
   \
-  make menuselect/menuselect menuselect-tree menuselect.makeopts && \
-  \
+  # configure default options by category
   menuselect/menuselect \
     --enable-category MENUSELECT_ADDONS \
     --enable-category MENUSELECT_CHANNELS \
@@ -374,7 +373,8 @@ RUN set -xe && \
     --enable-category MENUSELECT_PBX \
     --enable-category MENUSELECT_RES \
     --enable-category MENUSELECT_CEL \
-  \
+  && \
+  # eanble/disable default options by single resource
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
@@ -437,9 +437,12 @@ RUN set -xe && \
     --disable res_config_mysql \
     --disable res_config_ldap \
     --disable res_config_sqlite3 \
+    --disable res_geolocation \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
   && \
+  # finalize configuration and build Asterisk PBX
+  make menuselect/menuselect menuselect-tree menuselect.makeopts && \
   make && \
   make install && \
   make install-headers && \
