@@ -256,6 +256,8 @@ RUN set -xe && \
 ## build asterisk
 RUN set -xe && \
   . /etc/os-release && \
+  \
+  : "---------- START installing build packages ----------" && \
   ASTERISK_BUILD_DEPS=' \
     dmidecode \
     autoconf \
@@ -321,9 +323,10 @@ RUN set -xe && \
     libuv-devel \
   ' && \
   #xmlstarlet \
-  
   \
   dnf -y install $ASTERISK_BUILD_DEPS && \
+  \
+  : "---------- END installing build packages ----------" && \
   \
   : "---------- START build spandsp ----------" && \
   cd /usr/src && \
@@ -357,11 +360,17 @@ RUN set -xe && \
   cd /usr/src && \
   mkdir asterisk && \
   curl -fSL --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
-  cd asterisk && \
-  \
+  cd asterisk 
+
+  #&& \
+  # step debug to avoid reinstall every time the development packages during debug sessions (COMMENT BEFORE FINAL BUILD TO AVOID ANOTHER CONTAINER LAYER)
+RUN set -xe && \
+   cd /usr/src/asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
   \
+  # finalize configuration
+  make menuselect/menuselect menuselect-tree menuselect.makeopts && \
   # configure default options by category
   menuselect/menuselect \
     --enable-category MENUSELECT_ADDONS \
@@ -374,7 +383,7 @@ RUN set -xe && \
     --enable-category MENUSELECT_RES \
     --enable-category MENUSELECT_CEL \
   && \
-  # eanble/disable default options by single resource
+  # enable/disable default options by single resource
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
@@ -441,8 +450,7 @@ RUN set -xe && \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
   && \
-  # finalize configuration and build Asterisk PBX
-  make menuselect/menuselect menuselect-tree menuselect.makeopts && \
+  # build and install Asterisk PBX
   make && \
   make install && \
   make install-headers && \
