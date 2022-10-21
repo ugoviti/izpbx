@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.16.14] - 2022-10-21
+### Changed
+- Updated PBX engine to Asterisk `18.15.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.15.0)
+- Updated FOP2 to 2.31.33 (https://www.fop2.com/download.php)
+- Updated database engine to MariaDB `10.6.10` LTS (https://mariadb.com/kb/en/mariadb-10610-release-notes/)
+  - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+- Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
+  - changed: `APP_PORT_SIP=5061` to `APP_PORT_SIP=5160`
+### Fixed
+- fixed codec_opus build (xmlstarlet was missing in RL8 repos)
+
 ## [18.16.13] - 2022-09-22
 ### Changed
 - Updated PBX engine to Asterisk `18.14.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.14.0)
@@ -14,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.16.12] - 2022-08-09
 ### Changed
-- updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
+- Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
   - added: `#FAIL2BAN_DEFAULT_BANACTION=iptables-allports[blocktype=DROP]`
 
 ## [18.16.11] - 2022-07-21
@@ -30,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [18.16.9] - 2022-06-29
 ### Changed
 - Updated PBX engine to Asterisk `18.13.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.13.0)
-- Updated database engine to MariaDB `10.6.8` LTS (https://mariadb.com/kb/en/mariadb-1067-release-notes/)
+- Updated database engine to MariaDB `10.6.8` LTS (https://mariadb.com/kb/en/mariadb-1068-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
 ## [18.16.8] - 2022-05-14

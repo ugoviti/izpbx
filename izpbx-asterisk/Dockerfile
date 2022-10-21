@@ -16,19 +16,22 @@ ENV APP_VER=${APP_VER}
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.14.0
+ARG ASTERISK_VER=18.15.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.32
+ARG FOP2_VER=2.31.33
 
 ## http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=3.0.0-6ec23e5a7e
 
 ## https://github.com/holme-r/iksemel
 ARG IKSEMEL_VER=1.5.1.3
+
+## https://sourceforge.net/projects/xmlstar/files/xmlstarlet/
+ARG XMLSTARLET_VER=1.6.1
 
 ## https://github.com/BelledonneCommunications/bcg729/tags
 ARG BCG729_VER=1.1.1
@@ -321,6 +324,8 @@ RUN set -xe && \
     libresample-devel \
     mariadb-devel \
     libuv-devel \
+    xmlto \
+    docbook5-schemas \
   ' && \
   #xmlstarlet \
   \
@@ -345,6 +350,17 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 https://github.com/holme-r/iksemel/archive/${IKSEMEL_VER}.tar.gz | tar xz --strip 1 -C iksemel && \
   cd iksemel && \
   ./configure --prefix=/usr && \
+  make && \
+  make install && \
+  ldconfig && \
+  : "---------- END build ----------" && \
+  \
+  : "---------- START build xmlstarlet ----------" && \
+  cd /usr/src && \
+  mkdir xmlstarlet && \
+  curl -fSL --connect-timeout 30 https://sourceforge.net/projects/xmlstar/files/xmlstarlet/${XMLSTARLET_VER}/xmlstarlet-${XMLSTARLET_VER}.tar.gz | tar xz --strip 1 -C xmlstarlet && \
+  cd xmlstarlet && \
+  ./configure --prefix=/usr --with-libxml-prefix=/usr && \
   make && \
   make install && \
   ldconfig && \
