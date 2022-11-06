@@ -4,10 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [18.16.15] - 2022-10-21
+### Added
+- FOP2 certificate management for HTTPS/WSS SSL WebSockets
+
 ## [18.16.14] - 2022-10-21
 ### Changed
 - Updated PBX engine to Asterisk `18.15.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-18.15.0)
-- Updated FOP2 to 2.31.33 (https://www.fop2.com/download.php)
+- Updated FOP2 to `2.31.33` (https://www.fop2.com/download.php)
 - Updated database engine to MariaDB `10.6.10` LTS (https://mariadb.com/kb/en/mariadb-10610-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 - Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)

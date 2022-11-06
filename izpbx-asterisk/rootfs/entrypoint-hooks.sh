@@ -68,7 +68,7 @@ declare -A fpbxDirs=(
   [AMPSBIN]=/var/lib/asterisk/sbin
   [AMPCGIBIN]=/var/www/cgi-bin
   [AMPPLAYBACK]=/var/lib/asterisk/playback
-  [CERTKEYLOC]=/etc/asterisk/keys               
+  [CERTKEYLOC]=/etc/asterisk/keys
 )
 
 # asterisk extra directories
@@ -1298,6 +1298,12 @@ cfgService_fop2 () {
     sed "s|^manager_port.*=.*|manager_port=${FOP2_AMI_PORT}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     sed "s|^manager_user.*=.*|manager_user=${FOP2_AMI_USERNAME}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     sed "s|^manager_secret.*=.*|manager_secret=${FOP2_AMI_PASSWORD}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+   
+    # configure fop2 certificates if https is enabled
+    if [ "$HTTPD_HTTPS_ENABLED" = "true" ]; then
+      sed "s|^ssl_certificate_file.*=.*|ssl_certificate_file=${HTTPD_HTTPS_CERT_FILE}|"        -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+      sed "s|^ssl_certificate_key_file.*=.*|ssl_certificate_key_file=${HTTPD_HTTPS_KEY_FILE}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    fi
    
     # FOP2 License Code Management
     # licensed interface
