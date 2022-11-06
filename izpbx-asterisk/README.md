@@ -30,7 +30,7 @@ Start izPBX:
 ### Docker Compose:
 
 Asterisk 20 + FreePBX 16:  
-`docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-20.16.yml up`
+` `
 
 Asterisk 18 + FreePBX 16:  
 `docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-18.16.yml up`

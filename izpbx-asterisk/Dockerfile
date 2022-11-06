@@ -16,7 +16,7 @@ ENV APP_VER=${APP_VER}
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.0.0
+ARG ASTERISK_VER=18.15.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
@@ -398,6 +398,7 @@ RUN set -xe && \
     --enable-category MENUSELECT_CEL \
   && \
   # enable/disable default options by single resource
+  if [[ ${ASTERISK_VER%%.*} -le 18 ]]; then \
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
@@ -463,7 +464,74 @@ RUN set -xe && \
     --disable res_geolocation \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
-  && \
+    ; else \
+  menuselect/menuselect \
+    --enable BETTER_BACKTRACES \
+    --enable DONT_OPTIMIZE \
+    --enable app_confbridge \
+    --enable app_macro \
+    --enable app_page \
+    --enable binaural_rendering_in_bridge_softmix \
+    --enable chan_motif \
+    --enable codec_silk \
+    --enable codec_opus \
+    --enable format_mp3 \
+    --enable res_ari \
+    --enable res_chan_stats \
+    --enable res_calendar \
+    --enable res_calendar_caldav \
+    --enable res_calendar_icalendar \
+    --enable res_endpoint_stats \
+    --enable res_fax \
+    --enable res_fax_spandsp \
+    --enable res_pktccops \
+    --enable res_snmp \
+    --enable res_srtp \
+    --enable res_xmpp \
+    --disable-category MENUSELECT_CORE_SOUNDS \
+    --disable-category MENUSELECT_EXTRA_SOUNDS \
+    --disable-category MENUSELECT_MOH \
+    --disable BUILD_NATIVE \
+    --disable app_meetme \
+    --disable app_ivrdemo \
+    --disable app_saycounted \
+    --disable app_skel \
+    --disable app_voicemail_imap \
+    --disable cdr_pgsql \
+    --disable cel_pgsql \
+    --disable cdr_sqlite3_custom \
+    --disable cel_sqlite3_custom \
+    --disable cdr_tds \
+    --disable cel_tds \
+    --disable cdr_radius \
+    --disable cel_radius \
+    --disable chan_alsa \
+    --disable chan_console \
+    --disable chan_mgcp \
+    --disable chan_skinny \
+    --disable chan_ooh323 \
+    --disable chan_mobile \
+    --disable chan_unistim \
+    --disable res_ari_mailboxes \
+    --disable res_digium_phone \
+    --disable res_calendar_ews \
+    --disable res_calendar_exchange \
+    --disable res_stasis_mailbox \
+    --disable res_mwi_external \
+    --disable res_mwi_external_ami \
+    --disable res_config_pgsql \
+    --disable res_config_mysql \
+    --disable res_config_ldap \
+    --disable res_config_sqlite3 \
+    --disable res_geolocation \
+    --disable res_phoneprov \
+    --disable res_pjsip_phoneprov_provider \
+    ;fi && \
+#    --enable app_mysql \
+#    --disable cdr_syslog \
+#    --disable cdr_mysql \
+#    --disable chan_oss \
+  \
   # build and install Asterisk PBX
   make && \
   make install && \
