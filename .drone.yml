@@ -89,13 +89,13 @@ steps:
       
 ---
 kind: pipeline
-name: izpbx-dev-18.16
+name: izpbx-dev-20.16
 
 environment:
   APP_DEBUG: 1
-  ASTERISK_VER: 18.8.0
+  ASTERISK_VER: 20.0.0
   FREEPBX_VER: 16
-  APP_VER: dev
+  APP_VER: dev-20.16
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
   APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
@@ -104,7 +104,7 @@ trigger:
   event:
   - push
   branch:
-  - dev
+  - dev-20.16
 
 platform:
   os: linux
@@ -133,114 +133,35 @@ steps:
     mount:
     - /drone/docker
 
+- name: print-env
+  image: alpine/git
+  commands:
+  - set
+
 - name: prep
   image: alpine
   commands:
     - echo -e -n "$${DRONE_COMMIT_SHA:0:7}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
+    - echo -e -n ",dev-$${ASTERISK_VER%%.*}.${FREEPBX_VER}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
 
-- name: build&publish
+- name: build-docker
   image: plugins/docker
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
     context: izpbx-asterisk
     build_args_from_env:
-    - APP_DEBUG
-    - ASTERISK_VER
     - APP_VER
     - APP_VER_BUILD
     - APP_BUILD_COMMIT
     - APP_BUILD_DATE
-    storage_path: /drone/docker
-    username:
-      from_secret: DOCKER_USERNAME
-    password:
-      from_secret: DOCKER_PASSWORD
-
-- name: rebuild-cache
-  image: drillster/drone-volume-cache
-  volumes:
-  - name: cache
-    path: /cache
-  settings:
-    rebuild: true
-    mount:
-    - /drone/docker
-    
----
-kind: pipeline
-name: izpbx-dev-18.15
-
-environment:
-  APP_DEBUG: 1
-  ASTERISK_VER: 18.8.0
-  FREEPBX_VER: 15
-  APP_VER: dev
-  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
-
-trigger:
-  event:
-  - push
-  branch:
-  - dev
-
-platform:
-  os: linux
-  arch: amd64
-
-concurrency:
-  limit: 1
-
-volumes:
-  - name: cache
-    host:
-      path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-
-workspace:
-  base: /drone
-  path: src
-      
-steps:
-- name: restore-cache
-  image: drillster/drone-volume-cache
-  volumes:
-  - name: cache
-    path: /cache
-  settings:
-    restore: true
-    mount:
-    - /drone/docker
-
-- name: prep
-  image: alpine
-  commands:
-    - echo -e -n "$${DRONE_COMMIT_SHA:0:7}" >> .tags
-    - echo -e -n ",dev-$${ASTERISK_VER%%.*}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
-
-- name: build&publish
-  image: plugins/docker
-  settings:
-    repo: izdock/izpbx-asterisk
-    dockerfile: izpbx-asterisk/Dockerfile
-    context: izpbx-asterisk
-    build_args_from_env:
     - APP_DEBUG
     - ASTERISK_VER
-    - APP_VER
-    - APP_VER_BUILD
-    - APP_BUILD_COMMIT
-    - APP_BUILD_DATE
+    - FREEPBX_VER
     storage_path: /drone/docker
     username:
       from_secret: DOCKER_USERNAME
