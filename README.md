@@ -6,15 +6,12 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 
 # Supported tags
 
-## Production Branch: (Asterisk 18 + FreePBX 15)
-* `latest`, `18`, `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT`
-
-## Legacy Branch: (Asterisk 16 + FreePBX 15)
-* `0`, `0.9`, `0.9.X`, `0.9.X-BUILD`, `0.9.X-COMMIT`
+## Production Branch:
+* `18.16`, `18.16.X`, `18.16.X-BUILD`, `18.16.X-COMMIT`,`18`, `latest` (Asterisk 18 + FreePBX 16)
+* `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT` (Asterisk 18 + FreePBX 15)
 
 ## Development Branches:
-* Asterisk 18 LTS + FreePBX 15: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
-* Asterisk 16 LTS + FreePBX 15: `dev-16`, `dev-16.X`, `dev-16.X.X-BUILD`, `dev-16.X.X-COMMIT`
+* Asterisk 18 LTS: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
 
 ## Version notes:
 Tags format: **Z.Y.X-[BUILD|COMMIT]**
@@ -28,7 +25,10 @@ where:
 Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions
 
 # Dockerfile
-- https://github.com/ugoviti/izdock-izpbx/blob/master/izpbx-asterisk/Dockerfile
+- https://github.com/ugoviti/izpbx/blob/main/izpbx-asterisk/Dockerfile
+
+# Targets of this project
+Cloud and On-Premise, Fast, Automatic and Repeatable deploy of VoIP PBX systems
 
 # Features
 - Fast initial bootstrap to deploy a full features PBX system (60 secs install time from zero to a running turnkey PBX system)
@@ -36,7 +36,7 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 - Built-in WEB Management GUI based on FreePBX® project (with default predownloaded modules for quicker initial deploy)
 - No vendor lock-in, you can migrare to izPBX and away izPBX simply importing/exporting FreePBX Backups
 - Based on Rocky Linux 8 64bit OS (RHEL derivate with long term support)
-- Small container image footprint (~450 MB)
+- Small container image footprint (~450 MB vs 2300 MB of official FreePBX ISO distro file)
 - Multi-Tenant PBX System Support (look into **Advanced Production Configuration Examples** section)
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and not volatile data
@@ -63,28 +63,16 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 
 # Screenshots
 #### izPBX Dashboard (FreePBX):
-![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-dashboard.png)
+![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-dashboard.png)
 
 #### izPBX Operator Panel (FOP2):
-![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-operator-panel.png)
+![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-operator-panel.png)
 
 #### izPBX Monitoring Dashboard (Zabbix):
-![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-zabbix-dashboard.png)
+![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-zabbix-dashboard.png)
 
 #### izPBX CLI (Asterisk):
-![izpbx-console](https://raw.githubusercontent.com/ugoviti/izdock-izpbx/master/screenshots/izpbx-cli.png)
-
-# Targets of this project
-On-Premise, fast, automatic and repeatable deploy of PBX systems.  
-by default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal container network is used), so the default UDP RTP port range can be from `10000` to `20000`.  
-If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpu usage and longer startup times), for example for 50 concurrent calls:  
-`APP_PORT_RTP_START=10000`  
-`APP_PORT_RTP_END=10200`  
-for best security, fine-tune the ports range based on your needs by not using standard port ranges!  
-
-# Limits of this project
-- Deploy 1 izPBX instance for every host. No multi deploy works out of the box by default when using `network_mode: host` (look **Advanced Production Configuration Examples** section for Multi-Tenant Solutions)
-- Container Antipattern Design (FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to function, and the FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by izPBX container updates)
+![izpbx-console](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-cli.png)
   
 # Deploy izPBX
 Using **docker-compose** is the suggested method:
@@ -100,12 +88,12 @@ eval sudo curl -L "$(curl -s https://api.github.com/repos/docker/compose/release
 sudo systemctl enable --now docker
 ```
 
-- Create a `docker-compose.yml`, or clone git repository, or download latest tarbal release from: https://github.com/ugoviti/izdock-izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
-  - `git clone https://github.com/ugoviti/izdock-izpbx.git /opt/izpbx`
+- Create a `docker-compose.yml`, or clone git repository, or download latest tarbal release from: https://github.com/ugoviti/izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
+  - `git clone https://github.com/ugoviti/izpbx.git /opt/izpbx`
   - `cd /opt/izpbx`
 
 - Checkout into latest official release:
-  - `git checkout refs/tags/$(git tag | sort --version-sort | tail -1)`
+  - `git checkout tags/$(git tag | sort --version-sort | tail -1)`
 
 - Copy default configuration file `default.env` into `.env`:
   - `cp default.env .env`
@@ -136,8 +124,10 @@ If you want test izPBX without using docker-compose, you can use the following d
 1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
 ```
 cd /opt/izpbx
+git checkout main
 git pull
-git checkout refs/tags/$(git tag | sort --version-sort | tail -1)
+git fetch --tags --all -f
+git checkout tags/$(git tag | sort --version-sort | tail -1)
 ```
 
 2. Upgrade the **izpbx** deploy with:  
@@ -150,18 +140,37 @@ docker-compose up -d
 3. If the mariadb database version was changed, rememeber to update tables schema with command  
   `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
-4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menù: **Admin-->Modules Admin: Check Online**
+4. Open FreePBX Web URL and verify if exist any modules updates from FreePBX Menu: **Admin --> Modules Admin --> Check Online --> Upgade all --> Process**
 
 That's all
 
-### FreePBX upgrade path to a major release
+### Upgrade path to a major FreePBX release
 FreePBX will be installed into persistent data dir on initial deploy only (when no installations already exist).
 
-Successive container updates will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
-After initial deploy, upgrading FreePBX Core and Modules and Major Release (es. from 15.x to 16.x) is possible **only** via **official FreePBX upgrade method**:
-  - FreePBX Menù: **Admin-->Modules Admin: Check Online** select **FreePBX Upgrader**
+Successive container updates on the same release (example from 18.15.1 to 18.15.2) will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
 
-Recap: only Asterisk core engine will be updated on container image update. FreePBX will be updated only via Modules Update Menu.
+If you want upgrade FreePBX Framework/Core to a major release (example from 15 to 16), you have 2 options:  
+  
+1. Automatic upgrade using izPBX container release (example, switching from 18.15.x to 18.16.x release)
+2. Manual upgrade using **FreePBX Upgrader** tool
+
+### method 1: Automatic upgrade using izPBX container release (suggested)
+* Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
+* Make sure you made a full backup of `data` dir (IMPORTANT!)
+* Make sure you enabled `FREEPBX_AUTOUPGRADE_CORE=true` in the `.env` file
+* Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
+* izPBX should be detect an old FreePBX version installed and start the upgrade process
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated and enable again disabled modules
+
+### method 2: Manual upgrade using FreePBX Upgrader tool
+* Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
+* Make sure you made a full backup of `data` dir (IMPORTANT!)
+* Make sure you disabled `FREEPBX_AUTOUPGRADE_CORE=false` in the `.env` file
+* Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
+* izPBX should start with the old FreePBX release but with all dependences installed and ready to complete the upgrade
+* Open FreePBX Menu: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
+* Follow these istructions: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
+* From the **FreePBX / Modules Admin** page, check if all modules are been updated and enable again disabled modules
 
 # Advanced Production Configuration Examples
 
@@ -383,7 +392,7 @@ Enter the directory containig configuration files and run:
 ### Command to restart whole izPBX deploy
 `docker-compose restart izpbx`
 
-### Command to restart izPBX cntainer only
+### Command to restart izPBX container only
 `docker restart izpbx`
 
 ### Command to restart DB container only
@@ -423,11 +432,11 @@ Tested Host Operating Systems:
 
 # Environment default variables
 Consult the `default.env` file: 
-  - https://github.com/ugoviti/izdock-izpbx/blob/master/default.env
+  - https://github.com/ugoviti/izpbx/blob/main/default.env
 
 # Zabbix Agent Configuration
 Consult official repository page for installation and configuration of Asterisk Zabbix Template in you Zabbix Server:
-- https://github.com/ugoviti/zabbix-templates/tree/master/asterisk
+- https://github.com/ugoviti/zabbix-templates/tree/main/asterisk
 
 # FreePBX Configuration Best Practices
 * **Settings-->Advanced Settings**
@@ -495,36 +504,64 @@ NOTE: Tested on Yealink Phones
       - RemoteURL: **http://PBX_ADDRESS/pb/yealink/cm**
       - Display Name: **Shared Phone Book**
       
-# FAQ / Trobleshooting
+# FAQ / Troubleshooting
+- FOP2 useful commands:
+    NB. define interface name to associate the license, for example: `eth0`
+    - enter into izpbx container: `docker exec -it izpbx bash`
+    - register the license: `/usr/local/fop2/fop2_server --rp=http --register --iface eth0 --name "Company Name" --code "LICENSECODE"`
+    - get lincese detail: `/usr/local/fop2/fop2_server --rp=http --getinfo --iface eth0`
+    - reactivate the license: `/usr/local/fop2/fop2_server --rp=http --reactivate --iface eth0`
+    - revoke the license: `/usr/local/fop2/fop2_server --rp=http --revoke --iface eth0`
+
+- FOP2 is running in Demo mode because the license is invalid
+  - FOP2 soffer from a bug about the lincensing model (already comunicated many times to the FOP2 support without an official solution)
+    to workaround that problem, normally is required to **reactivate** the license, but some times doesn't works, so the only solution is to contact FOP2 support team
+
 - FreePBX is slow to reload (https://issues.freepbx.org/browse/FREEPBX-20559)
   - As temporary WORKAROUND enter into izpbx container shell and run:  
     `docker exec -it izpbx bash`  
     `fwconsole setting SIGNATURECHECK 0`
 
-- Factory Reset / Start from scratch a clean configurations (WARNING! you persistent storage will be wiped!):
+- Factory Reset izPBX (WARNING! your persistent storage will be wiped!):
   - `docker-compose down`
   - `rm -rf data`
   - `docker-compose up -d`
     
-# TODO / Future Development by priority
+# TODO / Future Development
+- Add ARM version compatible with Raspberry PI 
 - Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possibile using FreePBX FAX Module)
 - macOS host support? (edit docker-compose.yml and comment localtime volume?)
 - Windows host support (need to use docker volume instead local directory path?)
 
-# BUGS
-- Unpredictable network interface order when running in Multi-Tenant mode. As workaround used, the network interface name must be named in lexical order. refs:
+# BUGS and Limits of this project
+- izPBX was developed with container antipattern design in mind.
+  - FreePBX was not designed to run as containerized app, and its ecosystem requires numerous modules to works
+  - FreePBX modules updates will managed by FreePBX Admin Modules Pages itself not by izPBX container updates
+- izPBX must be deployed by 1 instance for every VM or Baremetal host
+  - No multi deploy works out of the box by default when using `network_mode: host`
+  - Look **Advanced Production Configuration Examples** section for Multi-Tenant Solutions
+- By default `network_mode: host` is used, so the PBX network is esposed directly in the host interface (no internal container network is used), so the default UDP RTP port range can be set from `10000` to `20000`.
+  - If you plan to disable `network_mode: host`, tune the port range (forwarding 10000 ports with the docker stack make high cpu usage and longer startup times), for example for 50 concurrent calls:  
+`APP_PORT_RTP_START=10000`  
+`APP_PORT_RTP_END=10200`  
+for best security, fine-tune the ports range based on your needs by not using standard port ranges!  
+- Unpredictable network interface order when running in Multi-Tenant mode. As workaround, used network interface name must be named in lexical order. refs:
   - https://gist.github.com/jfellus/cfee9efc1e8e1baf9d15314f16a46eca
   - https://github.com/moby/moby/issues/20179
-- By default FreePBX use Signature Checking for modules packages, but this make very high deplays when reloading FreePBX, so by default is been disabled. refs:
+- By default FreePBX use Signature Checking for modules packages, but this make very high delays when reloading FreePBX, so by default is been disabled. refs:
   - https://issues.freepbx.org/browse/FREEPBX-20559
+- No commercial FreePBX modules can be installed
+  - sysadmin rpm module is missing. Looking for a solution
+- Missing good EndPoint Manager for automatic phone provisioning
+  - Looking fo a valid solution
   
 # Quick reference
 - **Developed and maintained by**:
-  [Ugo Viti](https://github.com/ugoviti/izdock-izpbx) @ InitZero S.r.l.
+  [Ugo Viti](https://github.com/ugoviti/izpbx) @ InitZero S.r.l.
 
 - **Where to file issues**:
-  [https://github.com/ugoviti/izdock-izpbx/issues](https://github.com/ugoviti/izdock-izpbx/issues)
+  [https://github.com/ugoviti/izpbx/issues](https://github.com/ugoviti/izpbx/issues)
 
 - **Where to get commercial help**:
   email: [support@initzero.it](mailto:support@initzero.it) - web: [InitZero Support](https://www.initzero.it/)
@@ -536,4 +573,4 @@ NOTE: Tested on Yealink Phones
   [the latest release](https://github.com/docker/docker-ce/releases/latest) (down to 1.6 on a best-effort basis)
 
 - **License**:
-  [GPL v3](https://github.com/ugoviti/izdock-izpbx/blob/master/LICENSE)
+  [GPL v3](https://github.com/ugoviti/izpbx/blob/main/LICENSE)
