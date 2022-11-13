@@ -844,6 +844,7 @@ Charset=utf8" > /etc/odbc.ini
   if [ ! -e ${APP_DATA}/.initialized ]; then
       # first run detected initialize izpbx
       cfgService_freepbx_install
+      [ "$INSTALL_STATUS" = "KO" ] && echo "=> ERROR: FreePBX not installed... exiting in 60 seconds" && sleep 60 && exit 1
       # save the current installed freepbx version
       FREEPBX_VER_INSTALLED="$(${fpbxDirs[AMPBIN]}/fwconsole -V | awk '{print $NF}' | awk -F'.' '{print $1}')"
     else
@@ -979,7 +980,6 @@ cfgService_freepbx_upgrade() {
 
 # install FreePBX if not installed
 cfgService_freepbx_install() {
-
   mysqlQuery() {
     mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u ${MYSQL_ROOT_USER} --password=${MYSQL_ROOT_PASSWORD} -N -B -e "$@"
   }
@@ -1014,6 +1014,8 @@ cfgService_freepbx_install() {
   myn=1 ; myt=10
   
   until [ $myn -eq $myt ]; do
+    # wait 10 seconds for mysql to come run
+    sleep 10
     checkMysql
     RETVAL=$?
     if [ $RETVAL = 0 ]; then
@@ -1021,7 +1023,6 @@ cfgService_freepbx_install() {
       else
         let myn+=1
         echo "--> WARNING: cannot connect to MySQL database '${MYSQL_SERVER}'... waiting database to become ready... retrying in 10 seconds... try:[$myn/$myt]"
-        sleep 10
     fi
   done
   
@@ -1185,6 +1186,8 @@ cfgService_freepbx_install() {
       sleep 10
   fi
   done
+  
+  [ $n -le $t ] && INSTALL_STATUS="OK" && INSTALL_STATUS="KO"
   
   # stop asterisk
   if asterisk -r -x "core show version" 2>/dev/null ; then 

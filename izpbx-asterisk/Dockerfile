@@ -80,7 +80,7 @@ RUN set -xe && \
   . /etc/os-release && \
   \
   ## manage RL9 minimal variant
-  if command -v microdnf 1>/dev/null; then alias dnf="microdnf"; fi && \
+  if command -v microdnf 1>/dev/null; then ln -s /usr/bin/microdnf /usr/bin/dnf; fi && \
   \
   ## install packages
   APP_INSTALL_DEPS='\

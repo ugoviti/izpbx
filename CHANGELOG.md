@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Working on upgrade baseimage to Rocky Linux 9 and Asterisk 20
   - EL9 problems: ilbc 3.0.4, libsrtp 2.3.0, python 2, libtermcap, unbound
   - Asterisk 20 problems: FreePBX 16 missing support, app_mysql
+### Fixed
+- exit from install phase if all 5 retries fails
 
 ## [18.16.14] - 2022-10-21
 ### Changed
