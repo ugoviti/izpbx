@@ -10,8 +10,6 @@ environment:
 trigger:
   event:
   - tag
-  branch:
-  - main
 
 platform:
   os: linux
@@ -106,7 +104,7 @@ environment:
 
 trigger:
   event:
-  - tag
+  - push
   branch:
   - dev
 
