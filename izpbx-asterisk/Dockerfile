@@ -14,6 +14,8 @@ MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
 ARG RHEL_VER=8
+# PHP versions: FreePBX15 <= 7.2 - FreePBX16 >= 7.4
+ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
@@ -192,6 +194,8 @@ RUN set -xe && \
     patch \
     iproute \
     bc \
+    chkconfig \
+    libpcap \
   ' && \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
   if [[ "${RHEL_VER}" -le "8" ]]; then \
@@ -234,12 +238,10 @@ RUN set -xe && \
   \
   dnf config-manager --set-enabled ${REPOLIST} && \
   \
-  ## enable module php 7.4 needed for FreePBX 16
-  if [[ "${RHEL_VER}" -le "8" && "${FREEPBX_VER}" = "16" ]]; then \
-    : "---------- Enable PHP 7.4 ----------" && \
-    dnf module reset php -y && \
-    dnf module enable php:7.4 -y \
-  ;fi && \
+  ## enable specific module php needed for FreePBX
+  : "---------- Enable PHP ${PHP_VER} ----------" && \
+  dnf module reset php -y && \
+  dnf module enable php:${PHP_VER} -y && \
   \
   ## upgrade the system
   dnf upgrade -y && \
@@ -338,6 +340,7 @@ RUN set -xe && \
     gmime-devel \
     jack-audio-connection-kit-devel \
     libcap-devel \
+    libpcap-devel \
   ' && \
   #xmlstarlet \
   \
@@ -422,6 +425,7 @@ RUN set -xe && \
   && \
   # enable/disable default options by single resource
   if [[ ${ASTERISK_VER%%.*} -le 18 ]]; then \
+  # asterisk 18
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
@@ -488,6 +492,7 @@ RUN set -xe && \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
     ; else \
+  # asterisk 20
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
@@ -550,6 +555,7 @@ RUN set -xe && \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
     ;fi && \
+# not supported anymore in asterisk 20
 #    --enable app_mysql \
 #    --disable cdr_syslog \
 #    --disable cdr_mysql \
@@ -606,7 +612,6 @@ RUN set -xe && \
   mkdir sngrep && \
   curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/archive/v${SNGREP_VER}.tar.gz | tar xz --strip 1 -C sngrep && \
   cd sngrep && \
-  dnf -y install libpcap libpcap-devel && \
   ./bootstrap.sh && \
   ./configure --prefix=/usr && \
   make && \
@@ -646,6 +651,7 @@ RUN set -xe && \
     curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.0.xml -o modules-${FREEPBX_VER}.0.xml \
   ;fi && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
+  # predownload the following modules for faster install
   for MODULE in \
       announcement \
       arimanager \
@@ -678,21 +684,23 @@ RUN set -xe && \
       userman \
       ucp \
       bulkhandler \
-      speeddial \
       weakpasswords \
       pm2 \
       ; do \
-  echo "---------- PreDownloading module for offline install: $MODULE ----------" && \
-  mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
+      # missing:
+      #speeddial \
+  # download loop
   MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
+  mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
+  echo "---------- Predownloading module for offline install: $MODULE ${MODULE_VER} ----------" && \
   curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ && \
   curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz.gpg -o amp_conf/htdocs/admin/modules/_cache/$MODULE-${MODULE_VER}.tgz.gpg \
   ; done && \
-  su - asterisk -s /bin/bash -c "gpg --refresh-keys --keyserver hkp://keyserver.ubuntu.com:80" && \
-  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/1588A7366BD35B34.key" && \
-  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/3DDB2122FE6D84F7.key" && \
-  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/86CE877469D2EAD9.key" && \
-  su - asterisk -s /bin/bash -c "gpg --import /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/9F9169F4B33B4659.key"
+  \
+  su - asterisk -s /bin/bash -c "chmod og-rwx /home/asterisk/.gnupg" && \
+  su - asterisk -s /bin/bash -c "for key in /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/*.key ; do gpg --import $key ; done" && \
+  su - asterisk -s /bin/bash -c "gpg --refresh-keys --keyserver keys.openpgp.org"
+
 
 ## install other components
 RUN set -xe && \
@@ -703,17 +711,16 @@ RUN set -xe && \
   cp -a izsynth/izsynth /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END install ----------" && \
+  \
   : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agent2.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agentd.d && \
   : "---------- END install ----------" && \
-  ## enable module php 7.4 needed for FreePBX 16
-  if [[ "${FREEPBX_VER}" = "16" ]]; then \
-  : "---------- START install PHP IonCube Loader ----------" && \
-  curl -fSL --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_7.4.so && \
-  echo "zend_extension=ioncube_loader_lin_7.4.so" >> /etc/php.ini && \
-  : "---------- END install ----------" \
-  ;fi
+  \
+  : "---------- START install PHP ionCube Loader ----------" && \
+  curl -fSL --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_"${PHP_VER}".so && \
+  echo "zend_extension=ioncube_loader_lin_${PHP_VER}.so" >> /etc/php.ini && \
+  : "---------- END install ----------"
 
 ## set pemissions and sudo
 RUN set -xe && \
@@ -781,7 +788,7 @@ ARG APP_VER_BUILD
 ARG APP_BUILD_COMMIT
 ARG APP_BUILD_DATE
 
-## CI envs
+## CI envs for later usage
 ENV APP_FQDN=""
 ENV APP_VER_BUILD="${APP_VER_BUILD}"
 ENV APP_BUILD_COMMIT="${APP_BUILD_COMMIT}"

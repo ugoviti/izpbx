@@ -8,8 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - FOP2 certificate management for HTTPS/WSS SSL WebSockets
 ### Changed
-- Preparing for migration to Rocky Linux 9 and Asterisk 20
 - Updated zabbix-agent to `6.2` and switched to zabbix-agent2
+- Working on upgrade baseimage to Rocky Linux 9 and Asterisk 20
+  - EL9 problems: ilbc 3.0.4, libsrtp 2.3.0, python 2, libtermcap, unbound
+  - Asterisk 20 problems: FreePBX 16 missing support, app_mysql
 
 ## [18.16.14] - 2022-10-21
 ### Changed
