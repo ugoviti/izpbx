@@ -697,7 +697,6 @@ RUN set -xe && \
   curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz.gpg -o amp_conf/htdocs/admin/modules/_cache/$MODULE-${MODULE_VER}.tgz.gpg \
   ; done && \
   \
-  su - asterisk -s /bin/bash -c "chmod og-rwx /home/asterisk/.gnupg" && \
   su - asterisk -s /bin/bash -c "for key in /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/*.key ; do gpg --import $key ; done" && \
   su - asterisk -s /bin/bash -c "gpg --refresh-keys --keyserver keys.openpgp.org"
 
