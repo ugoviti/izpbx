@@ -1182,7 +1182,7 @@ cfgService_freepbx_install() {
       n=$t
     else
       let n+=1
-      echo "--> problem detected when trying to install FreePBX... restarting in 10 seconds... try:[$n/$t]"
+      echo "--> WARNING: unable to install FreePBX ${FREEPBX_VER}... restarting in 10 seconds... try:[$n/$t]"
       sleep 10
   fi
   done
