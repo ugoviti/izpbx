@@ -1,5 +1,5 @@
-ARG IMAGE_FROM=rockylinux/rockylinux:8
-
+ARG RHEL_VER=8
+ARG IMAGE_FROM=rockylinux/rockylinux:${RHEL_VER}
 FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
@@ -13,6 +13,7 @@ MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 #ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
+ARG RHEL_VER=8
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
@@ -71,9 +72,16 @@ ENV APP_GRP               "asterisk"
 
 ## development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
-
-## install packages
-ENV APP_INSTALL_DEPS=' \
+  
+RUN set -xe && \
+  ## import system information vars
+  . /etc/os-release && \
+  \
+  ## manage RL9 minimal variant
+  if command -v microdnf 1>/dev/null; then alias dnf="microdnf"; fi && \
+  \
+  ## install packages
+  APP_INSTALL_DEPS='\
     rsync \
     net-tools \
     procps-ng \
@@ -152,8 +160,6 @@ ENV APP_INSTALL_DEPS=' \
     net-snmp-libs \
     codec2 \
     neon \
-    pakchois \
-    libmodman \
     libproxy \
     net-snmp-agent-libs \
     lm_sensors-libs \
@@ -162,7 +168,6 @@ ENV APP_INSTALL_DEPS=' \
     icu \
     gcc-c++ \
     make \
-    python2 \
     libnsl \
     which \
     fftw-libs \
@@ -176,11 +181,10 @@ ENV APP_INSTALL_DEPS=' \
     cyrus-sasl-plain \
     cyrus-sasl-md5 \
     libresample \
-    incron \
     chrony \
     postfix \
     phpMyAdmin \
-    zabbix-agent \
+    zabbix-agent2 \
     zabbix-sender \
     ffmpeg \
     lame \
@@ -188,58 +192,66 @@ ENV APP_INSTALL_DEPS=' \
     patch \
     iproute \
     bc \
-  '
-  
+  ' && \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
-  
-RUN set -xe && \
-  ## import system information vars
-  . /etc/os-release && \
+  if [[ "${RHEL_VER}" -le "8" ]]; then \
+  # <= el8 (deprecated in el9)
+  APP_INSTALL_DEPS_EXTRA='\
+    libmodman \
+    pakchois \
+    incron \
+    python2 \
+  ' \
+  ;fi && \
   \
-  ## install epel repository
+  ## install dnf plugins and extra repositories
+  dnf -y install dnf-plugins-core && \
+  \
+  ## epel repository
   dnf -y install epel-release && \
   \
   ## repo for phpMyAdmin
-  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-8.rpm && \
+  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-"${RHEL_VER}".rpm && \
   ## repo for zabbix agent
-  rpm -Uvh https://repo.zabbix.com/zabbix/6.0/rhel/8/x86_64/zabbix-release-6.0-1.el8.noarch.rpm && \
+  rpm -Uvh https://repo.zabbix.com/zabbix/6.2/rhel/"${RHEL_VER}"/x86_64/zabbix-release-6.2-3.el"${RHEL_VER}".noarch.rpm && \
   ## repo for ffmpeg command
-  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm && \
-  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-8.noarch.rpm && \
-  ## repo for lame command
-  rpm -Uhv http://repo.okay.com.mx/centos/8/x86_64/release/okay-release-1-5.el8.noarch.rpm && \
-  ## fix wrong option
-  sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo && \
+  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-"${RHEL_VER}".noarch.rpm && \
+  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-"${RHEL_VER}".noarch.rpm && \
   \
-  ## install dnf plugins
-  dnf -y install dnf-plugins-core && \
   ## enable extra repository
-  dnf config-manager --set-enabled \
-    powertools \
-    remi \
-    rpmfusion-free-updates \
-    rpmfusion-nonfree-updates \
-    okay \
-  && \
+  if [[ "${RHEL_VER}" -le "8" ]]; then \ 
+    # <= el8
+    ## repo for lame command
+    rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-5.el"${RHEL_VER}".noarch.rpm && \
+    ## fix wrong option
+    sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo && \
+    \
+    REPOLIST="remi rpmfusion-free-updates rpmfusion-nonfree-updates powertools okay" \
+  ; else \
+    # >= el9
+    REPOLIST="remi rpmfusion-free-updates rpmfusion-nonfree-updates crb" \
+  ;fi && \
+  \
+  dnf config-manager --set-enabled ${REPOLIST} && \
+  \
   ## enable module php 7.4 needed for FreePBX 16
-  if [[ "${FREEPBX_VER}" = "16" ]]; then \
-  : "---------- Enable PHP 7.4 ----------" && \
-  dnf module reset php -y && \
-  dnf module enable php:7.4 -y \
+  if [[ "${RHEL_VER}" -le "8" && "${FREEPBX_VER}" = "16" ]]; then \
+    : "---------- Enable PHP 7.4 ----------" && \
+    dnf module reset php -y && \
+    dnf module enable php:7.4 -y \
   ;fi && \
   \
   ## upgrade the system
   dnf upgrade -y && \
   ## install mandatory packages
-  dnf install -y \
-  $APP_INSTALL_DEPS \
+  dnf install -y ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA}\
   && \
-  dnf mark install $APP_INSTALL_DEPS && \
+  dnf mark install ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} && \
   \
   if [[ ${APP_DEBUG} -eq 0 ]]; then \
-  : "---------- Clean temporary files ----------" && \
-  dnf clean all && \
-  rm -rf /var/cache/{dnf,yum} ;fi && \
+    : "---------- Clean temporary files ----------" && \
+    dnf clean all && rm -rf /var/cache/{dnf,yum} \
+  ;fi && \
   : "---------- ALL install finished ----------" 
 
 ### prep users
@@ -280,7 +292,6 @@ RUN set -xe && \
     opusfile-devel \
     unixODBC-devel \
     ncurses-devel \
-    libtermcap-devel \
     libtiff-devel \
     libjpeg-turbo-devel \
     audiofile-devel \
@@ -297,7 +308,6 @@ RUN set -xe && \
     libpq-devel \
     libxslt-devel \
     net-snmp-devel \
-    unbound-devel \
     libcurl-devel \
     openldap-devel \
     popt-devel \
@@ -317,7 +327,6 @@ RUN set -xe && \
     uw-imap-devel \
     sox-devel \
     ilbc-devel \
-    python2-devel \
     python3-devel \
     libtool \
     cmake \
@@ -326,10 +335,22 @@ RUN set -xe && \
     libuv-devel \
     xmlto \
     docbook5-schemas \
+    gmime-devel \
+    jack-audio-connection-kit-devel \
+    libcap-devel \
   ' && \
   #xmlstarlet \
   \
-  dnf -y install $ASTERISK_BUILD_DEPS && \
+  if [[ "${RHEL_VER}" -le "8" ]]; then \
+  # <= el8 (deprecated in el9)
+  ASTERISK_BUILD_DEPS_EXTRA='\
+    python2-devel \
+    libtermcap-devel \
+    unbound-devel \
+  ' \
+  ;fi && \
+  \
+  dnf -y install ${ASTERISK_BUILD_DEPS} ${ASTERISK_BUILD_DEPS_EXTRA} && \
   \
   : "---------- END installing build packages ----------" && \
   \
@@ -344,6 +365,7 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END build ----------" && \
   \
+  if [[ "${RHEL_VER}" -le "8" ]]; then \ 
   : "---------- START build iksemel ----------" && \
   cd /usr/src && \
   mkdir iksemel && \
@@ -353,7 +375,8 @@ RUN set -xe && \
   make && \
   make install && \
   ldconfig && \
-  : "---------- END build ----------" && \
+  : "---------- END build ----------" \
+  ;fi && \
   \
   : "---------- START build xmlstarlet ----------" && \
   cd /usr/src && \
@@ -379,7 +402,7 @@ RUN set -xe && \
   cd asterisk && \
   # step debug to avoid reinstall every time the development packages during debug sessions (COMMENT BEFORE FINAL BUILD TO AVOID ANOTHER CONTAINER LAYER)
   #RUN set -xe && \
-   cd /usr/src/asterisk && \
+  cd /usr/src/asterisk && \
   ./contrib/scripts/get_mp3_source.sh && \
   ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-resample --with-ssl=ssl --with-srtp && \
   \
@@ -562,7 +585,8 @@ RUN set -xe && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
   make && \
   make install && \
-  ldconfig ;fi && \
+  ldconfig \
+  ;fi && \
   : "---------- END build ----------" && \
   \
   : "---------- START build asterisk-chan-dongle ----------" && \
@@ -595,7 +619,8 @@ RUN set -xe && \
   dnf remove -y $ASTERISK_BUILD_DEPS && \
   dnf clean all && \
   rm -rf /var/cache/yum /tmp /usr/src && \
-  mkdir -p /usr/src /tmp && chmod 1777 /tmp ;fi && \
+  mkdir -p /usr/src /tmp && chmod 1777 /tmp \
+  ;fi && \
   : "---------- ALL builds finished ----------" 
 
 ### NOTE: asterisk build
@@ -679,7 +704,7 @@ RUN set -xe && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END install ----------" && \
   : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
-  cd /etc/zabbix/zabbix_agentd.d && \
+  cd /etc/zabbix/zabbix_agent2.d && \
   curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agentd.d && \
   : "---------- END install ----------" && \
   ## enable module php 7.4 needed for FreePBX 16
