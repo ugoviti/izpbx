@@ -89,15 +89,15 @@ steps:
       
 ---
 kind: pipeline
-name: izpbx-dev-18.16
+name: izpbx-dev-20.16
 
 environment:
   RHEL_VER: 8
   PHP_VER: 7.4
-  ASTERISK_VER: 18.15.0
+  ASTERISK_VER: 20.0.0
   FREEPBX_VER: 16
   APP_DEBUG: 1
-  APP_VER: dev-18.16
+  APP_VER: dev-20.16
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
   APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
   APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
