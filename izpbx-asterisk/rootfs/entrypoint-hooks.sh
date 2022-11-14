@@ -1268,7 +1268,7 @@ cfgService_zabbix() {
   echo "#DebugLevel=4
 #LogFileSize=1
 #EnableRemoteCommands=1
-LogRemoteCommands=1
+Plugins.SystemRun.LogRemoteCommands=1
 LogType=console
 
 Server=${ZABBIX_SERVER}
