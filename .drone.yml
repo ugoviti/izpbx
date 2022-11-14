@@ -143,8 +143,8 @@ steps:
 - name: prep
   image: alpine
   commands:
-    - echo -e -n ",dev-$${ASTERISK_VER%%.*}.$${FREEPBX_VER}" >> .tags
-#    - echo -e -n "$${DRONE_COMMIT_SHA:0:7}" >> .tags
+    - echo -e -n "dev-$${ASTERISK_VER%%.*}.$${FREEPBX_VER}" >> .tags
+#    - echo -e -n ",$${DRONE_COMMIT_SHA:0:7}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
 #    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
