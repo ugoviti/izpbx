@@ -989,15 +989,15 @@ cfgService_freepbx_install() {
   }
   
   # counter for global attempts
-  n=1 ; t=5
+  try=1 ; trymax=5
   
-  until [ $n -eq $t ]; do
+  until [ $try -eq $trymax ]; do
   cd /usr/src/freepbx
   echo
   echo "====================================================================="
   echo "=> !!! NEW INSTALLATION DETECTED :: FreePBX IS NOT INITIALIZED !!! <="
   echo "====================================================================="
-  echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$n/$t]"
+  echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$try/$trymax]"
 
   # use mysql user if MYSQL_ROOT_PASSWORD is not defined and skip initial MySQL deploy
   if [ -z "${MYSQL_ROOT_PASSWORD}" ]; then
@@ -1179,16 +1179,16 @@ cfgService_freepbx_install() {
   fi
 
   if [ $RETVAL = 0 ]; then
-      n=$t
+      try=$trymax
     else
-      let n+=1
-      echo "--> WARNING: unable to install FreePBX ${FREEPBX_VER}... restarting in 10 seconds... try:[$n/$t]"
-      sleep 10
+      let try+=1
+      echo "--> WARNING: unable to install FreePBX ${FREEPBX_VER}... restarting in 10 seconds... try:[$try/$trymax]"
+      # check if reached the end of the loop
+      [ $try -eq $trymax ] && INSTALL_STATUS="KO" || sleep 10
   fi
   done
-  
-  [ $n -gt $t ] && INSTALL_STATUS="KO" && INSTALL_STATUS="OK"
-  echo n=$n t=$t INSTALL_STATUS=$INSTALL_STATUS
+
+  #echo DEBUG: try=$try trymax=$trymax INSTALL_STATUS=$INSTALL_STATUS
   
   # stop asterisk
   if asterisk -r -x "core show version" 2>/dev/null ; then 

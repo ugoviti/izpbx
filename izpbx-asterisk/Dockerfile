@@ -653,6 +653,7 @@ RUN set -xe && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   # predownload the following modules for faster install
   for MODULE in \
+      framework \
       core \
       featurecodeadmin \
       customappsreg \
