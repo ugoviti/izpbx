@@ -723,7 +723,7 @@ RUN set -xe && \
   \
   : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agent2.d && \
-  curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agentd.d && \
+  curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agent2.d && \
   : "---------- END install ----------" && \
   \
   : "---------- START install PHP ionCube Loader ----------" && \
