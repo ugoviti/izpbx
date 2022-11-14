@@ -741,6 +741,10 @@ RUN set -xe && \
 ### fixes and workarounds
 ## gpg management
 RUN set -xe && \
+  # update default framework installer from latest release
+  : "---------- installing latest framework installer ----------" && \
+  rsync -a -P /usr/src/freepbx/amp_conf/htdocs/admin/modules/framework/ /usr/src/freepbx/ && \
+  # fix gpg keys
   su - asterisk -s /bin/bash -c 'for key in /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/*.key ; do gpg --import "$key" ; done' && \
   su - asterisk -s /bin/bash -c 'gpg --refresh-keys --keyserver keys.openpgp.org'
 
