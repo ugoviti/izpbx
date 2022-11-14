@@ -653,6 +653,17 @@ RUN set -xe && \
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   # predownload the following modules for faster install
   for MODULE in \
+      core \
+      featurecodeadmin \
+      customappsreg \
+      recordings \
+      callrecording \
+      conferences \
+      dashboard \
+      logfiles \
+      cdr \
+      sipsettings \
+      voicemail \
       announcement \
       arimanager \
       asteriskinfo \
@@ -687,7 +698,9 @@ RUN set -xe && \
       weakpasswords \
       pm2 \
       ; do \
-      # missing:
+      ## skip download
+      #framework \
+      ## deprecated:
       #speeddial \
   # download loop
   MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \

@@ -345,8 +345,8 @@ symlinkFile() {
   echo "--> symlinking '$fileCustom' to '$fileOriginal'"
   # create parent dir if not exist
   [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
+  # link custom file over orinal path
   ln -s "$fileCustom" "$fileOriginal"
-
 }
 
 # enable/disable and configure services
@@ -1187,7 +1187,8 @@ cfgService_freepbx_install() {
   fi
   done
   
-  [ $n -le $t ] && INSTALL_STATUS="OK" && INSTALL_STATUS="KO"
+  [ $n -gt $t ] && INSTALL_STATUS="KO" && INSTALL_STATUS="OK"
+  echo n=$n t=$t INSTALL_STATUS=$INSTALL_STATUS
   
   # stop asterisk
   if asterisk -r -x "core show version" 2>/dev/null ; then 
