@@ -77,7 +77,8 @@ ENV APP_GRP               "asterisk"
 
 ## development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
-  
+
+### STEP 1: INSTALL BASE PACKAGES
 RUN set -xe && \
   ## import system information vars
   . /etc/os-release && \
@@ -262,7 +263,8 @@ RUN set -xe && \
   ;fi && \
   : "---------- ALL install finished ----------" 
 
-### prep users
+### STEP 2: PREPARE SYSTEM USERS
+## prep users
 RUN set -xe && \
   groupadd -g ${APP_GID} ${APP_GRP} && \
   useradd -u ${APP_UID} -c "${APP_DESCRIPTION} User" -g ${APP_GRP} -s /sbin/nologin ${APP_USR} && \
@@ -271,11 +273,7 @@ RUN set -xe && \
   ## fix phpMyAdmin apache group permissions
   chmod g+w /var/lib/phpMyAdmin/temp
 
-### build stage
-
-## copy external sources files
-#ADD build/ /usr/src/
-
+### STEP 3: BUILD STAGE
 ## build asterisk
 RUN set -xe && \
   . /etc/os-release && \
@@ -765,6 +763,7 @@ RUN set -xe && \
   echo "zend_extension=ioncube_loader_lin_${PHP_VER}.so" >> /etc/php.ini && \
   : "---------- END install ----------"
 
+### STEP 4: FINISH SYSTEM SETUP  
 ## set pemissions and sudo
 RUN set -xe && \
   chown -R ${APP_USR}:${APP_GRP} \
@@ -788,23 +787,22 @@ ADD patch/ /usr/src/
 RUN sed 's/@SECLEVEL=2/@SECLEVEL=1/' -i /etc/crypto-policies/back-ends/opensslcnf.config
 
 ### app ports
-ENV \
-  APP_PORT_HTTP         80 \
-  APP_PORT_HTTPS        443 \
-  APP_PORT_IAX          4569 \
-  APP_PORT_PJSIP        5060 \
-  APP_PORT_SIP          5160 \
-  APP_PORT_WEBRTC       8089 \
-  APP_PORT_UCP_HTTP     8001 \
-  APP_PORT_UCP_HTTPS    8003 \
-  APP_PORT_AMI          8088 \
-  APP_PORT_RTP_START    10000 \
-  APP_PORT_RTP_END      10200 \
-  APP_PORT_DHCP         67 \
-  APP_PORT_TFTP         69 \
-  APP_PORT_NTP          123 \
-  APP_PORT_FOP2         4445 \
-  APP_PORT_ZABBIX       10050 
+ENV APP_PORT_HTTP         80
+ENV APP_PORT_HTTPS        443
+ENV APP_PORT_IAX          4569
+ENV APP_PORT_PJSIP        5060
+ENV APP_PORT_SIP          5160
+ENV APP_PORT_WEBRTC       8089
+ENV APP_PORT_UCP_HTTP     8001
+ENV APP_PORT_UCP_HTTPS    8003
+ENV APP_PORT_AMI          8088
+ENV APP_PORT_RTP_START    10000
+ENV APP_PORT_RTP_END      10200
+ENV APP_PORT_DHCP         67
+ENV APP_PORT_TFTP         69
+ENV APP_PORT_NTP          123
+ENV APP_PORT_FOP2         4445
+ENV APP_PORT_ZABBIX       10050
 
 ### exposed ports
 EXPOSE \
