@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - res_adsi
     - res_monitor
     - res_pktccops
+- Updated database engine to MariaDB `10.6.11` LTS (https://mariadb.com/kb/en/mariadb-10610-release-notes/)
 - Updated zabbix-agent to `6.2` and switched to zabbix-agent2
 - Now the initial deploy include the latest release of framework on time of izpbx build
 - Pre downloading all upgradable base system modules also (core, etc..) to avoid upgrading after initial install
