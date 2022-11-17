@@ -4,15 +4,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [18.16.15] - 2022-xx-xx
+## [20.16.0] - 2022-11-17
 ### Added
 - FOP2 certificate management for HTTPS/WSS SSL WebSockets
 ### Changed
+- Updated PBX engine to Asterisk `20.0.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.0.0)
+  - enabled modules:
+    - app_statsd
+    - app_saycounted
+    - chan_sip
+    - res_config_sqlite3
+    - res_phoneprov
+    - res_pjsip_phoneprov_provider
+    - res_pjsip_geolocation
+  - disabled modules:
+    - res_adsi
+    - res_monitor
+    - res_pktccops
 - Updated zabbix-agent to `6.2` and switched to zabbix-agent2
-- Working on upgrade baseimage to Rocky Linux 9 and Asterisk 20
+- Now the initial deploy include the latest release of framework on time of izpbx build
+- Pre downloading all upgradable base system modules also (core, etc..) to avoid upgrading after initial install
+- Testing upgrade baseimage to Rocky Linux 9 and Asterisk 20
   - EL9 problems: ilbc 3.0.4, libsrtp 2.3.0, python 2, libtermcap, unbound
-  - Asterisk 20 problems: FreePBX 16 missing support, app_mysql
-  - Predownload all upgradable base system modules also (core, etc..) to avoid upgrading after initial install
 ### Fixed
 - exit from install phase if all 5 retries fails
 

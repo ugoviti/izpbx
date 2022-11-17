@@ -425,7 +425,7 @@ RUN set -xe && \
   && \
   # enable/disable default options by single resource
   if [[ ${ASTERISK_VER%%.*} -le 18 ]]; then \
-  # asterisk 18
+  # asterisk <= 18
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
@@ -492,15 +492,19 @@ RUN set -xe && \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
     ; else \
-  # asterisk 20
+  # asterisk >= 20
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
     --enable app_confbridge \
     --enable app_macro \
     --enable app_page \
+    --enable app_statsd \
+    --enable app_saycounted \
     --enable binaural_rendering_in_bridge_softmix \
     --enable chan_motif \
+    --enable chan_sip \
+    --enable chan_pjsip \
     --enable codec_silk \
     --enable codec_opus \
     --enable format_mp3 \
@@ -516,6 +520,9 @@ RUN set -xe && \
     --enable res_snmp \
     --enable res_srtp \
     --enable res_xmpp \
+    --enable res_config_sqlite3 \
+    --enable res_phoneprov \
+    --enable res_pjsip_phoneprov_provider \
     --disable-category MENUSELECT_CORE_SOUNDS \
     --disable-category MENUSELECT_EXTRA_SOUNDS \
     --disable-category MENUSELECT_MOH \
@@ -550,10 +557,10 @@ RUN set -xe && \
     --disable res_config_pgsql \
     --disable res_config_mysql \
     --disable res_config_ldap \
-    --disable res_config_sqlite3 \
     --disable res_geolocation \
-    --disable res_phoneprov \
-    --disable res_pjsip_phoneprov_provider \
+    --disable res_adsi \
+    --disable res_monitor \
+    --disable res_pktccops \
     ;fi && \
 # not supported anymore in asterisk 20
 #    --enable app_mysql \
@@ -644,16 +651,24 @@ RUN set -xe && \
   \
   cd /usr/src && \
   mkdir freepbx && \
-  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx && \
+  # deprecated download (because this is not the latest version)
+  #curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
   ## download modules-*.xml file if not exist in local build dir
   if [[ -e "/usr/src/modules-${FREEPBX_VER}.0.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.0.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.0.xml"; else \
     curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.0.xml -o modules-${FREEPBX_VER}.0.xml \
   ;fi && \
+  \
+  # download latest framework release
+  MODULE="framework" && \
+  MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
+  echo "---------- Predownloading freepbx framework latest release: ${MODULE_VER} ----------" && \
+  curl -sfSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C ./ && \
+  \
+  # make the modules cache
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
   # predownload the following modules for faster install
   for MODULE in \
-      framework \
       core \
       featurecodeadmin \
       customappsreg \
@@ -742,8 +757,8 @@ RUN set -xe && \
 ## gpg management
 RUN set -xe && \
   # update default framework installer from latest release
-  : "---------- installing latest framework installer ----------" && \
-  rsync -a -P /usr/src/freepbx/amp_conf/htdocs/admin/modules/framework/ /usr/src/freepbx/ && \
+  #: "---------- installing latest framework installer ----------" && \
+  #rsync -a -P /usr/src/freepbx/amp_conf/htdocs/admin/modules/framework/ /usr/src/freepbx/ && \
   # fix gpg keys
   su - asterisk -s /bin/bash -c 'for key in /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/*.key ; do gpg --import "$key" ; done' && \
   su - asterisk -s /bin/bash -c 'gpg --refresh-keys --keyserver keys.openpgp.org'
