@@ -1,5 +1,5 @@
 ARG RHEL_VER=8
-ARG IMAGE_FROM=rockylinux/rockylinux:${RHEL_VER}
+ARG IMAGE_FROM=rockylinux/rockylinux:${RHEL_VER}-minimal
 FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
@@ -48,6 +48,9 @@ ARG ASTERISK_CHAN_DONGLE_VER=master
 ## https://github.com/ugoviti/izsynth
 ARG IZSYNTH_VER=5.0
 
+## https://www.zabbix.com/download_agents
+ENV ZABBIX_VER=6.2
+
 ## https://github.com/ugoviti/zabbix-templates
 ARG ZABBIX_TEMPLATE_VER=main
 
@@ -79,8 +82,11 @@ RUN set -xe && \
   ## import system information vars
   . /etc/os-release && \
   \
-  ## manage RL9 minimal variant
-  if command -v microdnf 1>/dev/null; then ln -s /usr/bin/microdnf /usr/bin/dnf; fi && \
+  ## manage dnf rhel minimal image variant
+  if command -v microdnf 1>/dev/null; then export RHEL_MINIMAL="true" ;else export RHEL_MINIMAL="false" ;fi && \
+  if [[ "$RHEL_MINIMAL" = "true" && ! -e "/usr/bin/dnf" ]]; then ln -s /usr/bin/microdnf /usr/bin/dnf ;fi && \
+  ## dnf extra options
+  export DNF_OPTS+=" -y --nodocs" && \
   \
   ## install packages
   APP_INSTALL_DEPS='\
@@ -208,35 +214,33 @@ RUN set -xe && \
   ' \
   ;fi && \
   \
-  ## install dnf plugins and extra repositories
-  dnf -y install dnf-plugins-core && \
-  \
-  ## epel repository
-  dnf -y install epel-release && \
+  ## enable epel repository
+  dnf install epel-release && \
   \
   ## repo for phpMyAdmin
-  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-"${RHEL_VER}".rpm && \
+  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-${RHEL_VER}.rpm && \
   ## repo for zabbix agent
-  rpm -Uvh https://repo.zabbix.com/zabbix/6.2/rhel/"${RHEL_VER}"/x86_64/zabbix-release-6.2-3.el"${RHEL_VER}".noarch.rpm && \
+  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rhel/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_VER}-3.el${RHEL_VER}.noarch.rpm && \
   ## repo for ffmpeg command
-  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-"${RHEL_VER}".noarch.rpm && \
-  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-"${RHEL_VER}".noarch.rpm && \
+  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${RHEL_VER}.noarch.rpm && \
+  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${RHEL_VER}.noarch.rpm && \
   \
-  ## enable extra repository
+  ## enable extra repository via dnf command line
+  export DNF_OPTS+=" --enablerepo=epel" && \
+  export DNF_OPTS+=" --enablerepo=remi" && \
+  export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
+  export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
+  if [[ "${RHEL_VER}" -le "8" ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ "${RHEL_VER}" -ge "9" ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
+  \
+  # install other repositories
   if [[ "${RHEL_VER}" -le "8" ]]; then \ 
     # <= el8
     ## repo for lame command
     rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-5.el"${RHEL_VER}".noarch.rpm && \
     ## fix wrong option
-    sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo && \
-    \
-    REPOLIST="remi rpmfusion-free-updates rpmfusion-nonfree-updates powertools okay" \
-  ; else \
-    # >= el9
-    REPOLIST="remi rpmfusion-free-updates rpmfusion-nonfree-updates crb" \
+    sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo \
   ;fi && \
-  \
-  dnf config-manager --set-enabled ${REPOLIST} && \
   \
   ## enable specific module php needed for FreePBX
   : "---------- Enable PHP ${PHP_VER} ----------" && \
@@ -244,11 +248,13 @@ RUN set -xe && \
   dnf module enable php:${PHP_VER} -y && \
   \
   ## upgrade the system
-  dnf upgrade -y && \
+  dnf upgrade ${DNF_OPTS} && \
   ## install mandatory packages
-  dnf install -y ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA}\
+  dnf install ${DNF_OPTS} ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} \
   && \
-  dnf mark install ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} && \
+  if [[ "$RHEL_MINIMAL" = "false" ]]; then \
+    dnf mark install ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} \
+  ;fi && \
   \
   if [[ ${APP_DEBUG} -eq 0 ]]; then \
     : "---------- Clean temporary files ----------" && \
@@ -273,6 +279,19 @@ RUN set -xe && \
 ## build asterisk
 RUN set -xe && \
   . /etc/os-release && \
+  \
+  ## manage dnf rhel minimal image variant
+  if command -v microdnf 1>/dev/null; then export RHEL_MINIMAL="true" ;else export RHEL_MINIMAL="false" ;fi && \
+  if [[ "$RHEL_MINIMAL" = "true" && ! -e "/usr/bin/dnf" ]]; then ln -s /usr/bin/microdnf /usr/bin/dnf ;fi && \
+  ## dnf extra options
+  export DNF_OPTS+=" --nodocs" && \
+  ## enable extra repository via dnf command line
+  export DNF_OPTS+=" --enablerepo=epel" && \
+  export DNF_OPTS+=" --enablerepo=remi" && \
+  export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
+  export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
+  if [[ "${RHEL_VER}" -le "8" ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ "${RHEL_VER}" -ge "9" ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
   \
   : "---------- START installing build packages ----------" && \
   ASTERISK_BUILD_DEPS=' \
@@ -353,7 +372,7 @@ RUN set -xe && \
   ' \
   ;fi && \
   \
-  dnf -y install ${ASTERISK_BUILD_DEPS} ${ASTERISK_BUILD_DEPS_EXTRA} && \
+  dnf install ${DNF_OPTS} ${ASTERISK_BUILD_DEPS} ${ASTERISK_BUILD_DEPS_EXTRA} && \
   \
   : "---------- END installing build packages ----------" && \
   \
@@ -628,7 +647,7 @@ RUN set -xe && \
   \
   if [[ ${APP_DEBUG} -eq 0 ]]; then \
   : "---------- Clean temporary files ----------" && \
-  dnf remove -y $ASTERISK_BUILD_DEPS && \
+  dnf remove ${DNF_OPTS} $ASTERISK_BUILD_DEPS && \
   dnf clean all && \
   rm -rf /var/cache/yum /tmp /usr/src && \
   mkdir -p /usr/src /tmp && chmod 1777 /tmp \
@@ -756,9 +775,6 @@ RUN set -xe && \
 ### fixes and workarounds
 ## gpg management
 RUN set -xe && \
-  # update default framework installer from latest release
-  #: "---------- installing latest framework installer ----------" && \
-  #rsync -a -P /usr/src/freepbx/amp_conf/htdocs/admin/modules/framework/ /usr/src/freepbx/ && \
   # fix gpg keys
   su - asterisk -s /bin/bash -c 'for key in /usr/src/freepbx/amp_conf/htdocs/admin/libraries/BMO/*.key ; do gpg --import "$key" ; done' && \
   su - asterisk -s /bin/bash -c 'gpg --refresh-keys --keyserver keys.openpgp.org'
@@ -772,22 +788,23 @@ ADD patch/ /usr/src/
 RUN sed 's/@SECLEVEL=2/@SECLEVEL=1/' -i /etc/crypto-policies/back-ends/opensslcnf.config
 
 ### app ports
-ENV APP_PORT_HTTP         80
-ENV APP_PORT_HTTPS        443
-ENV APP_PORT_IAX          4569
-ENV APP_PORT_PJSIP        5060
-ENV APP_PORT_SIP          5160
-ENV APP_PORT_WEBRTC       8089
-ENV APP_PORT_UCP_HTTP     8001
-ENV APP_PORT_UCP_HTTPS    8003
-ENV APP_PORT_AMI          8088
-ENV APP_PORT_RTP_START    10000
-ENV APP_PORT_RTP_END      10200
-ENV APP_PORT_DHCP         67
-ENV APP_PORT_TFTP         69
-ENV APP_PORT_NTP          123
-ENV APP_PORT_FOP2         4445
-ENV APP_PORT_ZABBIX       10050
+ENV \
+  APP_PORT_HTTP         80 \
+  APP_PORT_HTTPS        443 \
+  APP_PORT_IAX          4569 \
+  APP_PORT_PJSIP        5060 \
+  APP_PORT_SIP          5160 \
+  APP_PORT_WEBRTC       8089 \
+  APP_PORT_UCP_HTTP     8001 \
+  APP_PORT_UCP_HTTPS    8003 \
+  APP_PORT_AMI          8088 \
+  APP_PORT_RTP_START    10000 \
+  APP_PORT_RTP_END      10200 \
+  APP_PORT_DHCP         67 \
+  APP_PORT_TFTP         69 \
+  APP_PORT_NTP          123 \
+  APP_PORT_FOP2         4445 \
+  APP_PORT_ZABBIX       10050 
 
 ### exposed ports
 EXPOSE \
