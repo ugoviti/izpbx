@@ -1149,16 +1149,19 @@ cfgService_freepbx_install() {
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
     
     echo "--> installing Prerequisite FreePBX modules from local repo into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
+    mod_cnt=1 ; mod_tot=$(echo ${FREEPBX_MODULES_PRE} ${FREEPBX_MODULES_EXTRA} | wc -w)
     for module in ${FREEPBX_MODULES_PRE}; do
-      echo "---> installing module: ${module}"
+      echo "---> [$mod_cnt/$mod_tot] installing module: ${module}"
       # the pre-modules need be installed as root
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
+      let mod_cnt+=1
     done
     
     echo "--> installing Extra FreePBX modules from local repo into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_EXTRA}; do
-      echo "---> installing module: ${module}"
+      echo "---> [$mod_cnt/$mod_tot] installing module: ${module}"
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
+      let mod_cnt+=1
     done
 
     if [ "${FREEPBX_AUTOUPDATE_MODULES_FIRSTDEPLOY}" = "true" ]; then
