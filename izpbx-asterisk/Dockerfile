@@ -358,6 +358,10 @@ RUN set -xe && \
     jack-audio-connection-kit-devel \
     libcap-devel \
     libpcap-devel \
+    rpm-devel \
+    mariadb-connector-c-devel \
+    libogg-devel \
+    cmake-data \
   ' && \
   #xmlstarlet \
   \
@@ -645,7 +649,7 @@ RUN set -xe && \
   \
   if [[ ${APP_DEBUG} -eq 0 ]]; then \
   : "---------- Clean temporary files ----------" && \
-  dnf remove ${DNF_OPTS} $ASTERISK_BUILD_DEPS && \
+  dnf remove ${DNF_OPTS} ${ASTERISK_BUILD_DEPS} ${ASTERISK_BUILD_DEPS_EXTRA} && \
   dnf clean all && \
   rm -rf /var/cache/yum /tmp /usr/src && \
   mkdir -p /usr/src /tmp && chmod 1777 /tmp \

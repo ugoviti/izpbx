@@ -1596,7 +1596,7 @@ runHooks() {
 #   done
 
   # customize bash env
-  cfgBashEnv > /etc/profile.d/izpbx.sh
+  cfgBashEnv > /root/.bashrc
   
   # enable/disable and configure services
   #chkService SYSLOG_ENABLED
