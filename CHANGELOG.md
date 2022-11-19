@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [20.16.0] - 2022-11-17
+## [20.16.0] - 2022-11-19
 ### Added
 - FOP2 certificate management for HTTPS/WSS SSL WebSockets
 ### Changed
@@ -24,8 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated database engine to MariaDB `10.6.11` LTS (https://mariadb.com/kb/en/mariadb-10610-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 - Updated zabbix-agent to `6.2` and switched to zabbix-agent2
-- Now the initial deploy include the latest release of framework on time of izpbx build
-- Pre downloading all upgradable base system modules also (core, etc..) to avoid upgrading after initial install
+- Now the initial deploy include the latest release of framework (at build time of izpbx release) so you don't need to update any FreePBX modules after the deploy
+- Pre downloading all upgradable base system modules also (core, etc..) to avoid upgrading after initial deploy
+- Various entrypoint enhancements
 - Testing upgrade baseimage to Rocky Linux 9 and Asterisk 20
   - EL9 problems: ilbc 3.0.4, libsrtp 2.3.0, python 2, libtermcap, unbound
 ### Fixed
