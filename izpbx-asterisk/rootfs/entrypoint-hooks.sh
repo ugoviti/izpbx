@@ -308,7 +308,7 @@ symlinkDir() {
     local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
   fi
   
-  echo "${prefix}INFO: [$dirOriginal] detected directory data override path: '$dirCustom'"
+  echo -e "${prefix}INFO: [$dirOriginal] detected directory data override path: '$dirCustom'"
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
@@ -364,7 +364,7 @@ symlinkFile() {
       #touch "$fileOriginal"
   fi
 
-  echo -e "${prefixIndent}INFO: [$fileOriginal] symlinking to '$fileOriginal'"
+  echo -e "${prefixIndent}INFO: [$fileOriginal] symlinking '$fileCustom' to '$fileOriginal'"
   # create parent dir if not exist
   [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
   # link custom file over orinal path
