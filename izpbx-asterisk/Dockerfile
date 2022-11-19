@@ -19,7 +19,7 @@ ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=18.15.0
+ARG ASTERISK_VER=20.0.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
