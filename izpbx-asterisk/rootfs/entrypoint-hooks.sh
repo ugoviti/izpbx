@@ -295,54 +295,76 @@ fixPermission() {
 # if required move default confgurations to custom directory
 symlinkDir() {
   local dirOriginal="$1"
-  local dirCustom="$2"
-
-  echo "--> directory data override detected: original:[$dirOriginal] custom:[$dirCustom]"
+  shift
+  local dirCustom="$1"
+  shift
+  local prefixLog="$1"
+  
+  if [ -z "$prefixLog" ];then
+    local prefix="--> "
+    local prefixIndent="--> "
+  else
+    local prefix="--> $prefixLog "
+    local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
+  fi
+  
+  echo "${prefix}INFO: [$dirOriginal] detected directory data override path: '$dirCustom'"
 
   # copy data files form original directory if destination is empty
   if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
-    echo "--> empty dir '$dirCustom' detected copying '$dirOriginal' contents to '$dirCustom'..."
+    echo -e "${prefixIndent}INFO: [$dirOriginal] empty dir detected copying files to '$dirCustom'..."
     rsync -a -q "$dirOriginal/" "$dirCustom/"
   fi
 
   # make directory if not exist
   if [ ! -e "$dirOriginal" ]; then
       # make destination dir if not exist
-      echo "--> WARNING: original data directory doesn't exist... creating empty directory: '$dirOriginal'"
+      echo -e "${prefixIndent}WARNING: [$dirOriginal] original directory doesn't exist... creating empty directory"
       mkdir -p "$dirOriginal"
   fi
   
   # rename directory
   if [ -e "$dirOriginal" ]; then
-      echo -e "--> renaming '${dirOriginal}' to '${dirOriginal}.dist'"
+      echo -e "${prefixIndent}INFO: [$dirOriginal] renaming to '${dirOriginal}.dist'"
       mv "$dirOriginal" "$dirOriginal".dist
   fi
   
   # symlink directory
-  echo "--> symlinking '$dirCustom' to '$dirOriginal'"
+  echo -e "${prefixIndent}INFO: [$dirOriginal] symlinking '$dirCustom' to '$dirOriginal'"
   ln -s "$dirCustom" "$dirOriginal"
 }
 
 symlinkFile() {
   local fileOriginal="$1"
-  local fileCustom="$2"
-
-  echo "--> file data override detected: original:[$fileOriginal] custom:[$fileCustom]"
+  shift
+  local fileCustom="$1"
+  shift
+  local prefixLog="$1"
+  
+  if [ -z "$prefixLog" ];then
+    local prefix="--> "
+    local prefixIndent="--> "
+  else
+    local prefix="--> $prefixLog "
+    local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
+  fi
+  
+  echo -e "${prefix}INFO: [$fileOriginal] file data override detected: original:[$fileOriginal] custom:[$fileCustom]"
 
   if [ -e "$fileOriginal" ]; then
       # copy data files form original directory if destination is empty
       if [ ! -e "$fileCustom" ]; then
-        echo "--> INFO: detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
+        echo -e "${prefixIndent}INFO: [$fileOriginal] detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
         rsync -a -q "$fileOriginal" "$fileCustom"
       fi
-      echo -e "--> renaming '${fileOriginal}' to '${fileOriginal}.dist'... "
+      echo -e "${prefixIndent}INFO: [$fileOriginal] renaming to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
-      echo "--> WARNING: original data file doesn't exist... creating symlink from a not existing source: '$fileOriginal'"
+      echo -e "${prefixIndent}WARNING: [$fileOriginal] original file doesn't exist... creating symlink from a not existing source file"
       #touch "$fileOriginal"
   fi
 
-  echo "--> symlinking '$fileCustom' to '$fileOriginal'"
+  echo -e "${prefixIndent}INFO: [$fileOriginal] symlinking to '$fileOriginal'"
   # create parent dir if not exist
   [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
   # link custom file over orinal path
@@ -1552,7 +1574,7 @@ runHooks() {
 
   # check and create missing container directory
   if [ ! -z "${APP_DATA}" ]; then  
-    echo "=> Persistent storage path detected... relocating and reconfiguring system data and configuration files using basedir: ${APP_DATA}"
+    echo "=> Persistent storage path detected... relocating and reconfiguring system data and configuration files using basedir: '${APP_DATA}'"
     for dir in ${appDataDirs[@]}
       do
         dir="${APP_DATA}${dir}"
@@ -1563,13 +1585,16 @@ runHooks() {
       done
 
     # link to custom data directory if required
+    
+    local n=1 ; local t=$(echo ${#appDataDirs[@]} + ${#appFilesConf[@]} | bc)
     for dir in ${appDataDirs[@]}; do
-      symlinkDir "${dir}" "${APP_DATA}${dir}"
+      symlinkDir "${dir}" "${APP_DATA}${dir}" "[$n/$t]"
+      let n+=1
     done
     
     for file in ${appFilesConf[@]}; do
-      # echo FILE=$file
-      symlinkFile "${file}" "${APP_DATA}${file}"
+      symlinkFile "${file}" "${APP_DATA}${file}" "[$n/$t]"
+      let n+=1
     done
    else
     echo "=> WARNING: No Persistent storage path detected... the configurations will be lost on container restart"
