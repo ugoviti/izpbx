@@ -205,7 +205,7 @@ RUN set -xe && \
     libpcap \
   ' && \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
-  if [[ "${RHEL_VER}" -le "8" ]]; then \
+  if [[ ${RHEL_VER} -le 8 ]]; then \
   # <= el8 (deprecated in el9)
   APP_INSTALL_DEPS_EXTRA='\
     libmodman \
@@ -231,11 +231,11 @@ RUN set -xe && \
   export DNF_OPTS+=" --enablerepo=remi" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ "${RHEL_VER}" -le "8" ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
-  if [[ "${RHEL_VER}" -ge "9" ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
+  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
   \
   # install other repositories
-  if [[ "${RHEL_VER}" -le "8" ]]; then \ 
+  if [[ ${RHEL_VER} -le 8 ]]; then \ 
     # <= el8
     ## repo for lame command
     rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-5.el"${RHEL_VER}".noarch.rpm && \
@@ -288,8 +288,8 @@ RUN set -xe && \
   export DNF_OPTS+=" --enablerepo=remi" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ "${RHEL_VER}" -le "8" ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
-  if [[ "${RHEL_VER}" -ge "9" ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
+  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
   \
   : "---------- START installing build packages ----------" && \
   ASTERISK_BUILD_DEPS=' \
@@ -365,8 +365,8 @@ RUN set -xe && \
   ' && \
   #xmlstarlet \
   \
-  if [[ "${RHEL_VER}" -le "8" ]]; then \
-  # <= el8 (deprecated in el9)
+  # deprecated in el9
+  if [[ ${RHEL_VER} -le 8 ]]; then \
   ASTERISK_BUILD_DEPS_EXTRA='\
     python2-devel \
     libtermcap-devel \
@@ -389,7 +389,8 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END build ----------" && \
   \
-  if [[ "${RHEL_VER}" -le "8" ]]; then \ 
+  # not working with RHEL 9
+  if [[ ${RHEL_VER} -le 8 ]]; then \
   : "---------- START build iksemel ----------" && \
   cd /usr/src && \
   mkdir iksemel && \
@@ -609,11 +610,12 @@ RUN set -xe && \
   ldconfig && \
   : "---------- END build ----------" && \
   \
-  if [[ ${ASTERISK_VER%%.*} -le 18 ]]; then \
+  # not working with RHEL 9
+  if [[ ${RHEL_VER} -le 8 ]]; then \
   : "---------- START build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
-  curl -fSL --connect-timeout 30 https://bitbucket.org/arkadi/asterisk-g72x/get/${ASTERISK_G72X_VER}.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
+  curl -fSL --connect-timeout 30 https://github.com/arkadijs/asterisk-g72x/archive/refs/heads/${ASTERISK_G72X_VER}.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
   cd asterisk-g72x && \
   ./autogen.sh && \
   ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
