@@ -1,5 +1,5 @@
 ARG RHEL_VER=8
-ARG IMAGE_FROM=rockylinux/rockylinux:${RHEL_VER}-minimal
+ARG IMAGE_FROM=rockylinux/rockylinux:${RHEL_VER}
 FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <ugo.viti@initzero.it>
