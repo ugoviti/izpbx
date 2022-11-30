@@ -83,12 +83,6 @@ RUN set -xe && \
   ## import system information vars
   . /etc/os-release && \
   \
-  ## manage dnf rhel minimal image variant
-  if command -v microdnf 1>/dev/null; then export RHEL_MINIMAL="true" ;else export RHEL_MINIMAL="false" ;fi && \
-  if [[ "$RHEL_MINIMAL" = "true" && ! -e "/usr/bin/dnf" ]]; then ln -s /usr/bin/microdnf /usr/bin/dnf ;fi && \
-  ## dnf extra options
-  export DNF_OPTS+=" -y --nodocs" && \
-  \
   ## install packages
   APP_INSTALL_DEPS='\
     rsync \
@@ -215,6 +209,12 @@ RUN set -xe && \
   ' \
   ;fi && \
   \
+  ## manage dnf rhel minimal image variant
+  if command -v microdnf 1>/dev/null; then export RHEL_MINIMAL="true" ;else export RHEL_MINIMAL="false" ;fi && \
+  if [[ "$RHEL_MINIMAL" = "true" && ! -e "/usr/bin/dnf" ]]; then ln -s /usr/bin/microdnf /usr/bin/dnf ;fi && \
+  \
+  ## dnf extra options
+  export DNF_OPTS+=" -y --nodocs" && \
   ## enable epel repository
   dnf install ${DNF_OPTS} epel-release && \
   \
@@ -282,10 +282,14 @@ RUN set -xe && \
   if command -v microdnf 1>/dev/null; then export RHEL_MINIMAL="true" ;else export RHEL_MINIMAL="false" ;fi && \
   if [[ "$RHEL_MINIMAL" = "true" && ! -e "/usr/bin/dnf" ]]; then ln -s /usr/bin/microdnf /usr/bin/dnf ;fi && \
   ## dnf extra options
-  export DNF_OPTS+=" --nodocs" && \
+  export DNF_OPTS+=" -y --nodocs" && \
   ## enable extra repository via dnf command line
   export DNF_OPTS+=" --enablerepo=epel" && \
-  export DNF_OPTS+=" --enablerepo=remi" && \
+  \
+  #export DNF_OPTS+=" --enablerepo=remi" && \
+  ##20221130 temporary disable nogpgcheck because remi is failing
+  export DNF_OPTS+=" --enablerepo=remi --nogpgcheck" && \
+  \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
   if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
