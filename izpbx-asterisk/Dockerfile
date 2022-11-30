@@ -216,7 +216,7 @@ RUN set -xe && \
   ;fi && \
   \
   ## enable epel repository
-  dnf install epel-release && \
+  dnf install ${DNF_OPTS} epel-release && \
   \
   ## repo for phpMyAdmin
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-${RHEL_VER}.rpm && \
@@ -261,7 +261,7 @@ RUN set -xe && \
     : "---------- Clean temporary files ----------" && \
     dnf clean all && rm -rf /var/cache/{dnf,yum} \
   ;fi && \
-  : "---------- ALL install finished ----------" 
+  : "---------- ALL install finished ----------"
 
 ### STEP 2: PREPARE SYSTEM USERS
 ## prep users
