@@ -555,6 +555,7 @@ RUN set -xe && \
     --disable BUILD_NATIVE \
     --disable app_meetme \
     --disable app_ivrdemo \
+    --disable app_jack \
     --disable app_saycounted \
     --disable app_skel \
     --disable app_voicemail_imap \
@@ -573,17 +574,14 @@ RUN set -xe && \
     --disable chan_ooh323 \
     --disable chan_mobile \
     --disable chan_unistim \
-    --disable res_ari_mailboxes \
     --disable res_digium_phone \
     --disable res_calendar_ews \
     --disable res_calendar_exchange \
-    --disable res_stasis_mailbox \
     --disable res_mwi_external \
     --disable res_mwi_external_ami \
     --disable res_config_pgsql \
     --disable res_config_mysql \
     --disable res_config_ldap \
-    --disable res_geolocation \
     --disable res_adsi \
     --disable res_monitor \
     --disable res_pktccops \
