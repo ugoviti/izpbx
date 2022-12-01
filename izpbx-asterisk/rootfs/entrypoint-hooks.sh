@@ -789,6 +789,11 @@ cfgService_izpbx() {
     # FIXME @20210321 FreePBX doesn't configure into configuration DB the non default 'asteriskcdrdb' DB
     [ "$(fwconsole setting CDRDBNAME | awk -F"[][{}]" '{print $2}')" != "${MYSQL_DATABASE_CDR}" ] && fwconsole setting CDRDBNAME ${MYSQL_DATABASE_CDR}
     
+    # FIXME FreePBX by default include many non existant context, adding these as blank fixe the startup and reload warnings
+    grep "include => .*-custom" ${fpbxDirs[ASTETCDIR]}/extensions.conf ${fpbxDirs[ASTETCDIR]}/extensions_additional.conf | awk '{print $3}' | sort -u | while read context ; do echo -e "[$context]\n"; done > ${fpbxDirs[ASTETCDIR]}/freepbx_custom_fix_missing_contexts.conf
+    echo -e "[ext-meetme]\n\n[ext-queues]\n\n[app-recordings]" >> ${fpbxDirs[ASTETCDIR]}/freepbx_custom_fix_missing_contexts.conf
+    if ! grep "#include freepbx_custom_fix_missing_contexts.conf" ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf >/dev/null 2>&1; then echo "#include freepbx_custom_fix_missing_contexts.conf" >> ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf ; fi
+
     ## fix Asterisk/FreePBX file permissions
     freepbxChown
   }

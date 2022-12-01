@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.3] - 2022-12-XX
+### Changed
+- Created a special FIX/Workaround for lowering FreePBX WARNINGS about missing custom contexts
+  - the new config file `freepbx_custom_fix_missing_contexts.conf` was created containing empty default contexts
+- Changed Asterisk modules build config:
+  - enabled modules:
+    - res_stasis_mailbox
+    - res_ari_mailboxes
+    - res_geolocation
+    - res_pjsip_geolocation
+  - disabled modules:
+    - app_jack
+
 ## [20.16.2] - 2022-11-27
 ### Fixed
 - changed base image from rockylinux:8-minimal to rockylinux:8
