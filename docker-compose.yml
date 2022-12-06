@@ -45,7 +45,7 @@ services:
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:20.16.2
+    image: docker.io/izdock/izpbx-asterisk:20.16.3
     container_name: izpbx
     #hostname: ${APP_FQDN}
     restart: unless-stopped

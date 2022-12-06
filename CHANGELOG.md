@@ -4,8 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [20.16.3] - 2022-12-XX
+## [20.16.3] - 2022-12-06
 ### Changed
+- Updated PBX engine to Asterisk `20.0.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.0.1)
+- Updated FOP2 to `2.31.34` (https://www.fop2.com/download.php)
 - Created a special FIX/Workaround for lowering FreePBX WARNINGS about missing custom contexts
   - the new config file `freepbx_custom_fix_missing_contexts.conf` was created containing empty default contexts
 - Changed Asterisk modules build config:

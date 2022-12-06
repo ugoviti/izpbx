@@ -19,13 +19,13 @@ ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.0.0
+ARG ASTERISK_VER=20.0.1
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.33
+ARG FOP2_VER=2.31.34
 
 ## http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=3.0.0-6ec23e5a7e
@@ -39,7 +39,7 @@ ARG XMLSTARLET_VER=1.6.1
 ## https://github.com/BelledonneCommunications/bcg729/tags
 ARG BCG729_VER=1.1.1
 
-## https://bitbucket.org/arkadi/asterisk-g72x
+## https://github.com/arkadijs/asterisk-g72x
 ARG ASTERISK_G72X_VER=master
 
 ## https://github.com/shalzz/asterisk-chan-dongle
