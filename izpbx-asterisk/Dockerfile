@@ -197,6 +197,7 @@ RUN set -xe && \
     bc \
     chkconfig \
     libpcap \
+    gmime \
   ' && \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
   if [[ ${RHEL_VER} -le 8 ]]; then \
@@ -585,6 +586,7 @@ RUN set -xe && \
     --disable res_adsi \
     --disable res_monitor \
     --disable res_pktccops \
+    --disable res_geolocation \
     ;fi && \
 # not supported anymore in asterisk 20
 #    --enable app_mysql \

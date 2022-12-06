@@ -14,10 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - enabled modules:
     - res_stasis_mailbox
     - res_ari_mailboxes
-    - res_geolocation
-    - res_pjsip_geolocation
   - disabled modules:
     - app_jack
+    - res_geolocation
 
 ## [20.16.2] - 2022-11-27
 ### Fixed
