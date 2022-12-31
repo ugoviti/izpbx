@@ -880,7 +880,7 @@ Charset=utf8" > /etc/odbc.ini
       
       # 'fwconsole -V' is not always reliable, reading current installed version directly from database
       if [ -z "${FREEPBX_VER_INSTALLED##*[!0-9]*}" ]; then
-        FREEPBX_VER_INSTALLED="$(mysql -h ${MYSQL_SERVER} -u ${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_DATABASE} --batch --skip-column-names --raw --execute="SELECT value FROM admin WHERE variable = 'version';" | awk '{print $NF}' | awk -F'.' '{print $1}')"
+        FREEPBX_VER_INSTALLED="$(mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u ${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_DATABASE} --batch --skip-column-names --raw --execute="SELECT value FROM admin WHERE variable = 'version';" | awk '{print $NF}' | awk -F'.' '{print $1}')"
       fi
       
       # save version into .initialized file if empty
@@ -891,8 +891,8 @@ Charset=utf8" > /etc/odbc.ini
       
       # izpbx is already initialized, update configuration files
       echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
-      [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
       sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '${MYSQL_SERVER}';/"   -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBPORT'\] =.*/\$amp_conf\['AMPDBPORT'\] = '${APP_PORT_MYSQL}';/" -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
@@ -1074,8 +1074,6 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --ampcgibin=${fpbxDirs[AMPCGIBIN]}"
   FPBX_OPTS+=" --ampplayback=${fpbxDirs[AMPPLAYBACK]}"
   
-  # if mysql run in a non standard port change the mysql server address
-  [[ ! -z "${APP_PORT_MYSQL}" && ${APP_PORT_MYSQL} -ne 3306 ]] && export MYSQL_SERVER="${MYSQL_SERVER}:${APP_PORT_MYSQL}"
   #set -x
   
   ## create mysql users and databases if not exists
@@ -1092,12 +1090,12 @@ cfgService_freepbx_install() {
   fi
   
   # veirfy if databases exist and we can access
-  mysqlQuery "USE ${MYSQL_DATABASE};"     ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE} DB. Please check if exist and the permissions... exiting" && exit 1
-  mysqlQuery "USE ${MYSQL_DATABASE_CDR};" ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE_CDR} DB. Please check if exist and the permissions... exiting" && exit 1
+  mysqlQuery "USE ${MYSQL_DATABASE};"     ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE} database. Please check if exist and the permissions... exiting" && exit 1
+  mysqlQuery "USE ${MYSQL_DATABASE_CDR};" ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE_CDR} database. Please check if exist and the permissions... exiting" && exit 1
   
   # install freepbx
   set -x
-  ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} --dbname=${MYSQL_DATABASE} --cdrdbname=${MYSQL_DATABASE_CDR} ${FPBX_OPTS}
+  ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbport=${APP_PORT_MYSQL} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} --dbname=${MYSQL_DATABASE} --cdrdbname=${MYSQL_DATABASE_CDR} ${FPBX_OPTS}
   RETVAL=$?
   set +x
   echo "---> END install FreePBX @ $(date)"

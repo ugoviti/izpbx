@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.X] - 2022-12-27
+### Fixed
+- Fixed unable to use custom MySQL port than 3006 (partial fix #40. FreePBX related problem)
+
 ## [20.16.3] - 2022-12-06
 ### Changed
 - Updated PBX engine to Asterisk `20.0.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.0.1)
