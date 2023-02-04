@@ -322,7 +322,6 @@ RUN set -xe && \
     uuid-devel \
     libtool-ltdl-devel \
     libsamplerate-devel \
-    patch \
     libsndfile-devel \
     doxygen \
     bison \

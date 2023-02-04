@@ -1309,7 +1309,7 @@ $(if [ "${ZABBIX_HOSTNAME}" = "${HOSTNAME}" ]; then
 fi)
 
 $(if [ ! -z "${ZABBIX_HOSTMETADATA}" ]; then
-  echo "HostMetadataItem=system.uname"
+  #echo "HostMetadataItem=system.uname"
   echo "HostMetadata=${ZABBIX_HOSTMETADATA}"
 fi)
 " > "$ZABBIX_CONF_LOCAL"
