@@ -78,6 +78,9 @@ ENV APP_GRP               "asterisk"
 ## development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
 
+## install ad hoc additional packages as defined via --build-arg next to regular dependencies
+ARG APP_INSTALL_EXTRA=""
+
 ### STEP 1: INSTALL BASE PACKAGES
 RUN set -xe && \
   ## import system information vars
@@ -252,7 +255,7 @@ RUN set -xe && \
   ## upgrade the system
   dnf upgrade ${DNF_OPTS} && \
   ## install mandatory packages
-  dnf install ${DNF_OPTS} ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} \
+  dnf install ${DNF_OPTS} ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} ${APP_INSTALL_EXTRA} \
   && \
   if [[ "$RHEL_MINIMAL" = "false" ]]; then \
     dnf mark install ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} \
