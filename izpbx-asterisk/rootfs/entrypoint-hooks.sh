@@ -1548,6 +1548,38 @@ cfgBashEnv() {
   echo'
 }
 
+cfgService_msmtp() {
+
+    echo "=> Setting up msmptp as default sendmail replacement"
+
+    if [ ! -r ~asterisk/.msmtprc ] ; then
+    cat <<EOF > "~asterisk/.msmtprc"
+# Set default values for all following accounts.
+defaults
+auth           off
+tls            off
+#tls_trust_file /etc/ssl/certs/ca-certificates.crt
+logfile        ~asterisk/msmtp.log
+
+# localmta
+account        localmta
+host           ${SMTP_RELAYHOST}
+port           ${SMTP_RELAYHOST_PORT}
+tls_starttls   off
+from           ${SMTP_MAIL_FROM}
+user           ${SMTP_RELAYHOST_USERNAME}
+password       ${SMTP_RELAYHOST_PASSWORD}
+
+# Set a default account
+account default : localmta
+
+EOF
+  fi
+
+  alternatives --set mta /usr/bin/msmtp
+
+}
+
 runHooks() {
   # configure supervisord
   echo "--> fixing supervisord config file..."
@@ -1629,6 +1661,7 @@ runHooks() {
   # enable/disable and configure services
   #chkService SYSLOG_ENABLED
   chkService POSTFIX_ENABLED
+  chkService MSMTP_ENABLED
   chkService CRON_ENABLED
   chkService FAIL2BAN_ENABLED
   chkService HTTPD_ENABLED
