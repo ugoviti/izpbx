@@ -9,7 +9,7 @@ for more info: https://github.com/ugoviti/izdock-izpbx
 ## Build
 
 Asterisk 20 + FreePBX 16:  
-`docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-20.16 --build-arg ASTERISK_VER=20.0.0 --build-arg FREEPBX_VER=16 -t izpbx-asterisk:dev-20.16 .`
+`docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-20.16 -t izpbx-asterisk:dev-20.16 .`
 
 Asterisk 18 + FreePBX 16:  
 `docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-18.16 --build-arg ASTERISK_VER=18.15.0 --build-arg FREEPBX_VER=16 -t izpbx-asterisk:dev-18.16 .`
@@ -30,7 +30,7 @@ Start izPBX:
 ### Docker Compose:
 
 Asterisk 20 + FreePBX 16:  
-` `
+`docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-20.16.yml up`
 
 Asterisk 18 + FreePBX 16:  
 `docker-compose down ; docker-compose -f docker-compose.yml -f docker-compose-dev-18.16.yml up`

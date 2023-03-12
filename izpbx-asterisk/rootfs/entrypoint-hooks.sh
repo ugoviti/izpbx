@@ -159,13 +159,12 @@ fi
 : ${ZABBIX_HOSTMETADATA:="izPBX"}
 
 ## default supervisord services status
-#: ${SYSLOG_ENABLED:="true"}
-#: ${POSTFIX_ENABLED:="true"}
 : ${CRON_ENABLED:="true"}
 : ${HTTPD_ENABLED:="true"}
 : ${ASTERISK_ENABLED:="false"}
 : ${IZPBX_ENABLED:="true"}
 : ${FAIL2BAN_ENABLED:="true"}
+: ${MSMTP_ENABLED:="true"}
 : ${POSTFIX_ENABLED:="false"}
 : ${DNSMASQ_ENABLED:="false"}
 : ${DHCP_ENABLED:="false"}
@@ -184,6 +183,7 @@ fi
 
 # postfix
 : ${SMTP_RELAYHOST:=""}
+: ${SMTP_RELAYHOST_PORT:="25"}
 : ${SMTP_RELAYHOST_USERNAME:=""}
 : ${SMTP_RELAYHOST_PASSWORD:=""}
 : ${SMTP_STARTTLS:="true"}
@@ -193,6 +193,7 @@ fi
 : ${SMTP_MAIL_TO:="root@localhost.localdomain"}
 # smarthost config
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
+: ${RELAYHOST_PORT:="$SMTP_RELAYHOST_PORT"}
 : ${RELAYHOST_USERNAME:="$SMTP_RELAYHOST_USERNAME"}
 : ${RELAYHOST_PASSWORD:="$SMTP_RELAYHOST_PASSWORD"}
 : ${ALLOWED_SENDER_DOMAINS:="$SMTP_ALLOWED_SENDER_DOMAINS"}
@@ -319,7 +320,7 @@ symlinkDir() {
   # make directory if not exist
   if [ ! -e "$dirOriginal" ]; then
       # make destination dir if not exist
-      echo -e "${prefixIndent}WARNING: [$dirOriginal] original directory doesn't exist... creating empty directory"
+      echo -e "${prefixIndent}WARN: [$dirOriginal] original directory doesn't exist... creating empty directory"
       mkdir -p "$dirOriginal"
   fi
   
@@ -360,7 +361,7 @@ symlinkFile() {
       echo -e "${prefixIndent}INFO: [$fileOriginal] renaming to '${fileOriginal}.dist'... "
       mv "$fileOriginal" "$fileOriginal".dist
     else
-      echo -e "${prefixIndent}WARNING: [$fileOriginal] original file doesn't exist... creating symlink from a not existing source file"
+      echo -e "${prefixIndent}WARN: [$fileOriginal] original file doesn't exist... creating symlink from a not existing source file"
       #touch "$fileOriginal"
   fi
 
@@ -397,32 +398,32 @@ postconf -e inet_protocols=ipv4
 
 # Set up host name
 if [ ! -z "$HOSTNAME" ]; then
-	postconf -e myhostname="$HOSTNAME"
+  postconf -e myhostname="$HOSTNAME"
 else
-	postconf -# myhostname
+  postconf -# myhostname
 fi
 
 # Set up a relay host, if needed
 if [ ! -z "$RELAYHOST" ]; then
-	echo -n "- Forwarding all emails to $RELAYHOST"
-	postconf -e relayhost=$RELAYHOST
+    echo -n "- Forwarding all emails to [$RELAYHOST]:$RELAYHOST_PORT"
+    postconf -e "relayhost=[$RELAYHOST]:$RELAYHOST_PORT"
 
-	if [ -n "$RELAYHOST_USERNAME" ] && [ -n "$RELAYHOST_PASSWORD" ]; then
-		echo " using username $RELAYHOST_USERNAME."
-		echo "$RELAYHOST $RELAYHOST_USERNAME:$RELAYHOST_PASSWORD" >> /etc/postfix/sasl_passwd
-		postmap hash:/etc/postfix/sasl_passwd
-		postconf -e "smtp_sasl_auth_enable=yes"
-		postconf -e "smtp_sasl_password_maps=hash:/etc/postfix/sasl_passwd"
-		postconf -e "smtp_sasl_security_options=noanonymous"
-	else
-		echo " without any authentication. Make sure your server is configured to accept emails coming from this IP."
-	fi
+    if [ -n "$RELAYHOST_USERNAME" ] && [ -n "$RELAYHOST_PASSWORD" ]; then
+      echo " using username $RELAYHOST_USERNAME."
+      echo "$RELAYHOST $RELAYHOST_USERNAME:$RELAYHOST_PASSWORD" >> /etc/postfix/sasl_passwd
+      postmap hash:/etc/postfix/sasl_passwd
+      postconf -e "smtp_sasl_auth_enable=yes"
+      postconf -e "smtp_sasl_password_maps=hash:/etc/postfix/sasl_passwd"
+      postconf -e "smtp_sasl_security_options=noanonymous"
+    else
+      echo " without any authentication. Make sure your server is configured to accept emails coming from this IP."
+    fi
 else
-	echo "---> postfix will try to deliver emails directly to the final server. make sure your DNS is setup properly!"
-	postconf -# relayhost
-	postconf -# smtp_sasl_auth_enable
-	postconf -# smtp_sasl_password_maps
-	postconf -# smtp_sasl_security_options
+    echo "---> postfix will try to deliver emails directly to the final server. make sure your DNS is setup properly!"
+    postconf -# relayhost
+    postconf -# smtp_sasl_auth_enable
+    postconf -# smtp_sasl_password_maps
+    postconf -# smtp_sasl_security_options
 fi
 
 # Set up my networks to list only networks in the local loopback range
@@ -1551,45 +1552,33 @@ cfgBashEnv() {
 }
 
 cfgService_msmtp() {
-
     echo "=> Setting up MSMTP as (default) sendmail replacement"
 
-    # check if package is already installed, if not, try to install from repo
-    if ! dnf list installed msmtp ; then
-      echo "   ...Package MSMTP not yet installed, fetching from repo"
-      dnf install -y --nodocs msmtp  || {
-          echo "   ...Automatic install failed. Make sure to install the package manually before retrying. Abort."
-          exit 0
-      }
-    fi
+    # set alternative for mta to 'msmtp' thereby updating symlinks in rootfs
+    alternatives --set mta /usr/bin/msmtp
 
     # check if configuration file already exists in $APP_USR home directory, if not, create default configuration
     USR_HOME="$(getent passwd "$APP_USR" | cut -d: -f6)"
-    if [ ! -r "${USR_HOME}/.msmtprc" ] ; then
-    	echo "# Set default values for all following accounts.
+
+    echo "# Set default values for all following accounts.
 defaults
 auth           off
 tls            off
+tls_starttls   off
 #tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile        ${USR_HOME}/msmtp.log
 
 # account local-mta
 account        local-mta
-host           ${SMTP_RELAYHOST}
-port           ${SMTP_RELAYHOST_PORT}
-tls_starttls   off
-from           ${SMTP_MAIL_FROM}
-user           ${SMTP_RELAYHOST_USERNAME}
-password       ${SMTP_RELAYHOST_PASSWORD}
+$([ ! -z "${SMTP_RELAYHOST}" ]          && echo "host           ${SMTP_RELAYHOST}")
+$([ ! -z "${SMTP_RELAYHOST_PORT}" ]     && echo "port           ${SMTP_RELAYHOST_PORT}")
+$([ ! -z "${SMTP_MAIL_FROM}" ]          && echo "from           ${SMTP_MAIL_FROM}")
+$([ ! -z "${SMTP_RELAYHOST_USERNAME}" ] && echo "user           ${SMTP_RELAYHOST_USERNAME}")
+$([ ! -z "${SMTP_RELAYHOST_PASSWORD}" ] && echo "password       ${SMTP_RELAYHOST_PASSWORD}")
 
 # Set a default account
 account default : local-mta
 " > "${USR_HOME}/.msmtprc"
-  fi ;
-
-  # set alternative for mta to 'msmtp' thereby updating symlinks in rootfs
-  alternatives --set mta /usr/bin/msmtp
-
 }
 
 runHooks() {
@@ -1635,12 +1624,12 @@ runHooks() {
     
     local n=1 ; local t=$(echo ${#appDataDirs[@]} + ${#appFilesConf[@]} | bc)
     for dir in ${appDataDirs[@]}; do
-      symlinkDir "${dir}" "${APP_DATA}${dir}" "[$n/$t]"
+      symlinkDir "${dir}" "${APP_DATA}${dir}" "$(printf '[%02d/%d]' $n $t)"
       let n+=1
     done
     
     for file in ${appFilesConf[@]}; do
-      symlinkFile "${file}" "${APP_DATA}${file}" "[$n/$t]"
+      symlinkFile "${file}" "${APP_DATA}${file}" "$(printf '[%02d/%d]' $n $t)"
       let n+=1
     done
    else
@@ -1671,9 +1660,10 @@ runHooks() {
   cfgBashEnv > /root/.bashrc
   
   # enable/disable and configure services
-  #chkService SYSLOG_ENABLED
+  [[ "$POSTFIX_ENABLED" = "true" && "$MSMTP_ENABLED" = "true" ]] && MSMTP_ENABLED=false # make POSTFIX service override MSMTP if both enabled
+  [[ "$MSMTP_ENABLED" = "true" ]] && cfgService_msmtp
+
   chkService POSTFIX_ENABLED
-  chkService MSMTP_ENABLED
   chkService CRON_ENABLED
   chkService FAIL2BAN_ENABLED
   chkService HTTPD_ENABLED

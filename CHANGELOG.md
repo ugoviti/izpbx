@@ -5,10 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [20.16.5] - 2023-03-XX
+### Added
+- Added 'msmtp' as an additional and default MTA service alternative to postfix (thanks to @hobbit378)
 ### Changed
 - Updated PBX engine to Asterisk `20.2.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.2.0)
 - Updated database engine to MariaDB `10.6.12` LTS (https://mariadb.com/kb/en/mariadb-10612-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+- Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
+  - added: `#SMTP_RELAYHOST_PORT=25`
+  - added: `#MSMTP_ENABLED=true`
 
 ## [20.16.4] - 2023-02-04
 ### Changed
