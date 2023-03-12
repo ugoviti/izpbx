@@ -15,7 +15,10 @@ networks:
 services:
   # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
   db:
-    image: docker.io/mariadb:10.6.11
+    # current long term release
+    #image: docker.io/mariadb:10.11.2
+    # previous long term release
+    image: docker.io/mariadb:10.6.12
     container_name: izpbx-db
     ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
     ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
@@ -45,7 +48,7 @@ services:
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:20.16.4
+    image: docker.io/izdock/izpbx-asterisk:20.16.5
     container_name: izpbx
     #hostname: ${APP_FQDN}
     restart: unless-stopped

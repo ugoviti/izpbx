@@ -1176,7 +1176,8 @@ cfgService_freepbx_install() {
     echo "--> installing Prerequisite FreePBX modules from local repo into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     mod_cnt=1 ; mod_tot=$(echo ${FREEPBX_MODULES_PRE} ${FREEPBX_MODULES_EXTRA} | wc -w)
     for module in ${FREEPBX_MODULES_PRE}; do
-      echo "---> [$mod_cnt/$mod_tot] installing module: ${module}"
+      #echo "---> [$mod_cnt/$mod_tot] installing module: ${module}"
+      printf -- '---> [%02d/%d] installing module: %s\n' $mod_cnt $mod_tot "${module}"
       # the pre-modules need be installed as root
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
       let mod_cnt+=1
@@ -1184,7 +1185,8 @@ cfgService_freepbx_install() {
     
     echo "--> installing Extra FreePBX modules from local repo into '${fpbxDirs[AMPWEBROOT]}/admin/modules'"
     for module in ${FREEPBX_MODULES_EXTRA}; do
-      echo "---> [$mod_cnt/$mod_tot] installing module: ${module}"
+      #echo "---> [$mod_cnt/$mod_tot] installing module: ${module}"
+      printf -- '---> [%02d/%d] installing module: %s\n' $mod_cnt $mod_tot "${module}"
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
       let mod_cnt+=1
     done

@@ -4,10 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.5] - 2023-03-XX
+### Changed
+- Updated PBX engine to Asterisk `20.2.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.2.0)
+- Updated database engine to MariaDB `10.6.12` LTS (https://mariadb.com/kb/en/mariadb-10612-release-notes/)
+  - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+
 ## [20.16.4] - 2023-02-04
+### Changed
+- Updated PBX engine to Asterisk `20.1.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.1.0)
 ### Fixed
 - Fixed unable to use custom MySQL port than 3006 (partial fix #40. FreePBX related problem)
-- Updated PBX engine to Asterisk `20.1.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.1.0)
 
 ## [20.16.3] - 2022-12-06
 ### Changed
@@ -48,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - res_adsi
     - res_monitor
     - res_pktccops
-- Updated database engine to MariaDB `10.6.11` LTS (https://mariadb.com/kb/en/mariadb-10610-release-notes/)
+- Updated database engine to MariaDB `10.6.11` LTS (https://mariadb.com/kb/en/mariadb-10611-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 - Updated zabbix-agent to `6.2` and switched to zabbix-agent2
 - Now the initial deploy include the latest release of framework (at build time of izpbx release) so you don't need to update any FreePBX modules after the deploy
