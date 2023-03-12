@@ -56,6 +56,7 @@ ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/releases
 ARG SNGREP_VER=1.6.0
+ARG SNGREP_XTRA_BUILDCONFIG=""
 
 ### define variables for later container usage
 ENV ASTERISK_VER=${ASTERISK_VER}
@@ -77,6 +78,9 @@ ENV APP_GRP               "asterisk"
 
 ## development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
+
+## install ad hoc additional packages as defined via --build-arg next to regular dependencies
+ARG APP_INSTALL_EXTRA=""
 
 ### STEP 1: INSTALL BASE PACKAGES
 RUN set -xe && \
@@ -252,7 +256,7 @@ RUN set -xe && \
   ## upgrade the system
   dnf upgrade ${DNF_OPTS} && \
   ## install mandatory packages
-  dnf install ${DNF_OPTS} ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} \
+  dnf install ${DNF_OPTS} ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} ${APP_INSTALL_EXTRA} \
   && \
   if [[ "$RHEL_MINIMAL" = "false" ]]; then \
     dnf mark install ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} \
@@ -646,7 +650,7 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/archive/v${SNGREP_VER}.tar.gz | tar xz --strip 1 -C sngrep && \
   cd sngrep && \
   ./bootstrap.sh && \
-  ./configure --prefix=/usr && \
+  ./configure --prefix=/usr ${SNGREP_XTRA_BUILDCONFIG} && \
   make && \
   make install && \
   ldconfig && \
