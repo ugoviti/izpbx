@@ -1559,12 +1559,12 @@ cfgService_msmtp() {
           echo "   ...Automatic install failed. Make sure to install the package manually before retrying. Abort."
           exit 0
       }
+    fi
 
     # check if configuration file already exists in $APP_USR home directory, if not, create default configuration
     USR_HOME="$(getent passwd "$APP_USR" | cut -d: -f6)"
     if [ ! -r "${USR_HOME}/.msmtprc" ] ; then
-    cat <<EOF > "${USR_HOME}/.msmtprc"
-# Set default values for all following accounts.
+    	echo "# Set default values for all following accounts.
 defaults
 auth           off
 tls            off
@@ -1582,11 +1582,12 @@ password       ${SMTP_RELAYHOST_PASSWORD}
 
 # Set a default account
 account default : local-mta
-EOF
-  fi
+" > "${USR_HOME}/.msmtprc"
+  fi ;
 
   # set alternative for mta to 'msmtp' thereby updating symlinks in rootfs
   alternatives --set mta /usr/bin/msmtp
+
 }
 
 runHooks() {
