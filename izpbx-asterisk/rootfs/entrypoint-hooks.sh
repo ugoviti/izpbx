@@ -1064,7 +1064,6 @@ cfgService_freepbx_install() {
   # set default freepbx install options
   FPBX_OPTS+=" --webroot=${fpbxDirs[AMPWEBROOT]}"
   FPBX_OPTS+=" --astetcdir=${fpbxDirs[ASTETCDIR]}"
-  FPBX_OPTS+=" --astmoddir=${fpbxDirs[ASTMODDIR]}"
   FPBX_OPTS+=" --astvarlibdir=${fpbxDirs[ASTVARLIBDIR]}"
   FPBX_OPTS+=" --astagidir=${fpbxDirs[ASTAGIDIR]}"
   FPBX_OPTS+=" --astspooldir=${fpbxDirs[ASTSPOOLDIR]}"
@@ -1074,7 +1073,8 @@ cfgService_freepbx_install() {
   FPBX_OPTS+=" --ampsbin=${fpbxDirs[AMPSBIN]}"
   FPBX_OPTS+=" --ampcgibin=${fpbxDirs[AMPCGIBIN]}"
   FPBX_OPTS+=" --ampplayback=${fpbxDirs[AMPPLAYBACK]}"
-  
+  FPBX_OPTS+=" --astmoddir=${fpbxDirsExtra[ASTMODDIR]}"
+
   #set -x
   
   ## create mysql users and databases if not exists

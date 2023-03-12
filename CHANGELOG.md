@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated PBX engine to Asterisk `20.1.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.1.0)
 ### Fixed
-- Fixed unable to use custom MySQL port than 3006 (partial fix #40. FreePBX related problem)
+- Fixed unable to use custom MySQL port than 3006 (partial fix #40. FreePBX related problem: ref. https://issues.freepbx.org/browse/FREEPBX-24066)
 
 ## [20.16.3] - 2022-12-06
 ### Changed
