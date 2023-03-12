@@ -1550,19 +1550,29 @@ cfgBashEnv() {
 
 cfgService_msmtp() {
 
-    echo "=> Setting up msmptp as default sendmail replacement"
+    echo "=> Setting up MSMTP as (default) sendmail replacement"
 
-    if [ ! -r ~asterisk/.msmtprc ] ; then
-    cat <<EOF > "~asterisk/.msmtprc"
+    # check if package is already installed, if not, try to install from repo
+    if ! dnf list installed msmtp ; then
+      echo "   ...Package MSMTP not yet installed, fetching from repo"
+      dnf install -y --nodocs msmtp  || {
+          echo "   ...Automatic install failed. Make sure to install the package manually before retrying. Abort."
+          exit 0
+      }
+
+    # check if configuration file already exists in $APP_USR home directory, if not, create default configuration
+    USR_HOME="$(getent passwd "$APP_USR" | cut -d: -f6)"
+    if [ ! -r "${USR_HOME}/.msmtprc" ] ; then
+    cat <<EOF > "${USR_HOME}/.msmtprc"
 # Set default values for all following accounts.
 defaults
 auth           off
 tls            off
 #tls_trust_file /etc/ssl/certs/ca-certificates.crt
-logfile        ~asterisk/msmtp.log
+logfile        ${USR_HOME}/msmtp.log
 
-# localmta
-account        localmta
+# account local-mta
+account        local-mta
 host           ${SMTP_RELAYHOST}
 port           ${SMTP_RELAYHOST_PORT}
 tls_starttls   off
@@ -1571,13 +1581,12 @@ user           ${SMTP_RELAYHOST_USERNAME}
 password       ${SMTP_RELAYHOST_PASSWORD}
 
 # Set a default account
-account default : localmta
-
+account default : local-mta
 EOF
   fi
 
+  # set alternative for mta to 'msmtp' thereby updating symlinks in rootfs
   alternatives --set mta /usr/bin/msmtp
-
 }
 
 runHooks() {
