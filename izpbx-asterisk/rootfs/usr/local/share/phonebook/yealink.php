@@ -20,7 +20,7 @@ if ($PB == "ext"){
     Updated December 24, 2019 to use FreePBX bootstrap
     */
 
-    header("Content-Type: text/xml");
+    //header("Content-Type: text/xml");
 
     // Load FreePBX bootstrap environment
     require_once('/etc/freepbx.conf');
@@ -44,6 +44,7 @@ if ($PB == "ext"){
         // Potentially clean this up so that it outputs pretty if not valid
         error_log( "There was an error attempting to query the extensions<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
     } else {
+        header("Content-Type: text/xml");
         $extensions = $res->fetchAll(PDO::FETCH_ASSOC);
         // output the XML header info
         echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
@@ -77,7 +78,7 @@ else{
     /**********************************************************************************************************/
     /********************** End Customization. Change below at your own risk **********************************/
     /**********************************************************************************************************/
-    header("Content-Type: text/xml");
+    //header("Content-Type: text/xml");
 
     // Load FreePBX bootstrap environment
     require_once('/etc/freepbx.conf');
@@ -104,9 +105,10 @@ else{
         // Potentially clean this up so that it outputs pretty if not valid
         error_log( "There was an error attempting to query contactmanager<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
     } else {
-        //if ($count == '0'){
-        //    echo "non ci sono risultati<br>";
-        //}else{
+        if ($count[0]["quante"] == "0"){
+            echo "Non ci sono risultati<br>";
+        } else {
+            header("Content-Type: text/xml");
             $contacts = $res->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($contacts as $i => $contact){
@@ -190,7 +192,7 @@ else{
             // Output the closing tag of the root. If you changed it above, make sure you change it here.
             echo "</CompanyIPPhoneDirectory>\n";
         }
-    //}
+    }
 }
 
 ?>

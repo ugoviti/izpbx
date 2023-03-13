@@ -20,7 +20,7 @@ if ($PB == "ext"){
     Updated December 24, 2019 to use FreePBX bootstrap
     */
 
-    header("Content-Type: text/xml");
+    //header("Content-Type: text/xml");
 
     // Load FreePBX bootstrap environment
     require_once('/etc/freepbx.conf');
@@ -44,6 +44,7 @@ if ($PB == "ext"){
         // Potentially clean this up so that it outputs pretty if not valid
         error_log( "There was an error attempting to query the extensions<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
     } else {
+        header("Content-Type: text/xml");
         $extensions = $res->fetchAll(PDO::FETCH_ASSOC);
         // output the XML header info
         echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
@@ -75,7 +76,6 @@ else{
     /**********************************************************************************************************/
     /********************** End Customization. Change below at your own risk **********************************/
     /**********************************************************************************************************/
-    header("Content-Type: text/xml");
 
     // Load FreePBX bootstrap environment
     require_once('/etc/freepbx.conf');
@@ -86,6 +86,12 @@ else{
     // This pulls every number in contact maanger that is part of the group specified by $contact_manager_group
     $sql = "SELECT cen.number, cge.displayname, cen.type, cen.E164, 0 AS 'sortorder' FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = '$contact_manager_group') ORDER BY cge.displayname, cen.number;";
 
+    $sql_count = "SELECT COUNT(*) AS quante FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = '$PB' )";
+    //echo $sql_count."<br>";
+
+    $res_count = $db->prepare($sql_count);
+    $res_count->execute();
+    $count = $res_count->fetchAll(PDO::FETCH_ASSOC);
     // Execute the SQL statement
     $res = $db->prepare($sql);
     $res->execute();
@@ -94,7 +100,11 @@ else{
         // Potentially clean this up so that it outputs pretty if not valid
         error_log( "There was an error attempting to query contactmanager<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
     } else {
-        $contacts = $res->fetchAll(PDO::FETCH_ASSOC);
+        if ($count[0]["quante"] == "0"){
+            echo "Non ci sono risultati<br>";
+        } else {
+            header("Content-Type: text/xml");
+            $contacts = $res->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($contacts as $i => $contact){
             // The if staements provide the ability to re-lable the phone number type as you wish.
@@ -176,6 +186,7 @@ else{
         //echo "    </DirectoryEntry>\n";
         // Output the closing tag of the root. If you changed it above, make sure you change it here.
         echo "</list>\n";
+        }
     }
 }
 
