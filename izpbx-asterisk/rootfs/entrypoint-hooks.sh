@@ -183,7 +183,7 @@ fi
 
 # postfix
 : ${SMTP_RELAYHOST:=""}
-: ${SMTP_RELAYHOST_PORT:="25"}
+#: ${SMTP_RELAYHOST_PORT:="25"}
 : ${SMTP_RELAYHOST_USERNAME:=""}
 : ${SMTP_RELAYHOST_PASSWORD:=""}
 : ${SMTP_STARTTLS:="true"}
@@ -193,7 +193,7 @@ fi
 : ${SMTP_MAIL_TO:="root@localhost.localdomain"}
 # smarthost config
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
-: ${RELAYHOST_PORT:="$SMTP_RELAYHOST_PORT"}
+#: ${RELAYHOST_PORT:="$SMTP_RELAYHOST_PORT"}
 : ${RELAYHOST_USERNAME:="$SMTP_RELAYHOST_USERNAME"}
 : ${RELAYHOST_PASSWORD:="$SMTP_RELAYHOST_PASSWORD"}
 : ${ALLOWED_SENDER_DOMAINS:="$SMTP_ALLOWED_SENDER_DOMAINS"}
@@ -1568,18 +1568,18 @@ tls            off
 tls_starttls   off
 #tls_trust_file /etc/ssl/certs/ca-certificates.crt
 logfile        ${USR_HOME}/msmtp.log
+#logfile -
+account        default
 
-# account local-mta
-account        local-mta
 $([ ! -z "${SMTP_RELAYHOST}" ]          && echo "host           ${SMTP_RELAYHOST}")
 $([ ! -z "${SMTP_RELAYHOST_PORT}" ]     && echo "port           ${SMTP_RELAYHOST_PORT}")
 $([ ! -z "${SMTP_MAIL_FROM}" ]          && echo "from           ${SMTP_MAIL_FROM}")
 $([ ! -z "${SMTP_RELAYHOST_USERNAME}" ] && echo "user           ${SMTP_RELAYHOST_USERNAME}")
 $([ ! -z "${SMTP_RELAYHOST_PASSWORD}" ] && echo "password       ${SMTP_RELAYHOST_PASSWORD}")
+" > "/etc/msmtprc"
 
-# Set a default account
-account default : local-mta
-" > "${USR_HOME}/.msmtprc"
+echo "--> forwarding all emails to: ${SMTP_RELAYHOST}"
+[ -n "${SMTP_RELAYHOST_USERNAME}" ] && echo "---> using username: ${SMTP_RELAYHOST_USERNAME}"
 }
 
 runHooks() {
