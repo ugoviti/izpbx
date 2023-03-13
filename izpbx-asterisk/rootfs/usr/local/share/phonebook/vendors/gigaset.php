@@ -1,15 +1,15 @@
 <?php
-$PB=$_GET["pb"];
+$pb=$_GET["pb"];
 
 // default to extension view
-if ($PB == ""){ $PB = "ext"; }
+if ($pb == ""){ $pb = "ext"; }
 
 // remove php extension from variable
 //print_r($_GET);
-$PB = str_replace('.php', '', $PB);
-//echo $PB;
+$pb = str_replace('.php', '', $pb);
+//echo $pb;
 
-if ($PB == "ext"){
+if ($pb == "ext"){
     /*
     ylab.php (short for yealink address book) was taken directly from yl.php and modified.
     https://github.com/sorvani/freepbx-helper-scripts/blob/master/yl.php
@@ -22,7 +22,7 @@ if ($PB == "ext"){
 
     //header("Content-Type: text/xml");
 
-    // Load FreePBX bootstrap environment
+    // Load FreePBX bootstrap environmen#t
     require_once('/etc/freepbx.conf');
 
     // Initialize a database connection
@@ -65,7 +65,7 @@ if ($PB == "ext"){
 else{
     // LO SCRIPT CHE GENERA LA RUBRICA
 
-    $contact_manager_group = isset($_GET['cgroup']) ? $_GET['cgroup'] : $PB; //"PhoneBook"; // <-- Edit "SomeName" to make your own default
+    $contact_manager_group = isset($_GET['cgroup']) ? $_GET['cgroup'] : $pb; //"PhoneBook"; // <-- Edit "SomeName" to make your own default
     $use_e164 = isset($_GET['e164']) ? $_GET['e164'] : 0; // <-- Edit 0 to 1 to use the E164 formatted numbers by default
     $ctype['internal'] = "Extension"; // <-- Edit the right side to display what you want shown
     $ctype['cell'] = "Mobile"; // <-- Edit the right side to display what you want shown
@@ -86,12 +86,13 @@ else{
     // This pulls every number in contact maanger that is part of the group specified by $contact_manager_group
     $sql = "SELECT cen.number, cge.displayname, cen.type, cen.E164, 0 AS 'sortorder' FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = '$contact_manager_group') ORDER BY cge.displayname, cen.number;";
 
-    $sql_count = "SELECT COUNT(*) AS quante FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = '$PB' )";
+    $sql_count = "SELECT COUNT(*) AS quante FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = '$pb' )";
     //echo $sql_count."<br>";
 
     $res_count = $db->prepare($sql_count);
     $res_count->execute();
     $count = $res_count->fetchAll(PDO::FETCH_ASSOC);
+
     // Execute the SQL statement
     $res = $db->prepare($sql);
     $res->execute();
