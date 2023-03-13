@@ -486,27 +486,21 @@ Consult official repository page for installation and configuration of Asterisk 
   * Global Language: **Italian**
 
 # Configuring VoIP XML PhoneBook Lookup
-NOTE: Tested on Yealink Phones
 
-- Configure **Contact Manager** as reported above (the Contact Manager GroupName be MUST named **PhoneBook** otherwise doesn't works by default)
+- Visit **http://IZPBX_ADDRESS/pb/** to learn about the supported Phones and XML Address Books.
 
-## Option 1: PhoneBook Menu
-- Open VoIP Phone GUI (Yealink Phone GUI):
-  - **Directory-->Remote Phone Book**
-    - Index 1 (URL for XML Menu)
-      - RemoteURL: **http://PBX_ADDRESS/pb**
-      - Display Name: **PhoneBook**
+- Configure **Contact Manager** as reported above (create a new contact manager group name like **PhoneBook**)
 
-## Option 2: Define every PhoneBook you want to use
-- Open VoIP Phone GUI (Yealink Phone GUI):
+## Define every PhoneBooks you want to use
+- Open your VoIP Phone GUI (example for Yealink Phones):
   - **Directory-->Remote Phone Book**
     - Index 1 (URL for Extensions PhoneBook)
-      - RemoteURL: **http://PBX_ADDRESS/pb/yealink/ext**
+      - RemoteURL: **http://IZPBX_ADDRESS/pb/yealink/ext**
       - Display Name: **Extensions**
-    - Index 2 (URL for Shared PhoneBook)
-      - RemoteURL: **http://PBX_ADDRESS/pb/yealink/cm**
-      - Display Name: **Shared Phone Book**
-      
+    - Index 2 (URL for Corporate PhoneBook)
+      - RemoteURL: **http://IZPBX_ADDRESS/pb/yealink/PhoneBook**
+      - Display Name: **Corporate**
+
 # FAQ / Troubleshooting
 - FOP2 useful commands:
     NB. define interface name to associate the license, for example: `eth0`
