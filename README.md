@@ -289,7 +289,7 @@ NOTE:
   - `parent:` (must be specified your ethernet card)
   - `subnet:` (must match you intranet network range)
   - `ipv4_address:` (every izPBX frontend will must to have a different external IP)
-- Rembember to modify every `PBXNAME.env` file and set different variables for `MYSQL` (for best security use a different password for every deploy), example:
+- Remember to modify every `PBXNAME.env` file and set different variables for `MYSQL` (for best security use a different password for every deploy), example:
   - `MYSQL_SERVER=db` (all deployes will use the same db name)
   - `MYSQL_DATABASE=izpbx1_asterisk`
   - `MYSQL_DATABASE_CDR=izpbx1_asteriskcdrdb`
