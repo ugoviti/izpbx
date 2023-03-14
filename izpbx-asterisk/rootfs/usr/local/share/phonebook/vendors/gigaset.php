@@ -102,7 +102,9 @@ else{
         error_log( "There was an error attempting to query contactmanager<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
     } else {
         if ($count[0]["quante"] == "0"){
-            echo "Non ci sono risultati<br>";
+            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+            echo "<list>\n";
+            echo "</list>\n";
         } else {
             header("Content-Type: text/xml");
             $contacts = $res->fetchAll(PDO::FETCH_ASSOC);

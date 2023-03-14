@@ -1433,22 +1433,6 @@ cfgService_phonebook() {
 $(print_ApacheAllowFrom)
 </Directory>
 " > "${HTTPD_CONF_DIR}/conf.d/phonebook.conf"
-
-# echo "<?xml version=\"1.0\" encoding=\"utf-8\"?>
-# <CompanyIPPhoneMenu>
-#     <!-- Title can show on the phone depending on settings in phone -->
-#     <Title>PhoneBook Menu</Title>
-#     <MenuItem>
-#        	<!-- This name shows in the menu when the button is pressed -->
-#         <Name>Extensions</Name>
-#         <URL>${PHONEBOOK_ADDRESS}/pb/yealink/ext</URL>
-#     </MenuItem>
-#     <MenuItem>
-#         <Name>Shared PhoneBook</Name>
-#         <URL>${PHONEBOOK_ADDRESS}/pb/yealink/cm</URL>
-#     </MenuItem>
-# </CompanyIPPhoneMenu>
-# " > "/usr/local/share/phonebook/menu.xml"
 }
 
 cfgService_letsencrypt() {

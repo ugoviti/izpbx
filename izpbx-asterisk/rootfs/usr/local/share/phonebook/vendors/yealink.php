@@ -63,8 +63,33 @@ if ($pb == "ext"){
         // Output the closing tag of the root. If you changed it above, make sure you change it here.
         echo "</CompanyIPPhoneDirectory>\n";
     }
-}
-else{
+} else if ($pb == "menu"){
+        // Execute the SQL statement
+        $res = $db->prepare($sql);
+        $res->execute();
+        $client = $res->fetchAll(PDO::FETCH_ASSOC);
+
+        header("Content-Type: text/xml");
+        $extensions = $res->fetchAll(PDO::FETCH_ASSOC);
+        // output the XML header info
+        echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+        // Corporate Extension Phonebook
+        echo "<CompanyIPPhoneMenu>\n";
+        echo "  <Title>PhoneBook Menu</Title>\n";
+        echo "  <MenuItem>\n";
+        echo "    <Name>Extensions</Name>\n";
+        echo "    <URL>".$http_host_with_protocol."/pb/".$PHONE."/ext</URL>\n";
+        echo "  </MenuItem>\n";
+        // Other Shared Phonebooks
+        foreach ($client as $client) {
+        echo "  <MenuItem>\n";
+        echo "    <Name>".$client["name"]."</Name>\n";
+        echo "    <URL>".$http_host_with_protocol."/pb/".$PHONE."/".$client["name"]."</URL>\n";
+        echo "  </MenuItem>\n";
+        }
+        echo "</CompanyIPPhoneMenu>\n";
+} else {
+
   // LO SCRIPT CHE GENERA LA RUBRICA
 
     $contact_manager_group = isset($_GET['cgroup']) ? $_GET['cgroup'] : $pb; //"PhoneBook"; // <-- Edit "SomeName" to make your own default
@@ -106,7 +131,9 @@ else{
         error_log( "There was an error attempting to query contactmanager<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
     } else {
         if ($count[0]["quante"] == "0"){
-            echo "Non ci sono risultati<br>";
+            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+            echo "<CompanyIPPhoneDirectory  clearlight=\"true\">\n";
+            echo "</CompanyIPPhoneDirectory>\n";
         } else {
             header("Content-Type: text/xml");
             $contacts = $res->fetchAll(PDO::FETCH_ASSOC);

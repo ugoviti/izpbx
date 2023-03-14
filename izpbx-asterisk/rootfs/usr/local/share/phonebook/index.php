@@ -3,6 +3,15 @@
 // Load FreePBX bootstrap environment
 require_once('/etc/freepbx.conf');
 
+// Get the protocol
+$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+
+// Get the host name
+$host = $_SERVER['HTTP_HOST'];
+
+// Combine the protocol and host to get the full URL
+$http_host_with_protocol = $protocol . "://" . $host;
+
 // Initialize a database connection
 global $db;
 $sql = "SELECT * FROM asterisk.contactmanager_groups WHERE id !='1'";
@@ -31,19 +40,15 @@ if ($PHONE == ""){
 } else if ($PBOOK == "") {
     $client = $res->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get the protocol
-    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
- 
-    // Get the host name
-    $host = $_SERVER['HTTP_HOST'];
-
-    // Combine the protocol and host to get the full URL
-    $http_host_with_protocol = $protocol . "://" . $host;
-
-    echo "Selected Phone: <b>".$_GET["ph"]."</b>";
+    echo "Phone: <b>".$_GET["ph"]."</b>";
     echo "<br>";
     echo "<br>";
-    echo "Available Address Books: <br>";
+    echo "Menu: <br>";
+    //echo "- <a href=".$PHONE."/ext>Extensions</a><br>";
+    echo "- <a href=index.php?ph=".$PHONE."&pb=menu>Menu</a> - configuration URL: <a href=".$PHONE."/menu>".$http_host_with_protocol."/pb/".$PHONE."/menu</a>";
+    echo "<br>";
+    echo "<br>";
+    echo "Addressbooks: <br>";
     //echo "- <a href=".$PHONE."/ext>Extensions</a><br>";
     echo "- <a href=index.php?ph=".$PHONE."&pb=ext>Extensions</a> - configuration URL: <a href=".$PHONE."/ext>".$http_host_with_protocol."/pb/".$PHONE."/ext</a>";
     echo "<br>";
