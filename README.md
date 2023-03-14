@@ -501,6 +501,8 @@ Consult official repository page for installation and configuration of Asterisk 
       - RemoteURL: **http://IZPBX_ADDRESS/pb/yealink/PhoneBook**
       - Display Name: **Corporate**
 
+For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_ADDRESS/pb/yealink/menu**
+
 # FAQ / Troubleshooting
 - FOP2 useful commands:
     NB. define interface name to associate the license, for example: `eth0`
