@@ -45,13 +45,13 @@ if ($PHONE == ""){
     echo "<br>";
     echo "Available Address Books: <br>";
     //echo "- <a href=".$PHONE."/ext>Extensions</a><br>";
-    echo "- <a href=index.php?ph=".$PHONE."&pb=ext>Extensions</a> - configuration URL: <a href=".$PHONE."/ext>".$http_host_with_protocol."/".$PHONE."/ext</a>";
+    echo "- <a href=index.php?ph=".$PHONE."&pb=ext>Extensions</a> - configuration URL: <a href=".$PHONE."/ext>".$http_host_with_protocol."/pb/".$PHONE."/ext</a>";
     echo "<br>";
 
     foreach ($client as $client) {
       #echo "- <a href=".$PHONE.".php?pb=".$client["name"].">".$client["name"]."</a><br>";
       #echo "- <a href=".$PHONE."/".$client["name"].">".$client["name"]."</a><br>";
-      echo "- <a href=index.php?ph=".$PHONE."&pb=".$client["name"].">".$client["name"]."</a> - configuration URL: <a href=".$PHONE."/".$client["name"].">".$http_host_with_protocol."/".$PHONE."/".$client["name"]."</a>";
+      echo "- <a href=index.php?ph=".$PHONE."&pb=".$client["name"].">".$client["name"]."</a> - configuration URL: <a href=".$PHONE."/".$client["name"].">".$http_host_with_protocol."/pb/".$PHONE."/".$client["name"]."</a>";
     echo "<br>";
     }
 }
@@ -69,4 +69,3 @@ $_SERVER['REQUEST_URI']="";
 $PBOOK=$_GET[""];
 $PHONE=$_GET[""];
 ?>
-
