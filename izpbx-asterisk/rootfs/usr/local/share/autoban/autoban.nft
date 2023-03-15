@@ -1,0 +1,31 @@
+#!/usr/sbin/nft -f
+#
+
+table ip autoban {
+	set watch {
+		type ipv4_addr
+		flags timeout
+	}
+	set jail {
+		type ipv4_addr
+		flags timeout
+	}
+	set parole {
+		type ipv4_addr
+		flags timeout
+	}
+	set blacklist {
+		type ipv4_addr
+	}
+	set whitelist {
+		type ipv4_addr
+	}
+
+	#TODO adjust 'dport' according to asterisk transport settings 
+	chain incoming {
+		type filter hook input priority security; policy accept;
+		ip saddr @whitelist accept
+		ip saddr @blacklist EXTRA_NFT_PORT_RULES drop
+		ip saddr @jail EXTRA_NFT_PORT_RULES drop
+	}
+}
