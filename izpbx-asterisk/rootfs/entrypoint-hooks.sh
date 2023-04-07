@@ -566,87 +566,8 @@ cfgService_autoban() {
   #ENV AUTOBAN_PWD=""
   #ENV AUTOBAN_NFT_PORT_RULES
 
-  AUTOBAN_NFT_PORT_RULES=${AUTOBAN_NFT_PORT_RULES:=""}
-
-  local autoban_dir="/usr/local/share/autoban"
-  local autoban_seed_conf_file="${autoban_dir}/autoban.conf"
-  local autoban_seed_nft_file="${autoban_dir}/autoban.nft"
-  local autoban_conf_file="/etc/asterisk/autoban.conf"
-  local ami_conf_file="/etc/asterisk/manager_custom.conf"
-  local autoban_nft_table="autoban"
-
-  #fix permissions
-  chmod 755 ${autoban_dir}/autoband.php
-  chmod 755 ${autoban_dir}/autoban.php
-  
-  #create symlinks in searchpath
-  ln -sf ${autoban_dir}/autoband.php /usr/local/sbin/autoband
-  ln -sf ${autoban_dir}/autoban.php /usr/local/bin/autoban
-  
-  #seed config if not yet existant
-  if [ ! -s "${autoban_conf_file}" ]; then
-    
-    #generate random password if empty / not set
-    [ -z ${AUTOBAN_PWD} ] &&  AUTOBAN_PWD=$(date +%s | sha256sum | base64 | head -c 32)
-    
-    cat <<EOF >"${autoban_conf_file}"
-;
-; autoban.conf
-;
-; This file hold user customization of the AutoBan intrusion detection and
-; prevention system. This is a php ini file. Luckily its syntax is similar to
-; other asterisk conf files. "yes" and "no" have to be within quotation marks
-; otherwise they will be interpreted as Boolean.
-;
-
-[asmanager]
-server     = 127.0.0.1
-port       = 5038
-username   = autoban
-secret     = ${AUTOBAN_PWD}
-
-[autoban]
-maxcount   = 10
-watchtime  = 20m
-jailtime   = 20m
-repeatmult = 6
-EOF
-    
-    #purge [autoban] section if any and  rewrite
-    [ -s ${ami_conf_file} ] && sed -i '/^\[autoban]/,/^\[/{/^\[autoban\]/d; /^\[/!d}' ${ami_conf_file}
-    cat <<EOF >>${ami_conf_file}
-[autoban]
-secret   = ${AUTOBAN_PWD}
-permit   = 127.0.0.1/255.255.255.255
-read     = security
-write    =
-EOF
-
-  fi
-  #
-  # If DOCKER_NFT_FILE is empty or is missing
-  # initialize it with files from DOCKER_SEED_NFT_DIR.
-  #
-
-  #nft_file=$DOCKER_NFT_DIR/$DOCKER_NFT_FILE
-  nft_file="/etc/nftables/autoban.nft"
-
-  if [ ! -s ${nft_file} ]; then
-    cp ${autoban_seed_nft_file} "/etc/nftables/"
-    sed -i "s/EXTRA_NFT_PORT_RULES/${AUTOBAN_NFT_PORT_RULES}/" ${nft_file}
-  fi
-
-  #
-  # If nft_file exists have NFT import it
-  #
-
-  if [ -f ${nft_file} ]; then
-    echo "Importing $nft_file."
-    if nft delete table ${autoban_nft_table} 2>/dev/null; then
-      echo  "nft table ${autoban_nft_table} was overwritten"
-    fi
-    nft -f ${nft_file}
-  fi
+  # call external configure script
+  /usr/local/sbin/startautoban
 
 }
 

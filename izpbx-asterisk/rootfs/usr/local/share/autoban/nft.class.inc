@@ -168,7 +168,9 @@ class Nft {
 	@return mixed  state string or boolean false if unsuccessful
 	*/
 	public function save() {
-		$args = ['sub'=>'list ruleset', 'family'=>null, 'table'=>null];
+		// $args = ['sub'=>'list ruleset', 'family'=>null, 'table'=>null];
+		// save only table 'autoban'
+		$args = ['sub'=>'list table autoban', 'family'=>null, 'table'=>null];
 		$return = $this->exec($args);
 		if ($return === false) return false;
 		@rename($this->nft_statefile, $this->nft_statefile.'~');

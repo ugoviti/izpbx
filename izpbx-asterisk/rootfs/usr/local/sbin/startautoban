@@ -1,0 +1,112 @@
+#! /usr/bin/env bash
+
+cfgService_autoban() {
+  
+  echo "--> Configuring autoban settings..."
+
+
+  ## USED ENV Settings
+  #ENV DOCKER_NFT_DIR="/etc/nftables"
+  #ENV DOCKER_NFT_FILE="autoban.nft"
+  #ENV AUTOBAN_PWD=""
+  #ENV AUTOBAN_NFT_PORT_RULES
+  AUTOBAN_NFT_PORT_RULES=${AUTOBAN_NFT_PORT_RULES:=""}
+
+  local autoban_dir="/usr/local/share/autoban"
+  local autoban_conf_file="/etc/asterisk/autoban.conf"
+  local autoban_nft_table="autoban"
+  local autoban_nft_file="${DOCKER_NFT_DIR:="/etc/nftables"}/${DOCKER_NFT_FILE:="autoban.nft"}"
+  local ami_conf_file="/etc/asterisk/manager_custom.conf"
+  
+  # always (re)create autoban and asterisk manager config
+  # intended to avoid problems if an old autoban config file is restored by  FreePBX restore without nmachting manager config 
+
+  [ -z ${AUTOBAN_PWD} ] &&  AUTOBAN_PWD="$(date +%s | sha256sum | base64 | head -c 32)"
+  
+   cat >"${autoban_conf_file}" <<EOF
+;
+; THIS FILE IS AUTOMATICALLY (RE)GENERATED AND MAY BE OVERWRITTEN ANY TIME.
+; DO NOT MODIFY !!!
+; seetings can be changed via according autoban_... environment variables
+;
+; autoban.conf
+;
+; This file holds user customization of the AutoBan intrusion detection and
+; prevention system. This is a php ini file. Luckily its syntax is similar to
+; other asterisk conf files. "yes" and "no" have to be within quotation marks
+; otherwise they will be interpreted as Boolean.
+;
+
+[asmanager]
+server     = 127.0.0.1
+port       = 5038
+username   = autoban
+secret     = ${AUTOBAN_PWD}
+
+[autoban]
+maxcount   = 10
+watchtime  = 20m
+jailtime   = 20m
+repeatmult = 6
+EOF
+
+  # purge [autoban] section in manager config file if any and  rewrite
+  [ -s ${ami_conf_file} ] && \
+    sed -i '/^\[autoban]/,/^\[/{/^\[autoban\]/d; /^\[/!d}' ${ami_conf_file}
+
+  cat >>${ami_conf_file} <<EOF 
+[autoban]
+secret   = ${AUTOBAN_PWD}
+permit   = 127.0.0.1/255.255.255.255
+read     = security
+write    =
+EOF
+
+  # (re)create ${autoban_nft_file} from template if missing
+  [ ! -s ${autoban_nft_file} ] && \
+    cat >${autoban_nft_file} <<EOF
+#!/usr/sbin/nft -f
+#
+
+table ip autoban {
+	set watch {
+		type ipv4_addr
+		flags timeout
+	}
+	set jail {
+		type ipv4_addr
+		flags timeout
+	}
+	set parole {
+		type ipv4_addr
+		flags timeout
+	}
+	set blacklist {
+		type ipv4_addr
+	}
+	set whitelist {
+		type ipv4_addr
+	}
+
+	chain incoming {
+		type filter hook input priority security; policy accept;
+		ip saddr @whitelist accept
+		ip saddr @blacklist ${AUTOBAN_NFT_PORT_RULES} drop
+		ip saddr @jail ${AUTOBAN_NFT_PORT_RULES} drop
+	}
+}
+EOF
+
+  # import ${autoban_nft_file} into nftables
+  [ -s ${autoban_nft_file} ] && \
+    nft -f ${autoban_nft_file}
+
+  #fix permissions and create symlinks in searchpath
+  chmod 755 ${autoban_dir}/autoband.php
+  ln -sf ${autoban_dir}/autoband.php /usr/local/sbin/autoband
+  chmod 755 ${autoban_dir}/autoban.php
+  ln -sf ${autoban_dir}/autoban.php /usr/local/bin/autoban
+
+}
+
+cfgService_autoban
