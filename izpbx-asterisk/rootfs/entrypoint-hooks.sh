@@ -1606,7 +1606,6 @@ runHooks() {
       done
 
     # link to custom data directory if required
-    
     local n=1 ; local t=$(echo ${#appDataDirs[@]} + ${#appFilesConf[@]} | bc)
     for dir in ${appDataDirs[@]}; do
       symlinkDir "${dir}" "${APP_DATA}${dir}" "$(printf '[%02d/%d]' $n $t)"

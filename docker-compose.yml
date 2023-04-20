@@ -42,7 +42,7 @@ services:
     ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
     networks:
       izpbx:
-    ## WARNING: if commented out, the database will be exposed outside the container
+    ## WARNING: if not commented out, the database will be exposed outside the container
     ports:
     - ${APP_PORT_MYSQL}:3306
 
