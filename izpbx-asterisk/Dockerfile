@@ -19,7 +19,7 @@ ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.2.0
+ARG ASTERISK_VER=20.2.1
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
@@ -55,7 +55,7 @@ ENV ZABBIX_VER=6.2
 ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.6.0
+ARG SNGREP_VER=1.7.0
 ARG SNGREP_XTRA_BUILDCONFIG=""
 
 ### define variables for later container usage
