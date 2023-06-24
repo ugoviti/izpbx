@@ -275,6 +275,8 @@ initizializeDir() {
   local dirCustom="$1"
   shift
   local prefixLog="$1"
+  shift
+  local syncForce="$1"
 
   if [ -z "$prefixLog" ];then
     local prefix="--> "
@@ -286,20 +288,18 @@ initizializeDir() {
 
   # verify if $dirDefault and $dirCustom are not the same directory
   if [[ "$dirDefault" != "$dirCustom" && -e "$dirDefault" && ! -z "$dirCustom" ]]; then
-    # copy data files form default directory if destination is empty
-    if ! dirEmpty "${dirDefault}" && dirEmpty "$dirCustom"; then
-      echo -e "${prefixIndent}INFO: [$dirDefault] empty custom dir detected... copying default files from '${dirDefault}' to '${dirCustom}'"
+    if dirEmpty "$dirCustom" && ! dirEmpty "${dirDefault}"; then
+      # copy data files form default directory if destination is empty
+      echo -e "${prefixIndent}INFO: [$dirDefault] empty dir '${dirCustom}' detected... copying default files from '${dirDefault}' to '${dirCustom}'"
       cp -af "$dirDefault"/. "$dirCustom"/
       #echo -e "${prefixIndent}INFO: [$dirDefault] setting owner with user '${APP_USR}' (UID:${APP_UID}) and group '${APP_GRP}' (GID:${APP_GID}) on '${dirCustom}'"
       #chown -R ${APP_USR}:${APP_GRP} "$dirCustom"/
-    # copy data files form default directory if destination is not initialized and is empty!
-    elif dirEmpty "${dirCustom}" && [ ! -f "${dirCustom}/.initialized" ]; then
-      echo -e "${prefixIndent}INFO: [$dirDefault] not initialized persistent data storage detected in '${dirCustom}/.initialized'... copying default files from '${dirDefault}' to '${dirCustom}'"
+    elif [[ ! -f "${dirCustom}/.initialized" && "$syncForce" = "force" ]]; then
+      # copy data files form default directory only if destination is not initialized and is empty
+      echo -e "${prefixIndent}INFO: [$dirDefault] missing '${dirCustom}/.initialized' file... copying default files from '${dirDefault}' to '${dirCustom}'"
       cp -af "$dirDefault"/. "$dirCustom"/
-      #echo -e "${prefixIndent}INFO: [$dirDefault] setting owner with user '${APP_USR}' (UID:${APP_UID}) and group '${APP_GRP}' (GID:${APP_GID}) on '${dirCustom}'"
-      #chown -R ${APP_USR}:${APP_GRP} "$dirCustom"/
-      else
-        echo -e "${prefixIndent}INFO: [$dirDefault] skipping data initialization... '$dirCustom' data dir is already initialized"
+    else
+      echo -e "${prefixIndent}INFO: [$dirDefault] data dir '$dirCustom' is already initialized... skipping data initialization"
     fi
   fi
 
@@ -350,8 +350,8 @@ symlinkDir() {
     # symlink default directory to custom directory
     echo -e "${prefixIndent}INFO: [$dirDefault] symlinking '$dirDefault' to '$dirCustom'"
     ln -s "$dirCustom" "$dirDefault"
-   else
-     echo "${prefix}WARN: [$dirDefault] no custom persistent storage path defined... all data placed into '$dirDefault' will be lost on container restart"
+  else
+    echo "${prefix}WARN: [$dirDefault] no custom persistent storage path defined... all data placed into '$dirDefault' will be lost on container restart"
   fi
 }
 
