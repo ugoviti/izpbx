@@ -113,6 +113,26 @@ sudo systemctl enable --now docker
 Modify docker-compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not production tested. There will be problems with RTP traffic).
 Another available option is to disable `network_mode: host` and use **macvlan** network mode used for running izPBX into multi-tenant mode.
 
+## Customizing docker-compose.yml
+
+If you need to customize the default `docker-compose.yml`, don't edit it, but create an **override** file:
+
+- `docker-compose.override.yml`
+
+and specify the options you want to override, for example:
+
+```
+version: '3'
+
+services:
+  db:
+    image: docker.io/mariadb:10.11.4
+  izpbx:
+    image: docker.io/izdock/izpbx-asterisk:20.16.7
+```
+
+and start the deploy with the same command `docker-compose up -d`
+
 ## Alternative deploy method via 'docker run' command (not suggested)
 If you want test izPBX without using docker-compose, you can use the following docker commands:
 
