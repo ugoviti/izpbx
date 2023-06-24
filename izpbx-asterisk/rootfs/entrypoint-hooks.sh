@@ -287,13 +287,13 @@ initizializeDir() {
   # verify if $dirDefault and $dirCustom are not the same directory
   if [[ "$dirDefault" != "$dirCustom" && -e "$dirDefault" && ! -z "$dirCustom" ]]; then
     # copy data files form default directory if destination is empty
-    if ! dirEmpty "$dirDefault" && dirEmpty "$dirCustom"; then
+    if ! dirEmpty "${dirDefault}" && dirEmpty "$dirCustom"; then
       echo -e "${prefixIndent}INFO: [$dirDefault] empty custom dir detected... copying default files from '${dirDefault}' to '${dirCustom}'"
       cp -af "$dirDefault"/. "$dirCustom"/
       #echo -e "${prefixIndent}INFO: [$dirDefault] setting owner with user '${APP_USR}' (UID:${APP_UID}) and group '${APP_GRP}' (GID:${APP_GID}) on '${dirCustom}'"
       #chown -R ${APP_USR}:${APP_GRP} "$dirCustom"/
-    # copy data files form default directory if destination is not initialized
-    elif ! dirEmpty "$dirDefault" && [ ! -f "${dirCustom}/.initialized" ]; then
+    # copy data files form default directory if destination is not initialized and is empty!
+    elif dirEmpty "${dirCustom}" && [ ! -f "${dirCustom}/.initialized" ]; then
       echo -e "${prefixIndent}INFO: [$dirDefault] not initialized persistent data storage detected in '${dirCustom}/.initialized'... copying default files from '${dirDefault}' to '${dirCustom}'"
       cp -af "$dirDefault"/. "$dirCustom"/
       #echo -e "${prefixIndent}INFO: [$dirDefault] setting owner with user '${APP_USR}' (UID:${APP_UID}) and group '${APP_GRP}' (GID:${APP_GID}) on '${dirCustom}'"

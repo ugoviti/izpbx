@@ -50,6 +50,7 @@ services:
   izpbx:
     image: docker.io/izdock/izpbx-asterisk:20.16.7
     container_name: izpbx
+    #entrypoint: /bin/bash -c "/bin/bash -c \"sleep 3600\""
     #hostname: ${APP_FQDN}
     restart: unless-stopped
     depends_on:
