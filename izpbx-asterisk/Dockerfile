@@ -742,11 +742,15 @@ RUN set -xe && \
       userman \
       ucp \
       bulkhandler \
+      music \
+      infoservices \
       weakpasswords \
       pm2 \
       ; do \
-      ## skip download
+
+      ## skip download:
       #framework \
+
       ## deprecated:
       #speeddial \
   # download loop

@@ -1224,10 +1224,12 @@ cfgService_freepbx_install() {
       cel
       timeconditions
       bulkhandler
-      speeddial
       weakpasswords
       ucp
     "}
+
+      ## deprecated:
+      #speeddial
 
     # disabled modules
     : ${FREEPBX_MODULES_DISABLED:="
