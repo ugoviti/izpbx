@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.7] - 2023-06-24
+### Changed
+- Updated PBX engine to Asterisk `20.3.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.3.0.md)
+- Updated zabbix-agent to `6.4` and switched to zabbix-agent2
+- Reworked entrypoint.sh and entrypoint-hooks.sh scripts
+
 ## [20.16.6] - 2023-05-14
 ### Changed
 - Updated PBX engine to Asterisk `20.2.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.2.1)

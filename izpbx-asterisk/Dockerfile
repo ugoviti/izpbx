@@ -19,7 +19,7 @@ ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.2.1
+ARG ASTERISK_VER=20.3.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
@@ -49,7 +49,7 @@ ARG ASTERISK_CHAN_DONGLE_VER=master
 ARG IZSYNTH_VER=5.0
 
 ## https://www.zabbix.com/download_agents
-ENV ZABBIX_VER=6.2
+ENV ZABBIX_VER=6.4
 
 ## https://github.com/ugoviti/zabbix-templates
 ARG ZABBIX_TEMPLATE_VER=main
@@ -227,7 +227,7 @@ RUN set -xe && \
   ## repo for phpMyAdmin
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-${RHEL_VER}.rpm && \
   ## repo for zabbix agent
-  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rhel/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_VER}-3.el${RHEL_VER}.noarch.rpm && \
+  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rhel/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_VER}-1.el${RHEL_VER}.noarch.rpm && \
   ## repo for ffmpeg command
   rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${RHEL_VER}.noarch.rpm && \
   rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${RHEL_VER}.noarch.rpm && \

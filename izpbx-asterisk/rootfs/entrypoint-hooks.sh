@@ -12,8 +12,27 @@
 : ${ASTERISK_VER:=""}
 : ${FREEPBX_VER:=""}
 
-# override default data directory used by container apps (used by stateful apps)
+# override default data directory used by this apps (used for stateful and persistent data)
+: ${APP_CONF:=""}
 : ${APP_DATA:=""}
+: ${APP_LOGS:=""}
+: ${APP_TEMP:=""}
+
+# array of custom data directory
+declare -A appDataDirsCustom=(
+  [APP_CONF]="${APP_CONF}"
+  [APP_DATA]="${APP_DATA}"
+  [APP_LOGS]="${APP_LOGS}"
+  [APP_TEMP]="${APP_TEMP}"
+)
+
+# array of default data directory paths used by this app
+declare -A appDataDirsDefault=(
+  [APP_CONF]="${APP_CONF}"
+  [APP_DATA]="${APP_DATA}"
+  [APP_LOGS]="${APP_LOGS}"
+  [APP_TEMP]="${APP_TEMP}"
+)
 
 # timezone management workaround
 : ${TZ:="UTC"}
@@ -25,62 +44,67 @@ echo "$TZ" > /etc/timezone
 
 # default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
-  [CRONDIR]=/var/spool/cron
-  [ASTHOME]=/home/asterisk
-  [ASTETCDIR]=/etc/asterisk
-  [ASTVARLIBDIR]=/var/lib/asterisk
-  [ASTSPOOLDIR]=/var/spool/asterisk
-  [HTTPDHOME]=/var/www
-  [HTTPDLOGDIR]=/var/log/httpd
-  [ASTLOGDIR]=/var/log/asterisk
-  [F2BLOGDIR]=/var/log/fail2ban
-  [F2BLIBDIR]=/var/lib/fail2ban
-  [FOP2APPDIR]=/usr/local/fop2
-  [ROOTHOME]=/root
-  [DNSMASQDIR]=/etc/dnsmasq.d
-  [DNSMASQLEASEDIR]=/var/lib/dnsmasq
-  [TFTPDIR]=/var/lib/tftpboot
+  [CRONDIR]="/var/spool/cron"
+  [ASTHOME]="/home/asterisk"
+  [ASTETCDIR]="/etc/asterisk"
+  [ASTVARLIBDIR]="/var/lib/asterisk"
+  [ASTSPOOLDIR]="/var/spool/asterisk"
+  [HTTPDHOME]="/var/www"
+  [HTTPDLOGDIR]="/var/log/httpd"
+  [ASTLOGDIR]="/var/log/asterisk"
+  [F2BLOGDIR]="/var/log/fail2ban"
+  [F2BLIBDIR]="/var/lib/fail2ban"
+  [FOP2APPDIR]="/usr/local/fop2"
+  [ROOTHOME]="/root"
+  [DNSMASQDIR]="/etc/dnsmasq.d"
+  [DNSMASQLEASEDIR]="/var/lib/dnsmasq"
+  [TFTPDIR]="/var/lib/tftpboot"
 )
 
 # configuration files
 declare -A appFilesConf=(
-  [FPBXCFGFILE]=/etc/freepbx.conf
-  [AMPCFGFILE]=/etc/amportal.conf
+  [FPBXCFGFILE]="/etc/freepbx.conf"
+  [AMPCFGFILE]="/etc/amportal.conf"
+)
+
+# log files
+declare -A appFilesLog=(
+  [FPBXLOGFILE]="/var/log/asterisk/freepbx.log"
+  [FPBXSECLOGFILE]="/var/log/asterisk/freepbx_security.log"
+  [F2BLOGFILE]="/var/log/fail2ban/fail2ban.log"
 )
 
 # cache directories
 declare -A appCacheDirs=(
-  [ASTRUNDIR]=/var/run/asterisk
-  [PHPOPCACHEDIR]=/var/lib/php/opcache
-  [PHPSESSDIR]=/var/lib/php/session
-  [PHPWSDLDIR]=/var/lib/php/wsdlcache
+  [ASTRUNDIR]="/var/run/asterisk"
+  [PHPOPCACHEDIR]="/var/lib/php/opcache"
+  [PHPSESSDIR]="/var/lib/php/session"
+  [PHPWSDLDIR]="/var/lib/php/wsdlcache"
 )
 
 # FreePBX directories
 declare -A fpbxDirs=(
-  [AMPWEBROOT]=/var/www/html
-  [ASTETCDIR]=/etc/asterisk
-  [ASTVARLIBDIR]=/var/lib/asterisk
-  [ASTAGIDIR]=/var/lib/asterisk/agi-bin
-  [ASTSPOOLDIR]=/var/spool/asterisk
-  [ASTLOGDIR]=/var/log/asterisk
-  [AMPBIN]=/var/lib/asterisk/bin
-  [AMPSBIN]=/var/lib/asterisk/sbin
-  [AMPCGIBIN]=/var/www/cgi-bin
-  [AMPPLAYBACK]=/var/lib/asterisk/playback
-  [CERTKEYLOC]=/etc/asterisk/keys
+  [AMPWEBROOT]="/var/www/html"
+  [ASTETCDIR]="/etc/asterisk"
+  [ASTVARLIBDIR]="/var/lib/asterisk"
+  [ASTAGIDIR]="/var/lib/asterisk/agi-bin"
+  [ASTSPOOLDIR]="/var/spool/asterisk"
+  [ASTLOGDIR]="/var/log/asterisk"
+  [AMPBIN]="/var/lib/asterisk/bin"
+  [AMPSBIN]="/var/lib/asterisk/sbin"
+  [AMPCGIBIN]="/var/www/cgi-bin"
+  [AMPPLAYBACK]="/var/lib/asterisk/playback"
+  [CERTKEYLOC]="/etc/asterisk/keys"
 )
 
 # asterisk extra directories
 declare -A fpbxDirsExtra=(
-  [ASTMODDIR]=/usr/lib64/asterisk/modules
+  [ASTMODDIR]="/usr/lib64/asterisk/modules"
 )
 
 # FreePBX log files
 declare -A fpbxFilesLog=(
-  [FPBXDBUGFILE]=/var/log/asterisk/freepbx_debug.log
-  [FPBXLOGFILE]=/var/log/asterisk/freepbx.log
-  [FPBXSECLOGFILE]=/var/log/asterisk/freepbx_security.log
+  [FPBXDBUGFILE]="/var/log/asterisk/freepbx_debug.log"
 )
 
 # FreePBX customizable settings
@@ -239,26 +263,133 @@ fi
 
 ## misc functions
 check_version() { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); }
+print_path() { echo ${@%/*}; }
+print_fullname() { echo ${@##*/}; }
+print_name() { print_fullname $(echo ${@%.*}); }
+print_ext() { echo ${@##*.}; }
+dirEmpty() { [ -z "$(ls -A "$1"/)" ]; } # return true if specified directory is empty, false if contains files
 
-print_path() {
-  echo ${@%/*}
+initizializeDir() {
+  local dirDefault="$1"
+  shift
+  local dirCustom="$1"
+  shift
+  local prefixLog="$1"
+
+  if [ -z "$prefixLog" ];then
+    local prefix="--> "
+    local prefixIndent="--> "
+  else
+    local prefix="--> $prefixLog "
+    local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
+  fi
+
+  # verify if $dirDefault and $dirCustom are not the same directory
+  if [[ "$dirDefault" != "$dirCustom" && -e "$dirDefault" && ! -z "$dirCustom" ]]; then
+    # copy data files form default directory if destination is empty
+    if ! dirEmpty "$dirDefault" && dirEmpty "$dirCustom"; then
+      echo -e "${prefixIndent}INFO: [$dirDefault] empty custom dir detected... copying default files from '${dirDefault}' to '${dirCustom}'"
+      cp -af "$dirDefault"/. "$dirCustom"/
+      #echo -e "${prefixIndent}INFO: [$dirDefault] setting owner with user '${APP_USR}' (UID:${APP_UID}) and group '${APP_GRP}' (GID:${APP_GID}) on '${dirCustom}'"
+      #chown -R ${APP_USR}:${APP_GRP} "$dirCustom"/
+    # copy data files form default directory if destination is not initialized
+    elif ! dirEmpty "$dirDefault" && [ ! -f "${dirCustom}/.initialized" ]; then
+      echo -e "${prefixIndent}INFO: [$dirDefault] not initialized persistent data storage detected in '${dirCustom}/.initialized'... copying default files from '${dirDefault}' to '${dirCustom}'"
+      cp -af "$dirDefault"/. "$dirCustom"/
+      #echo -e "${prefixIndent}INFO: [$dirDefault] setting owner with user '${APP_USR}' (UID:${APP_UID}) and group '${APP_GRP}' (GID:${APP_GID}) on '${dirCustom}'"
+      #chown -R ${APP_USR}:${APP_GRP} "$dirCustom"/
+      else
+        echo -e "${prefixIndent}INFO: [$dirDefault] skipping data initialization... '$dirCustom' data dir is already initialized"
+    fi
+  fi
+
+  # make the dirCustom initialized unsing ISO 8601:2004 extended time format: https://en.wikipedia.org/wiki/ISO_8601
+  if [[ -e "${dirCustom}" && ! -f "${dirCustom}/.initialized" ]]; then
+    echo -e "${prefixIndent}INFO: [$dirDefault] directory '$dirCustom' successfully initialized"
+    echo "$(date +"%Y-%m-%dT%H:%M:%S%:z")" > "${dirCustom}/.initialized";
+  fi
 }
 
-print_fullname() {
-  echo ${@##*/}
+# if required move default confgurations to custom directory
+symlinkDir() {
+  local dirDefault="$1"
+  shift
+  local dirCustom="$1"
+  shift
+  local prefixLog="$1"
+
+  if [ -z "$prefixLog" ];then
+    local prefix="--> "
+    local prefixIndent="--> "
+  else
+    local prefix="--> $prefixLog "
+    local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
+  fi
+
+  if [ ! -z "$dirCustom" ]; then
+    echo -e "${prefix}INFO: [$dirDefault] detected directory data override path: '$dirCustom'"
+
+    if [ ! -e "$dirCustom" ]; then
+      # make destination dir if not exist
+      echo -e "${prefixIndent}WARN: [$dirDefault] custom directory '$dirCustom' doesn't exist... creating empty directory '$dirCustom'"
+      mkdir -p "$dirCustom"
+    fi
+
+    if [ ! -e "$dirDefault" ]; then
+      # make default dir if not exist
+      echo -e "${prefixIndent}WARN: [$dirDefault] default directory doesn't exist... creating empty directory '$dirDefault'"
+      mkdir -p "$dirDefault"
+    fi
+
+    # rename default directory
+    if [ -e "$dirDefault" ]; then
+      echo -e "${prefixIndent}INFO: [$dirDefault] renaming '$dirDefault' to '${dirDefault}.dist'"
+      mv "$dirDefault" "$dirDefault".dist
+    fi
+
+    # symlink default directory to custom directory
+    echo -e "${prefixIndent}INFO: [$dirDefault] symlinking '$dirDefault' to '$dirCustom'"
+    ln -s "$dirCustom" "$dirDefault"
+   else
+     echo "${prefix}WARN: [$dirDefault] no custom persistent storage path defined... all data placed into '$dirDefault' will be lost on container restart"
+  fi
 }
 
-print_name() {
-  print_fullname $(echo ${@%.*})
-}
+symlinkFile() {
+  local fileDefault="$1"
+  shift
+  local fileCustom="$1"
+  shift
+  local prefixLog="$1"
 
-print_ext() {
-  echo ${@##*.}
-}
+  if [ -z "$prefixLog" ];then
+    local prefix="--> "
+    local prefixIndent="--> "
+  else
+    local prefix="--> $prefixLog "
+    local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
+  fi
 
-# return true if specified directory is empty
-dirEmpty() {
-    [ -z "$(ls -A "$1/")" ]
+  echo -e "${prefix}INFO: [$fileDefault] file data override detected: default:[$fileDefault] custom:[$fileCustom]"
+
+  if [ -e "$fileDefault" ]; then
+      # copy data files form default directory if destination is empty
+      if [ ! -e "$fileCustom" ]; then
+        echo -e "${prefixIndent}INFO: [$fileDefault] detected not existing file '$fileCustom'. copying '$fileDefault' to '$fileCustom'..."
+        cp -a -f "$fileDefault" "$fileCustom"
+      fi
+      echo -e "${prefixIndent}INFO: [$fileDefault] renaming to '${fileDefault}.dist'... "
+      mv "$fileDefault" "$fileDefault".dist
+    else
+      echo -e "${prefixIndent}WARN: [$fileDefault] default file doesn't exist... creating symlink from a not existing source file"
+      #touch "$fileDefault"
+  fi
+
+  echo -e "${prefixIndent}INFO: [$fileDefault] symlinking '$fileDefault' to '$fileCustom'"
+  # create parent dir if not exist
+  [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
+  # link custom file over orinal path
+  ln -s "$fileCustom" "$fileDefault"
 }
 
 fixOwner() {
@@ -291,85 +422,6 @@ fixPermission() {
     else
       echo "---> WARNING: file or directory doesn't exist: '${file}'"
   fi
-}
-
-# if required move default confgurations to custom directory
-symlinkDir() {
-  local dirOriginal="$1"
-  shift
-  local dirCustom="$1"
-  shift
-  local prefixLog="$1"
-  
-  if [ -z "$prefixLog" ];then
-    local prefix="--> "
-    local prefixIndent="--> "
-  else
-    local prefix="--> $prefixLog "
-    local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
-  fi
-  
-  echo -e "${prefix}INFO: [$dirOriginal] detected directory data override path: '$dirCustom'"
-
-  # copy data files form original directory if destination is empty
-  if [ -e "$dirOriginal" ] && dirEmpty "$dirCustom"; then
-    echo -e "${prefixIndent}INFO: [$dirOriginal] empty dir detected copying files to '$dirCustom'..."
-    rsync -a -q "$dirOriginal/" "$dirCustom/"
-  fi
-
-  # make directory if not exist
-  if [ ! -e "$dirOriginal" ]; then
-      # make destination dir if not exist
-      echo -e "${prefixIndent}WARN: [$dirOriginal] original directory doesn't exist... creating empty directory"
-      mkdir -p "$dirOriginal"
-  fi
-  
-  # rename directory
-  if [ -e "$dirOriginal" ]; then
-      echo -e "${prefixIndent}INFO: [$dirOriginal] renaming to '${dirOriginal}.dist'"
-      mv "$dirOriginal" "$dirOriginal".dist
-  fi
-  
-  # symlink directory
-  echo -e "${prefixIndent}INFO: [$dirOriginal] symlinking '$dirCustom' to '$dirOriginal'"
-  ln -s "$dirCustom" "$dirOriginal"
-}
-
-symlinkFile() {
-  local fileOriginal="$1"
-  shift
-  local fileCustom="$1"
-  shift
-  local prefixLog="$1"
-  
-  if [ -z "$prefixLog" ];then
-    local prefix="--> "
-    local prefixIndent="--> "
-  else
-    local prefix="--> $prefixLog "
-    local prefixIndent="$(echo $prefixLog | sed 's/[][\/a-zA-Z0-9]/-/g')---> "
-  fi
-  
-  echo -e "${prefix}INFO: [$fileOriginal] file data override detected: original:[$fileOriginal] custom:[$fileCustom]"
-
-  if [ -e "$fileOriginal" ]; then
-      # copy data files form original directory if destination is empty
-      if [ ! -e "$fileCustom" ]; then
-        echo -e "${prefixIndent}INFO: [$fileOriginal] detected not existing file '$fileCustom'. copying '$fileOriginal' to '$fileCustom'..."
-        rsync -a -q "$fileOriginal" "$fileCustom"
-      fi
-      echo -e "${prefixIndent}INFO: [$fileOriginal] renaming to '${fileOriginal}.dist'... "
-      mv "$fileOriginal" "$fileOriginal".dist
-    else
-      echo -e "${prefixIndent}WARN: [$fileOriginal] original file doesn't exist... creating symlink from a not existing source file"
-      #touch "$fileOriginal"
-  fi
-
-  echo -e "${prefixIndent}INFO: [$fileOriginal] symlinking '$fileCustom' to '$fileOriginal'"
-  # create parent dir if not exist
-  [ ! -e "$(dirname "$fileCustom")" ] && mkdir -p "$(dirname "$fileCustom")"
-  # link custom file over orinal path
-  ln -s "$fileCustom" "$fileOriginal"
 }
 
 # enable/disable and configure services
@@ -549,8 +601,7 @@ cfgService_fail2ban() {
   echo "--> reconfiguring Fail2ban settings..."
   # ini config file parse function
   # fix default log path
-  echo "DEFAULT LOGTARGET=/var/log/fail2ban/fail2ban.log" | iniParser "/etc/fail2ban/fail2ban.conf"
-  touch /var/log/fail2ban/fail2ban.log
+  echo "DEFAULT LOGTARGET=${appFilesLog[F2BLOGFILE]}" | iniParser "/etc/fail2ban/fail2ban.conf"
   # configure all settings
   set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | sed -e 's/_/ /' | iniParser "/etc/fail2ban/jail.d/99-local.conf"
 }
@@ -747,7 +798,7 @@ cfgService_izpbx() {
   
   freepbxSettingsFix() {
     # reload freepbx config 
-    echo "---> FIXME: apply workarounds for FreePBX broken modules and configs..."
+    echo "---> FIXME: applying workarounds for FreePBX broken modules and configs..."
 
     # make missing log files
     [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${fpbxDirs[ASTLOGDIR]}/full"
@@ -763,7 +814,7 @@ cfgService_izpbx() {
 
     # fix freepbx directory paths
     if [ ! -z "${APP_DATA}" ]; then
-      echo "----> fixing directory system paths in db configuration..."
+      echo "---> fixing directory system paths in db configuration..."
       for k in ${!fpbxDirs[@]}; do
         [ "$(fwconsole setting ${k} | awk -F"[][{}]" '{print $2}')" != "${fpbxDirs[$k]}" ] && fwconsole setting ${k} ${fpbxDirs[$k]}
       done
@@ -775,8 +826,8 @@ cfgService_izpbx() {
     # fixing missing documentation that prevent loading extra codecs (like codec_opus)
     if [ ! -z "${APP_DATA}" ]; then
       if [ "$(ls -1 "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty/")" != "$(ls -1 "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty/")" ]; then
-        echo "----> fixing asterisk documentation directory... ${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty"
-        rsync -a -P "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty/"
+        echo "---> fixing asterisk documentation directory... ${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty"
+        cp -af "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty"/. "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty"/
       fi
     fi
     
@@ -835,7 +886,18 @@ cfgService_izpbx() {
       fi
     done
     
-    # process logs files
+    # process app logs files
+    for k in ${!appFilesLog[@]}; do
+      v="${appFilesLog[$k]}"
+      eval appFilesLog[$k]=${APP_DATA}$v
+      [ ! -e "$v" ] && touch "$v"
+      if [ "$(stat -c "%U %G" "$v" 2>/dev/null)" != "${APP_USR} ${APP_GRP}" ];then
+      echo "---> fixing permissions for: $k=$v"
+      chown ${APP_USR}:${APP_GRP} "$v"
+      fi
+    done
+
+    # process freepbx logs files
     for k in ${!fpbxFilesLog[@]}; do
       v="${fpbxFilesLog[$k]}"
       eval fpbxFilesLog[$k]=${APP_DATA}$v
@@ -848,7 +910,7 @@ cfgService_izpbx() {
   fi
 
   # configure CDR ODBC
-  echo "--> configuring FreePBX ODBC"
+  echo "---> configuring FreePBX ODBC"
   # fix mysql odbc inst file path
   sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmaodbc.so/' /etc/odbcinst.ini
   # create mysql odbc
@@ -863,9 +925,10 @@ Charset=utf8" > /etc/odbc.ini
 
   # LEGACY: workaround for missing ${APP_DATA}/.initialized file but already initialized izpbx deploy
   if [[ -e "${appFilesConf[FPBXCFGFILE]}" && ! -e ${APP_DATA}/.initialized ]]; then
-    echo "--> INFO: found '${appFilesConf[FPBXCFGFILE]}' configuration file but missing '${APP_DATA}/.initialized'... creating it right now"
-    echo "--> NOTE: if you want deploy izPBX from scratch, remove '${appFilesConf[FPBXCFGFILE]}' and '${APP_DATA}/.initialized' file"
-    touch "${APP_DATA}/.initialized"
+    echo "---> INFO: found '${appFilesConf[FPBXCFGFILE]}' configuration file but missing '${APP_DATA}/.initialized'... creating it right now"
+    echo "---> NOTE: if you want deploy izPBX from scratch, remove '${appFilesConf[FPBXCFGFILE]}' and '${APP_DATA}/.initialized' file"
+    # make this deploy initialized and save the configuration status for later usage if using persistent data
+    initizializeDir "${appDataDirsCustom[APP_DATA]}" "${appDataDirsCustom[APP_DATA]}" "$(printf '[%02d/%d]' $n $t)"
   fi
   
   # initialize izpbx if not already deployed
@@ -887,11 +950,11 @@ Charset=utf8" > /etc/odbc.ini
       # save version into .initialized file if empty
       #[ -z "$(cat "${APP_DATA}/.initialized")" ] && ${fpbxDirs[AMPBIN]}/fwconsole -V > "${APP_DATA}/.initialized"
       
-      echo "--> INFO: found '${APP_DATA}/.initialized' file - Detected FreePBX version: $FREEPBX_VER_INSTALLED"
+      echo "---> INFO: found '${APP_DATA}/.initialized' file - Detected installed FreePBX version: $FREEPBX_VER_INSTALLED"
       [ ! -e "${appFilesConf[FPBXCFGFILE]}" ] && echo "---> WARNING: missing configuration file: ${appFilesConf[FPBXCFGFILE]}"
       
       # izpbx is already initialized, update configuration files
-      echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'..."
+      echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'"
       sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '${MYSQL_SERVER}';/"   -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBPORT'\] =.*/\$amp_conf\['AMPDBPORT'\] = '${APP_PORT_MYSQL}';/" -i "${appFilesConf[FPBXCFGFILE]}"
       sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
@@ -1025,7 +1088,7 @@ cfgService_freepbx_install() {
   echo "====================================================================="
   echo "=> !!! NEW INSTALLATION DETECTED :: FreePBX IS NOT INITIALIZED !!! <="
   echo "====================================================================="
-  echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX right now... try:[$try/$trymax]"
+  echo "--> missing '${APP_DATA}/.initialized' file... initializing FreePBX... try:[$try/$trymax]"
 
   # use mysql user if MYSQL_ROOT_PASSWORD is not defined and skip initial MySQL deploy
   if [ -z "${MYSQL_ROOT_PASSWORD}" ]; then
@@ -1200,8 +1263,8 @@ cfgService_freepbx_install() {
     # reload freePBX
     freepbxReload
     
-    # make this deploy initialized
-    touch "${APP_DATA}/.initialized"
+    # make this deploy initialized and save the configuration status for later usage if using persistent data
+    initizializeDir "${appDataDirsCustom[APP_DATA]}" "${appDataDirsCustom[APP_DATA]}" "$(printf '[%02d/%d]' $n $t)"
     # save current FreePBX version number
     [ -z "$(cat "${APP_DATA}/.initialized")" ] && ${fpbxDirs[AMPBIN]}/fwconsole -V > "${APP_DATA}/.initialized"
     
@@ -1596,22 +1659,16 @@ runHooks() {
   # check and create missing container directory
   if [ ! -z "${APP_DATA}" ]; then  
     echo "=> Persistent storage path detected... relocating and reconfiguring system data and configuration files using basedir: '${APP_DATA}'"
-    for dir in ${appDataDirs[@]}
-      do
-        dir="${APP_DATA}${dir}"
-        if [ ! -e "${dir}" ];then
-          echo "--> creating missing dir: '$dir'"
-          mkdir -p "${dir}"
-        fi
-      done
 
     # link to custom data directory if required
     local n=1 ; local t=$(echo ${#appDataDirs[@]} + ${#appFilesConf[@]} | bc)
     for dir in ${appDataDirs[@]}; do
       symlinkDir "${dir}" "${APP_DATA}${dir}" "$(printf '[%02d/%d]' $n $t)"
+      initizializeDir "${dir}".dist "${APP_DATA}${dir}" "$(printf '[%02d/%d]' $n $t)"
       let n+=1
     done
     
+    # link default configuration files to custom location
     for file in ${appFilesConf[@]}; do
       symlinkFile "${file}" "${APP_DATA}${file}" "$(printf '[%02d/%d]' $n $t)"
       let n+=1
