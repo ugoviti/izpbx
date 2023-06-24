@@ -698,7 +698,7 @@ RUN set -xe && \
   \
   # make the modules cache
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
-  # predownload the following modules for faster install
+  # predownload the following modules for faster install (need to skip 'framework' module)
   for MODULE in \
       core \
       featurecodeadmin \
@@ -747,12 +747,6 @@ RUN set -xe && \
       weakpasswords \
       pm2 \
       ; do \
-
-      ## skip download:
-      #framework \
-
-      ## deprecated:
-      #speeddial \
   # download loop
   MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
