@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.8] - 2023-07-17
+### Changed
+- Updated PBX engine to Asterisk `20.3.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.3.1.md)
+- Updated FOP2 to `2.31.35` (https://www.fop2.com/download.php)
+
 ## [20.16.7] - 2023-06-24
 ### Changed
 - Updated PBX engine to Asterisk `20.3.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.3.0.md)
