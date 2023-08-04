@@ -19,7 +19,7 @@ ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.3.1
+ARG ASTERISK_VER=20.4.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
@@ -203,6 +203,7 @@ RUN set -xe && \
     libpcap \
     gmime \
     msmtp \
+    mtr \
   ' && \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
   if [[ ${RHEL_VER} -le 8 ]]; then \
