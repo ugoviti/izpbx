@@ -194,7 +194,6 @@ RUN set -xe && \
     zabbix-agent2 \
     zabbix-sender \
     ffmpeg \
-    lame \
     libuv \
     patch \
     iproute \
@@ -204,8 +203,9 @@ RUN set -xe && \
     gmime \
     msmtp \
     mtr \
-    vim \
+    vim-enhanced \
   ' && \
+  #  lame \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
   if [[ ${RHEL_VER} -le 8 ]]; then \
   # <= el8 (deprecated in el9)
@@ -239,16 +239,18 @@ RUN set -xe && \
   export DNF_OPTS+=" --enablerepo=remi" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
   if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
+  #if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
   \
   # install other repositories
-  if [[ ${RHEL_VER} -le 8 ]]; then \ 
+  if [[ ${RHEL_VER} -le 8 ]]; then \
     # <= el8
     ## repo for lame command
-    rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-5.el"${RHEL_VER}".noarch.rpm && \
+    #rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-9.el"${RHEL_VER}".noarch.rpm && \
+    rpm -Uhv http://repos.dslab.tuwien.ac.at/public/el${RHEL_VER}/x86_64/okay/lame-3.100-6.el${RHEL_VER}.x86_64.rpm http://repos.dslab.tuwien.ac.at/public/el${RHEL_VER}/x86_64/okay/lame-libs-3.100-6.el${RHEL_VER}.x86_64.rpm \
     ## fix wrong option
-    sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo \
+    #sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo \
   ;fi && \
   \
   ## enable specific module php needed for FreePBX
@@ -300,7 +302,8 @@ RUN set -xe && \
   \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
+  #if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
   if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
   \
   : "---------- START installing build packages ----------" && \
