@@ -204,6 +204,7 @@ RUN set -xe && \
     gmime \
     msmtp \
     mtr \
+    vim \
   ' && \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
   if [[ ${RHEL_VER} -le 8 ]]; then \
