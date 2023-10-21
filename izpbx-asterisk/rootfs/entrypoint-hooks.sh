@@ -108,6 +108,7 @@ declare -A fpbxFilesLog=(
 )
 
 # FreePBX customizable settings
+: ${FREEPBX_FIX_PERMISSION:="true"}
 : ${FREEPBX_HTTPBINDPORT:="$APP_PORT_AMI"}
 
 # FreePBX customizable SIP settings
@@ -847,7 +848,7 @@ cfgService_izpbx() {
     if ! grep "#include freepbx_custom_fix_missing_contexts.conf" ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf >/dev/null 2>&1; then echo "#include freepbx_custom_fix_missing_contexts.conf" >> ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf ; fi
 
     ## fix Asterisk/FreePBX file permissions
-    freepbxChown
+    [ "$FREEPBX_FIX_PERMISSION" = "true" ] && freepbxChown
   }
   
   echo "---> verifing FreePBX configurations"
@@ -1462,10 +1463,10 @@ cfgService_fop2 () {
           fi
           unset RETVAL
         fi
-        echo "--> INFO: FOP2 license code info:"
-        ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
-        echo "--> INFO: FOP2 license code status:"
-        ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
+        #echo "--> INFO: FOP2 license code info:"
+        #${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
+        #echo "--> INFO: FOP2 license code status:"
+        #${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
     fi
   fi
 }
