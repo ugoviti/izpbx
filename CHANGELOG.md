@@ -174,7 +174,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.16.4] - 2022-02-03
 ### Fixes
-- Updated FOP2 to 2.31.32 (this release fix a long standing FOP2 license issue when running inside docker container that on every restart the license got invalid and needed to be reactivated)
+- Updated FOP2 to 2.31.32 (this release fixes a long-standing FOP2 license issue when running inside a Docker container, where the license became invalid and needed to be reactivated on every restart.)
 - FOP2: added new option `--rp=http` on fop2_server commands to bypass fop2 license problems when running inside a container
 - FOP2: better license handling
 
