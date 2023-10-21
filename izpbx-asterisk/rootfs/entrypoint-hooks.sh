@@ -1406,8 +1406,10 @@ cfgService_fop2 () {
     fi
    
     # FOP2 License Code Management
-    # licensed interface
+    # licensing method
     FOP2_LICENSE_OPTS+=" --rp=http"
+    # licensed interface
+    [ -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_IFACE=$(ip link show | grep ^"[0-9].*:" | awk -F': ' '{print $2}' | grep -v -e lo | head -n1)
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
     # modify fop2 command if interface name is specified
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
