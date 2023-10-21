@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated PBX engine to Asterisk `20.5.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.5.0.md)
 - Updated Database engine to MariaDB `10.11.5` LTS (https://mariadb.com/kb/en/mariadb-10-11-5-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
-- Updated FOP2 to `2.31.37` (https://www.fop2.com/download.php)
 - Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
   - changed: `#FOP2_AUTOUPGRADE=false`
   - added: `#FOP2_AUTOACTIVATION=false`
