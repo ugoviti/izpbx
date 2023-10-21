@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated FOP2 to `2.31.37` (https://www.fop2.com/download.php)
 - Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
   - changed: `#FOP2_AUTOUPGRADE=false`
+  - added: `#FOP2_AUTOACTIVATION=false`
   - added: `FREEPBX_FIX_PERMISSION=false`
 ### Fixed
 - disabled using eth0 as default interface when registering fop2 and the FOP2_LICENSE_IFACE var is not set

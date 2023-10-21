@@ -160,6 +160,7 @@ fi
 #: ${FOP2_AMI_USERNAME:="admin"}
 #: ${FOP2_AMI_PASSWORD:="amp111"}
 : ${FOP2_AUTOUPGRADE:="false"}
+: ${FOP2_AUTOACTIVATION:="false"}
 
 # apache httpd configuration
 : ${HTTPD_HTTPS_ENABLED:="false"}
@@ -1429,44 +1430,44 @@ cfgService_fop2 () {
     fi
     
     if [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.lic" ]; then
-        if [ -z "${FOP2_LICENSE_CODE}" ]; then
-            echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in Demo Mode"
-          else
-            echo "--> INFO: Registering FOP2"
-            echo "---> NAME: ${FOP2_LICENSE_NAME}"
-            echo "---> CODE: ${FOP2_LICENSE_CODE}"
-            echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
-            set -x
-            ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
-            set +x
-            echo "--> INFO: FOP2 license code info:"
-            ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
-            echo "--> INFO: FOP2 license code status:"
-            ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
-        fi
-      else
-        #FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS)"
-        FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS)"
-        if [ ! -z "$(echo $FOP2_LICENSE_STATUS | grep "Demo")" ]; then
-          echo "--> WARNING: Reactivating FOP2 license because:"
-          echo $FOP2_LICENSE_STATUS
+      if [ -z "${FOP2_LICENSE_CODE}" ]; then
+          echo "--> INFO: FOP2 is not licensed and no 'FOP2_LICENSE_CODE' variable defined... running in Demo Mode"
+        else
+          echo "--> INFO: Registering FOP2"
+          echo "---> NAME: ${FOP2_LICENSE_NAME}"
+          echo "---> CODE: ${FOP2_LICENSE_CODE}"
+          echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
           set -x
-          ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate $FOP2_LICENSE_OPTS
-          local RETVAL=$?
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
           set +x
-          if [ $RETVAL != 0 ]; then
-            echo "echo --> ERROR: Failed to reactivating the license... trying to revoke and register it again:"
-            set -x
-            ${appDataDirs[FOP2APPDIR]}/fop2_server --revoke   --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
-            ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
-            set +x
-          fi
-          unset RETVAL
+          echo "--> INFO: FOP2 license code info:"
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
+          echo "--> INFO: FOP2 license code status:"
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
+      fi
+    elif [ "${FOP2_AUTOACTIVATION}" = "true" ]; then
+      #FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS)"
+      FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS)"
+      if [ ! -z "$(echo $FOP2_LICENSE_STATUS | grep "Demo")" ]; then
+        echo "--> WARNING: Reactivating FOP2 license because:"
+        echo $FOP2_LICENSE_STATUS
+        set -x
+        ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate $FOP2_LICENSE_OPTS
+        local RETVAL=$?
+        set +x
+        if [ $RETVAL != 0 ]; then
+          echo "echo --> ERROR: Failed to reactivating the license... trying to revoke and register it again:"
+          set -x
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --revoke   --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
+          ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
+          set +x
         fi
-        #echo "--> INFO: FOP2 license code info:"
-        #${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
-        #echo "--> INFO: FOP2 license code status:"
-        #${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
+        unset RETVAL
+      fi
+      echo "--> INFO: FOP2 license code info:"
+      ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
+      echo "--> INFO: FOP2 license code status:"
+      ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
     fi
   fi
 }
