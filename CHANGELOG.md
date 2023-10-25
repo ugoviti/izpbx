@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - added: `FREEPBX_FIX_PERMISSION=false`
 ### Fixed
 - disabled using eth0 as default interface when registering fop2 and the FOP2_LICENSE_IFACE var is not set
+- fixed /etc/sysconfig/fop2 file contents
 
 ## [20.16.9] - 2023-08-04
 ### Changed

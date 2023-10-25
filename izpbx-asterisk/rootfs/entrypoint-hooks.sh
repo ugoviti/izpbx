@@ -1412,6 +1412,9 @@ cfgService_fop2 () {
     FOP2_LICENSE_OPTS+=" --rp=http"
     # licensed interface
     [ -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_IFACE=$(ip link show | grep ^"[0-9].*:" | awk -F': ' '{print $2}' | grep -v -e lo | head -n1)
+    # save interface name into /etc/sysconfig/fop2 file
+    [ ! -z "${FOP2_LICENSE_IFACE}" ] && echo "OPTIONS=\"-d -i ${FOP2_LICENSE_IFACE}\"" > /etc/sysconfig/fop2
+    # use interface name in the command line
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
     # modify fop2 command if interface name is specified
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
@@ -1569,7 +1572,6 @@ cfgService_fop2_upgrade() {
   
   # container workarounds
   export TERM=linux
-  echo "-i ${FOP2_LICENSE_IFACE}" > /etc/sysconfig/fop2
   
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
   cd /usr/src/fop2 && make install
