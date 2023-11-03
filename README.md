@@ -78,16 +78,15 @@ Cloud and On-Premise, Fast, Automatic and Repeatable deploy of VoIP PBX systems
 ![izpbx-console](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-cli.png)
   
 # Deploy izPBX
-Using **docker-compose** is the suggested method:
+Using **docker compose** is the suggested method:
 
 - Install your prefered Linux OS into VM or Baremetal Server
 
-- Install Docker Runtime and docker-compose utility for your Operating System from https://www.docker.com/get-started
+- Install Docker Runtime with `docker compose` plugin for your Operating System from https://www.docker.com/get-started
   - RHEL8 based distro Quick&Dirty commands (skip if you use other distribution):
 ```
 sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-sudo dnf install docker-ce -y
-eval sudo curl -L "$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep browser_download_url | grep "docker-compose-$(uname -s)-$(uname -m)\"" | awk '{print $2}')" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
+sudo dnf install docker-ce docker-compose-plugin -y
 sudo systemctl enable --now docker
 ```
 
@@ -104,8 +103,8 @@ sudo systemctl enable --now docker
 - Customize `.env` variables, specially the security section of default passwords:
   - `vim .env`
 
-- Deploy and start izpbx using docker-compose command:
-  - `docker-compose up -d`
+- Deploy and start izpbx using `docker compose` command:
+  - `docker compose up -d`
 
 - Wait the pull to finish (~60 seconds with fast internet connections) and point your web browser to the IP address of your docker host and follow initial setup guide
 
@@ -113,8 +112,28 @@ sudo systemctl enable --now docker
 Modify docker-compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not production tested. There will be problems with RTP traffic).
 Another available option is to disable `network_mode: host` and use **macvlan** network mode used for running izPBX into multi-tenant mode.
 
+## Customizing docker-compose.yml
+
+If you need to customize the default `docker-compose.yml`, don't edit it, but create an **override** file:
+
+- `docker-compose.override.yml`
+
+and specify the options you want to override, for example:
+
+```
+version: '3'
+
+services:
+  db:
+    image: docker.io/mariadb:10.11.4
+  izpbx:
+    image: docker.io/izdock/izpbx-asterisk:20.16.7
+```
+
+and start the deploy with the same command `docker compose up -d`
+
 ## Alternative deploy method via 'docker run' command (not suggested)
-If you want test izPBX without using docker-compose, you can use the following docker commands:
+If you want test izPBX without using docker compose command, you can use the following docker commands:
 
 1. Start MySQL:  
 `docker run --rm -ti -v ./data/db:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.4`
@@ -136,8 +155,8 @@ git checkout tags/$(git tag | sort --version-sort | tail -1)
 2. Upgrade the **izpbx** deploy with:  
 (NB. **First** verify if `docker-compose.yml` and `default.env` was updated a make the same changes in your `.env` file)
 ```
-docker-compose pull
-docker-compose up -d
+docker compose pull
+docker compose up -d
 ```
 
 3. If the mariadb database version was changed, rememeber to update tables schema with command  
@@ -262,7 +281,7 @@ Repeat the procedure for every izPBX you want deploy. Remember to create a dedic
 
 #### Deploy
 Enter in every directory containig configuration files and run:
-- `docker-compose up -d`
+- `docker compose up -d`
 
 ### Multi-Tenant VoIP PBX with shared global Database and single docker-compose.yml file
 
@@ -388,12 +407,12 @@ services:
 
 #### Deploy
 Enter the directory containig configuration files and run:
-- `docker-compose up -d`
+- `docker compose up -d`
 
 # Services Management
 
 ### Command to restart whole izPBX deploy
-`docker-compose restart izpbx`
+`docker compose restart izpbx`
 
 ### Command to restart izPBX container only
 `docker restart izpbx`
@@ -423,12 +442,11 @@ Available services:
 
 # Tested systems and host compatibility
 Tested Docker Runtime:
-  - moby-engine 19.03
-  - docker-ce 19.03
-  - docker-compose 1.25
+  - docker-ce >= 20.0
+  - docker-compose-plugin >= 2.0
 
 Tested Host Operating Systems:
-  - RHEL 6/7/8 based distro
+  - RHEL 6/7/8/9 based distro
   - Fedora Core >30
   - Debian 10
   - Ubuntu 20.04
@@ -504,6 +522,10 @@ Consult official repository page for installation and configuration of Asterisk 
 For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_ADDRESS/pb/yealink/menu**
 
 # FAQ / Troubleshooting
+- FOP2 specific version upgrade/downgrade:
+  `curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-2.31.37-centos-x86_64.tgz | tar xz -C /usr/src`
+  `cp /usr/src/fop2/server/fop2_server /usr/local/fop2/fop2_server`
+
 - FOP2 useful commands:
     NB. define interface name to associate the license, for example: `eth0`
     - enter into izpbx container: `docker exec -it izpbx bash`
@@ -522,9 +544,9 @@ For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_
     `fwconsole setting SIGNATURECHECK 0`
 
 - Factory Reset izPBX (WARNING! your persistent storage will be wiped!):
-  - `docker-compose down`
+  - `docker compose down`
   - `rm -rf data`
-  - `docker-compose up -d`
+  - `docker compose up -d`
     
 # TODO / Future Development
 - Add ARM version compatible with Raspberry PI 

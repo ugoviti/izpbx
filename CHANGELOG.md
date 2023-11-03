@@ -4,6 +4,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.10] - 2023-10-21
+### Changed
+- Updated PBX engine to Asterisk `20.5.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.5.0.md)
+- Updated Database engine to MariaDB `10.11.5` LTS (https://mariadb.com/kb/en/mariadb-10-11-5-release-notes/)
+  - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+- Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
+  - changed: `#FOP2_AUTOUPGRADE=false`
+  - added: `#FOP2_AUTOACTIVATION=false`
+  - added: `FREEPBX_FIX_PERMISSION=false`
+### Fixed
+- disabled using eth0 as default interface when registering fop2 and the FOP2_LICENSE_IFACE var is not set
+- fixed /etc/sysconfig/fop2 file contents
+
+## [20.16.9] - 2023-08-04
+### Changed
+- Updated PBX engine to Asterisk `20.4.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.4.0.md)
+- Updated Database engine to MariaDB `10.11.4` LTS (https://mariadb.com/kb/en/mariadb-10-11-4-release-notes/)
+  - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+
+## [20.16.8] - 2023-07-17
+### Changed
+- Updated PBX engine to Asterisk `20.3.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.3.1.md)
+- Updated FOP2 to `2.31.35` (https://www.fop2.com/download.php)
+
+## [20.16.7] - 2023-06-24
+### Changed
+- Updated PBX engine to Asterisk `20.3.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.3.0.md)
+- Updated zabbix-agent to `6.4` and switched to zabbix-agent2
+- Reworked entrypoint.sh and entrypoint-hooks.sh scripts
+
+## [20.16.6] - 2023-05-14
+### Changed
+- Updated PBX engine to Asterisk `20.2.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.2.1)
+- Updated sngrep to `1.7.0` (https://github.com/irontec/sngrep/releases/tag/v1.7.0)
+
 ## [20.16.5] - 2023-03-14
 ### Added
 - Added 'msmtp' as an additional and default MTA service alternative to postfix (thanks to @hobbit378)
@@ -140,7 +175,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [18.16.4] - 2022-02-03
 ### Fixes
-- Updated FOP2 to 2.31.32 (this release fix a long standing FOP2 license issue when running inside docker container that on every restart the license got invalid and needed to be reactivated)
+- Updated FOP2 to 2.31.32 (this release fixes a long-standing FOP2 license issue when running inside a Docker container, where the license became invalid and needed to be reactivated on every restart.)
 - FOP2: added new option `--rp=http` on fop2_server commands to bypass fop2 license problems when running inside a container
 - FOP2: better license handling
 

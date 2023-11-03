@@ -19,13 +19,13 @@ ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.2.0
+ARG ASTERISK_VER=20.5.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.34
+ARG FOP2_VER=2.31.35
 
 ## http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=3.0.0-6ec23e5a7e
@@ -49,13 +49,13 @@ ARG ASTERISK_CHAN_DONGLE_VER=master
 ARG IZSYNTH_VER=5.0
 
 ## https://www.zabbix.com/download_agents
-ENV ZABBIX_VER=6.2
+ENV ZABBIX_VER=6.4
 
 ## https://github.com/ugoviti/zabbix-templates
 ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.6.0
+ARG SNGREP_VER=1.7.0
 ARG SNGREP_XTRA_BUILDCONFIG=""
 
 ### define variables for later container usage
@@ -194,7 +194,6 @@ RUN set -xe && \
     zabbix-agent2 \
     zabbix-sender \
     ffmpeg \
-    lame \
     libuv \
     patch \
     iproute \
@@ -203,7 +202,10 @@ RUN set -xe && \
     libpcap \
     gmime \
     msmtp \
+    mtr \
+    vim-enhanced \
   ' && \
+  #  lame \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
   if [[ ${RHEL_VER} -le 8 ]]; then \
   # <= el8 (deprecated in el9)
@@ -227,7 +229,7 @@ RUN set -xe && \
   ## repo for phpMyAdmin
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-${RHEL_VER}.rpm && \
   ## repo for zabbix agent
-  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rhel/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_VER}-3.el${RHEL_VER}.noarch.rpm && \
+  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rhel/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_VER}-1.el${RHEL_VER}.noarch.rpm && \
   ## repo for ffmpeg command
   rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${RHEL_VER}.noarch.rpm && \
   rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${RHEL_VER}.noarch.rpm && \
@@ -237,16 +239,18 @@ RUN set -xe && \
   export DNF_OPTS+=" --enablerepo=remi" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
   if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
+  #if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
   \
   # install other repositories
-  if [[ ${RHEL_VER} -le 8 ]]; then \ 
+  if [[ ${RHEL_VER} -le 8 ]]; then \
     # <= el8
     ## repo for lame command
-    rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-5.el"${RHEL_VER}".noarch.rpm && \
+    #rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-9.el"${RHEL_VER}".noarch.rpm && \
+    rpm -Uhv http://repos.dslab.tuwien.ac.at/public/el${RHEL_VER}/x86_64/okay/lame-3.100-6.el${RHEL_VER}.x86_64.rpm http://repos.dslab.tuwien.ac.at/public/el${RHEL_VER}/x86_64/okay/lame-libs-3.100-6.el${RHEL_VER}.x86_64.rpm \
     ## fix wrong option
-    sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo \
+    #sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo \
   ;fi && \
   \
   ## enable specific module php needed for FreePBX
@@ -298,7 +302,8 @@ RUN set -xe && \
   \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" && export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
+  #if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
   if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
   \
   : "---------- START installing build packages ----------" && \
@@ -698,7 +703,7 @@ RUN set -xe && \
   \
   # make the modules cache
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
-  # predownload the following modules for faster install
+  # predownload the following modules for faster install (need to skip 'framework' module)
   for MODULE in \
       core \
       featurecodeadmin \
@@ -742,13 +747,11 @@ RUN set -xe && \
       userman \
       ucp \
       bulkhandler \
+      music \
+      infoservices \
       weakpasswords \
       pm2 \
       ; do \
-      ## skip download
-      #framework \
-      ## deprecated:
-      #speeddial \
   # download loop
   MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
