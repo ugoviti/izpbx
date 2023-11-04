@@ -1449,27 +1449,25 @@ cfgService_fop2 () {
           ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
       fi
     elif [ "${FOP2_AUTOACTIVATION}" = "true" ]; then
-      #FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS)"
-      FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS)"
-      if [ ! -z "$(echo $FOP2_LICENSE_STATUS | grep "Demo")" ]; then
+      FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS | grep ^"Not Found")"
+      if [ ! -z "$FOP2_LICENSE_STATUS" ]; then
         echo "--> WARNING: Reactivating FOP2 license because:"
         echo $FOP2_LICENSE_STATUS
         set -x
         ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate $FOP2_LICENSE_OPTS
-        local RETVAL=$?
         set +x
-        if [ $RETVAL != 0 ]; then
+        FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS | grep ^"Not Found")"
+        if [ ! -z "$FOP2_LICENSE_STATUS" ]; then
           echo "echo --> ERROR: Failed to reactivating the license... trying to revoke and register it again:"
           set -x
           ${appDataDirs[FOP2APPDIR]}/fop2_server --revoke   --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
           ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
           set +x
         fi
-        unset RETVAL
       fi
-      echo "--> INFO: FOP2 license code info:"
+      echo "--> INFO: FOP2 info:"
       ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
-      echo "--> INFO: FOP2 license code status:"
+      echo "--> INFO: FOP2 test:"
       ${appDataDirs[FOP2APPDIR]}/fop2_server --test $FOP2_LICENSE_OPTS
     fi
   fi
