@@ -1736,4 +1736,32 @@ runHooks() {
   [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
 }
 
+
+
+runCustomHooks() {
+
+  HOOK=${1:-""}
+  HOOKDIR=${APP_CUSTOM_SCRIPTS}/${HOOK}
+  
+  [ -z "${APP_CUSTOM_SCRIPTS}" ] && { echo "Custom Script Hooks : OFF ... SKIP script search" ; return ; }
+
+  echo "=> Looking for custom scripts ('${HOOK}' hook stage)"
+  echo "      in " '${APP_CUSTOM_SCRIPTS}/${HOOK}=' "'${HOOKDIR}'"
+  
+  if [ -d "${HOOKDIR}" ] ; then
+    for inc in ${HOOKDIR}/*.custom-inc ; do
+      if [ -r ${inc} ] ; then
+        echo "--> Found and source '${inc}' ..."
+        source ${inc}
+      fi
+    done 
+  fi
+
+}
+
+runCustomHooks pre-init
+
 runHooks
+
+runCustomHooks post-init
+
