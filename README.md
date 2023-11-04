@@ -527,7 +527,7 @@ For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_
   ```
   FOP2_VER=2.31.37
   curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
-  cd /usr/src
+  cd /usr/src/fop2
   make install
   supervisorctl restart fop2
   ```
