@@ -3,6 +3,48 @@
 # version: 20210313
 #set -ex
 
+## helper functions
+
+function readfsecret() {
+
+    # parameters:
+    #
+    #  $1 : name of variable that stores path to password file 
+    #  $2 : name of variable that stores retrieved password 
+    #
+         
+    if [ $# -lt 2 ] ; then
+        echo "syntax error: not enough parameters" >&2
+        return 1
+     elif [ ! ${!1} ] ; then
+        echo "info/warning: param#1 / value referenced by '$1' (expected: file path to secret file) is empty. abort." >&2
+        return 128
+     elif [ ${!2} ] ; then
+        # password string  in target var if present has presedence
+         echo "info/warning: param#2 / target var '$2' is not empty. we refuse to overwrite present value of '$2'. abort." >&2
+        return 129
+     elif [ -r "${!1}" ] ; then
+        # check if password file is accessible 
+        # if yes, read file content and store it in $2 var 
+         local rvalue="$(<${!1})"
+         local -n rvref=$2
+         rvref=$rvalue
+     else
+         echo "error: can not access/read passwort file '${!1}'. abort." >&2
+         return 1
+    fi
+
+    if [ ! ${!2} ] ; then
+        # issue a warning if content of secret file is empty  
+        echo "warning: param#2 / passwort var '${2}' has been set to empty string." >&2
+    fi
+
+    #TODO
+    # export retrieved password to environment if necessary
+ 
+ }
+
+
 ## app specific variables
 : ${APP_DESCRIPTION:="izPBX Cloud Telephony System"}
 : ${APP_CHART:=""}
@@ -150,8 +192,10 @@ fi
 : ${MYSQL_DATABASE_CDR:="asteriskcdrdb"}
 : ${MYSQL_USER:="asterisk"}
 : ${MYSQL_PASSWORD:=""}
+readfsecret MYSQL_PASSWORD_FILE MYSQL_PASSWORD
 : ${MYSQL_ROOT_USER:="root"}
 : ${MYSQL_ROOT_PASSWORD:=""}
+readfsecret MYSQL_ROOT_PASSWORD_FILE MYSQL_ROOT_PASSWORD
 : ${APP_PORT_MYSQL:="3306"}
 
 # fop2 (automaticcally obtained quering freepbx settings)
