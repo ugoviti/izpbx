@@ -78,15 +78,17 @@ steps:
     - /drone/docker
       
 - name: notify
-  image: plugins/matrix
+  image: spotlightkid/drone-matrixchat-notify
   settings:
     homeserver: https://quantico.in
-    roomid: UCuIdxzWsiiboEXriU:quantico.in
-    username:
-      from_secret: MATRIX_USERNAME
+    roomid: "!UCuIdxzWsiiboEXriU:quantico.in"
+    userid: "@gitbot:quantico.in"
     password:
       from_secret: MATRIX_PASSWORD
-      
+    markdown: 'yes'
+    template: |
+      [`${DRONE_REPO}`](${DRONE_BUILD_LINK}) build:[`#${DRONE_BUILD_NUMBER}`] tag:[`${DRONE_TAG}`] status:[**${DRONE_BUILD_STATUS}**]
+
 ---
 kind: pipeline
 name: izpbx-dev-20.16
