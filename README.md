@@ -564,7 +564,7 @@ For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_
 - Add ARM version compatible with Raspberry PI 
 - Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possibile using FreePBX FAX Module)
-- macOS host support? (edit docker-compose.yml and comment localtime volume?)
+- macOS host support? (edit `docker-compose.yml` and comment localtime volume?)
 - Windows host support (need to use docker volume instead local directory path?)
 
 # BUGS and Limits of this project

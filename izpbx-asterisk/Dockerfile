@@ -14,23 +14,23 @@ MAINTAINER Ugo Viti <ugo.viti@initzero.it>
 ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
 ARG RHEL_VER=8
-# PHP versions: FreePBX15 <= 7.2 - FreePBX16 >= 7.4
+# PHP versions: FreePBX15 <= 7.2, FreePBX16 >= 7.4
 ARG PHP_VER=7.4
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.5.0
+ARG ASTERISK_VER=20.5.2
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.35
+ARG FOP2_VER=2.31.38
 
 ## http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=3.0.0-6ec23e5a7e
 
-## https://github.com/holme-r/iksemel
+## https://github.com/holme-r/iksemel/releases
 ARG IKSEMEL_VER=1.5.1.3
 
 ## https://sourceforge.net/projects/xmlstar/files/xmlstarlet/
@@ -55,7 +55,7 @@ ENV ZABBIX_VER=6.4
 ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.7.0
+ARG SNGREP_VER=1.8.0
 ARG SNGREP_XTRA_BUILDCONFIG=""
 
 ### define variables for later container usage
