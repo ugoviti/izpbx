@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.12] - 2024-01-13
+### Changed
+- Added custom script hooks to the main entrypoint (thaks to @hobbit378)
+  - define an external `APP_CUSTOM_SCRIPTS` variable as base path where to put your custom scripts
+- Added function to read MYSQL passwords from secret files generated with 'docker secret' or 'podman secret' (thaks to @hobbit378)
+  WARNING: need further testing
+  NOTE. external secrets are supported only in swarm mode, you must tweak docker-compose.override.yml to make secrets working in your setup
+  create the docker secret using the following commands:
+  - echo YourSuperSecretPASSWORD | docker secret create MYSQL_PASSWORD_FILE -
+  - echo YourSuperSecretPASSWORD | docker secret create MYSQL_ROOT_PASSWORD_FILE -
+- Updated `default.env` with: (NOTE: don't forget to accordingly update your `.env` file)
+  - added: `#APP_CUSTOM_SCRIPTS=/data/scripts`
+  - added: `#IZPBX_MYSQL_PASSWORD_FILE=/run/secrets/IZPBX_MYSQL_PASSWORD`
+  - added: `#IZPBX_MYSQL_ROOT_PASSWORD_FILE=/run/secrets/IZPBX_MYSQL_ROOT_PASSWORD`
+
 ## [20.16.11] - 2024-01-05
 ### Changed
 - Updated PBX engine to Asterisk `20.5.2` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.5.2.md)

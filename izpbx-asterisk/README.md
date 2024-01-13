@@ -34,3 +34,6 @@ Asterisk 18 + FreePBX 16:
 
 Asterisk 18 + FreePBX 15:  
 `docker compose down ; docker compose -f docker-compose.yml -f docker-compose-dev-18.15.yml up`
+
+### entering into container:
+`docker exec -it izpbx bash`

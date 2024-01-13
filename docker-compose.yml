@@ -1,3 +1,5 @@
+# NOTE: don't edit this file, instead specify your changes creating docker-compose.override.yml
+
 version: '3'
 
 networks:
@@ -11,6 +13,12 @@ networks:
     #ipam:
       #config:
       #- subnet: 10.1.1.0/24
+
+# secrets:
+#   IZPBX_MYSQL_ROOT_PASSWORD:
+#     environment: MYSQL_ROOT_PASSWORD
+#   IZPBX_MYSQL_PASSWORD:
+#     environment: MYSQL_PASSWORD
 
 services:
   # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
@@ -32,8 +40,14 @@ services:
     - MYSQL_USER
     - MYSQL_PASSWORD
     - MYSQL_ROOT_PASSWORD
+    ## NOTE: using secrets files need further testing
+    #- MYSQL_PASSWORD_FILE=/run/secrets/IZPBX_MYSQL_PASSWORD
+    #- MYSQL_ROOT_PASSWORD_FILE=/run/secrets/IZPBX_MYSQL_ROOT_PASSWORD
     #- MARIADB_RANDOM_ROOT_PASSWORD=${MYSQL_RANDOM_ROOT_PASSWORD}
     #- MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=${MYSQL_ALLOW_EMPTY_ROOT_PASSWORD}
+    #secrets:
+    #- IZPBX_MYSQL_PASSWORD
+    #- IZPBX_MYSQL_ROOT_PASSWORD
     volumes:
     #- /etc/localtime:/etc/localtime:ro
     - ./data/db:/var/lib/mysql
@@ -57,6 +71,9 @@ services:
     - db
     env_file:
     - .env
+    #secrets:
+    #- IZPBX_MYSQL_PASSWORD
+    #- IZPBX_MYSQL_ROOT_PASSWORD
     volumes:
     #- /etc/localtime:/etc/localtime:ro
     - ./data/izpbx:/data

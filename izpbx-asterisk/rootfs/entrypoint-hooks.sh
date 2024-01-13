@@ -1,49 +1,7 @@
 #!/bin/bash
 # written by Ugo Viti <ugo.viti@initzero.it>
-# version: 20210313
+# version: 20240113
 #set -ex
-
-## helper functions
-
-function readfsecret() {
-
-    # parameters:
-    #
-    #  $1 : name of variable that stores path to password file 
-    #  $2 : name of variable that stores retrieved password 
-    #
-         
-    if [ $# -lt 2 ] ; then
-        echo "syntax error: not enough parameters" >&2
-        return 1
-     elif [ ! ${!1} ] ; then
-        echo "info/warning: param#1 / value referenced by '$1' (expected: file path to secret file) is empty. abort." >&2
-        return 128
-     elif [ ${!2} ] ; then
-        # password string  in target var if present has presedence
-         echo "info/warning: param#2 / target var '$2' is not empty. we refuse to overwrite present value of '$2'. abort." >&2
-        return 129
-     elif [ -r "${!1}" ] ; then
-        # check if password file is accessible 
-        # if yes, read file content and store it in $2 var 
-         local rvalue="$(<${!1})"
-         local -n rvref=$2
-         rvref=$rvalue
-     else
-         echo "error: can not access/read passwort file '${!1}'. abort." >&2
-         return 1
-    fi
-
-    if [ ! ${!2} ] ; then
-        # issue a warning if content of secret file is empty  
-        echo "warning: param#2 / passwort var '${2}' has been set to empty string." >&2
-    fi
-
-    #TODO
-    # export retrieved password to environment if necessary
- 
- }
-
 
 ## app specific variables
 : ${APP_DESCRIPTION:="izPBX Cloud Telephony System"}
@@ -82,7 +40,6 @@ declare -A appDataDirsDefault=(
 [ -e "/etc/timezone" ] && rm -f /etc/timezone
 ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
 echo "$TZ" > /etc/timezone
-
 
 # default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
@@ -162,7 +119,6 @@ declare -A fpbxSipSettings=(
   [bindport]=${APP_PORT_SIP}
 )
 
-
 # 20200318 still can't be changed
 #declare -A freepbxIaxSettings=(
 #  [bindport]=${APP_PORT_IAX}
@@ -186,16 +142,14 @@ if [ -z "$PHONEBOOK_ADDRESS" ]; then
   fi
 fi
 
-# mysql configuration
+# mysql configuration (see bellow for other variables after help functions section)
 : ${MYSQL_SERVER:="db"}
 : ${MYSQL_DATABASE:="asterisk"}
 : ${MYSQL_DATABASE_CDR:="asteriskcdrdb"}
 : ${MYSQL_USER:="asterisk"}
 : ${MYSQL_PASSWORD:=""}
-readfsecret MYSQL_PASSWORD_FILE MYSQL_PASSWORD
 : ${MYSQL_ROOT_USER:="root"}
 : ${MYSQL_ROOT_PASSWORD:=""}
-readfsecret MYSQL_ROOT_PASSWORD_FILE MYSQL_ROOT_PASSWORD
 : ${APP_PORT_MYSQL:="3306"}
 
 # fop2 (automaticcally obtained quering freepbx settings)
@@ -307,15 +261,56 @@ else
 fi
 
 
-## misc functions
-check_version() { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); }
-print_path() { echo ${@%/*}; }
-print_fullname() { echo ${@##*/}; }
-print_name() { print_fullname $(echo ${@%.*}); }
-print_ext() { echo ${@##*.}; }
-dirEmpty() { [ -z "$(ls -A "$1"/)" ]; } # return true if specified directory is empty, false if contains files
+## helper functions
+function check_version() { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); }
+function print_path() { echo ${@%/*}; }
+function print_fullname() { echo ${@##*/}; }
+function print_name() { print_fullname $(echo ${@%.*}); }
+function print_ext() { echo ${@##*.}; }
+function dirEmpty() { [ -z "$(ls -A "$1"/)" ]; } # return true if specified directory is empty, false if contains files
+function readfsecret() {
+  # parameters:
+  #
+  #  $1 : name of variable that stores path to password file
+  #  $2 : name of variable that stores retrieved password
+  #
 
-initizializeDir() {
+  if [ $# -lt 2 ] ; then
+    echo "syntax error: not enough parameters" >&2
+    return 1
+  elif [ ! ${!1} ] ; then
+    echo "info/warning: param#1 / value referenced by '$1' (expected: file path to secret file) is empty. abort." >&2
+    return 128
+  elif [ ${!2} ] ; then
+    # password string  in target var if present has presedence
+    echo "info/warning: param#2 / target var '$2' is not empty. we refuse to overwrite present value of '$2'. abort." >&2
+    return 129
+  elif [ -r "${!1}" ] ; then
+    # check if password file is accessible
+    # if yes, read file content and store it in $2 var
+    local rvalue="$(<${!1})"
+    local -n rvref=$2
+    rvref=$rvalue
+  else
+    echo "error: can not access/read passwort file '${!1}'. abort." >&2
+    return 1
+  fi
+
+  if [ ! ${!2} ] ; then
+    # issue a warning if content of secret file is empty
+    echo "warning: param#2 / passwort var '${2}' has been set to empty string." >&2
+  fi
+
+  # TODO: export retrieved password to environment if necessary
+}
+
+# mysql secrets from docker secrets
+[ ! -z "$IZPBX_MYSQL_PASSWORD_FILE" ]      && readfsecret IZPBX_MYSQL_PASSWORD_FILE      MYSQL_PASSWORD
+[ ! -z "$IZPBX_MYSQL_ROOT_PASSWORD_FILE" ] && readfsecret IZPBX_MYSQL_ROOT_PASSWORD_FILE MYSQL_ROOT_PASSWORD
+
+
+## main functions
+function initizializeDir() {
   local dirDefault="$1"
   shift
   local dirCustom="$1"
@@ -357,7 +352,7 @@ initizializeDir() {
 }
 
 # if required move default confgurations to custom directory
-symlinkDir() {
+function symlinkDir() {
   local dirDefault="$1"
   shift
   local dirCustom="$1"
@@ -401,7 +396,7 @@ symlinkDir() {
   fi
 }
 
-symlinkFile() {
+function symlinkFile() {
   local fileDefault="$1"
   shift
   local fileCustom="$1"
@@ -438,7 +433,7 @@ symlinkFile() {
   ln -s "$fileCustom" "$fileDefault"
 }
 
-fixOwner() {
+function fixOwner() {
   usr=$1
   shift
   grp=$1
@@ -454,7 +449,7 @@ fixOwner() {
   fi
 }
 
-fixPermission() {
+function fixPermission() {
   usr=$1
   shift
   grp=$1
@@ -471,7 +466,7 @@ fixPermission() {
 }
 
 # enable/disable and configure services
-chkService() {
+function chkService() {
   local SERVICE_VAR="$1"
   eval local SERVICE_ENABLED="\$$(echo $SERVICE_VAR)"
   eval local SERVICE_DAEMON="\$$(echo $SERVICE_VAR | sed 's/_.*//')_DAEMON"
@@ -490,7 +485,7 @@ chkService() {
 }
 
 ## postfix service
-cfgService_postfix() {
+function cfgService_postfix() {
 # fix inet_protocols ipv6 problem
 postconf -e inet_protocols=ipv4
 
@@ -604,7 +599,7 @@ fi
 }
 
 ## cron service
-cfgService_cron() {
+function cfgService_cron() {
   if   [ "$OS_RELEASE" = "debian" ]; then
     cronDir="/var/spool/cron/ing supervisord config fbs"
   else
@@ -632,7 +627,7 @@ cfgService_cron() {
 #  set FAIL2BAN_RECIDIVE_ENABLED=false
 #  set FAIL2BAN_RECIDIVE_BANTIME=1814400
 #  set | grep ^"FAIL2BAN_" | sed -e 's/^FAIL2BAN_//' | sed -e 's/_/ /' | iniParser /etc/fail2ban/jail.d/99-local.conf
-iniParser() {
+function iniParser() {
   ini="$@"
   while read setting ; do
     section="$(echo $setting | cut -d" " -f1)"
@@ -643,7 +638,7 @@ iniParser() {
 }
 
 ## fail2ban service
-cfgService_fail2ban() {
+function cfgService_fail2ban() {
   echo "--> reconfiguring Fail2ban settings..."
   # ini config file parse function
   # fix default log path
@@ -653,10 +648,10 @@ cfgService_fail2ban() {
 }
 
 ## apache service
-cfgService_httpd() {
+function cfgService_httpd() {
 
   # local functions
-  print_ApacheAllowFrom() {
+  function print_ApacheAllowFrom() {
     if [ ! -z "${HTTPD_ALLOW_FROM}" ]; then 
         for IP in $(echo ${HTTPD_ALLOW_FROM} | sed -e "s/'//g") ; do
           echo "    Require ip ${IP}"
@@ -825,24 +820,24 @@ $(print_ApacheAllowFrom)
 fi
 }
 
-cfgService_asterisk() {
+function cfgService_asterisk() {
   echo "=> Starting Asterisk"
 }
 
 ## freepbx+asterisk service
-cfgService_izpbx() {
+function cfgService_izpbx() {
 
-  freepbxReload() {
+  function freepbxReload() {
     echo "---> reloading FreePBX..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole reload"
   }
   
-  freepbxChown() {
+  function freepbxChown() {
     echo "---> setting FreePBX Permission..."
     fwconsole chown
   }
   
-  freepbxSettingsFix() {
+  function freepbxSettingsFix() {
     # reload freepbx config 
     echo "---> FIXME: applying workarounds for FreePBX broken modules and configs..."
 
@@ -1047,7 +1042,7 @@ Charset=utf8" > /etc/odbc.ini
   cfgService_freepbx_upgrade_check
 }
 
-cfgService_freepbx_upgrade_check() {
+function cfgService_freepbx_upgrade_check() {
   #set -x
   if [ -e "${APP_DATA}/.initialized" ]; then
     if [ $FREEPBX_VER_INSTALLED -lt $FREEPBX_VER ];then
@@ -1078,7 +1073,7 @@ cfgService_freepbx_upgrade_check() {
   fi
 }
 
-cfgService_freepbx_upgrade() {
+function cfgService_freepbx_upgrade() {
   echo "=========================================================================================="
   echo "==> START UPGRADING FreePBX from '${FREEPBX_VER_INSTALLED}' to '${FREEPBX_VER}'"
   # FIXME: @20211128 workaround
@@ -1116,12 +1111,12 @@ cfgService_freepbx_upgrade() {
 }
 
 # install FreePBX if not installed
-cfgService_freepbx_install() {
-  mysqlQuery() {
+function cfgService_freepbx_install() {
+  function mysqlQuery() {
     mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u ${MYSQL_ROOT_USER} --password=${MYSQL_ROOT_PASSWORD} -N -B -e "$@"
   }
   
-  checkMysql() {
+  function checkMysql() {
     mysqlQuery "SELECT 1;" >/dev/null
   }
   
@@ -1342,13 +1337,13 @@ cfgService_freepbx_install() {
 }
 
 ## dnsmasq service
-cfgService_dnsmasq() {
+function cfgService_dnsmasq() {
   [ "$DHCP_ENABLED" = "true" ] && cfgService_dhcp
   [ "$TFTP_ENABLED" = "true" ] && cfgService_tftp
 }
 
 ## chronyd service (ntp server)
-cfgService_ntp() {
+function cfgService_ntp() {
   # disable default ntp pools addresses if NTP_SERVERS var is set
   echo "# chronyd ntp server configuration
 driftfile /var/lib/chrony/drift
@@ -1366,7 +1361,7 @@ $(for subnet in $NTP_ALLOW_FROM ; do echo "allow $subnet"; done)
 }
 
 ## dhcp service
-cfgService_dhcp() {
+function cfgService_dhcp() {
   echo "--> configuring DHCP service"
   if [[ ! -z "$DHCP_POOL_START" || ! -z "$DHCP_POOL_END" || ! -z "$DHCP_POOL_LEASE" ]]; then
     sed "s|^#dhcp-range=.*|dhcp-range=$DHCP_POOL_START,$DHCP_POOL_END,$DHCP_POOL_LEASE|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
@@ -1390,7 +1385,7 @@ cfgService_dhcp() {
 }
 
 ## tftp service
-cfgService_tftp() {
+function cfgService_tftp() {
   echo "--> configuring TFTP service"
   sed "s|^#dhcp-option=66|dhcp-option=66|"                  -i "${appDataDirs[DNSMASQDIR]}/local.conf"
   sed "s|^#enable-tftp|enable-tftp|"                        -i "${appDataDirs[DNSMASQDIR]}/local.conf"
@@ -1398,7 +1393,7 @@ cfgService_tftp() {
 }
 
 ## zabbix service
-cfgService_zabbix() {
+function cfgService_zabbix() {
   # comment zabbix global config
   if [ -w "$ZABBIX_CONF" ]; then
     sed 's/^LogFile=/#LogFile=/g' -i $ZABBIX_CONF
@@ -1429,7 +1424,7 @@ fi)
 " > "$ZABBIX_CONF_LOCAL"
 }
 
-cfgService_fop2 () {
+function cfgService_fop2 () {
   [ ! -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ] && cfgService_fop2_install
 
   if [ -e "${appDataDirs[FOP2APPDIR]}/fop2.cfg" ]; then
@@ -1517,7 +1512,7 @@ cfgService_fop2 () {
   fi
 }
 
-cfgService_pma() {
+function cfgService_pma() {
     echo "=> Enabling and Configuring phpMyAdmin"
     # remove unused http alias
     sed "/^Alias \/phpMyAdmin \/usr\/share\/phpMyAdmin/d" -i "${PMA_CONF_APACHE}"
@@ -1535,7 +1530,7 @@ EOF
     sed "s|'localhost';|'${MYSQL_SERVER}';|" -i "${PMA_CONFIG}"
 }
 
-cfgService_phonebook() {
+function cfgService_phonebook() {
     echo "=> Enabling Remote XML PhoneBook support"
     
     echo "Alias /pb /usr/local/share/phonebook
@@ -1549,7 +1544,7 @@ $(print_ApacheAllowFrom)
 " > "${HTTPD_CONF_DIR}/conf.d/phonebook.conf"
 }
 
-cfgService_letsencrypt() {
+function cfgService_letsencrypt() {
   echo "=> Generating Let's Encrypt certificates for '$APP_FQDN'"
   if   [ -z "$APP_FQDN" ]; then
     echo "--> WARNING: skipping let's encrypt certificates request because APP_FQDN is not defined"
@@ -1591,7 +1586,7 @@ cfgService_letsencrypt() {
   fi
 }
 
-cfgService_fop2_install() {
+function cfgService_fop2_install() {
   echo
   echo "=> !!! FOP2 IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2..."
   echo
@@ -1608,7 +1603,7 @@ cfgService_fop2_install() {
   fwconsole stop
 }
 
-cfgService_fop2_upgrade() {
+function cfgService_fop2_upgrade() {
   #:${FOP2_VER:=$1}
   #[ -z "${FOP2_VER}" ] && echo "--> ERROR: No FOP2 upgrade version defined... define FOP2_VER var or give it as argument... exiting" && return
   
@@ -1619,7 +1614,7 @@ cfgService_fop2_upgrade() {
   cd /usr/src/fop2 && make install
 }
 
-cfgBashEnv() {
+function cfgBashEnv() {
   echo '. /etc/os-release
   APP="izPBX"
   DOMAIN="$(hostname | cut -d'.' -f2)"
@@ -1649,7 +1644,7 @@ cfgBashEnv() {
   echo'
 }
 
-cfgService_msmtp() {
+function cfgService_msmtp() {
     echo "=> Setting up MSMTP as (default) sendmail replacement"
 
     # set alternative for mta to 'msmtp' thereby updating symlinks in rootfs
@@ -1679,7 +1674,7 @@ echo "--> forwarding all emails to: ${SMTP_RELAYHOST}"
 [ -n "${SMTP_RELAYHOST_USERNAME}" ] && echo "---> using username: ${SMTP_RELAYHOST_USERNAME}"
 }
 
-runHooks() {
+function runHooks() {
   # configure supervisord
   echo "--> fixing supervisord config file..."
   if   [ "$OS_RELEASE" = "debian" ]; then
@@ -1778,10 +1773,7 @@ runHooks() {
   [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
 }
 
-
-
-runCustomHooks() {
-
+function runHooksCustom() {
   HOOK=${1:-""}
   HOOKDIR=${APP_CUSTOM_SCRIPTS}/${HOOK}
   
@@ -1791,19 +1783,17 @@ runCustomHooks() {
   echo "      in " '${APP_CUSTOM_SCRIPTS}/${HOOK}=' "'${HOOKDIR}'"
   
   if [ -d "${HOOKDIR}" ] ; then
-    for inc in ${HOOKDIR}/*.custom-inc ; do
+     for inc in ${HOOKDIR}/*.custom-inc ; do
       if [ -r ${inc} ] ; then
         echo "--> Found and source '${inc}' ..."
         source ${inc}
       fi
-    done 
+     done
+    else
+      echo "--> WARNING: Custom scripts dir '${HOOKDIR}' doesn't exist..."
   fi
-
 }
 
-runCustomHooks pre-init
-
+runHooksCustom pre-init
 runHooks
-
-runCustomHooks post-init
-
+runHooksCustom post-init
