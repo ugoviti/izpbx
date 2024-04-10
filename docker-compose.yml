@@ -24,7 +24,7 @@ services:
   # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
   db:
     # current LTS (Long Term Support) release
-    image: docker.io/mariadb:10.11.6
+    image: docker.io/mariadb:10.11.7
     # previous LTS (Long Term Support) release
     #image: docker.io/mariadb:10.6.14
     container_name: izpbx-db
@@ -62,7 +62,7 @@ services:
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:20.16.11
+    image: docker.io/izdock/izpbx-asterisk:20.16.13
     container_name: izpbx
     #entrypoint: /bin/bash -c "/bin/bash -c \"sleep 3600\""
     #hostname: ${APP_FQDN}
