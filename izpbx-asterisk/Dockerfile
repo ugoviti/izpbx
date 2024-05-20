@@ -16,6 +16,7 @@ ENV APP_VER=${APP_VER}
 ARG RHEL_VER=8
 # PHP versions: FreePBX15 <= 7.2, FreePBX16 >= 7.4
 ARG PHP_VER=7.4
+ARG ARCH=x86-64 # supported: x86-64 and aarch64
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
@@ -49,7 +50,7 @@ ARG ASTERISK_CHAN_DONGLE_VER=master
 ARG IZSYNTH_VER=5.0
 
 ## https://www.zabbix.com/download_agents
-ENV ZABBIX_VER=6.4
+ENV ZABBIX_VER=6.5
 
 ## https://github.com/ugoviti/zabbix-templates
 ARG ZABBIX_TEMPLATE_VER=main
@@ -229,7 +230,7 @@ RUN set -xe && \
   ## repo for phpMyAdmin
   rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-${RHEL_VER}.rpm && \
   ## repo for zabbix agent
-  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rhel/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_VER}-1.el${RHEL_VER}.noarch.rpm && \
+  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rocky/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_VER}-3.el${RHEL_VER}.noarch.rpm && \
   ## repo for ffmpeg command
   rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${RHEL_VER}.noarch.rpm && \
   rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${RHEL_VER}.noarch.rpm && \
@@ -244,13 +245,17 @@ RUN set -xe && \
   #if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
   \
   # install other repositories
-  if [[ ${RHEL_VER} -le 8 ]]; then \
+  if [[ ${RHEL_VER} -le 8 && "$ARCH" = "x86-64" ]]; then \
     # <= el8
     ## repo for lame command
-    #rpm -Uhv http://repo.okay.com.mx/centos/"${RHEL_VER}"/x86_64/release/okay-release-1-9.el"${RHEL_VER}".noarch.rpm && \
     rpm -Uhv http://repos.dslab.tuwien.ac.at/public/el${RHEL_VER}/x86_64/okay/lame-3.100-6.el${RHEL_VER}.x86_64.rpm http://repos.dslab.tuwien.ac.at/public/el${RHEL_VER}/x86_64/okay/lame-libs-3.100-6.el${RHEL_VER}.x86_64.rpm \
     ## fix wrong option
     #sed '/^failovermethod/d' -i /etc/yum.repos.d/okay.repo \
+  ;fi && \
+  if [[ ${RHEL_VER} -le 8 && "$ARCH" = "aarch64" ]]; then \
+    # <= el8
+    ## repo for lame command
+    rpm -Uhv https://dl.rockylinux.org/pub/rocky/${RHEL_VER}/Devel/aarch64/os/Packages/l/lame-3.100-6.el${RHEL_VER}.aarch64.rpm https://dl.rockylinux.org/pub/rocky/${RHEL_VER}/Devel/aarch64/os/Packages/l/lame-libs-3.100-6.el${RHEL_VER}.aarch64.rpm \
   ;fi && \
   \
   ## enable specific module php needed for FreePBX
@@ -631,7 +636,11 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 https://github.com/arkadijs/asterisk-g72x/archive/refs/heads/${ASTERISK_G72X_VER}.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
   cd asterisk-g72x && \
   ./autogen.sh && \
-  ./configure --prefix=/usr --with-bcg729 --enable-penryn && \
+  if [[ "$ARCH" = "x86-64" ]]; then \
+    ./configure --prefix=/usr --with-bcg729 --enable-penryn; \
+  else \
+    ./configure --prefix=/usr --with-bcg729 \
+  ;fi && \
   make && \
   make install && \
   ldconfig \
@@ -776,7 +785,7 @@ RUN set -xe && \
   : "---------- END install ----------" && \
   \
   : "---------- START install PHP ionCube Loader ----------" && \
-  curl -fSL --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_"${PHP_VER}".so && \
+  curl -fSL --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_${ARCH}.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_"${PHP_VER}".so && \
   echo "zend_extension=ioncube_loader_lin_${PHP_VER}.so" >> /etc/php.ini && \
   : "---------- END install ----------"
 
