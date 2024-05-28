@@ -27,13 +27,13 @@ Start izPBX:
 ### docker compose:
 
 Asterisk 20 + FreePBX 16:  
-`docker compose down ; docker compose -f docker-compose.yml -f docker-compose-dev-20.16.yml up`
+`docker compose down ; docker compose -f compose.yml -f compose-dev-20.16.yml up`
 
 Asterisk 18 + FreePBX 16:  
-`docker compose down ; docker compose -f docker-compose.yml -f docker-compose-dev-18.16.yml up`
+`docker compose down ; docker compose -f compose.yml -f compose-dev-18.16.yml up`
 
 Asterisk 18 + FreePBX 15:  
-`docker compose down ; docker compose -f docker-compose.yml -f docker-compose-dev-18.15.yml up`
+`docker compose down ; docker compose -f compose.yml -f compose-dev-18.15.yml up`
 
 ### entering into container:
 `docker exec -it izpbx bash`

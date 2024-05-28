@@ -1,7 +1,5 @@
 # NOTE: don't edit this file, instead specify your changes creating docker-compose.override.yml
 
-version: '3'
-
 networks:
   izpbx:
     driver: bridge
@@ -24,7 +22,7 @@ services:
   # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
   db:
     # current LTS (Long Term Support) release
-    image: docker.io/mariadb:10.11.7
+    image: docker.io/mariadb:10.11.8
     # previous LTS (Long Term Support) release
     #image: docker.io/mariadb:10.6.14
     container_name: izpbx-db
@@ -62,7 +60,7 @@ services:
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:20.16.12
+    image: docker.io/izdock/izpbx-asterisk:20.16.13
     container_name: izpbx
     #entrypoint: /bin/bash -c "/bin/bash -c \"sleep 3600\""
     #hostname: ${APP_FQDN}

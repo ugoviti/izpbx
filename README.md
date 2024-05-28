@@ -86,11 +86,11 @@ Using **docker compose** is the suggested method:
   - RHEL8 based distro Quick&Dirty commands (skip if you use other distribution):
 ```
 sudo dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-sudo dnf install docker-ce docker-compose-plugin -y
+sudo dnf install docker-ce docker compose-plugin -y
 sudo systemctl enable --now docker
 ```
 
-- Create a `docker-compose.yml`, or clone git repository, or download latest tarbal release from: https://github.com/ugoviti/izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
+- Create a `compose.yml`, or clone git repository, or download latest tarbal release from: https://github.com/ugoviti/izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
   - `git clone https://github.com/ugoviti/izpbx.git /opt/izpbx`
   - `cd /opt/izpbx`
 
@@ -109,14 +109,14 @@ sudo systemctl enable --now docker
 - Wait the pull to finish (~60 seconds with fast internet connections) and point your web browser to the IP address of your docker host and follow initial setup guide
 
 **Note:** by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
-Modify docker-compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not production tested. There will be problems with RTP traffic).
+Modify compose.yml and comment `#network_mode: host` if you want run multiple izpbx containers in the same host (not production tested. There will be problems with RTP traffic).
 Another available option is to disable `network_mode: host` and use **macvlan** network mode used for running izPBX into multi-tenant mode.
 
-## Customizing docker-compose.yml
+## Customizing compose.yml
 
-If you need to customize the default `docker-compose.yml`, don't edit it, but create an **override** file:
+If you need to customize the default `compose.yml`, don't edit it, but create an **override** file:
 
-- `docker-compose.override.yml`
+- `docker compose.override.yml`
 
 and specify the options you want to override, for example:
 
@@ -143,7 +143,7 @@ If you want test izPBX without using docker compose command, you can use the fol
 
 # Upgrade izPBX
 
-1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **docker-compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
+1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
 ```
 cd /opt/izpbx
 git checkout main
@@ -153,7 +153,7 @@ git checkout tags/$(git tag | sort --version-sort | tail -1)
 ```
 
 2. Upgrade the **izpbx** deploy with:  
-(NB. **First** verify if `docker-compose.yml` and `default.env` was updated a make the same changes in your `.env` file)
+(NB. **First** verify if `compose.yml` and `default.env` was updated a make the same changes in your `.env` file)
 ```
 docker compose pull
 docker compose up -d
@@ -203,18 +203,18 @@ If you want upgrade FreePBX Framework/Core to a major release (example from 15 t
 - Dedicated Database for every izPBX instances
 
 #### Configuration
-Create a directory where you want deploy izpbx data and create `docker-compose.yml` and `.env` files:
+Create a directory where you want deploy izpbx data and create `compose.yml` and `.env` files:
 
 Example:
 ```
 mkdir yourgreatpbx
 cd yourgreatpbx
-vim docker-compose.yml
+vim compose.yml
 vim .env
 ```
 
 NOTE:
-- Modify `docker-compose.yml` according to your environment needs:
+- Modify `compose.yml` according to your environment needs:
   - `parent:` (must be specified your ethernet card)
   - `subnet:` (must match you intranet network range)
   - `ipv4_address:` (every izPBX frontend will must to have a different external IP)
@@ -283,20 +283,20 @@ Repeat the procedure for every izPBX you want deploy. Remember to create a dedic
 Enter in every directory containig configuration files and run:
 - `docker compose up -d`
 
-### Multi-Tenant VoIP PBX with shared global Database and single docker-compose.yml file
+### Multi-Tenant VoIP PBX with shared global Database and single compose.yml file
 
 #### Objective
 - Run many izPBX instances into single docker host (you must allocate an external static IP for every izPBX backend/frontend)
 - Single Global Shared Database used by all izPBX instances
 
 #### Configuration
-Create a directory where you want deploy all izpbx data and create `docker-compose.yml` and a `PBXNAME.env` file for every izpbx deploy:
+Create a directory where you want deploy all izpbx data and create `compose.yml` and a `PBXNAME.env` file for every izpbx deploy:
 
 Example:
 ```
 mkdir izpbx
 cd izpbx
-vim docker-compose.yml
+vim compose.yml
 vim izpbx1.env
 vim izpbx2.env
 vim izpbx3.env
@@ -304,7 +304,7 @@ vim izpbx3.env
 etc...
 
 NOTE:
-- Modify `docker-compose.yml` according to your environment needs, changing:
+- Modify `compose.yml` according to your environment needs, changing:
   - `parent:` (must be specified your ethernet card)
   - `subnet:` (must match you intranet network range)
   - `ipv4_address:` (every izPBX frontend will must to have a different external IP)
@@ -443,7 +443,7 @@ Available services:
 # Tested systems and host compatibility
 Tested Docker Runtime:
   - docker-ce >= 20.0
-  - docker-compose-plugin >= 2.0
+  - docker compose-plugin >= 2.0
 
 Tested Host Operating Systems:
   - RHEL 6/7/8/9 based distro
@@ -564,7 +564,7 @@ For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_
 - Add ARM version compatible with Raspberry PI 
 - Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possibile using FreePBX FAX Module)
-- macOS host support? (edit `docker-compose.yml` and comment localtime volume?)
+- macOS host support? (edit `compose.yml` and comment localtime volume?)
 - Windows host support (need to use docker volume instead local directory path?)
 
 # BUGS and Limits of this project
