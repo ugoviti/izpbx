@@ -1,6 +1,6 @@
 kind: pipeline
 type: docker
-name: izpbx-release-amd64
+name: izpbx-release
 
 environment:
   APP_VER: "${DRONE_TAG}"
@@ -11,9 +11,6 @@ environment:
 trigger:
   event:
   - tag
-
-platform:
-  os: linux
 
 concurrency:
   limit: 1
@@ -44,7 +41,8 @@ steps:
   - set
 
 - name: build-docker
-  image: plugins/docker
+  image: owncloudci/drone-docker-buildx
+  privileged: true
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
@@ -66,102 +64,8 @@ steps:
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
       #- ${DRONE_COMMIT_SHA:0:7}
-    platform:
+    platforms:
       - linux/amd64
-
-- name: rebuild-cache
-  image: drillster/drone-volume-cache
-  volumes:
-  - name: cache
-    path: /cache
-  settings:
-    rebuild: true
-    mount:
-    - /drone/docker
-      
-- name: notify
-  image: spotlightkid/drone-matrixchat-notify
-  settings:
-    homeserver: https://quantico.in
-    roomid: "!UCuIdxzWsiiboEXriU:quantico.in"
-    userid: "@gitbot:quantico.in"
-    password:
-      from_secret: MATRIX_PASSWORD
-    markdown: 'yes'
-    template: |
-      [`${DRONE_REPO}`](${DRONE_BUILD_LINK}) build:[`#${DRONE_BUILD_NUMBER}`] tag:[`${DRONE_TAG}`] status:[**${DRONE_BUILD_STATUS}**]
-
-
----
-kind: pipeline
-type: docker
-name: izpbx-release-arm64
-
-environment:
-  APP_VER: "${DRONE_TAG}"
-  APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
-  APP_BUILD_COMMIT: "${DRONE_COMMIT_SHA:0:7}"
-  APP_BUILD_DATE: "${DRONE_BUILD_FINISHED}"
-
-trigger:
-  event:
-  - tag
-
-platform:
-  os: linux
-
-concurrency:
-  limit: 1
-
-volumes:
-  - name: cache
-    host:
-      path: /var/cache/drone/${DRONE_REPO}/${DRONE_STAGE_NAME}
-
-workspace:
-  base: /drone
-  path: src
-
-steps:
-- name: restore-cache
-  image: drillster/drone-volume-cache
-  volumes:
-  - name: cache
-    path: /cache
-  settings:
-    restore: true
-    mount:
-    - /drone/docker
-
-- name: print-env
-  image: alpine/git
-  commands:
-  - set
-
-- name: build-docker
-  image: plugins/docker
-  settings:
-    repo: izdock/izpbx-asterisk
-    dockerfile: izpbx-asterisk/Dockerfile
-    context: izpbx-asterisk
-    build_args_from_env:
-    - APP_VER
-    - APP_VER_BUILD
-    - APP_BUILD_COMMIT
-    - APP_BUILD_DATE
-    storage_path: /drone/docker
-    username:
-      from_secret: DOCKER_USERNAME
-    password:
-      from_secret: DOCKER_PASSWORD
-    tags:
-      - latest
-      - ${DRONE_TAG}
-      - ${DRONE_TAG%.*}
-      - ${DRONE_TAG%%.*}
-      - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
-      #- ${DRONE_COMMIT_SHA:0:7}
-    platform:
       - linux/arm64
 
 - name: rebuild-cache
@@ -173,7 +77,7 @@ steps:
     rebuild: true
     mount:
     - /drone/docker
-
+      
 - name: notify
   image: spotlightkid/drone-matrixchat-notify
   settings:
@@ -210,6 +114,7 @@ trigger:
 
 platform:
   os: linux
+  arch: amd64
 
 concurrency:
   limit: 1
