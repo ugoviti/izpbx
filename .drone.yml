@@ -43,7 +43,7 @@ steps:
   - set
 
 - name: build-docker
-  image: plugins/docker
+  image: plugins/buildx
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
