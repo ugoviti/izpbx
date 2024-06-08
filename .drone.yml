@@ -65,7 +65,7 @@ steps:
       - ${DRONE_TAG%%.*}
       - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
       #- ${DRONE_COMMIT_SHA:0:7}
-    platforms:
+    platform:
       - linux/amd64
       - linux/arm64
 
@@ -174,7 +174,7 @@ steps:
       from_secret: DOCKER_USERNAME
     password:
       from_secret: DOCKER_PASSWORD
-    platforms:
+    platform:
       - linux/amd64
       - linux/arm64
 

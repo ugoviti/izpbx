@@ -7,23 +7,23 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 # Supported tags
 
 ## Production Branch:
-* `20.16`, `20.16.X`, `20.16.X-BUILD`, `20.16.X-COMMIT`,`20`, `latest` (Asterisk 20 LTS + FreePBX 16)
-* `18.16`, `18.16.X`, `18.16.X-BUILD`, `18.16.X-COMMIT`,`18` (Asterisk 18 LTS + FreePBX 16)
-* `18.15`, `18.15.X`, `18.15.X-BUILD`, `18.15.X-COMMIT` (Asterisk 18 LTS + FreePBX 15)
-* `16.15`, `16.15.X`, `16.15.X-BUILD`, `16.15.X-COMMIT` (Asterisk 16 LTS + FreePBX 15)
+* `20.16`, `20.16.X`, `20.16.X-BUILD`,`20`, `latest` (Asterisk 20 LTS + FreePBX 16)
+* `18.16`, `18.16.X`, `18.16.X-BUILD`,`18` (Asterisk 18 LTS + FreePBX 16)
+* `18.15`, `18.15.X`, `18.15.X-BUILD` (Asterisk 18 LTS + FreePBX 15)
+* `16.15`, `16.15.X`, `16.15.X-BUILD` (Asterisk 16 LTS + FreePBX 15)
 
 ## Development Branches:
-* Asterisk 20 LTS: `dev-20`, `dev-20.X`, `dev-20.X.X-BUILD`, `dev-20.X.X-COMMIT`
-* Asterisk 18 LTS: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`, `dev-18.X.X-COMMIT`
+* Asterisk 20 LTS: `dev-20`, `dev-20.X`, `dev-20.X.X-BUILD`
+* Asterisk 18 LTS: `dev-18`, `dev-18.X`, `dev-18.X.X-BUILD`
 
 ## Version notes:
-Tags format: **Z.Y.X-[BUILD|COMMIT]**
+Tags format: **Z.Y.X-[BUILD]**
 
 where:  
   * **Z** = Asterisk release (PBX engine)
   * **Y** = FreePBX release (PBX GUI)
   * **X** = izPBX release (this project)
-  * **BUILD** = Build number | **COMMIT** = GIT commit ID
+  * **BUILD** = Build number
 
 Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) page to discover the latest versions
 
