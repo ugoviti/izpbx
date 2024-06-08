@@ -96,7 +96,7 @@ steps:
 ---
 kind: pipeline
 type: docker
-name: izpbx-release-amd64
+name: izpbx-release-arm64
 
 environment:
   APP_VER: "${DRONE_TAG}"
