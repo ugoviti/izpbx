@@ -66,7 +66,7 @@ steps:
       #- ${DRONE_COMMIT_SHA:0:7}
     platforms:
       - linux/amd64
-      - linux/arm64
+#      - linux/arm64
 
 - name: rebuild-cache
   image: drillster/drone-volume-cache
