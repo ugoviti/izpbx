@@ -1,8 +1,8 @@
 # NOTE: don't edit this file, instead specify your changes creating docker-compose.override.yml
 
-networks:
-  izpbx:
-    driver: bridge
+#networks:
+#izpbx:
+#   driver: bridge
   ## if you want run other izpbx deploy in the same docker host enable the macvlan interface driver
   #izpbx-ext:
     #driver: macvlan
@@ -52,13 +52,25 @@ services:
     ## NOTE: to avoid nat management use: 'network_mode: host'
     #network_mode: host
     ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
-    networks:
-      izpbx:
+    #networks:
+    #  izpbx:
     ## WARNING: if not commented out, the database will be exposed outside the container
     ports:
     - ${APP_PORT_MYSQL}:3306
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    environment:
+      - PMA_ARBITRARY=1
+      - MYSQL_ROOT_PASSWORD
+      - MYSQL_USER
+      - MYSQL_PASSWORD
+    depends_on:
+      - db
   izpbx:
     image: docker.io/izdock/izpbx-asterisk:20.16.14
     container_name: izpbx
