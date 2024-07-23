@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.15] - 2024-07-24
+### Changed
+- Updated PBX engine to Asterisk `20.9.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.9.0.md)
+- Updated FOP2 to `2.31.43` (https://www.fop2.com/download.php)
+- Updated sngrep to `1.8.2` (https://github.com/irontec/sngrep/releases/tag/v1.8.2)
+- Fix msmtp starttls support
+
 ## [20.16.14] - 2024-06-07
 ### Changed
 - Added ARM64/AARCH64 CPU support (thank you to @Andreas)
@@ -12,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [20.16.13] - 2024-05-28
 ### Changed
-- Updated PBX engine to Asterisk `20.8.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.7.0.md)
+- Updated PBX engine to Asterisk `20.8.1` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.8.1.md)
 - Updated Database engine to MariaDB `10.11.8` LTS (https://mariadb.com/kb/en/mariadb-10-11-8-release-notes/)
 - Updated FOP2 to `2.31.41` (https://www.fop2.com/download.php)
 - Renamed all `docker-compose*.yml` files to `compose*.yml`
@@ -23,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated PBX engine to Asterisk `20.7.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.7.0.md)
 - Updated Database engine to MariaDB `10.11.7` LTS (https://mariadb.com/kb/en/mariadb-10-11-7-release-notes/)
   - after the deploy don't forget to upgrade mariadb database with: `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
-- Updated sngrep to `1.8.1` (https://github.com/irontec/sngrep/releases/tag/v1.8.0)
+- Updated sngrep to `1.8.1` (https://github.com/irontec/sngrep/releases/tag/v1.8.1)
 - Updated FOP2 to `2.31.40` (https://www.fop2.com/download.php)
 - Added custom script hooks to the main entrypoint (thaks to @hobbit378)
   - define an external `APP_CUSTOM_SCRIPTS` variable as base path where to put your custom scripts

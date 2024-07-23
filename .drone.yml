@@ -41,7 +41,8 @@ steps:
   - set
 
 - name: build-docker
-  image: owncloudci/drone-docker-buildx
+  #image: owncloudci/drone-docker-buildx
+  image: plugins/docker
   privileged: true
   settings:
     repo: izdock/izpbx-asterisk

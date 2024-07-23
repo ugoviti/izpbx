@@ -25,13 +25,13 @@ ARG TARGETOS
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.8.1
+ARG ASTERISK_VER=20.9.0
 
 ## https://github.com/FreePBX/core/tags (only major version)
 ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
-ARG FOP2_VER=2.31.41
+ARG FOP2_VER=2.31.43
 
 ## http://sources.buildroot.net/spandsp
 ARG SPANDSP_VER=3.0.0-6ec23e5a7e
@@ -62,7 +62,7 @@ ENV ZABBIX_REL=${ZABBIX_VER}-1
 ARG ZABBIX_TEMPLATE_VER=main
 
 ## https://github.com/irontec/sngrep/releases
-ARG SNGREP_VER=1.8.1
+ARG SNGREP_VER=1.8.2
 ARG SNGREP_XTRA_BUILDCONFIG=""
 
 ### define variables for later container usage
