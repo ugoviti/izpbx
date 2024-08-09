@@ -1775,20 +1775,19 @@ function runHooksCustom() {
   HOOK=${1:-""}
   HOOKDIR=${APP_CUSTOM_SCRIPTS}/${HOOK}
   
-  [ -z "${APP_CUSTOM_SCRIPTS}" ] && { echo "Custom Script Hooks : OFF ... SKIP script search" ; return ; }
+  [ -z "${APP_CUSTOM_SCRIPTS}" ] && { echo "--> Custom Script Hooks: OFF" ; return ; }
 
-  echo "=> Looking for custom scripts ('${HOOK}' hook stage)"
-  echo "      in " '${APP_CUSTOM_SCRIPTS}/${HOOK}=' "'${HOOKDIR}'"
+  echo "--> Looking for custom scripts ('${HOOK}' hook stage) in '${APP_CUSTOM_SCRIPTS}/${HOOK}='${HOOKDIR}'"
   
   if [ -d "${HOOKDIR}" ] ; then
      for inc in ${HOOKDIR}/*.custom-inc ; do
       if [ -r ${inc} ] ; then
-        echo "--> Found and source '${inc}' ..."
+        echo "---> Found and source '${inc}' ..."
         source ${inc}
       fi
      done
     else
-      echo "--> WARNING: Custom scripts dir '${HOOKDIR}' doesn't exist..."
+      echo "---> WARNING: Custom scripts dir '${HOOKDIR}' doesn't exist..."
   fi
 }
 
