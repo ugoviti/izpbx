@@ -25,9 +25,10 @@ ARG TARGETOS
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.9.0
+ARG ASTERISK_VER=20.9.2
 
-## https://github.com/FreePBX/core/tags (only major version)
+## https://github.com/FreePBX/core/tags
+## (only major version)
 ARG FREEPBX_VER=16
 
 ## https://www.fop2.com/download.php
