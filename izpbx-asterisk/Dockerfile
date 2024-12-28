@@ -2,7 +2,7 @@ ARG RHEL_VER=8
 ARG IMAGE_FROM=rockylinux/rockylinux:${RHEL_VER}
 FROM ${IMAGE_FROM}
 
-MAINTAINER Ugo Viti <u.viti@wearequantico.it>
+LABEL maintainer="Ugo Viti <u.viti@wearequantico.it>"
 
 ### default app args used during build step
 #ARG APP_VER_MAJOR=
@@ -231,6 +231,7 @@ RUN set -xe && \
   \
   ## dnf extra options
   export DNF_OPTS+=" -y --nodocs" && \
+  echo "ip_resolve=4" >> /etc/dnf/dnf.conf && \
   ## enable epel repository
   dnf install ${DNF_OPTS} epel-release && \
   ## repo for phpMyAdmin
