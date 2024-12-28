@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Updated PBX engine to Asterisk `20.11.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.11.0.md)
 - Updated FOP2 to `2.31.45` (https://www.fop2.com/download.php)
+- Updated Database engine to MariaDB `10.11.10` LTS (https://mariadb.com/kb/en/mariadb-10-11-10-release-notes/)
 
 ## [20.16.16] - 2024-08-09
 ### Changed
