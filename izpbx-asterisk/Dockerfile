@@ -394,7 +394,7 @@ RUN set -xe && \
   : "---------- START build spandsp ----------" && \
   cd /usr/src && \
   mkdir spandsp && \
-  curl -fSL --ipv4 --connect-timeout 30 http://sources.buildroot.net/spandsp/spandsp-${SPANDSP_VER}.tar.gz | tar xz --strip 1 -C spandsp && \
+  curl -fSL --connect-timeout 30 http://sources.buildroot.net/spandsp/spandsp-${SPANDSP_VER}.tar.gz | tar xz --strip 1 -C spandsp && \
   cd spandsp && \
   ./configure --prefix=/usr && \
   make && \
@@ -407,7 +407,7 @@ RUN set -xe && \
   : "---------- START build iksemel ----------" && \
   cd /usr/src && \
   mkdir iksemel && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/holme-r/iksemel/archive/${IKSEMEL_VER}.tar.gz | tar xz --strip 1 -C iksemel && \
+  curl -fSL --connect-timeout 30 https://github.com/holme-r/iksemel/archive/${IKSEMEL_VER}.tar.gz | tar xz --strip 1 -C iksemel && \
   cd iksemel && \
   ./configure --prefix=/usr && \
   make && \
@@ -419,7 +419,7 @@ RUN set -xe && \
   : "---------- START build xmlstarlet ----------" && \
   cd /usr/src && \
   mkdir xmlstarlet && \
-  curl -fSL --ipv4 --connect-timeout 30 https://sourceforge.net/projects/xmlstar/files/xmlstarlet/${XMLSTARLET_VER}/xmlstarlet-${XMLSTARLET_VER}.tar.gz | tar xz --strip 1 -C xmlstarlet && \
+  curl -fSL --connect-timeout 30 https://sourceforge.net/projects/xmlstar/files/xmlstarlet/${XMLSTARLET_VER}/xmlstarlet-${XMLSTARLET_VER}.tar.gz | tar xz --strip 1 -C xmlstarlet && \
   cd xmlstarlet && \
   ./configure --prefix=/usr --with-libxml-prefix=/usr && \
   make && \
@@ -436,7 +436,7 @@ RUN set -xe && \
   #tar zxvf /usr/src/asterisk-mp3.tar.gz -C addons
   cd /usr/src && \
   mkdir asterisk && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
+  curl -fSL --connect-timeout 30 https://github.com/asterisk/asterisk/archive/refs/tags/${ASTERISK_VER}.tar.gz | tar xz --strip 1 -C asterisk && \
   cd asterisk && \
   # step debug to avoid reinstall every time the development packages during debug sessions (COMMENT BEFORE FINAL BUILD TO AVOID ANOTHER CONTAINER LAYER)
   #RUN set -xe && \
@@ -614,7 +614,7 @@ RUN set -xe && \
   : "---------- START build bcg729 ----------" && \
   cd /usr/src && \
   mkdir bcg729 && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/BelledonneCommunications/bcg729/archive/${BCG729_VER}.tar.gz | tar xz --strip 1 -C bcg729 && \
+  curl -fSL --connect-timeout 30 https://github.com/BelledonneCommunications/bcg729/archive/${BCG729_VER}.tar.gz | tar xz --strip 1 -C bcg729 && \
   cd bcg729 && \
   cmake . -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_PREFIX_PATH=/usr && \
   make && \
@@ -627,7 +627,7 @@ RUN set -xe && \
   : "---------- START build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/arkadijs/asterisk-g72x/archive/refs/heads/${ASTERISK_G72X_VER}.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
+  curl -fSL --connect-timeout 30 https://github.com/arkadijs/asterisk-g72x/archive/refs/heads/${ASTERISK_G72X_VER}.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
   cd asterisk-g72x && \
   ./autogen.sh && \
   if [[ "${TARGETARCH}" = "x86_64" ]]; then \
@@ -644,7 +644,7 @@ RUN set -xe && \
   : "---------- START build asterisk-chan-dongle ----------" && \
   cd /usr/src && \
   mkdir asterisk-chan-dongle && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/shalzz/asterisk-chan-dongle/archive/${ASTERISK_CHAN_DONGLE_VER}.tar.gz | tar xz --strip 1 -C asterisk-chan-dongle && \
+  curl -fSL --connect-timeout 30 https://github.com/shalzz/asterisk-chan-dongle/archive/${ASTERISK_CHAN_DONGLE_VER}.tar.gz | tar xz --strip 1 -C asterisk-chan-dongle && \
   cd asterisk-chan-dongle && \
   ./bootstrap && \
   ./configure --with-astversion=${ASTERISK_VER} && \
@@ -656,7 +656,7 @@ RUN set -xe && \
   : "---------- START build sngrep ----------" && \
   cd /usr/src && \
   mkdir sngrep && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/irontec/sngrep/archive/v${SNGREP_VER}.tar.gz | tar xz --strip 1 -C sngrep && \
+  curl -fSL --connect-timeout 30 https://github.com/irontec/sngrep/archive/v${SNGREP_VER}.tar.gz | tar xz --strip 1 -C sngrep && \
   cd sngrep && \
   ./bootstrap.sh && \
   ./configure --prefix=/usr ${SNGREP_XTRA_BUILDCONFIG} && \
@@ -679,8 +679,8 @@ RUN set -xe && \
 
 ## download freepbx and modules for offline install:
 ## php -r 'echo json_encode(simplexml_load_file("http://mirror1.freepbx.org/modules-15.0.xml"));' | jq
-## curl -fSL --ipv4 --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx
-## curl -fSL --ipv4 https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
+## curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx
+## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
 ## copy external sources files again
 ADD build/ /usr/src/
@@ -691,18 +691,18 @@ RUN set -xe && \
   cd /usr/src && \
   mkdir freepbx && \
   # deprecated download (because this is not the latest version)
-  #curl -fSL --ipv4 --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx && \
+  #curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
   ## download modules-*.xml file if not exist in local build dir
   if [[ -e "/usr/src/modules-${FREEPBX_VER}.0.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.0.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.0.xml"; else \
-    curl -fSL --ipv4 --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.0.xml -o modules-${FREEPBX_VER}.0.xml \
+    curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.0.xml -o modules-${FREEPBX_VER}.0.xml \
   ;fi && \
   \
   # download latest framework release
   MODULE="framework" && \
   MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
   echo "---------- Predownloading freepbx framework latest release: ${MODULE_VER} ----------" && \
-  curl -fSL --ipv4 --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C ./ && \
+  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C ./ && \
   \
   # make the modules cache
   mkdir -p amp_conf/htdocs/admin/modules/_cache && \
@@ -759,8 +759,8 @@ RUN set -xe && \
   MODULE_VER=$(php -r "echo json_encode(simplexml_load_file('modules-${FREEPBX_VER}.0.xml'));" | jq -r ".module[] | select(.rawname == \"${MODULE}\") | {version}".version) && \
   mkdir -p amp_conf/htdocs/admin/modules/$MODULE && \
   echo "---------- Predownloading module for offline install: $MODULE ${MODULE_VER} ----------" && \
-  curl -fSL --ipv4 --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ && \
-  curl -fSL --ipv4 --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz.gpg -o amp_conf/htdocs/admin/modules/_cache/$MODULE-${MODULE_VER}.tgz.gpg \
+  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz | tar xz --strip 1 -C amp_conf/htdocs/admin/modules/$MODULE/ && \
+  curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/$MODULE/$MODULE-${MODULE_VER}.tgz.gpg -o amp_conf/htdocs/admin/modules/_cache/$MODULE-${MODULE_VER}.tgz.gpg \
   ; done
   
 ## install other components
@@ -769,18 +769,18 @@ RUN set -xe && \
   : "---------- START install izsynth by InitZero ----------" && \
   cd /usr/src && \
   mkdir -p izsynth && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/ugoviti/izsynth/archive/${IZSYNTH_VER}.tar.gz | tar xz --strip 1 -C izsynth && \
+  curl -fSL --connect-timeout 30 https://github.com/ugoviti/izsynth/archive/${IZSYNTH_VER}.tar.gz | tar xz --strip 1 -C izsynth && \
   cp -a izsynth/izsynth /usr/local/bin/izsynth && \
   chmod 755 /usr/local/bin/izsynth && \
   : "---------- END install ----------" && \
   \
   : "---------- START install Asterisk Zabbix Agents by InitZero ----------" && \
   cd /etc/zabbix/zabbix_agent2.d && \
-  curl -fSL --ipv4 --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agent2.d && \
+  curl -fSL --connect-timeout 30 https://github.com/ugoviti/zabbix-templates/archive/${ZABBIX_TEMPLATE_VER}.tar.gz | tar xz --strip 3 zabbix-templates-${ZABBIX_TEMPLATE_VER}/asterisk/zabbix_agent2.d && \
   : "---------- END install ----------" && \
   \
   : "---------- START install PHP ionCube Loader ----------" && \
-  curl -fSL --ipv4 --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_${OSARCH//_/-}.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_"${PHP_VER}".so && \
+  curl -fSL --connect-timeout 30 https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_${OSARCH//_/-}.tar.gz | tar xz --strip 1 -C /usr/lib64/php/modules/ ioncube/ioncube_loader_lin_"${PHP_VER}".so && \
   echo "zend_extension=ioncube_loader_lin_${PHP_VER}.so" >> /etc/php.ini && \
   : "---------- END install ----------"
 
