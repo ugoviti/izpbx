@@ -1,19 +1,14 @@
-ARG RHEL_VER=8
-ARG IMAGE_FROM=rockylinux/rockylinux:${RHEL_VER}
+ARG OS_TAG=12.8-slim
+ARG IMAGE_FROM=docker.io/debian:${OS_TAG}
 FROM ${IMAGE_FROM}
 
 MAINTAINER Ugo Viti <u.viti@wearequantico.it>
-
-### default app args used during build step
-#ARG APP_VER_MAJOR=
-#ARG APP_VER_MINOR=
-#ARG APP_VER_PATCH=
 
 ## full app version
 #ARG APP_VER=${APP_VER_MAJOR}.${APP_VER_MINOR}.${APP_VER_PATCH}
 ARG APP_VER=dev
 ENV APP_VER=${APP_VER}
-ARG RHEL_VER=8
+ARG OS_VER_MAJOR=12
 # PHP versions: FreePBX15 <= 7.2, FreePBX16 >= 7.4
 ARG PHP_VER=7.4
 
@@ -25,11 +20,11 @@ ARG TARGETOS
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.11.0
+ARG ASTERISK_VER=22.1.0
 
 ## https://github.com/FreePBX/core/tags
 ## (only major version)
-ARG FREEPBX_VER=16
+ARG FREEPBX_VER=17
 
 ## https://www.fop2.com/download.php
 ARG FOP2_VER=2.31.45
@@ -91,82 +86,86 @@ ARG APP_DEBUG=0
 ARG APP_INSTALL_EXTRA=""
 
 ### STEP 1: INSTALL BASE PACKAGES
-RUN set -xe && \
-  ## import system information vars
-  . /etc/os-release && export OSARCH=$(uname -m) && \
-  \
-  ## install packages
-  APP_INSTALL_DEPS='\
+ENV APP_INSTALL_DEPS=' \
     rsync \
     net-tools \
-    procps-ng \
+    procps \
     iptables \
-    libnetfilter_conntrack \
-    libnfnetlink \
-    conntrack-tools \
-    libnetfilter_cthelper \
-    libnetfilter_cttimeout \
-    libnetfilter_queue \
+    conntrack \
+    libnfnetlink0 \
+    libnetfilter-conntrack3 \
+    libnetfilter-cthelper0 \
+    libnetfilter-cttimeout1 \
+    libnetfilter-queue1 \
     iftop \
     lsof \
     strace \
     tcpdump \
     supervisor \
     curl \
-    opus \
+    libopus0 \
+    libopusenc0 \
+    libopusfile0 \
+    libogg0 \
+    opus-tools \
+    libflac12 \
     logrotate \
-    fail2ban-server \
-    fail2ban-mail \
-    fail2ban-sendmail \
-    libedit \
-    unixODBC \
+    fail2ban \
+    libedit2 \
+    unixodbc \
+    unixodbc-common \
+    bsd-mailx \
     sox \
     libxml2 \
+    ca-certificates \
     openssl \
-    newt \
-    sqlite \
-    libuuid \
-    jansson \
+    libterm-readline-gnu-perl \
+    libnewt0.52 \
+    sqlite3 \
+    libuuid1 \
+    libjansson4 \
     binutils \
-    libedit \
-    libtool \
-    ncurses \
-    libtiff \
-    libjpeg-turbo \
-    audiofile \
+    libedit2 \
+    ncurses-base \
+    libtiff6 \
+    libjpeg62-turbo \
+    libaudiofile1 \
     uuid \
-    libtool-ltdl \
-    libsndfile \
+    libltdl7 \
+    libsndfile1 \
     wget \
     bzip2 \
     file \
-    ilbc \
-    mariadb-connector-odbc \
+    odbc-mariadb \
     mpg123 \
     nodejs \
+    libtiff6 \
     libtiff-tools \
-    cronie \
-    httpd \
-    mod_ssl \
-    php \
-    php-mysqlnd \
-    php-process \
+    incron \
+    apache2 \
     php-pear \
-    php-mbstring \
-    php-xml \
-    php-json \
-    php-gd \
-    php-curl \
-    php-ldap \
-    mariadb \
+    php8.2 \
+    php8.2-common \
+    php8.2-curl \
+    php8.2-gd \
+    php8.2-ldap \
+    php8.2-intl \
+    php8.2-mbstring \
+    php8.2-odbc \
+    php8.2-opcache \
+    php8.2-sqlite3 \
+    php8.2-xml \
+    mariadb-client \
     diffutils \
     unzip \
     zip \
-    uriparser \
+    liburiparser1 \
     jq \
-    speex \
-    speexdsp \
-    portaudio \
+    libspeex1 \
+    libspeexdsp1 \
+    libportaudio2 \
+
+
     libsrtp \
     unbound-libs \
     freetds \
@@ -213,9 +212,22 @@ RUN set -xe && \
     mtr \
     vim-enhanced \
     lame-libs \
-  ' && \
+    '
+
+RUN set -xe && \
+  : "---------- START install OS prerequisites ----------" && \
+  ## import system information vars
+  . /etc/os-release && export OSARCH=$(uname -m) && \
+  \
+  # upgrade the system
+  apt-get update && \
+  apt-get upgrade -y && \
+  ## install needed packages
+  apt-get install -y --no-install-recommends ${APP_INSTALL_DEPS} && \
+
+
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
-  if [[ ${RHEL_VER} -le 8 ]]; then \
+  if [[ ${OS_VER_MAJOR} -le 8 ]]; then \
   # <= el8 (deprecated in el9)
   APP_INSTALL_DEPS_EXTRA='\
     libmodman \
@@ -234,21 +246,21 @@ RUN set -xe && \
   ## enable epel repository
   dnf install ${DNF_OPTS} epel-release && \
   ## repo for phpMyAdmin
-  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-${RHEL_VER}.rpm && \
+  rpm -Uvh https://rpms.remirepo.net/enterprise/remi-release-${OS_VER_MAJOR}.rpm && \
   ## repo for zabbix agent
-  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rocky/${RHEL_VER}/x86_64/zabbix-release-${ZABBIX_REL}.el${RHEL_VER}.noarch.rpm && \
+  rpm -Uvh https://repo.zabbix.com/zabbix/${ZABBIX_VER}/rocky/${OS_VER_MAJOR}/x86_64/zabbix-release-${ZABBIX_REL}.el${OS_VER_MAJOR}.noarch.rpm && \
   ## repo for ffmpeg command
-  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${RHEL_VER}.noarch.rpm && \
-  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${RHEL_VER}.noarch.rpm && \
+  rpm -Uhv https://download1.rpmfusion.org/free/el/rpmfusion-free-release-${OS_VER_MAJOR}.noarch.rpm && \
+  rpm -Uhv https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${OS_VER_MAJOR}.noarch.rpm && \
   \
   ## enable extra repository via dnf command line
   export DNF_OPTS+=" --enablerepo=epel" && \
   export DNF_OPTS+=" --enablerepo=remi" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
-  if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
-  #if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${OS_VER_MAJOR} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
+  if [[ ${OS_VER_MAJOR} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
+  #if [[ ${OS_VER_MAJOR} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
   \
   ## enable specific module php needed for FreePBX
   : "---------- Enable PHP ${PHP_VER} ----------" && \
@@ -261,7 +273,7 @@ RUN set -xe && \
   dnf install ${DNF_OPTS} ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} ${APP_INSTALL_EXTRA} \
   && \
   ## install extra packages
-  rpm -Uhv https://dl.rockylinux.org/pub/rocky/${RHEL_VER}/devel/${OSARCH}/os/Packages/l/lame-3.100-6.el${RHEL_VER}.${OSARCH}.rpm && \
+  rpm -Uhv https://dl.rockylinux.org/pub/rocky/${OS_VER_MAJOR}/devel/${OSARCH}/os/Packages/l/lame-3.100-6.el${OS_VER_MAJOR}.${OSARCH}.rpm && \
   if [[ "$RHEL_MINIMAL" = "false" ]]; then \
     dnf mark install ${APP_INSTALL_DEPS} ${APP_INSTALL_DEPS_EXTRA} \
   ;fi && \
@@ -301,9 +313,9 @@ RUN set -xe && \
   \
   export DNF_OPTS+=" --enablerepo=rpmfusion-free-updates" && \
   export DNF_OPTS+=" --enablerepo=rpmfusion-nonfree-updates" && \
-  if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
-  #if [[ ${RHEL_VER} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
-  if [[ ${RHEL_VER} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
+  if [[ ${OS_VER_MAJOR} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=powertools" ;fi && \
+  #if [[ ${OS_VER_MAJOR} -le 8 ]]; then export DNF_OPTS+=" --enablerepo=okay" ;fi && \
+  if [[ ${OS_VER_MAJOR} -ge 9 ]]; then export DNF_OPTS+=" --enablerepo=crb" ;fi && \
   \
   : "---------- START installing build packages ----------" && \
   ASTERISK_BUILD_DEPS=' \
@@ -379,7 +391,7 @@ RUN set -xe && \
   #xmlstarlet \
   \
   # deprecated in el9
-  if [[ ${RHEL_VER} -le 8 ]]; then \
+  if [[ ${OS_VER_MAJOR} -le 8 ]]; then \
   ASTERISK_BUILD_DEPS_EXTRA='\
     python2-devel \
     libtermcap-devel \
@@ -403,7 +415,7 @@ RUN set -xe && \
   : "---------- END build ----------" && \
   \
   # not working with RHEL 9
-  if [[ ${RHEL_VER} -le 8 ]]; then \
+  if [[ ${OS_VER_MAJOR} -le 8 ]]; then \
   : "---------- START build iksemel ----------" && \
   cd /usr/src && \
   mkdir iksemel && \
@@ -623,7 +635,7 @@ RUN set -xe && \
   : "---------- END build ----------" && \
   \
   # not working with RHEL 9
-  if [[ ${RHEL_VER} -le 8 ]]; then \
+  if [[ ${OS_VER_MAJOR} -le 8 ]]; then \
   : "---------- START build asterisk-g72x ----------" && \
   cd /usr/src && \
   mkdir asterisk-g72x && \
