@@ -98,9 +98,9 @@ name: izpbx-dev-amd64
 
 environment:
   APP_VER: dev-20.16
-  RHEL_VER: 8
-  PHP_VER: 7.4
-  ASTERISK_VER: 20.8.1
+  #RHEL_VER: 8
+  #PHP_VER: 7.4
+  ASTERISK_VER: 20.11.0
   FREEPBX_VER: 16
   APP_DEBUG: 1
   APP_VER_BUILD: "${DRONE_BUILD_NUMBER}"
@@ -109,7 +109,7 @@ environment:
 
 trigger:
   event:
-  - push
+  - tag
   branch:
   - dev
 
@@ -128,7 +128,7 @@ volumes:
 workspace:
   base: /drone
   path: src
-      
+
 steps:
 - name: restore-cache
   image: drillster/drone-volume-cache
@@ -145,18 +145,10 @@ steps:
   commands:
   - set
 
-- name: prep
-  image: alpine
-  commands:
-    - echo -e -n "dev-$${ASTERISK_VER%%.*}.$${FREEPBX_VER}" >> .tags
-#    - echo -e -n ",$${DRONE_COMMIT_SHA:0:7}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER%.*}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_BUILD_NUMBER}" >> .tags
-#    - echo -e -n ",dev-$${ASTERISK_VER}-$${DRONE_COMMIT_SHA:0:7}" >> .tags
-
 - name: build-docker
+  #image: owncloudci/drone-docker-buildx
   image: plugins/docker
+  privileged: true
   settings:
     repo: izdock/izpbx-asterisk
     dockerfile: izpbx-asterisk/Dockerfile
@@ -176,6 +168,17 @@ steps:
       from_secret: DOCKER_USERNAME
     password:
       from_secret: DOCKER_PASSWORD
+    tags:
+      # - latest
+      # - ${DRONE_TAG}
+      # - ${DRONE_TAG%.*}
+      # - ${DRONE_TAG%%.*}
+      # - ${DRONE_TAG}-${DRONE_BUILD_NUMBER}
+      # - ${DRONE_COMMIT_SHA:0:7}
+      - dev-$${ASTERISK_VER%%.*}.$${FREEPBX_VER}
+    platforms:
+      - linux/amd64
+#      - linux/arm64
 
 - name: rebuild-cache
   image: drillster/drone-volume-cache
