@@ -8,6 +8,9 @@ for more info: https://github.com/ugoviti/izdock-izpbx
 
 ## BUILD
 
+run docker build from inside `izpbx-asterisk` directory
+
+
 Asterisk 20 + FreePBX 16: (using Dockerfile variables)
 ```
 docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-20.16 -t izpbx-asterisk:dev-20.16 .
@@ -39,19 +42,21 @@ docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ${PWD}/da
 
 ### docker compose:
 
+from izpbx directory root, exec:
+
 Asterisk 20 + FreePBX 16:  
 ```
-docker compose down ; docker compose -f compose.yml -f compose-dev-20.16.yml up
+docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-20.16.yml up
 ```
 
 Asterisk 18 + FreePBX 16:  
 ```
-docker compose down ; docker compose -f compose.yml -f compose-dev-18.16.yml up
+docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-18.16.yml up
 ```
 
 Asterisk 18 + FreePBX 15:  
 ```
-docker compose down ; docker compose -f compose.yml -f compose-dev-18.15.yml up
+docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-18.15.yml up
 ```
 
 ### entering into container:

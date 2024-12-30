@@ -66,16 +66,16 @@ Cloud and On-Premise, Fast, Automatic and Repeatable deploy of VoIP PBX systems
 
 # Screenshots
 #### izPBX Dashboard (FreePBX):
-![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-dashboard.png)
+![izpbx-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/main/izpbx-asterisk/screenshots/izpbx-dashboard.png)
 
 #### izPBX Operator Panel (FOP2):
-![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-operator-panel.png)
+![izpbx-izpbx-operator-panel](https://raw.githubusercontent.com/ugoviti/izpbx/main/izpbx-asterisk/screenshots/izpbx-operator-panel.png)
 
 #### izPBX Monitoring Dashboard (Zabbix):
-![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-zabbix-dashboard.png)
+![izpbx-zabbix-dashboard](https://raw.githubusercontent.com/ugoviti/izpbx/main/izpbx-asterisk/screenshots/izpbx-zabbix-dashboard.png)
 
 #### izPBX CLI (Asterisk):
-![izpbx-console](https://raw.githubusercontent.com/ugoviti/izpbx/main/screenshots/izpbx-cli.png)
+![izpbx-console](https://raw.githubusercontent.com/ugoviti/izpbx/main/izpbx-asterisk/screenshots/izpbx-cli.png)
   
 # Deploy izPBX
 Using **docker compose** is the suggested method:
