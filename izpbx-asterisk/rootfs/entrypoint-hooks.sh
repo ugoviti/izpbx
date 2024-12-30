@@ -1206,12 +1206,9 @@ function cfgService_freepbx_install() {
   echo "---> END install FreePBX @ $(date)"
   unset FPBX_OPTS
  
-  # if the install success exec
+  # if the install success exec continue with specific ordered modules install
   if [ $RETVAL = 0 ]; then
-    # apply workarounds and fix for FreePBX open bugs
-    freepbxSettingsFix
-    #freepbxChown
-   
+    # core modules
     : ${FREEPBX_MODULES_CORE:="
       framework
       core
@@ -1220,12 +1217,13 @@ function cfgService_freepbx_install() {
       voicemail
     "}
 
-    # ordered modules install
+    # prerequisite extra modules
     : ${FREEPBX_MODULES_PRE:="
       userman
       pm2
     "}
-    
+
+    # extra modules
     : ${FREEPBX_MODULES_EXTRA:="
       soundlang
       callrecording
@@ -1276,6 +1274,12 @@ function cfgService_freepbx_install() {
     : ${FREEPBX_MODULES_DISABLED:="
     "}
     
+    # apply workarounds and fix for FreePBX unresolved issues
+    freepbxSettingsFix
+
+    # fix permissions before installing FreePBX modules
+    freepbxChown
+
     echo "--> enabling EXTENDED FreePBX repo..."
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo extended"
     su - ${APP_USR} -s /bin/bash -c "fwconsole ma enablerepo unsupported"
@@ -1287,6 +1291,8 @@ function cfgService_freepbx_install() {
       printf -- '---> [%02d/%d] installing module: %s\n' $mod_cnt $mod_tot "${module}"
       # the pre-modules need be installed as root
       su - ${APP_USR} -s /bin/bash -c "fwconsole ma install ${module}"
+      # enabling modules after install is not needed
+      #su - ${APP_USR} -s /bin/bash -c "fwconsole ma enable ${module}"
       let mod_cnt+=1
     done
     
