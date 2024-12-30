@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.18] - 2024-12-30
+### Fixed
+- Fix userman and pm2 errors on initial FreePBX deploy
+
 ## [20.16.17] - 2024-12-28
 ### Changed
 - Updated PBX engine to Asterisk `20.11.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.11.0.md)
