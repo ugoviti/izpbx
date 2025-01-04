@@ -60,7 +60,7 @@ services:
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:20.16.18
+    image: docker.io/izdock/izpbx-asterisk:20.16.19
     container_name: izpbx
     #entrypoint: /bin/bash -c "/bin/bash -c \"sleep 3600\""
     #hostname: ${APP_FQDN}
@@ -78,7 +78,8 @@ services:
     ## fail2ban need privileged mode to manage iptables
     cap_add:
     - NET_ADMIN
-    #security_opt:
+    security_opt:
+    - apparmor=unconfined
     #- seccomp=unconfined
     privileged: true
     ulimits:
