@@ -286,8 +286,7 @@ RUN set -xe && \
 ### STEP 3: BUILD STAGE
 ## build asterisk
 RUN set -xe && \
-  . /etc/os-release && \
-  export OSARCH=$(uname -m) && \
+  . /etc/os-release && export OSARCH=$(uname -m) && \
   \
   ## manage dnf rhel minimal image variant
   if command -v microdnf 1>/dev/null; then export RHEL_MINIMAL="true" ;else export RHEL_MINIMAL="false" ;fi && \
@@ -632,7 +631,7 @@ RUN set -xe && \
   curl -fSL --connect-timeout 30 https://github.com/arkadijs/asterisk-g72x/archive/refs/heads/${ASTERISK_G72X_VER}.tar.gz | tar xz --strip 1 -C asterisk-g72x && \
   cd asterisk-g72x && \
   ./autogen.sh && \
-  if [[ "${TARGETARCH}" = "x86_64" ]]; then \
+  if [[ "${OSARCH}" = "x86_64" ]]; then \
     ./configure --prefix=/usr --with-bcg729 --disable-penryn \
   else \
     ./configure --prefix=/usr --with-bcg729 \
