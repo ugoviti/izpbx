@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.19] - 2025-01-04
+### Fixed
+- Fix segfault on x86_64 systems caused by missing Intel Core2 Penryn and Core i7 instruction sets in codec_g729 (solve https://github.com/ugoviti/izpbx/issues/82)
+- Added apparmor=unconfined to docker compose to fix cron problems on ubuntu server with apparmour enabled (solve https://github.com/ugoviti/izpbx/issues/88)
+
 ## [20.16.18] - 2024-12-30
 ### Fixed
 - Fix userman and pm2 errors on initial FreePBX deploy
