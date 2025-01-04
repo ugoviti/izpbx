@@ -633,7 +633,7 @@ RUN set -xe && \
   ./autogen.sh && \
   if [[ "${OSARCH}" = "x86_64" ]]; then \
     ./configure --prefix=/usr --with-bcg729 --disable-penryn \
-  else \
+  ;else \
     ./configure --prefix=/usr --with-bcg729 \
   ;fi && \
   make && \
