@@ -51,14 +51,16 @@ if ($PHONE == ""){
     echo "Addressbooks: <br>";
     //echo "- <a href=".$PHONE."/ext>Extensions</a><br>";
     echo "- <a href=index.php?ph=".$PHONE."&pb=ext>Extensions</a> - configuration URL: <a href=".$PHONE."/ext>".$http_host_with_protocol."/pb/".$PHONE."/ext</a>";
+    echo "- <a href=index.php?ph=".$PHONE."&pb=contacts>Contacts</a> - configuration URL: <a href=".$PHONE."/ext>".$http_host_with_protocol."/pb/".$PHONE."/ext</a>";
     echo "<br>";
 
-    foreach ($client as $client) {
-      #echo "- <a href=".$PHONE.".php?pb=".$client["name"].">".$client["name"]."</a><br>";
-      #echo "- <a href=".$PHONE."/".$client["name"].">".$client["name"]."</a><br>";
-      echo "- <a href=index.php?ph=".$PHONE."&pb=".$client["name"].">".$client["name"]."</a> - configuration URL: <a href=".$PHONE."/".$client["name"].">".$http_host_with_protocol."/pb/".$PHONE."/".$client["name"]."</a>";
-    echo "<br>";
-    }
+    # disable until found a better auto discovery method to avoid [XBOW-025-157] SQL Injection in Phonebook Directory Extension Path in izPBX project
+    // foreach ($client as $client) {
+    //   #echo "- <a href=".$PHONE.".php?pb=".$client["name"].">".$client["name"]."</a><br>";
+    //   #echo "- <a href=".$PHONE."/".$client["name"].">".$client["name"]."</a><br>";
+    //   echo "- <a href=index.php?ph=".$PHONE."&pb=".$client["name"].">".$client["name"]."</a> - configuration URL: <a href=".$PHONE."/".$client["name"].">".$http_host_with_protocol."/pb/".$PHONE."/".$client["name"]."</a>";
+    // echo "<br>";
+    // }
 }
 
 if (($PHONE != '') && ($PBOOK != '')){

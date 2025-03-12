@@ -1,16 +1,23 @@
 <?php
-$pb=$_GET["pb"];
+$allowed_values = ['ext', 'menu', 'contacts', 'fanvil', 'gigaset', 'yealink']; // List allowed values
 
-// default to extension view
-if ($pb == ""){ $pb = "ext"; }
+$pb = isset($_GET["pb"]) ? $_GET["pb"] : ""; // Default to an empty value if pb is not set
 
-// remove php extension from variable
-//print_r($_GET);
+// Default to extension view
+if ($pb == "") {
+    $pb = "ext";
+}
+
+// Remove php extension from variable
 $pb = str_replace('.php', '', $pb);
-//echo $pb;
+
+// Add proper sanitization for the 'pb' parameter
+if (!in_array($pb, $allowed_values)) {
+    die("Invalid 'pb' parameter");
+}
 
 if ($pb == "ext"){
-/*
+    /*
     ylab.php (short for yealink address book) was taken directly from yl.php and modified.
     https://github.com/sorvani/freepbx-helper-scripts/blob/master/yl.php
 
@@ -42,7 +49,8 @@ if ($pb == "ext"){
     // Check that something is returned
     if (DB::IsError($res)) {
         // Potentially clean this up so that it outputs pretty if not valid
-        error_log( "There was an error attempting to query the extensions<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
+        //error_log( "There was an error attempting to query the extensions<br>($sql)<br>\n" . $res->getMessage() . "\n<br>\n");
+        error_log("Database error detected.");
     } else {
         header("Content-Type: text/xml");
         $extensions = $res->fetchAll(PDO::FETCH_ASSOC);
