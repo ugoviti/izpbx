@@ -25,7 +25,7 @@ ARG TARGETOS
 
 ### components app versions
 ## https://downloads.asterisk.org/pub/telephony/asterisk/releases
-ARG ASTERISK_VER=20.11.0
+ARG ASTERISK_VER=20.12.0
 
 ## https://github.com/FreePBX/core/tags
 ## (only major version)
@@ -527,7 +527,7 @@ RUN set -xe && \
     --disable res_geolocation \
     --disable res_phoneprov \
     --disable res_pjsip_phoneprov_provider \
-    ; else \
+    ;else \
   # asterisk >= 20
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
@@ -695,7 +695,9 @@ RUN set -xe && \
   #curl -fSL --connect-timeout 30 http://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz | tar xz --strip 1 -C freepbx && \
   cd freepbx && \
   ## download modules-*.xml file if not exist in local build dir
-  if [[ -e "/usr/src/modules-${FREEPBX_VER}.0.xml" ]]; then cp "/usr/src/modules-${FREEPBX_VER}.0.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.0.xml"; else \
+  if [[ -e "/usr/src/modules-${FREEPBX_VER}.0.xml" ]]; then \
+    cp "/usr/src/modules-${FREEPBX_VER}.0.xml" "/usr/src/freepbx/modules-${FREEPBX_VER}.0.xml" \
+  ;else \
     curl -fSL --connect-timeout 30 http://mirror1.freepbx.org/modules-${FREEPBX_VER}.0.xml -o modules-${FREEPBX_VER}.0.xml \
   ;fi && \
   \
