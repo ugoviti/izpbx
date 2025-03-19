@@ -22,7 +22,7 @@ services:
   # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
   db:
     # current LTS (Long Term Support) release
-    image: docker.io/mariadb:10.11.10
+    image: docker.io/mariadb:10.11.11
     # previous LTS (Long Term Support) release
     #image: docker.io/mariadb:10.6.14
     container_name: izpbx-db

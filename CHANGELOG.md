@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.20] - 2025-03-19
+### Changed
+- Updated PBX engine to Asterisk `20.12.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.11.0.md)
+- Updated Database engine to MariaDB `10.11.11` LTS (https://mariadb.com/kb/en/mariadb-10-11-11-release-notes/)
+### Fixed
+- Fix [XBOW-025-157] SQL Injection in Phonebook Directory Extension Path in izPBX project
+
 ## [20.16.19] - 2025-01-04
 ### Fixed
 - Fix segfault on x86_64 systems caused by missing Intel Core2 Penryn and Core i7 instruction sets in codec_g729 (solve https://github.com/ugoviti/izpbx/issues/82)
