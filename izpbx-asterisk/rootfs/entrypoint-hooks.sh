@@ -1660,8 +1660,7 @@ function cfgService_msmtp() {
     USR_HOME="$(getent passwd "$APP_USR" | cut -d: -f6)"
 
     echo "defaults
-auth     off
-tls      off
+$([ "${SMTP_STARTTLS}" = "true" ] && echo "tls      on" || echo "tls      off")
 $([ "${SMTP_STARTTLS}" = "true" ] && echo "tls_starttls   on" || echo "tls_starttls   off")
 $([ "${SMTP_STARTTLS}" = "true" ] && echo "tls_trust_file /etc/pki/tls/certs/ca-bundle.crt")
 logfile  ${USR_HOME}/msmtp.log
@@ -1670,6 +1669,8 @@ account  default
 $([ ! -z "${SMTP_RELAYHOST}" ]          && echo "host     ${SMTP_RELAYHOST}")
 $([ ! -z "${SMTP_RELAYHOST_PORT}" ]     && echo "port     ${SMTP_RELAYHOST_PORT}")
 $([ ! -z "${SMTP_MAIL_FROM}" ]          && echo "from     ${SMTP_MAIL_FROM}")
+
+$([ ! -z "${SMTP_RELAYHOST_USERNAME}" ] && echo "auth     on" || echo "auth     off")
 $([ ! -z "${SMTP_RELAYHOST_USERNAME}" ] && echo "user     ${SMTP_RELAYHOST_USERNAME}")
 $([ ! -z "${SMTP_RELAYHOST_PASSWORD}" ] && echo "password ${SMTP_RELAYHOST_PASSWORD}")
 " > "/etc/msmtprc"
