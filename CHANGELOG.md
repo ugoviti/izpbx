@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.21] - 2025-10-07
+### Changed
+- Updated PBX engine to Asterisk `20.15.2` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.15.2.md)
+
 ## [20.16.20] - 2025-03-19
 ### Changed
 - Updated PBX engine to Asterisk `20.12.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.11.0.md)
