@@ -887,6 +887,10 @@ function cfgService_izpbx() {
     echo -e "[ext-meetme]\n\n[ext-queues]\n\n[app-recordings]" >> ${fpbxDirs[ASTETCDIR]}/freepbx_custom_fix_missing_contexts.conf
     if ! grep "#include freepbx_custom_fix_missing_contexts.conf" ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf >/dev/null 2>&1; then echo "#include freepbx_custom_fix_missing_contexts.conf" >> ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf ; fi
 
+    # FIXME @20251014 framework 16.0.41 issue preventing initial setup completion
+    FRAMEWORK_VERSION=$(fwconsole ma list --format=json | jq -s -r '.[] | select(.data | type=="array") | .data[] | select(.[0]=="framework") | .[1]')
+    [ "$FRAMEWORK_VERSION" = "16.0.41" ] && fwconsole ma downloadinstall framework --tag=16.0.40
+
     ## fix Asterisk/FreePBX file permissions
     [ "$FREEPBX_FIX_PERMISSION" = "true" ] && freepbxChown
   }
