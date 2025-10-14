@@ -72,17 +72,17 @@ ENV FREEPBX_VER=${FREEPBX_VER}
 ENV FOP2_VER=${FOP2_VER}
 
 ## app name
-ENV APP_NAME              "izpbx-asterisk"
-ENV APP_DESCRIPTION       "izPBX Cloud Native Telephony System"
+ENV APP_NAME="izpbx-asterisk"
+ENV APP_DESCRIPTION="izPBX Cloud Native Telephony System"
 
 ## set default timezone
-ENV TZ                    "UTC"
+ENV TZ="UTC"
 
 ## app users
-ENV APP_UID               1000
-ENV APP_GID               1000
-ENV APP_USR               "asterisk"
-ENV APP_GRP               "asterisk"
+ENV APP_UID=1000
+ENV APP_GID=1000
+ENV APP_USR="asterisk"
+ENV APP_GRP="asterisk"
 
 ## development debug mode (don't delete development and build dependencies on filesystem)
 ARG APP_DEBUG=0
@@ -213,6 +213,8 @@ RUN set -xe && \
     mtr \
     vim-enhanced \
     lame-libs \
+    libev \
+    libwebsockets \
   ' && \
   # NOTE: postfix > 3.4.x is required for docker logging to stdout
   if [[ ${RHEL_VER} -le 8 ]]; then \
@@ -376,6 +378,7 @@ RUN set -xe && \
     mariadb-connector-c-devel \
     libogg-devel \
     cmake-data \
+    libwebsockets-devel \
   ' && \
   #xmlstarlet \
   \
@@ -532,6 +535,7 @@ RUN set -xe && \
   menuselect/menuselect \
     --enable BETTER_BACKTRACES \
     --enable DONT_OPTIMIZE \
+    --enable G711_NEW_ALGORITHM \
     --enable app_confbridge \
     --enable app_macro \
     --enable app_page \
@@ -811,22 +815,22 @@ ADD patch/ /usr/src/
 RUN sed 's/@SECLEVEL=2/@SECLEVEL=1/' -i /etc/crypto-policies/back-ends/opensslcnf.config
 
 ### app ports
-ENV APP_PORT_HTTP         80
-ENV APP_PORT_HTTPS        443
-ENV APP_PORT_IAX          4569
-ENV APP_PORT_PJSIP        5060
-ENV APP_PORT_SIP          5160
-ENV APP_PORT_WEBRTC       8089
-ENV APP_PORT_UCP_HTTP     8001
-ENV APP_PORT_UCP_HTTPS    8003
-ENV APP_PORT_AMI          8088
-ENV APP_PORT_RTP_START    10000
-ENV APP_PORT_RTP_END      10200
-ENV APP_PORT_DHCP         67
-ENV APP_PORT_TFTP         69
-ENV APP_PORT_NTP          123
-ENV APP_PORT_FOP2         4445
-ENV APP_PORT_ZABBIX       10050
+ENV APP_PORT_HTTP=80
+ENV APP_PORT_HTTPS=443
+ENV APP_PORT_IAX=4569
+ENV APP_PORT_PJSIP=5060
+ENV APP_PORT_SIP=5160
+ENV APP_PORT_WEBRTC=8089
+ENV APP_PORT_UCP_HTTP=8001
+ENV APP_PORT_UCP_HTTPS=8003
+ENV APP_PORT_AMI=8088
+ENV APP_PORT_RTP_START=10000
+ENV APP_PORT_RTP_END=10200
+ENV APP_PORT_DHCP=67
+ENV APP_PORT_TFTP=69
+ENV APP_PORT_NTP=123
+ENV APP_PORT_FOP2=4445
+ENV APP_PORT_ZABBIX=10050
 
 ### exposed ports
 EXPOSE \
