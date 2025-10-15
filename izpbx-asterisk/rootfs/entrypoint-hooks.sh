@@ -865,11 +865,15 @@ function cfgService_izpbx() {
     fi
     
     # fixing missing documentation that prevent loading extra codecs (like codec_opus)
-    if [ ! -z "${APP_DATA}" ]; then
-      if [ "$(ls -1 "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty/")" != "$(ls -1 "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty/")" ]; then
-        echo "---> fixing asterisk documentation directory... ${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty"
-        cp -af "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/thirdparty"/. "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/thirdparty"/
-      fi
+    if [ -n "${APP_DATA}" ]; then
+      SRC="${appDataDirs[ASTVARLIBDIR]}.dist/documentation/"
+      DST="${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/"
+
+      echo "---> checking asterisk documentation directory..."
+      rsync -avc --delete "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/" --dry-run | grep -q '^' && {
+        echo "---> fixing asterisk documentation directory... ${DST}"
+        rsync -avc --delete "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/"
+      }
     fi
     
     # FIXME @20200318 freepbx 15.x warnings workaround
@@ -886,10 +890,6 @@ function cfgService_izpbx() {
     grep "include => .*-custom" ${fpbxDirs[ASTETCDIR]}/extensions.conf ${fpbxDirs[ASTETCDIR]}/extensions_additional.conf | awk '{print $3}' | sort -u | while read context ; do echo -e "[$context]\n"; done > ${fpbxDirs[ASTETCDIR]}/freepbx_custom_fix_missing_contexts.conf
     echo -e "[ext-meetme]\n\n[ext-queues]\n\n[app-recordings]" >> ${fpbxDirs[ASTETCDIR]}/freepbx_custom_fix_missing_contexts.conf
     if ! grep "#include freepbx_custom_fix_missing_contexts.conf" ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf >/dev/null 2>&1; then echo "#include freepbx_custom_fix_missing_contexts.conf" >> ${fpbxDirs[ASTETCDIR]}/extensions_custom.conf ; fi
-
-    # FIXME @20251014 framework 16.0.41 issue preventing initial setup completion
-    FRAMEWORK_VERSION=$(fwconsole ma list --format=json | jq -s -r '.[] | select(.data | type=="array") | .data[] | select(.[0]=="framework") | .[1]')
-    [ "$FRAMEWORK_VERSION" = "16.0.41" ] && fwconsole ma downloadinstall framework --tag=16.0.40
 
     ## fix Asterisk/FreePBX file permissions
     [ "$FREEPBX_FIX_PERMISSION" = "true" ] && freepbxChown
@@ -1280,6 +1280,11 @@ function cfgService_freepbx_install() {
     
     # apply workarounds and fix for FreePBX unresolved issues
     freepbxSettingsFix
+
+    # FIXME @20251014 framework 16.0.41 issue preventing initial setup completion
+    FRAMEWORK_VERSION=$(fwconsole ma list --format=json | jq -s -r '.[] | select(.data | type=="array") | .data[] | select(.[0]=="framework") | .[1]')
+    [ "$FRAMEWORK_VERSION" = "16.0.41" ] && fwconsole ma downloadinstall framework --tag=16.0.40
+
 
     # fix permissions before installing FreePBX modules
     freepbxChown
