@@ -866,9 +866,6 @@ function cfgService_izpbx() {
     
     # fixing missing documentation that prevent loading extra codecs (like codec_opus)
     if [ -n "${APP_DATA}" ]; then
-      SRC="${appDataDirs[ASTVARLIBDIR]}.dist/documentation/"
-      DST="${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/"
-
       echo "---> checking asterisk documentation directory..."
       rsync -avc --delete "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/" --dry-run | grep -q '^' && {
         echo "---> fixing asterisk documentation directory... ${DST}"
