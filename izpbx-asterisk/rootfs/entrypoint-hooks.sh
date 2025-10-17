@@ -1280,8 +1280,7 @@ function cfgService_freepbx_install() {
 
     # FIXME @20251014 framework 16.0.41 issue preventing initial setup completion
     FRAMEWORK_VERSION=$(fwconsole ma list --format=json | jq -s -r '.[] | select(.data | type=="array") | .data[] | select(.[0]=="framework") | .[1]')
-    [ "$FRAMEWORK_VERSION" = "16.0.41" ] && fwconsole ma downloadinstall framework --tag=16.0.40
-
+    [[ $FRAMEWORK_VERSION =~ ^16\.0\.41($|\.) ]] && fwconsole ma downloadinstall framework --tag=16.0.40
 
     # fix permissions before installing FreePBX modules
     freepbxChown
