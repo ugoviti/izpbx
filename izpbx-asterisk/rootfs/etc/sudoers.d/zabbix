@@ -1,5 +1,6 @@
-## allow zabbix to restart sevices
+## allow zabbix to query asterisk as the asterisk user (used by zabbix-templates: sudo -u asterisk asterisk -rx ...)
+## NOTE: never allow running asterisk as root here: its CLI and -C option can execute arbitrary commands
 User_Alias ZABBIX = zabbix
 Cmnd_Alias ZABBIX_COMMANDS = /usr/sbin/asterisk
 Defaults:ZABBIX !requiretty
-ZABBIX ALL=(ALL) NOPASSWD: ZABBIX_COMMANDS
+ZABBIX ALL=(asterisk) NOPASSWD: ZABBIX_COMMANDS

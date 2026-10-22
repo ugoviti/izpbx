@@ -6,8 +6,8 @@
 #set -x
 
 ## entrypoint env management failback if not defined upstream into Dockerfile
-: ${APP_NAME:=unknown}}
-: ${APP_DESCRIPTION:=unknown}}
+: "${APP_NAME:=unknown}"
+: "${APP_DESCRIPTION:=unknown}"
 : ${APP_VER:=latest}
 : ${APP_VER_BUILD:=unknown}
 : ${APP_BUILD_COMMIT:=unknown}
@@ -33,28 +33,29 @@ appHooks() {
 appHooks
 
 # define pre command hooks
+# NOTE: CMD is an array to preserve arguments containing spaces
 if [ "$MULTISERVICE" = "true" ]; then
     # if this container will run multiple commands, override the entry point cmd
-    CMD="runsvdir -P /etc/service"
+    CMD=(runsvdir -P /etc/service)
 elif [ "$APP_RUNAS" = "true" ]; then
     # run the process as user if specified
-    CMD="runuser -p -u $APP_USR -- $@"
+    CMD=(runuser -p -u "$APP_USR" -- "$@")
   else
     # run the specified command without modifications
-    CMD="$@"
+    CMD=("$@")
 fi
 
-# at last if CMD_OVERRIDE is defined use it
-[ ! -z "$CMD_OVERRIDE" ] && CMD="${CMD_OVERRIDE}"
+# at last if CMD_OVERRIDE is defined use it (string splitted on whitespaces)
+[ ! -z "$CMD_OVERRIDE" ] && read -r -a CMD <<< "${CMD_OVERRIDE}"
 
 # use tini init manager if defined in Dockerfile
-[ "$ENTRYPOINT_TINI" = "true" ] && CMD="tini -g -- $CMD"
+[ "$ENTRYPOINT_TINI" = "true" ] && CMD=(tini -g -- "${CMD[@]}")
 
-echo "=> Executing $APP_NAME entrypoint command: $CMD"
+echo "=> Executing $APP_NAME entrypoint command: ${CMD[*]}"
 echo "==============================================================================="
 # set default system umask before starting the container
-[ ! -z "$UMASK" ] && umask $UMASK
+[ ! -z "$UMASK" ] && umask "$UMASK"
 set -x
 
-exec $CMD
+exec "${CMD[@]}"
 exit $?

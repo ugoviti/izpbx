@@ -1,11 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 # script to renew let's encrypt certificates using freepbx fwconsole command
+
+# cron doesn't inherit the container environment: load the variables saved by the entrypoint at container startup
+# shellcheck source=/dev/null
+[ -r /etc/izpbx/cron.env ] && . /etc/izpbx/cron.env
 
 if [[ "${HTTPD_HTTPS_ENABLED}" == "true" && "${LETSENCRYPT_ENABLED}" == "true" ]]; then
   # FIXME detect default certificate instead forcing to APP_FQDN variable
-  FNGR_OLD=$(openssl x509 -noout -fingerprint -in /etc/asterisk/keys/$APP_FQDN.crt)
+  FNGR_OLD=$(openssl x509 -noout -fingerprint -in "/etc/asterisk/keys/${APP_FQDN}.crt")
   fwconsole certificates --updateall -q
-  FNGR_NEW=$(openssl x509 -noout -fingerprint -in /etc/asterisk/keys/$APP_FQDN.crt)
+  FNGR_NEW=$(openssl x509 -noout -fingerprint -in "/etc/asterisk/keys/${APP_FQDN}.crt")
   if [ "$FNGR_OLD" != "$FNGR_NEW" ]; then
     supervisorctl restart httpd 1>/dev/null
     fwconsole restart

@@ -36,10 +36,18 @@ declare -A appDataDirsDefault=(
 
 # timezone management workaround
 : ${TZ:="UTC"}
+# validate TZ: must be a relative zoneinfo name (no '..', no leading '/') and the zoneinfo file must exist
+if [[ ! "$TZ" =~ ^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$ || ! -f "/usr/share/zoneinfo/$TZ" ]]; then
+  echo "=> WARNING: invalid timezone TZ='$TZ' (missing '/usr/share/zoneinfo/$TZ')... falling back to TZ=UTC"
+  TZ="UTC"
+fi
+export TZ
 [ -e "/etc/localtime" ] && rm -f /etc/localtime
 [ -e "/etc/timezone" ] && rm -f /etc/timezone
-ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime
 echo "$TZ" > /etc/timezone
+# derive PHP date.timezone from TZ (not hard-coded into php.d/99-local.ini anymore)
+[ -d "/etc/php.d" ] && echo "date.timezone = \"${TZ}\"" > /etc/php.d/99-timezone.ini
 
 # default directory and config files paths arrays used for persistent data
 declare -A appDataDirs=(
@@ -127,7 +135,11 @@ declare -A fpbxSipSettings=(
 ## other variables
 
 # hostname configuration
-[ ! -z ${APP_FQDN} ] && hostname "${APP_FQDN}" && export HOSTNAME=${HOSTNAME} # set hostname to APP_FQDN if defined
+# set hostname to APP_FQDN if defined (setting the kernel hostname may fail without CAP_SYS_ADMIN, export HOSTNAME anyway)
+if [ -n "${APP_FQDN}" ]; then
+  hostname "${APP_FQDN}" 2>/dev/null
+  export HOSTNAME="${APP_FQDN}"
+fi
 : ${SERVERNAME:=$HOSTNAME}      # (**$HOSTNAME**) default web server hostname
 
 # define PHONEBOOK_ADDRESS used in phonebook menu.xml.
@@ -217,11 +229,14 @@ fi
 : ${SMTP_MAIL_TO:="root@localhost.localdomain"}
 # smarthost config
 : ${RELAYHOST:="$SMTP_RELAYHOST"}
-#: ${RELAYHOST_PORT:="$SMTP_RELAYHOST_PORT"}
+: "${RELAYHOST_PORT:=${SMTP_RELAYHOST_PORT:-25}}"
 : ${RELAYHOST_USERNAME:="$SMTP_RELAYHOST_USERNAME"}
 : ${RELAYHOST_PASSWORD:="$SMTP_RELAYHOST_PASSWORD"}
 : ${ALLOWED_SENDER_DOMAINS:="$SMTP_ALLOWED_SENDER_DOMAINS"}
 : ${MESSAGE_SIZE_LIMIT:="$SMTP_MESSAGE_SIZE_LIMIT"}
+
+# let's encrypt
+: "${LETSENCRYPT_EMAIL:=$SMTP_MAIL_TO}" # contact email used when requesting new Let's Encrypt certificates
 
 # fail2ban
 : ${FAIL2BAN_DEFAULT_SENDER:="$SMTP_MAIL_FROM"}
@@ -268,6 +283,17 @@ function print_fullname() { echo ${@##*/}; }
 function print_name() { print_fullname $(echo ${@%.*}); }
 function print_ext() { echo ${@##*.}; }
 function dirEmpty() { [ -z "$(ls -A "$1"/)" ]; } # return true if specified directory is empty, false if contains files
+
+# escaping helpers (values coming from env vars may contain any character)
+# escape a string to be used as REPLACEMENT in a sed 's' command using '/' or '|' as delimiter (newlines become '\n')
+function sedEscape() { printf '%s' "$1" | sed -e ':a' -e '$!{N;ba' -e '}' -e 's/[\\/&|]/\\&/g' -e 's/\n/\\n/g'; }
+# escape a string to be placed inside a PHP single quoted string: '...'
+function phpSquote() { printf '%s' "$1" | sed -e "s/[\\\\']/\\\\&/g"; }
+# escape a string to be placed inside a SQL single quoted string literal: '...'
+function sqlEscape() { printf '%s' "$1" | sed -e "s/[\\\\']/\\\\&/g"; }
+# escape a SQL identifier to be placed between backticks: `...`
+function sqlIdent() { printf '%s' "${1//\`/\`\`}"; }
+
 function readfsecret() {
   # parameters:
   #
@@ -278,17 +304,18 @@ function readfsecret() {
   if [ $# -lt 2 ] ; then
     echo "syntax error: not enough parameters" >&2
     return 1
-  elif [ ! ${!1} ] ; then
+  elif [ -z "${!1}" ] ; then
     echo "info/warning: param#1 / value referenced by '$1' (expected: file path to secret file) is empty. abort." >&2
     return 128
-  elif [ ${!2} ] ; then
+  elif [ -n "${!2}" ] ; then
     # password string  in target var if present has presedence
     echo "info/warning: param#2 / target var '$2' is not empty. we refuse to overwrite present value of '$2'. abort." >&2
     return 129
   elif [ -r "${!1}" ] ; then
     # check if password file is accessible
     # if yes, read file content and store it in $2 var
-    local rvalue="$(<${!1})"
+    local rvalue
+    rvalue="$(<"${!1}")"
     local -n rvref=$2
     rvref=$rvalue
   else
@@ -296,7 +323,7 @@ function readfsecret() {
     return 1
   fi
 
-  if [ ! ${!2} ] ; then
+  if [ -z "${!2}" ] ; then
     # issue a warning if content of secret file is empty
     echo "warning: param#2 / passwort var '${2}' has been set to empty string." >&2
   fi
@@ -370,6 +397,13 @@ function symlinkDir() {
   if [ ! -z "$dirCustom" ]; then
     echo -e "${prefix}INFO: [$dirDefault] detected directory data override path: '$dirCustom'"
 
+    # already linked (ex. container restart): nothing to do, avoid nesting links into '*.dist'
+    if [ -L "$dirDefault" ] && [ "$(readlink "$dirDefault")" = "$dirCustom" ]; then
+      echo -e "${prefixIndent}INFO: [$dirDefault] already symlinked to '$dirCustom'... skipping"
+      [ ! -e "$dirCustom" ] && mkdir -p "$dirCustom"
+      return 0
+    fi
+
     if [ ! -e "$dirCustom" ]; then
       # make destination dir if not exist
       echo -e "${prefixIndent}WARN: [$dirDefault] custom directory '$dirCustom' doesn't exist... creating empty directory '$dirCustom'"
@@ -412,6 +446,13 @@ function symlinkFile() {
   fi
 
   echo -e "${prefix}INFO: [$fileDefault] file data override detected: default:[$fileDefault] custom:[$fileCustom]"
+
+  # already linked (ex. container restart): nothing to do, avoid overwriting the original '*.dist' file with a symlink
+  # NOTE: the link may be dangling if the custom file was not created yet (ex. FreePBX not installed yet)
+  if [ -L "$fileDefault" ] && [ "$(readlink "$fileDefault")" = "$fileCustom" ]; then
+    echo -e "${prefixIndent}INFO: [$fileDefault] already symlinked to '$fileCustom'... skipping"
+    return 0
+  fi
 
   if [ -e "$fileDefault" ]; then
       # copy data files form default directory if destination is empty
@@ -503,8 +544,13 @@ if [ ! -z "$RELAYHOST" ]; then
 
     if [ -n "$RELAYHOST_USERNAME" ] && [ -n "$RELAYHOST_PASSWORD" ]; then
       echo " using username $RELAYHOST_USERNAME."
-      echo "$RELAYHOST $RELAYHOST_USERNAME:$RELAYHOST_PASSWORD" >> /etc/postfix/sasl_passwd
-      postmap hash:/etc/postfix/sasl_passwd
+      # the lookup key must match exactly the relayhost value: [host]:port
+      # credentials file must be readable only by root (overwrite it at every start to avoid duplicated entries)
+      ( umask 077; printf '[%s]:%s %s:%s\n' "$RELAYHOST" "$RELAYHOST_PORT" "$RELAYHOST_USERNAME" "$RELAYHOST_PASSWORD" > /etc/postfix/sasl_passwd )
+      chown root:root /etc/postfix/sasl_passwd
+      chmod 600 /etc/postfix/sasl_passwd
+      ( umask 077; postmap hash:/etc/postfix/sasl_passwd )
+      chmod 600 /etc/postfix/sasl_passwd*
       postconf -e "smtp_sasl_auth_enable=yes"
       postconf -e "smtp_sasl_password_maps=hash:/etc/postfix/sasl_passwd"
       postconf -e "smtp_sasl_security_options=noanonymous"
@@ -531,11 +577,12 @@ fi
 #postmap $network_table
 #postconf -e mynetworks=hash:$network_table
 
+# by default allow relaying only from localhost (avoid an open relay in the LAN), override with SMTP_MYNETWORKS
 if [ ! -z "$SMTP_MYNETWORKS" ]; then
   echo "---> enabling mynetworks: $SMTP_MYNETWORKS"
-  postconf -e mynetworks=$SMTP_MYNETWORKS
+  postconf -e "mynetworks=$SMTP_MYNETWORKS"
 else
-  postconf -e "mynetworks=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+  postconf -e "mynetworks=127.0.0.0/8"
 fi
 
 if [ "$SMTP_STARTTLS" = "true" ]; then
@@ -571,11 +618,11 @@ sed -i -r -e 's/^#submission/submission/' /etc/postfix/master.cf
 # configure /etc/aliases
 [ ! -f /etc/aliases ] && echo "postmaster: root" > /etc/aliases
 
-if   ! grep ^"root:" /etc/aliases 2>&1 >/dev/null; then 
+if   ! grep ^"root:" /etc/aliases >/dev/null 2>&1; then
   echo "root: ${SMTP_MAIL_TO}" >> /etc/aliases
   newaliases
-elif ! grep ^"root:.*${SMTP_MAIL_TO}" /etc/aliases 2>&1 >/dev/null; then 
-  echo sed "s/^root:.*/root: ${SMTP_MAIL_TO}/" -i /etc/aliases
+elif ! grep -xF "root: ${SMTP_MAIL_TO}" /etc/aliases >/dev/null 2>&1; then
+  sed "s|^root:.*|root: $(sedEscape "${SMTP_MAIL_TO}")|" -i /etc/aliases
   newaliases
 fi
 
@@ -601,16 +648,16 @@ fi
 ## cron service
 function cfgService_cron() {
   if   [ "$OS_RELEASE" = "debian" ]; then
-    cronDir="/var/spool/cron/ing supervisord config fbs"
+    cronDir="/var/spool/cron/crontabs"
   else
     cronDir="/var/spool/cron"
   fi
-  
+
   if [ -e "$cronDir" ]; then
-    if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 0700" ];then
+    if [ "$(stat -c "%U %G %a" "$cronDir")" != "root root 700" ];then
       echo "---> fixing permissions: '$cronDir'"
       chown root:root "$cronDir"
-      chmod u=rwx,g=wx,o=t "$cronDir"
+      chmod 0700 "$cronDir"
     fi
   fi
 }
@@ -673,7 +720,11 @@ sed "s/^Listen .*/Listen ${APP_PORT_HTTP}/"       -i "${HTTPD_CONF_DIR}/conf/htt
 [ -e "${HTTPD_CONF_DIR}/conf.d/ssl.conf" ] && mv "${HTTPD_CONF_DIR}/conf.d/ssl.conf" "${HTTPD_CONF_DIR}/conf.d/ssl.conf-dist"
 
 echo "--> configuring Apache VirtualHosting and creating empty ${HTTPD_CONF_DIR}/conf.d/virtual.conf file"
-echo "" > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
+echo "
+# global settings (server config context, inherited by all virtualhosts)
+# reject request bodies bigger than PHP post_max_size (128M) before reaching PHP
+LimitRequestBody 134217728
+" > "${HTTPD_CONF_DIR}/conf.d/virtual.conf"
 
 echo "# default virtualhost
 
@@ -741,7 +792,7 @@ if [ "${HTTPD_HTTPS_ENABLED}" = "true" ]; then
   # define cert subject
   [ -z "$APP_FQDN" ] && local CERT_SUBJ="/CN=izpbx" || CERT_SUBJ="/CN=$APP_FQDN"
 
-  if [[ ! -e "${HTTPD_HTTPS_CERT_FILE}" && ! -e "${HTTPD_HTTPS_KEY_FILE}" ]]; then
+  if [[ ! -e "${HTTPD_HTTPS_CERT_FILE}" || ! -e "${HTTPD_HTTPS_KEY_FILE}" ]]; then
     echo "---> WARNING: the SSL certificate files (HTTPD_HTTPS_CERT_FILE=${HTTPD_HTTPS_CERT_FILE} HTTPD_HTTPS_KEY_FILE=${HTTPD_HTTPS_KEY_FILE}) doesn't exist"
     echo "----> generating new self-signed certificate (with 10 years duration) to avoid web server crashing"
     # make dirs if not exists
@@ -842,7 +893,7 @@ function cfgService_izpbx() {
     echo "---> FIXME: applying workarounds for FreePBX broken modules and configs..."
 
     # make missing log files
-    [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown ${APP_USR}:${APP_GRP} "${file}" "${fpbxDirs[ASTLOGDIR]}/full"
+    [ ! -e "${fpbxDirs[ASTLOGDIR]}/full" ] && touch "${fpbxDirs[ASTLOGDIR]}/full" && chown "${APP_USR}:${APP_GRP}" "${fpbxDirs[ASTLOGDIR]}/full"
     
     # fix paths and relink fwconsole and amportal if not exist
     [ ! -e "/usr/sbin/fwconsole" ] && ln -s ${fpbxDirs[AMPBIN]}/fwconsole /usr/sbin/fwconsole
@@ -867,15 +918,20 @@ function cfgService_izpbx() {
     # fixing missing documentation that prevent loading extra codecs (like codec_opus)
     if [ -n "${APP_DATA}" ]; then
       echo "---> checking asterisk documentation directory..."
-      rsync -avc --delete "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/" --dry-run | grep -q '^' && {
-        echo "---> fixing asterisk documentation directory... ${DST}"
-        rsync -avc --delete "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/"
+      # dry-run comparing only contents (checksum), links and missing/extra files: prints something only if differences are found
+      rsync -rlc --delete --dry-run --itemize-changes "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/" | grep -q . && {
+        echo "---> fixing asterisk documentation directory..."
+        rsync -ac --delete "${appDataDirs[ASTVARLIBDIR]}.dist/documentation/" "${APP_DATA}${appDataDirs[ASTVARLIBDIR]}/documentation/"
       }
     fi
     
     # FIXME @20200318 freepbx 15.x warnings workaround
     sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
-    sed 's/^enabled =.*/enabled = yes/' -i ${fpbxDirs[ASTETCDIR]}/hep.conf
+    # HEP (Homer capture) is configured only if HEP_ENABLED is defined (true|false)
+    if [ -n "${HEP_ENABLED}" ] && [ -e "${fpbxDirs[ASTETCDIR]}/hep.conf" ]; then
+      [ "${HEP_ENABLED}" = "true" ] && hepEnabled="yes" || hepEnabled="no"
+      sed "s/^enabled =.*/enabled = ${hepEnabled}/" -i "${fpbxDirs[ASTETCDIR]}/hep.conf"
+    fi
     
     # FIXME @20200322 https://issues.freepbx.org/browse/FREEPBX-21317 (NOT MORE NEEDED)
     #[ $(fwconsole ma list | grep backup | awk '{print $4}' | sed 's/\.//g') -lt 150893 ] && su - ${APP_USR} -s /bin/bash -c "fwconsole ma downloadinstall backup --edge"
@@ -986,7 +1042,8 @@ Charset=utf8" > /etc/odbc.ini
       
       # 'fwconsole -V' is not always reliable, reading current installed version directly from database
       if [ -z "${FREEPBX_VER_INSTALLED##*[!0-9]*}" ]; then
-        FREEPBX_VER_INSTALLED="$(mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u ${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_DATABASE} --batch --skip-column-names --raw --execute="SELECT value FROM admin WHERE variable = 'version';" | awk '{print $NF}' | awk -F'.' '{print $1}')"
+        # NOTE: password passed via environment of the single command (not visible into process list)
+        FREEPBX_VER_INSTALLED="$(MYSQL_PWD="${MYSQL_PASSWORD}" mysql -h "${MYSQL_SERVER}" -P "${APP_PORT_MYSQL}" -u "${MYSQL_USER}" "${MYSQL_DATABASE}" --batch --skip-column-names --raw --execute="SELECT value FROM admin WHERE variable = 'version';" | awk '{print $NF}' | awk -F'.' '{print $1}')"
       fi
       
       # save version into .initialized file if empty
@@ -997,11 +1054,13 @@ Charset=utf8" > /etc/odbc.ini
       
       # izpbx is already initialized, update configuration files
       echo "---> reconfiguring '${appFilesConf[FPBXCFGFILE]}'"
-      sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '${MYSQL_SERVER}';/"   -i "${appFilesConf[FPBXCFGFILE]}"
-      sed "s/^\$amp_conf\['AMPDBPORT'\] =.*/\$amp_conf\['AMPDBPORT'\] = '${APP_PORT_MYSQL}';/" -i "${appFilesConf[FPBXCFGFILE]}"
-      sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '${MYSQL_DATABASE}';/" -i "${appFilesConf[FPBXCFGFILE]}"
-      sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '${MYSQL_USER}';/"     -i "${appFilesConf[FPBXCFGFILE]}"
-      sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '${MYSQL_PASSWORD}';/" -i "${appFilesConf[FPBXCFGFILE]}"
+      # values are escaped for PHP single quoted strings first, then for the sed replacement
+      # NOTE: --follow-symlinks: /etc/freepbx.conf is a symlink to the persistent data, sed -i would replace it with a regular file
+      sed "s/^\$amp_conf\['AMPDBHOST'\] =.*/\$amp_conf\['AMPDBHOST'\] = '$(sedEscape "$(phpSquote "${MYSQL_SERVER}")")';/"   --follow-symlinks -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBPORT'\] =.*/\$amp_conf\['AMPDBPORT'\] = '$(sedEscape "$(phpSquote "${APP_PORT_MYSQL}")")';/" --follow-symlinks -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBNAME'\] =.*/\$amp_conf\['AMPDBNAME'\] = '$(sedEscape "$(phpSquote "${MYSQL_DATABASE}")")';/" --follow-symlinks -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBUSER'\] =.*/\$amp_conf\['AMPDBUSER'\] = '$(sedEscape "$(phpSquote "${MYSQL_USER}")")';/"     --follow-symlinks -i "${appFilesConf[FPBXCFGFILE]}"
+      sed "s/^\$amp_conf\['AMPDBPASS'\] =.*/\$amp_conf\['AMPDBPASS'\] = '$(sedEscape "$(phpSquote "${MYSQL_PASSWORD}")")';/" --follow-symlinks -i "${appFilesConf[FPBXCFGFILE]}"
   fi
 
   # apply workarounds and fixes for FreePBX bugs
@@ -1009,15 +1068,21 @@ Charset=utf8" > /etc/odbc.ini
   
   # reconfigure freepbx from env variables
   echo "---> reconfiguring FreePBX Advanced Settings if needed..."
-  set | grep ^"FREEPBX_" | grep -v -e ^"FREEPBX_MODULES_" -e ^"FREEPBX_AUTOUPGRADE_" -e ^"FREEPBX_FIX_PERMISSION" -e ^"FREEPBX_VER" | sed -e 's/^FREEPBX_//' -e 's/=/ /' | while read setting ; do
-    k="$(echo $setting | awk '{print $1}')"
-    v="$(echo $setting | awk '{print $2}')"
-    currentVal=$(fwconsole setting $k | awk -F"[][{}]" '{print $2}')
+  for var in $(compgen -v FREEPBX_); do
+    # skip variables used internally by izPBX and not FreePBX Advanced Settings
+    case "$var" in
+      FREEPBX_MODULES_*|FREEPBX_AUTOUPGRADE_*|FREEPBX_AUTOUPDATE_MODULES_FIRSTDEPLOY|FREEPBX_FIX_PERMISSION*|FREEPBX_VER*) continue ;;
+    esac
+    k="${var#FREEPBX_}"
+    v="${!var}"
+    # empty values are never applied
+    [ -z "$v" ] && continue
+    currentVal=$(fwconsole setting "$k" | awk -F"[][{}]" '{print $2}')
     [ "$currentVal" = "true" ] && currentVal="1"
     [ "$currentVal" = "false" ] && currentVal="0"
     if [ "$currentVal" != "$v" ]; then
       echo "---> reconfiguring advanced setting: ${k}=${v}"
-      fwconsole setting $k $v
+      fwconsole setting "$k" "$v"
     fi
   done
 
@@ -1046,7 +1111,9 @@ Charset=utf8" > /etc/odbc.ini
 function cfgService_freepbx_upgrade_check() {
   #set -x
   if [ -e "${APP_DATA}/.initialized" ]; then
-    if [ $FREEPBX_VER_INSTALLED -lt $FREEPBX_VER ];then
+    if [[ ! "$FREEPBX_VER_INSTALLED" =~ ^[0-9]+$ || ! "$FREEPBX_VER" =~ ^[0-9]+$ ]]; then
+      echo "==> WARNING: unable to detect FreePBX versions (installed:'${FREEPBX_VER_INSTALLED}' available:'${FREEPBX_VER}')... skipping FreePBX upgrade check"
+    elif [ "$FREEPBX_VER_INSTALLED" -lt "$FREEPBX_VER" ];then
       echo
       echo "=========================================================================================="
       echo "==> !!! UPGRADABLE FreePBX installation detetected !!!"
@@ -1114,18 +1181,24 @@ function cfgService_freepbx_upgrade() {
 # install FreePBX if not installed
 function cfgService_freepbx_install() {
   function mysqlQuery() {
-    mysql -h ${MYSQL_SERVER} -P ${APP_PORT_MYSQL} -u ${MYSQL_ROOT_USER} --password=${MYSQL_ROOT_PASSWORD} -N -B -e "$@"
+    # NOTE: password passed via environment of the single command (not visible into process list)
+    MYSQL_PWD="${MYSQL_ROOT_PASSWORD}" mysql -h "${MYSQL_SERVER}" -P "${APP_PORT_MYSQL}" -u "${MYSQL_ROOT_USER}" -N -B -e "$@"
   }
   
   function checkMysql() {
     mysqlQuery "SELECT 1;" >/dev/null
   }
-  
+
+  # the FreePBX installer writes the db password unescaped into /etc/freepbx.conf (a PHP single quoted string)
+  if [[ "${MYSQL_PASSWORD}" == *"'"* || "${MYSQL_PASSWORD}" == *"\\"* ]]; then
+    echo "=> ERROR: MYSQL_PASSWORD contains characters not supported by the FreePBX installer: single quote (') or backslash (\\)... exiting"
+    exit 1
+  fi
+
   # counter for global attempts
   try=1 ; trymax=5
   
-  until [ $try -eq $trymax ]; do
-  cd /usr/src/freepbx
+  until [ "$try" -gt "$trymax" ]; do
   echo
   echo "====================================================================="
   echo "=> !!! NEW INSTALLATION DETECTED :: FreePBX IS NOT INITIALIZED !!! <="
@@ -1141,7 +1214,7 @@ function cfgService_freepbx_install() {
   fi
   
   # start asterisk if it's not running
-  if ! asterisk -r -x "core show version" 2>/dev/null ; then ./start_asterisk start ; fi
+  if ! asterisk -r -x "core show version" 2>/dev/null ; then ( cd /usr/src/freepbx && ./start_asterisk start ) ; fi
   
   # counter for connecting to MySQL database
   myn=1 ; myt=10
@@ -1160,7 +1233,7 @@ function cfgService_freepbx_install() {
   done
   
   # latest check if MySQL is reachable otherwhise exit and don't try to install FreePBX
-  checkMysql && [ $? != 0 ] && "=> ERROR: UNABLE TO CONNECT TO THE MYSQL DATABASE AFTER $myt ATTEMPTS. Check the db connection, username, password and permissions... exiting" && exit 1
+  checkMysql || { echo "=> ERROR: UNABLE TO CONNECT TO THE MYSQL DATABASE AFTER $myt ATTEMPTS. Check the db connection, username, password and permissions... exiting"; exit 1; }
   
   echo "--> installing FreePBX in '${fpbxDirs[AMPWEBROOT]}'"
   echo "---> START install FreePBX @ $(date)"
@@ -1183,27 +1256,32 @@ function cfgService_freepbx_install() {
   #set -x
   
   ## create mysql users and databases if not exists
+  # NOTE: string values are escaped and database names are quoted as identifiers
   if [ "$SKIP_MYSQL_INIT" != "true" ]; then
     echo "---> creating and grantig access to FreePBX databases: ${MYSQL_DATABASE}, ${MYSQL_DATABASE_CDR}"
     # freepbx mysql user
-    mysqlQuery "CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';"
+    mysqlQuery "CREATE USER IF NOT EXISTS '$(sqlEscape "${MYSQL_USER}")'@'%' IDENTIFIED BY '$(sqlEscape "${MYSQL_PASSWORD}")';"
     # freepbx asterisk config db
-    mysqlQuery "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE}"
-    mysqlQuery "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
+    mysqlQuery "CREATE DATABASE IF NOT EXISTS \`$(sqlIdent "${MYSQL_DATABASE}")\`;"
+    mysqlQuery "GRANT ALL PRIVILEGES ON \`$(sqlIdent "${MYSQL_DATABASE}")\`.* TO '$(sqlEscape "${MYSQL_USER}")'@'%' WITH GRANT OPTION;"
     # freepbx asterisk cdr db
-    mysqlQuery "CREATE DATABASE IF NOT EXISTS ${MYSQL_DATABASE_CDR}"
-    mysqlQuery "GRANT ALL PRIVILEGES ON ${MYSQL_DATABASE_CDR}.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;"
+    mysqlQuery "CREATE DATABASE IF NOT EXISTS \`$(sqlIdent "${MYSQL_DATABASE_CDR}")\`;"
+    mysqlQuery "GRANT ALL PRIVILEGES ON \`$(sqlIdent "${MYSQL_DATABASE_CDR}")\`.* TO '$(sqlEscape "${MYSQL_USER}")'@'%' WITH GRANT OPTION;"
   fi
   
   # veirfy if databases exist and we can access
-  mysqlQuery "USE ${MYSQL_DATABASE};"     ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE} database. Please check if exist and the permissions... exiting" && exit 1
-  mysqlQuery "USE ${MYSQL_DATABASE_CDR};" ; [ $? != 0 ] && echo "---> WARNING: unable to access ${MYSQL_DATABASE_CDR} database. Please check if exist and the permissions... exiting" && exit 1
+  ! mysqlQuery "USE \`$(sqlIdent "${MYSQL_DATABASE}")\`;"     && echo "---> WARNING: unable to access ${MYSQL_DATABASE} database. Please check if exist and the permissions... exiting" && exit 1
+  ! mysqlQuery "USE \`$(sqlIdent "${MYSQL_DATABASE_CDR}")\`;" && echo "---> WARNING: unable to access ${MYSQL_DATABASE_CDR} database. Please check if exist and the permissions... exiting" && exit 1
   
   # install freepbx
-  set -x
-  ./install -n --skip-install --no-ansi --dbhost=${MYSQL_SERVER} --dbport=${APP_PORT_MYSQL} --dbuser=${MYSQL_USER} --dbpass=${MYSQL_PASSWORD} --dbname=${MYSQL_DATABASE} --cdrdbname=${MYSQL_DATABASE_CDR} ${FPBX_OPTS}
+  # NOTE: the FreePBX installer accepts the db password only from the command line: never print it (no 'set -x')
+  local fpbxOpts fpbxInstallCmd
+  read -r -a fpbxOpts <<< "${FPBX_OPTS}"
+  fpbxInstallCmd=(./install -n --skip-install --no-ansi --dbhost="${MYSQL_SERVER}" --dbport="${APP_PORT_MYSQL}" --dbuser="${MYSQL_USER}" --dbpass="${MYSQL_PASSWORD}" --dbname="${MYSQL_DATABASE}" --cdrdbname="${MYSQL_DATABASE_CDR}" "${fpbxOpts[@]}")
+  echo "+ ${fpbxInstallCmd[*]//--dbpass=*/--dbpass=********}"
+  ( cd /usr/src/freepbx && "${fpbxInstallCmd[@]}" )
   RETVAL=$?
-  set +x
+  unset fpbxInstallCmd
   echo "---> END install FreePBX @ $(date)"
   unset FPBX_OPTS
  
@@ -1327,12 +1405,16 @@ function cfgService_freepbx_install() {
   fi
 
   if [ $RETVAL = 0 ]; then
-      try=$trymax
+      break
+    elif [ "$try" -ge "$trymax" ]; then
+      # reached the end of the loop
+      echo "--> WARNING: unable to install FreePBX ${FREEPBX_VER}... giving up after try:[$try/$trymax]"
+      INSTALL_STATUS="KO"
+      try=$((try + 1))
     else
-      let try+=1
+      try=$((try + 1))
       echo "--> WARNING: unable to install FreePBX ${FREEPBX_VER}... restarting in 10 seconds... try:[$try/$trymax]"
-      # check if reached the end of the loop
-      [ $try -eq $trymax ] && INSTALL_STATUS="KO" || sleep 10
+      sleep 10
   fi
   done
 
@@ -1364,7 +1446,7 @@ keyfile /etc/chrony.keys
 leapsectz right/UTC
 logdir /var/log/chrony
 
-bindcmdaddress 0.0.0.0
+bindcmdaddress 127.0.0.1
 $([ -z "$NTP_SERVERS" ] && echo "pool 2.pool.ntp.org iburst" || for server in $NTP_SERVERS ; do echo "pool $server iburst"; done)
 
 $(for subnet in $NTP_ALLOW_FROM ; do echo "allow $subnet"; done)
@@ -1374,25 +1456,27 @@ $(for subnet in $NTP_ALLOW_FROM ; do echo "allow $subnet"; done)
 ## dhcp service
 function cfgService_dhcp() {
   echo "--> configuring DHCP service"
-  if [[ ! -z "$DHCP_POOL_START" || ! -z "$DHCP_POOL_END" || ! -z "$DHCP_POOL_LEASE" ]]; then
-    sed "s|^#dhcp-range=.*|dhcp-range=$DHCP_POOL_START,$DHCP_POOL_END,$DHCP_POOL_LEASE|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  local dnsmasqConf="${appDataDirs[DNSMASQDIR]}/local.conf"
+  if [[ -n "$DHCP_POOL_START" && -n "$DHCP_POOL_END" ]]; then
+    # match also an already enabled dhcp-range so changes are applied on restarts (local.conf is persistent)
+    sed "s|^#\?dhcp-range=.*|dhcp-range=$(sedEscape "$DHCP_POOL_START,$DHCP_POOL_END,${DHCP_POOL_LEASE:-72h}")|" -i "${dnsmasqConf}"
   else
-    echo "--> WARNING: DHCP server enabled but specify DHCP_POOL_START:[$DHCP_POOL_START] DHCP_POOL_END:[$DHCP_POOL_END] DHCP_POOL_LEASE:[$DHCP_POOL_LEASE]"
+    echo "--> WARNING: DHCP server enabled but DHCP pool not defined, specify both DHCP_POOL_START:[$DHCP_POOL_START] and DHCP_POOL_END:[$DHCP_POOL_END] (optional DHCP_POOL_LEASE:[$DHCP_POOL_LEASE])"
   fi
   
   if [ ! -z "$DHCP_DOMAIN" ]; then
-    sed "s|^local=.*|local=/$DHCP_DOMAIN/|"   -i "${appDataDirs[DNSMASQDIR]}/local.conf"
-    sed "s|^domain=.*|domain=/$DHCP_DOMAIN/|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
-    sed "s|^#dhcp-option=option:domain-name,.*|dhcp-option=option:domain-name,$DHCP_DOMAIN|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+    sed "s|^local=.*|local=/$(sedEscape "$DHCP_DOMAIN")/|"   -i "${dnsmasqConf}"
+    sed "s|^domain=.*|domain=$(sedEscape "$DHCP_DOMAIN")|" -i "${dnsmasqConf}"
+    sed "s|^#dhcp-option=option:domain-name,.*|dhcp-option=option:domain-name,$(sedEscape "$DHCP_DOMAIN")|" -i "${dnsmasqConf}"
   fi
 
-  [ ! -z "$DHCP_DNS" ] && sed "s|^#dhcp-option=6,.*|dhcp-option=6,$DHCP_DNS|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
-  [ ! -z "$DHCP_DNS" ] && sed "s|^dhcp-option=6,.*|dhcp-option=6,$DHCP_DNS|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  [ ! -z "$DHCP_DNS" ] && sed "s|^#dhcp-option=6,.*|dhcp-option=6,$(sedEscape "$DHCP_DNS")|" -i "${dnsmasqConf}"
+  [ ! -z "$DHCP_DNS" ] && sed "s|^dhcp-option=6,.*|dhcp-option=6,$(sedEscape "$DHCP_DNS")|" -i "${dnsmasqConf}"
   
-  [ ! -z "$DHCP_GW" ] && sed "s|^#dhcp-option=3,.*|dhcp-option=3,$DHCP_GW|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
-  [ ! -z "$DHCP_GW" ] && sed "s|^dhcp-option=3,.*|dhcp-option=3,$DHCP_GW|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  [ ! -z "$DHCP_GW" ] && sed "s|^#dhcp-option=3,.*|dhcp-option=3,$(sedEscape "$DHCP_GW")|" -i "${dnsmasqConf}"
+  [ ! -z "$DHCP_GW" ] && sed "s|^dhcp-option=3,.*|dhcp-option=3,$(sedEscape "$DHCP_GW")|" -i "${dnsmasqConf}"
   
-  [ ! -z "$DHCP_NTP" ] && sed "s|^#dhcp-option=option:ntp-server,.*|dhcp-option=option:ntp-server,$DHCP_NTP|" -i "${appDataDirs[DNSMASQDIR]}/local.conf"
+  [ ! -z "$DHCP_NTP" ] && sed "s|^#dhcp-option=option:ntp-server,.*|dhcp-option=option:ntp-server,$(sedEscape "$DHCP_NTP")|" -i "${dnsmasqConf}"
 }
 
 ## tftp service
@@ -1446,15 +1530,15 @@ function cfgService_fop2 () {
     : ${FOP2_AMI_PASSWORD:="$(fwconsole setting AMPMGRPASS | awk -F"[][{}]" '{print $2}')"}
   
     # reconfigure fop2.cfg
-    sed "s|^manager_host.*=.*|manager_host=${FOP2_AMI_HOST}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
-    sed "s|^manager_port.*=.*|manager_port=${FOP2_AMI_PORT}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
-    sed "s|^manager_user.*=.*|manager_user=${FOP2_AMI_USERNAME}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
-    sed "s|^manager_secret.*=.*|manager_secret=${FOP2_AMI_PASSWORD}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    sed "s|^manager_host.*=.*|manager_host=$(sedEscape "${FOP2_AMI_HOST}")|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    sed "s|^manager_port.*=.*|manager_port=$(sedEscape "${FOP2_AMI_PORT}")|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    sed "s|^manager_user.*=.*|manager_user=$(sedEscape "${FOP2_AMI_USERNAME}")|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+    sed "s|^manager_secret.*=.*|manager_secret=$(sedEscape "${FOP2_AMI_PASSWORD}")|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
    
     # configure fop2 certificates if https is enabled
     if [ "$HTTPD_HTTPS_ENABLED" = "true" ]; then
-      sed "s|^ssl_certificate_file.*=.*|ssl_certificate_file=${HTTPD_HTTPS_CERT_FILE}|"        -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
-      sed "s|^ssl_certificate_key_file.*=.*|ssl_certificate_key_file=${HTTPD_HTTPS_KEY_FILE}|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+      sed "s|^ssl_certificate_file.*=.*|ssl_certificate_file=$(sedEscape "${HTTPD_HTTPS_CERT_FILE}")|"        -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
+      sed "s|^ssl_certificate_key_file.*=.*|ssl_certificate_key_file=$(sedEscape "${HTTPD_HTTPS_KEY_FILE}")|" -i "${appDataDirs[FOP2APPDIR]}/fop2.cfg"
     fi
    
     # FOP2 License Code Management
@@ -1467,7 +1551,7 @@ function cfgService_fop2 () {
     # use interface name in the command line
     [ ! -z "${FOP2_LICENSE_IFACE}" ] && FOP2_LICENSE_OPTS+=" --iface ${FOP2_LICENSE_IFACE}"
     # modify fop2 command if interface name is specified
-    [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i ${FOP2_LICENSE_IFACE}|" -i "${SUPERVISOR_DIR}/fop2.ini"
+    [ ! -z "${FOP2_LICENSE_IFACE}" ] && sed "s|^command.*=.*|command=/usr/local/fop2/fop2_server -i $(sedEscape "${FOP2_LICENSE_IFACE}")|" -i "${SUPERVISOR_DIR}/fop2.ini"
     
     # fop2 version upgrade check
     if [ "$FOP2_AUTOUPGRADE" = "true" ]; then
@@ -1488,11 +1572,10 @@ function cfgService_fop2 () {
         else
           echo "--> INFO: Registering FOP2"
           echo "---> NAME: ${FOP2_LICENSE_NAME}"
-          echo "---> CODE: ${FOP2_LICENSE_CODE}"
+          echo "---> CODE: ******** (hidden)"
           echo "---> IFACE: ${FOP2_LICENSE_IFACE} ($(ip a show dev ${FOP2_LICENSE_IFACE} | grep 'link/ether' | awk '{print $2}'))"
-          set -x
+          echo "+ ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name '${FOP2_LICENSE_NAME}' --code '********'${FOP2_LICENSE_OPTS}"
           ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
-          set +x
           echo "--> INFO: FOP2 license code info:"
           ${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS
           echo "--> INFO: FOP2 license code status:"
@@ -1503,16 +1586,15 @@ function cfgService_fop2 () {
       if [ ! -z "$FOP2_LICENSE_STATUS" ]; then
         echo "--> WARNING: Reactivating FOP2 license because:"
         echo $FOP2_LICENSE_STATUS
-        set -x
+        echo "+ ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate${FOP2_LICENSE_OPTS}"
         ${appDataDirs[FOP2APPDIR]}/fop2_server --reactivate $FOP2_LICENSE_OPTS
-        set +x
         FOP2_LICENSE_STATUS="$(${appDataDirs[FOP2APPDIR]}/fop2_server --getinfo $FOP2_LICENSE_OPTS | grep ^"Not Found")"
         if [ ! -z "$FOP2_LICENSE_STATUS" ]; then
           echo "echo --> ERROR: Failed to reactivating the license... trying to revoke and register it again:"
-          set -x
+          echo "+ ${appDataDirs[FOP2APPDIR]}/fop2_server --revoke --name '${FOP2_LICENSE_NAME}' --code '********'${FOP2_LICENSE_OPTS}"
           ${appDataDirs[FOP2APPDIR]}/fop2_server --revoke   --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
+          echo "+ ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name '${FOP2_LICENSE_NAME}' --code '********'${FOP2_LICENSE_OPTS}"
           ${appDataDirs[FOP2APPDIR]}/fop2_server --register --name "${FOP2_LICENSE_NAME}" --code "${FOP2_LICENSE_CODE}" $FOP2_LICENSE_OPTS
-          set +x
         fi
       fi
       echo "--> INFO: FOP2 info:"
@@ -1523,22 +1605,43 @@ function cfgService_fop2 () {
   fi
 }
 
+# phpMyAdmin izPBX specific apache config file (alias and access rules), rewritten at every start
+# NOTE: the name must sort after phpMyAdmin.conf (Apache includes conf.d/*.conf in byte order) so its Require rules win
+function print_PmaConfApacheLocal() { echo "${PMA_CONF_APACHE%.conf}_izpbx.conf"; }
+
 function cfgService_pma() {
     echo "=> Enabling and Configuring phpMyAdmin"
-    # remove unused http alias
-    sed "/^Alias \/phpMyAdmin \/usr\/share\/phpMyAdmin/d" -i "${PMA_CONF_APACHE}"
-    # reconfigure the http alias
-    sed "s|^Alias /phpmyadmin /usr/share/phpMyAdmin|Alias ${PMA_ALIAS} /usr/share/phpMyAdmin|" -i "${PMA_CONF_APACHE}"
-    # allow connection from internal networks
-    #sed "s|Require local|Require ip ${PMA_ALLOW_FROM}|" -i "${PMA_CONF_APACHE}"
-    cat <<EOF >> "${PMA_CONF_APACHE}"
+    local pmaConfLocal
+    pmaConfLocal="$(print_PmaConfApacheLocal)"
+    # re-enable the default config file if previously disabled
+    if [ ! -e "${PMA_CONF_APACHE}" ] && [ -e "${PMA_CONF_APACHE}-disabled" ]; then
+      mv -f "${PMA_CONF_APACHE}-disabled" "${PMA_CONF_APACHE}"
+    fi
+    # remove the default http aliases (the configured alias is defined into the izPBX specific config file)
+    sed -e "/^Alias \/phpMyAdmin \/usr\/share\/phpMyAdmin/d" -e "/^Alias \/phpmyadmin \/usr\/share\/phpMyAdmin/d" -i "${PMA_CONF_APACHE}"
+    # configure the http alias and allow connection from internal networks
+    # NOTE: this file is loaded after the default config file, so its Require directives override the default ones
+    cat <<EOF2 > "${pmaConfLocal}"
+# phpMyAdmin izPBX configuration (automatically generated at container startup: don't edit)
+Alias ${PMA_ALIAS} /usr/share/phpMyAdmin
+
 <Directory /usr/share/phpMyAdmin/>
   AddDefaultCharset UTF-8
 $(for FROM in ${PMA_ALLOW_FROM}; do echo "    Require ip $FROM"; done)
 </Directory>
-EOF
+EOF2
     # configure database access
-    sed "s|'localhost';|'${MYSQL_SERVER}';|" -i "${PMA_CONFIG}"
+    sed "s|'localhost';|'$(sedEscape "$(phpSquote "${MYSQL_SERVER}")")';|" -i "${PMA_CONFIG}"
+}
+
+function cfgService_pma_disable() {
+    echo "=> Disabling phpMyAdmin"
+    local pmaConfLocal
+    pmaConfLocal="$(print_PmaConfApacheLocal)"
+    [ -e "${pmaConfLocal}" ] && rm -f "${pmaConfLocal}"
+    if [ -e "${PMA_CONF_APACHE}" ]; then
+      mv -f "${PMA_CONF_APACHE}" "${PMA_CONF_APACHE}-disabled"
+    fi
 }
 
 function cfgService_phonebook() {
@@ -1563,8 +1666,8 @@ function cfgService_letsencrypt() {
     echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_CODE is not defined"
   elif [ -z "$LETSENCRYPT_COUNTRY_STATE" ]; then
     echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_COUNTRY_STATE is not defined"
-  elif [ -z "$SMTP_MAIL_TO" ]; then
-    echo "--> WARNING: skipping let's encrypt certificates request because SMTP_MAIL_TO is not defined"
+  elif [ -z "$LETSENCRYPT_EMAIL" ]; then
+    echo "--> WARNING: skipping let's encrypt certificates request because LETSENCRYPT_EMAIL (default: SMTP_MAIL_TO) is not defined"
   else
     # generate let's encrypt certificates
     # NOTE: apache web server must be running to complete the certbot handshake
@@ -1578,7 +1681,7 @@ function cfgService_letsencrypt() {
       httpd -k start
       fwconsole certificates --updateall
       [ $? -eq 0 ] && CERTOK=0
-      [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
+      [ $CERTOK -eq 0 ] && fwconsole certificates --default="$APP_FQDN"
       [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
       httpd -k stop
     fi
@@ -1586,28 +1689,66 @@ function cfgService_letsencrypt() {
     # request new certificate
     if [ $CERTOK -eq 1 ]; then
       httpd -k start
-      set -x
-      fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$SMTP_MAIL_FROM
-      set +x
-      [ $? -eq 0 ] && CERTOK=0
-      [ $CERTOK -eq 0 ] && fwconsole certificates --default=$APP_FQDN
+      echo "+ fwconsole certificates -n --generate --type=le --hostname=$APP_FQDN --country-code=$LETSENCRYPT_COUNTRY_CODE --state=$LETSENCRYPT_COUNTRY_STATE --email=$LETSENCRYPT_EMAIL"
+      fwconsole certificates -n --generate --type=le --hostname="$APP_FQDN" --country-code="$LETSENCRYPT_COUNTRY_CODE" --state="$LETSENCRYPT_COUNTRY_STATE" --email="$LETSENCRYPT_EMAIL"
+      RET=$?
+      [ $RET -eq 0 ] && CERTOK=0
+      [ $CERTOK -eq 0 ] && fwconsole certificates --default="$APP_FQDN"
       [ $CERTOK -eq 0 ] && echo "--> default FreePBX certificate configured to ${fpbxDirs[CERTKEYLOC]}/$APP_FQDN.pem"
       httpd -k stop
     fi
   fi
 }
 
+# download the FOP2 package over HTTPS, verify its sha256 checksum (FOP2_SHA256) and extract it into /usr/src/fop2
+# returns non zero (without installing anything) if FOP2_VER/FOP2_SHA256 are not defined or the download/verification fails
+function fop2Fetch() {
+  local fop2Url="https://download2.fop2.com/fop2-${FOP2_VER}-centos-x86_64.tgz"
+  local fop2Tmp
+  if [ -z "$FOP2_VER" ]; then
+    echo "=> ERROR: FOP2_VER is not defined... unable to download FOP2 (the 'install_fop2.sh' automatic installer is not supported anymore)"
+    return 1
+  fi
+  if [ -z "$FOP2_SHA256" ]; then
+    echo "=> WARNING: ======================================================================"
+    echo "=> WARNING: !!! FOP2_SHA256 is not defined: refusing to install an UNVERIFIED FOP2 package !!!"
+    echo "=> WARNING: define FOP2_SHA256 with the sha256 checksum of 'fop2-${FOP2_VER}-centos-x86_64.tgz'... skipping FOP2 install"
+    echo "=> WARNING: ======================================================================"
+    return 1
+  fi
+  fop2Tmp="$(mktemp -d)" || return 1
+  echo "--> downloading FOP2 ${FOP2_VER} from: ${fop2Url}"
+  if ! curl -fSL --proto '=https' --connect-timeout 30 -o "${fop2Tmp}/fop2.tgz" "${fop2Url}"; then
+    echo "=> ERROR: unable to download FOP2 from '${fop2Url}'... skipping FOP2 install"
+    rm -rf "${fop2Tmp}"
+    return 1
+  fi
+  if ! echo "${FOP2_SHA256}  ${fop2Tmp}/fop2.tgz" | sha256sum -c -; then
+    echo "=> ERROR: ======================================================================"
+    echo "=> ERROR: !!! FOP2 package checksum MISMATCH (expected FOP2_SHA256=${FOP2_SHA256}) !!!"
+    echo "=> ERROR: the downloaded file has been discarded... skipping FOP2 install"
+    echo "=> ERROR: ======================================================================"
+    rm -rf "${fop2Tmp}"
+    return 1
+  fi
+  tar xzf "${fop2Tmp}/fop2.tgz" -C /usr/src
+  local RET=$?
+  rm -rf "${fop2Tmp}"
+  return $RET
+}
+
 function cfgService_fop2_install() {
   echo
   echo "=> !!! FOP2 IS NOT INITIALIZED :: NEW INSTALLATION DETECTED !!! Downloading and Installing FOP2..."
   echo
+  # check the requirements before starting FreePBX
+  if [[ -z "$FOP2_VER" || -z "$FOP2_SHA256" ]]; then
+    fop2Fetch
+    return 1
+  fi
   fwconsole start
-  if [ -z "$FOP2_VER" ]; then
-    # automatic installation of latest version
-    wget -O - http://download.fop2.com/install_fop2.sh | bash
-   else
-    curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
-    cd /usr/src/fop2 && make install && /usr/local/fop2/generate_override_contexts.pl -write
+  if fop2Fetch; then
+    ( cd /usr/src/fop2 && make install && /usr/local/fop2/generate_override_contexts.pl -write )
   fi
   
   pkill fop2_server
@@ -1621,8 +1762,7 @@ function cfgService_fop2_upgrade() {
   # container workarounds
   export TERM=linux
   
-  curl -fSL --connect-timeout 30 http://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz | tar xz -C /usr/src
-  cd /usr/src/fop2 && make install
+  fop2Fetch && ( cd /usr/src/fop2 && make install )
 }
 
 function cfgBashEnv() {
@@ -1664,6 +1804,8 @@ function cfgService_msmtp() {
     # check if configuration file already exists in $APP_USR home directory, if not, create default configuration
     USR_HOME="$(getent passwd "$APP_USR" | cut -d: -f6)"
 
+    # the config file contains the SMTP password: readable only by root and the asterisk group (used by voicemail-to-email)
+    install -m 0640 -o root -g "${APP_GRP:-asterisk}" /dev/null /etc/msmtprc
     echo "defaults
 $([ "${SMTP_STARTTLS}" = "true" ] && echo "tls      on" || echo "tls      off")
 $([ "${SMTP_STARTTLS}" = "true" ] && echo "tls_starttls   on" || echo "tls_starttls   off")
@@ -1682,6 +1824,24 @@ $([ ! -z "${SMTP_RELAYHOST_PASSWORD}" ] && echo "password ${SMTP_RELAYHOST_PASSW
 
 echo "--> forwarding all emails to: ${SMTP_RELAYHOST}"
 [ -n "${SMTP_RELAYHOST_USERNAME}" ] && echo "---> using username: ${SMTP_RELAYHOST_USERNAME}"
+}
+
+# write the container variables needed by cron jobs (ex. /etc/cron.daily/freepbx-le-renew) into /etc/izpbx/cron.env
+function cfgCronEnv() {
+  local cronEnv="/etc/izpbx/cron.env"
+  echo "--> saving cron jobs environment into '${cronEnv}'"
+  mkdir -p "$(dirname "${cronEnv}")"
+  (
+    umask 077
+    {
+      echo "# izPBX environment for cron jobs (automatically generated at container startup: don't edit)"
+      printf 'export HTTPD_HTTPS_ENABLED=%q\n' "${HTTPD_HTTPS_ENABLED}"
+      printf 'export LETSENCRYPT_ENABLED=%q\n' "${LETSENCRYPT_ENABLED}"
+      printf 'export APP_FQDN=%q\n'            "${APP_FQDN}"
+    } > "${cronEnv}"
+  )
+  chown root:root "${cronEnv}"
+  chmod 0600 "${cronEnv}"
 }
 
 function runHooks() {
@@ -1774,13 +1934,20 @@ function runHooks() {
   chkService DNSMASQ_ENABLED
    
   # phpMyAdmin configuration
-  [ "${PMA_ENABLED}" = "true" ] && cfgService_pma || mv "${PMA_CONF_APACHE}" "${PMA_CONF_APACHE}-disabled"
+  if [ "${PMA_ENABLED}" = "true" ]; then
+    cfgService_pma
+  else
+    cfgService_pma_disable
+  fi
 
   # remote XML phonebook support
-  [ ${PHONEBOOK_ENABLED} = "true" ] && cfgService_phonebook
+  [ "${PHONEBOOK_ENABLED}" = "true" ] && cfgService_phonebook
   
   # Lets Encrypt certificate generation
   [[ "${HTTPD_HTTPS_ENABLED}" = "true" && "${LETSENCRYPT_ENABLED}" = "true" ]] && cfgService_letsencrypt
+
+  # export the variables needed by cron jobs (cron doesn't inherit the container environment)
+  cfgCronEnv
 }
 
 function runHooksCustom() {

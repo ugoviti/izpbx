@@ -1,0 +1,80 @@
+# izPBX weekly rebuild (Gitea Actions)
+# Rebuilds the latest stable release tag (X.Y.Z) every week to pick up the Rocky Linux / AppStream
+# security updates (eg. PHP), even when no new izPBX release is tagged.
+# OS_UPDATE_STAMP=<ISO week> busts the cached STEP 1 (dnf upgrade) layer of izpbx-asterisk/Dockerfile.
+#
+# Pushes ONLY to the Gitea registry and NEVER moves the release tags (X.Y.Z, X.Y, X, latest), so
+# izpbx-promote keeps copying exactly the release digest that was tested. Tags produced (see .gitea/actions/image-tags):
+#   <X.Y.Z>-<YYYY>-W<WW>  and  <X.Y.Z>-<YYYY>-W<WW>-<run_number>      (eg. 20.16.22-2026-W43, 20.16.22-2026-W43-57)
+# To publish a weekly image on Docker Hub run izpbx-promote manually with that version (never automatic).
+#
+# The CI tooling (.gitea/actions) comes from the default branch, the build context (izpbx-asterisk/) from the tag:
+# older tags may predate the Gitea Actions migration or the post-build checks.
+#
+# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+
+name: izpbx-weekly-rebuild
+
+on:
+  schedule:
+    # every Monday at 03:00 UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: izpbx-weekly-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: resolve latest release
+        id: ver
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          # latest stable X.Y.Z tag (version sort, prereleases and dev tags excluded)
+          TAG=$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          [ -n "$TAG" ] || { echo "::error::no X.Y.Z release tag found"; exit 1; }
+          # build context from the tag, CI tooling from the default branch
+          rm -rf izpbx-asterisk
+          git checkout "refs/tags/${TAG}" -- izpbx-asterisk
+          STAMP=$(date -u +%G-W%V)
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "stamp=${STAMP}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG}-${STAMP}" >> "$GITHUB_OUTPUT"
+          echo "commit=$(git rev-parse --short=7 "refs/tags/${TAG}^{commit}")" >> "$GITHUB_OUTPUT"
+          echo "Rebuilding ${TAG} with OS_UPDATE_STAMP=${STAMP} -> ${TAG}-${STAMP}"
+
+      - name: build and push
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ${{ steps.ver.outputs.version }}
+          latest: 'false'
+          build-number: ${{ gitea.run_number }}
+          cache-tag: buildcache-weekly
+          build-args: |
+            OS_UPDATE_STAMP=${{ steps.ver.outputs.stamp }}
+            APP_BUILD_COMMIT=${{ steps.ver.outputs.commit }}
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: matrix notify
+        if: always()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: weekly rebuild tag:${{ steps.ver.outputs.tag }} -> ${{ steps.ver.outputs.version }}
+          password: ${{ secrets.MATRIX_PASSWORD }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+          user: ${{ vars.MATRIX_USER }}

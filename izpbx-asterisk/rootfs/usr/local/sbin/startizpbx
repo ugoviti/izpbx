@@ -20,7 +20,7 @@ $command start -q
 sleep 2
 
 # Loop while the pidfile and the process exist
-while [ -f $pidfile ] && kill -0 $(cat $pidfile) ; do
+while [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" ; do
     sleep 5
 done
-exit 1000 # exit unexpected
+exit 1 # exit unexpected

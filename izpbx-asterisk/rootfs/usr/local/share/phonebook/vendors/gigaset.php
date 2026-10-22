@@ -92,18 +92,18 @@ else{
     global $db;
 
     // This pulls every number in contact maanger that is part of the group specified by $contact_manager_group
-    $sql = "SELECT cen.number, cge.displayname, cen.type, cen.E164, 0 AS 'sortorder' FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = '$contact_manager_group') ORDER BY cge.displayname, cen.number;";
+    $sql = "SELECT cen.number, cge.displayname, cen.type, cen.E164, 0 AS 'sortorder' FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = ?) ORDER BY cge.displayname, cen.number;";
 
-    $sql_count = "SELECT COUNT(*) AS quante FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = '$pb' )";
+    $sql_count = "SELECT COUNT(*) AS quante FROM contactmanager_group_entries AS cge LEFT JOIN contactmanager_entry_numbers AS cen ON cen.entryid = cge.id WHERE cge.groupid = (SELECT cg.id FROM contactmanager_groups AS cg WHERE cg.name = ? )";
     //echo $sql_count."<br>";
 
     $res_count = $db->prepare($sql_count);
-    $res_count->execute();
+    $res_count->execute([$pb]);
     $count = $res_count->fetchAll(PDO::FETCH_ASSOC);
 
     // Execute the SQL statement
     $res = $db->prepare($sql);
-    $res->execute();
+    $res->execute([$contact_manager_group]);
     // Check that something is returned
     if (DB::IsError($res)) {
         // Potentially clean this up so that it outputs pretty if not valid

@@ -4,6 +4,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [20.16.22] - 2026-10-22
+### Security
+- **PHP CVE-2026-109618 and CVE-2026-109619 ("PHP2Shell", unauthenticated RCE)**: rebuilt on Rocky Linux 8 AppStream `php-7.4.33-8` (RHSA-2026:87080). All previous izPBX images are affected: upgrade as soon as possible
+- Updated PBX engine to Asterisk `20.21.0` LTS: fixes the Asterisk security advisories published after 20.15.2 (PJSIP, AMI, ARI)
+- FreePBX modules are predownloaded at build time using the same mirror query of FreePBX Module Admin: the static `modules-16.0.xml` file listed older releases (ex. Contact Manager 16.0.27 instead of 16.0.29, vulnerable to GHSA-j82w-j6cr-56m6). Module download failures now stop the build
+- Fixed unauthenticated SQL injection in the XML phonebook (`/pb`) via the `cgroup` parameter
+- Fixed path traversal and reflected XSS in the XML phonebook (`/pb`) via the `ph` parameter
+- Fixed privilege escalation from the `zabbix` user to root: sudo now allows `/usr/sbin/asterisk` only as the `asterisk` user
+- PHP hardening: `allow_url_include=Off`, `display_errors=Off`, `display_startup_errors=Off`, `session.upload_progress.enabled=0`, `memory_limit=512M`
+- Apache rejects request bodies bigger than 128M (`LimitRequestBody`)
+- Database passwords are not printed in the container logs anymore and are not visible in the process list during startup (`MYSQL_PWD`)
+- FOP2 license code is not printed in the container logs anymore
+- `/etc/msmtprc` and `/etc/postfix/sasl_passwd` (SMTP passwords) are not world readable anymore
+- FOP2 is downloaded only over HTTPS and verified with a sha256 checksum (`FOP2_SHA256`); removed the `install_fop2.sh` automatic installer
+- Build: removed `--nogpgcheck`, repository GPG keys are pinned by fingerprint and release RPMs are signature verified, every source tarball is verified with a sha256 checksum, all downloads use HTTPS, unpinned `master`/`main` sources are pinned to a commit
+### Changed
+- Updated FOP2 to `2.31.53`, sngrep to `1.9.0`, bcg729 to `1.1.2`, ionCube loader pinned to `15.5.1`
+- Updated Database engine to MariaDB `10.11.19` LTS
+- chan_dongle is now built from the maintained fork https://github.com/wdoekes/asterisk-chan-dongle
+- PHP `date.timezone` follows the container `TZ` variable (it was hard-coded to `Europe/Rome`)
+- Postfix relays mail only from localhost by default (`SMTP_MYNETWORKS` to allow other networks)
+- chrony accepts commands only from localhost
+- `hep.conf` is not forced anymore to `enabled = yes` at every start: use the new `HEP_ENABLED` variable
+- New `LETSENCRYPT_EMAIL` variable (default `SMTP_MAIL_TO`) used for Let's Encrypt certificates requests
+- `HOSTNAME` (Apache ServerName, postfix, zabbix) is set to `APP_FQDN` when defined
+- Removed Asterisk 18 development compose files (Asterisk 18 is EOL)
+- CI: the built image is verified (PHP fixed release, Asterisk version, `allow_url_include`) and a weekly rebuild publishes OS security updates into the private registry
+### Fixed
+- Let's Encrypt certificates were never renewed by the daily cron job
+- Installation didn't stop when the MySQL database was unreachable
+- Let's Encrypt certificate request failures were reported as successful, and the request used `SMTP_MAIL_FROM` as contact email
+- `SMTP_MAIL_TO` changes were not applied to the root mail alias
+- Postfix SMTP relay authentication didn't work (missing port and wrong `sasl_passwd` lookup key)
+- Database settings reconfigured at startup were written into a non persistent copy of `/etc/freepbx.conf` (`sed -i` replaced the symlink to the persistent file)
+- `MYSQL_PASSWORD` containing a single quote or a backslash (not supported by the FreePBX installer) is now rejected at startup with a clear error
+- Container restarts created nested symlinks into `*.dist` directories and overwrote the original `*.dist` files
+- phpMyAdmin configuration was duplicated at every container restart
+- Passwords and values containing special characters (`/ & ' \ |`) broke the FreePBX, FOP2 and dnsmasq configuration
+- Invalid dnsmasq configuration when `DHCP_DOMAIN` is defined
+- Asterisk documentation directory was resynchronized at every start
+- HTTPS self-signed certificate was not regenerated when only the key or only the certificate was missing
+- FreePBX install retried only 4 times instead of 5
+- Invalid `TZ` values left a broken `/etc/localtime`
+- Other minor fixes in entrypoint scripts (quoting, redirections, exit codes)
+
 ## [20.16.21] - 2025-10-14
 ### Changed
 - Updated PBX engine to Asterisk `20.15.2` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-20.15.2.md)

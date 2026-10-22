@@ -16,11 +16,6 @@ Asterisk 20 + FreePBX 16: (using Dockerfile variables)
 docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-20.16 -t izpbx-asterisk:dev-20.16 .
 ```
 
-Asterisk 18 + FreePBX 15: (overriding Dockerfile variables)
-```
-docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-18.15 --build-arg ASTERISK_VER=18.15.0 --build-arg FREEPBX_VER=15 -t izpbx-asterisk:dev-18.15 .
-```
-
 ### Multi Arch Build
 ```
 docker buildx build --platform linux/amd64,linux/arm64 --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-20.16 -t izpbx-asterisk:dev-20.16 .
@@ -31,7 +26,7 @@ docker buildx build --platform linux/amd64,linux/arm64 --pull --rm --build-arg A
 ### Docker Run:
 Start MySQL:  
 ```
-docker run --rm -ti -p 3306:3306 -v ${PWD}/data/db:/var/lib/mysql -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.6
+docker run --rm -ti -p 3306:3306 -v ${PWD}/data/db:/var/lib/mysql -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.11
 ```
 
 Start izPBX:  
@@ -47,16 +42,6 @@ from izpbx directory root, exec:
 Asterisk 20 + FreePBX 16:  
 ```
 docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-20.16.yml up
-```
-
-Asterisk 18 + FreePBX 16:  
-```
-docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-18.16.yml up
-```
-
-Asterisk 18 + FreePBX 15:  
-```
-docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-18.15.yml up
 ```
 
 ### entering into container:

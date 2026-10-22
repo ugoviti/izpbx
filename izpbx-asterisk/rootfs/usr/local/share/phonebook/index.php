@@ -16,16 +16,23 @@ $http_host_with_protocol = $protocol . "://" . $host;
 global $db;
 $sql = "SELECT * FROM asterisk.contactmanager_groups WHERE id !='1'";
 
-$PBOOK=$_GET["pb"];
-$PHONE=$_GET["ph"];
+$PBOOK = isset($_GET["pb"]) ? (string)$_GET["pb"] : "";
+$PHONE = isset($_GET["ph"]) ? (string)$_GET["ph"] : "";
 
 // Execute the SQL statement
 $res = $db->prepare($sql);
 $res->execute();
 
-$vendors = str_replace('.php', '', array_filter(scandir('vendors'), function($file) { return pathinfo($file, PATHINFO_EXTENSION) === 'php'; }));
+$vendors = array_values(str_replace('.php', '', array_filter(scandir(__DIR__ . '/vendors'), function($file) { return pathinfo($file, PATHINFO_EXTENSION) === 'php'; })));
 
-//print_r($vendors);
+// accept only known vendors: blocks path traversal in the include below
+if ($PHONE !== "" && !in_array($PHONE, $vendors, true)) {
+  http_response_code(400);
+  die('Error: unsupported phone vendor');
+}
+
+// escape values printed into HTML
+function h($s) { return htmlspecialchars($s, ENT_QUOTES, 'UTF-8'); }
 
 if ($PHONE == ""){
   if (DB::IsError($res)) {
@@ -34,24 +41,25 @@ if ($PHONE == ""){
   } else if ($PHONE == "") {
     echo "izPBX supported Phonebooks:<br><br>";
     foreach ($vendors as $vendor) {
-    echo "- <a href=".$_SERVER['QUERY_STRING']."?ph=".$vendor.">".$vendor."</a><br>";
+    echo "- <a href=\"?ph=".h($vendor)."\">".h($vendor)."</a><br>";
     }
   }
 } else if ($PBOOK == "") {
     $client = $res->fetchAll(PDO::FETCH_ASSOC);
 
-    echo "Phone: <b>".$_GET["ph"]."</b>";
+    // $PHONE is a validated vendor name; the host comes from the request header, so escape it
+    $P = h($PHONE);
+    $H = h($http_host_with_protocol);
+    echo "Phone: <b>".$P."</b>";
     echo "<br>";
     echo "<br>";
     echo "Menu: <br>";
-    //echo "- <a href=".$PHONE."/ext>Extensions</a><br>";
-    echo "- <a href=index.php?ph=".$PHONE."&pb=menu>Menu</a> - configuration URL: <a href=".$PHONE."/menu>".$http_host_with_protocol."/pb/".$PHONE."/menu</a>";
+    echo "- <a href=\"index.php?ph=".$P."&amp;pb=menu\">Menu</a> - configuration URL: <a href=\"".$P."/menu\">".$H."/pb/".$P."/menu</a>";
     echo "<br>";
     echo "<br>";
     echo "Addressbooks: <br>";
-    //echo "- <a href=".$PHONE."/ext>Extensions</a><br>";
-    echo "- <a href=index.php?ph=".$PHONE."&pb=ext>Extensions</a> - configuration URL: <a href=".$PHONE."/ext>".$http_host_with_protocol."/pb/".$PHONE."/ext</a>";
-    echo "- <a href=index.php?ph=".$PHONE."&pb=contacts>Contacts</a> - configuration URL: <a href=".$PHONE."/ext>".$http_host_with_protocol."/pb/".$PHONE."/ext</a>";
+    echo "- <a href=\"index.php?ph=".$P."&amp;pb=ext\">Extensions</a> - configuration URL: <a href=\"".$P."/ext\">".$H."/pb/".$P."/ext</a>";
+    echo "- <a href=\"index.php?ph=".$P."&amp;pb=contacts\">Contacts</a> - configuration URL: <a href=\"".$P."/ext\">".$H."/pb/".$P."/ext</a>";
     echo "<br>";
 
     # disable until found a better auto discovery method to avoid [XBOW-025-157] SQL Injection in Phonebook Directory Extension Path in izPBX project
@@ -64,15 +72,12 @@ if ($PHONE == ""){
 }
 
 if (($PHONE != '') && ($PBOOK != '')){
-  if (file_exists("vendors/".$PHONE.".php")) {
-    include "vendors/".$PHONE.".php";
-  } else {
-  die ('Errore: il file "vendors/'.$PHONE.'.php" non esiste.');
-  }
+  // $PHONE was validated against $vendors above
+  include __DIR__ . "/vendors/".$PHONE.".php";
 }
 
-// SVUOTO LE VARIABILI
+// clear the variables
 $_SERVER['REQUEST_URI']="";
-$PBOOK=$_GET[""];
-$PHONE=$_GET[""];
+$PBOOK="";
+$PHONE="";
 ?>
