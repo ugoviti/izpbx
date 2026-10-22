@@ -1,0 +1,42 @@
+name: izpbx image tags
+description: Single source of truth for the image tag scheme (docker/metadata-action), shared by build and promote
+
+# 20.16.22      -> 20.16.22, 20.16, 20 [, 20.16.22-<build-number>] [, latest]
+# 20.16.22-rc1  -> 20.16.22-rc1 [, 20.16.22-rc1-<build-number>]  (prerelease: never X.Y, X, latest)
+# dev-20.16     -> dev-20.16                                       (not semver: as-is, never latest)
+
+inputs:
+  images:
+    description: Image name(s), newline separated
+    required: true
+  version:
+    description: Version to tag (eg. 20.16.22)
+    required: true
+  latest:
+    description: "'true' to also tag latest (only applied to stable X.Y.Z versions)"
+    default: 'false'
+  build-number:
+    description: Optional build number, adds the <version>-<build-number> tag
+    default: ''
+
+outputs:
+  tags:
+    description: Full image references, newline separated
+    value: ${{ steps.meta.outputs.tags }}
+
+runs:
+  using: composite
+  steps:
+    - name: compute tags
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ inputs.images }}
+        flavor: |
+          latest=${{ inputs.latest == 'true' && 'auto' || 'false' }}
+        tags: |
+          type=raw,value=${{ inputs.version }}
+          type=semver,pattern={{version}},value=${{ inputs.version }}
+          type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }}
+          type=semver,pattern={{major}},value=${{ inputs.version }}
+          type=semver,pattern={{version}}-${{ inputs.build-number }},value=${{ inputs.version }},enable=${{ inputs.build-number != '' }}

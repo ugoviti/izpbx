@@ -1,0 +1,77 @@
+name: izpbx build & push
+description: Build izpbx-asterisk and push it to the private registry (Docker Hub is reached only through the promote workflow)
+
+inputs:
+  version:
+    description: Version, used as APP_VER and for the image tags (see .gitea/actions/image-tags)
+    required: true
+  latest:
+    description: "'true' to also tag latest (stable X.Y.Z only)"
+    default: 'false'
+  build-number:
+    description: Optional build number tag suffix
+    default: ''
+  build-args:
+    description: Extra newline separated build args (KEY=value)
+    default: ''
+  cache-tag:
+    description: Registry tag used for the buildx cache
+    default: buildcache
+  platforms:
+    default: linux/amd64
+  registry-host:
+    description: Private registry host (secrets.REGISTRY_HOST)
+    required: true
+  registry-username:
+    required: true
+  registry-token:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: registry login
+      id: login
+      uses: ./.gitea/actions/registry-login
+      with:
+        registry-host: ${{ inputs.registry-host }}
+        registry-username: ${{ inputs.registry-username }}
+        registry-token: ${{ inputs.registry-token }}
+
+    - name: image tags
+      id: tags
+      uses: ./.gitea/actions/image-tags
+      with:
+        images: ${{ steps.login.outputs.image }}
+        version: ${{ inputs.version }}
+        latest: ${{ inputs.latest }}
+        build-number: ${{ inputs.build-number }}
+
+    - name: build metadata
+      id: meta
+      shell: bash
+      run: |
+        echo "app_build_commit=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        echo "app_build_date=$(date +%s)" >> "$GITHUB_OUTPUT"
+        env | sort
+
+    - name: build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: izpbx-asterisk
+        file: izpbx-asterisk/Dockerfile
+        platforms: ${{ inputs.platforms }}
+        push: true
+        # no provenance attestation and no metadata-action labels:
+        # they would embed the private build source URL in the image
+        provenance: false
+        tags: ${{ steps.tags.outputs.tags }}
+        build-args: |
+          APP_VER=${{ inputs.version }}
+          APP_VER_BUILD=${{ github.run_number }}
+          APP_BUILD_COMMIT=${{ steps.meta.outputs.app_build_commit }}
+          APP_BUILD_DATE=${{ steps.meta.outputs.app_build_date }}
+          ${{ inputs.build-args }}
+        # build cache stored in the Gitea registry (replaces the Drone volume cache)
+        cache-from: type=registry,ref=${{ steps.login.outputs.image }}:${{ inputs.cache-tag }}
+        cache-to: type=registry,ref=${{ steps.login.outputs.image }}:${{ inputs.cache-tag }},mode=max,image-manifest=true,oci-mediatypes=true

@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# gitleaks pre-commit hook: blocks commits that add secrets or private infrastructure references.
+#
+# enable once per clone:  git config core.hooksPath .githooks
+# private extra rules:    ~/.config/gitleaks/izpbx.toml (outside the repo, same content as the
+#                         Gitea secret GITLEAKS_CONFIG). Override path with GITLEAKS_IZPBX_CONFIG.
+# bypass (emergency only): git commit --no-verify
+#
+# gitleaks version and checksum are read from .gitea/actions/gitleaks/action.yml (single source of truth).
+# If gitleaks is not in PATH, the pinned release is downloaded and verified into ~/.cache/gitleaks.
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+WORKFLOW="$ROOT/.gitea/actions/gitleaks/action.yml"
+CONFIG="${GITLEAKS_IZPBX_CONFIG:-$HOME/.config/gitleaks/izpbx.toml}"
+
+wf_env() { sed -n "s/^ *$1: *//p" "$WORKFLOW" | head -1 | tr -d "'\" "; }
+
+find_gitleaks() {
+  local ver sha dir tgz
+  ver=$(wf_env GITLEAKS_VERSION)
+  sha=$(wf_env GITLEAKS_SHA256)
+  dir="${XDG_CACHE_HOME:-$HOME/.cache}/gitleaks/$ver"
+  if [ -x "$dir/gitleaks" ]; then echo "$dir/gitleaks"; return; fi
+  if [ "$(uname -s)-$(uname -m)" = "Linux-x86_64" ]; then
+    tgz="gitleaks_${ver}_linux_x64.tar.gz"
+    mkdir -p "$dir"
+    echo "gitleaks: downloading v$ver..." >&2
+    curl -fsSL -o "$dir/$tgz" "https://github.com/gitleaks/gitleaks/releases/download/v${ver}/${tgz}"
+    echo "$sha  $dir/$tgz" | sha256sum -c --quiet - >&2
+    tar xzf "$dir/$tgz" -C "$dir" gitleaks && rm -f "$dir/$tgz"
+    echo "$dir/gitleaks"; return
+  fi
+  command -v gitleaks || true
+}
+
+GITLEAKS=$(find_gitleaks)
+if [ -z "$GITLEAKS" ]; then
+  echo "gitleaks: not available, commit blocked. Install gitleaks or use 'git commit --no-verify' at your own risk." >&2
+  exit 1
+fi
+
+ARGS=(git --pre-commit --staged --redact --verbose --no-banner)
+if [ -f "$CONFIG" ]; then
+  ARGS+=(--config "$CONFIG")
+else
+  echo "gitleaks: WARNING private rules not found ($CONFIG), using default rules only" >&2
+fi
+
+exec "$GITLEAKS" "${ARGS[@]}" "$ROOT"

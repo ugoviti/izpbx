@@ -1,0 +1,54 @@
+name: matrix notify
+description: Send the build result to the izPBX Matrix room (shared by release and dev workflows)
+
+inputs:
+  status:
+    description: Build status (eg. job.status)
+    required: true
+  label:
+    description: Extra label shown in the message (eg. tag:20.16.22)
+    default: ''
+  password:
+    description: Matrix bot password
+    required: true
+  homeserver:
+    description: Matrix homeserver URL (vars.MATRIX_HOMESERVER)
+    required: true
+  room-id:
+    description: Matrix room id (vars.MATRIX_ROOM_ID)
+    required: true
+  user:
+    description: Matrix bot user id (vars.MATRIX_USER)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: matrix notify
+      shell: bash
+      env:
+        STATUS: ${{ inputs.status }}
+        LABEL: ${{ inputs.label }}
+        MATRIX_PASSWORD: ${{ inputs.password }}
+        MATRIX_HOMESERVER: ${{ inputs.homeserver }}
+        MATRIX_ROOM_ID: ${{ inputs.room-id }}
+        MATRIX_USER: ${{ inputs.user }}
+      run: |
+        set -eu
+        RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_NUMBER}"
+        BODY="${GITHUB_REPOSITORY} build:#${GITHUB_RUN_NUMBER} ${LABEL} status:${STATUS}"
+        HTML="<a href=\"${RUN_URL}\"><code>${GITHUB_REPOSITORY}</code></a> build:[<code>#${GITHUB_RUN_NUMBER}</code>] [<code>${LABEL}</code>] status:[<strong>${STATUS}</strong>]"
+
+        TOKEN=$(jq -n --arg u "$MATRIX_USER" --arg p "$MATRIX_PASSWORD" \
+            '{type:"m.login.password", identifier:{type:"m.id.user", user:$u}, password:$p}' \
+          | curl -fsS -X POST -H 'Content-Type: application/json' -d @- \
+            "${MATRIX_HOMESERVER}/_matrix/client/v3/login" | jq -r .access_token)
+
+        ROOM=$(jq -rn --arg r "$MATRIX_ROOM_ID" '$r|@uri')
+        jq -n --arg b "$BODY" --arg h "$HTML" \
+            '{msgtype:"m.notice", body:$b, format:"org.matrix.custom.html", formatted_body:$h}' \
+          | curl -fsS -X PUT -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -d @- \
+            "${MATRIX_HOMESERVER}/_matrix/client/v3/rooms/${ROOM}/send/m.room.message/gitea-${GITHUB_RUN_ID}-$(date +%s)" >/dev/null
+
+        # logout so a new Matrix device isn't left behind for every build
+        curl -fsS -X POST -H "Authorization: Bearer ${TOKEN}" "${MATRIX_HOMESERVER}/_matrix/client/v3/logout" >/dev/null || true

@@ -1,0 +1,47 @@
+# izPBX release build (Gitea Actions)
+# Triggered by pushing a tag (eg. 20.16.22). Pushes ONLY to the Gitea registry.
+# To publish on Docker Hub run the izpbx-promote workflow manually.
+# Tag scheme: .gitea/actions/image-tags (X.Y.Z, X.Y, X, X.Y.Z-<run_number>, latest)
+#
+# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+
+name: izpbx-release
+
+on:
+  push:
+    tags:
+      - '*'
+
+concurrency:
+  group: izpbx-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build and push
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ${{ gitea.ref_name }}
+          latest: 'true'
+          build-number: ${{ gitea.run_number }}
+          cache-tag: buildcache
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: matrix notify
+        if: always()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: build tag:${{ gitea.ref_name }}
+          password: ${{ secrets.MATRIX_PASSWORD }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+          user: ${{ vars.MATRIX_USER }}

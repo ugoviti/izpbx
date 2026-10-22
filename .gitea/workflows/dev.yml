@@ -1,0 +1,78 @@
+# izPBX dev build (Gitea Actions)
+# Manual only: Repository > Actions > izpbx-dev > Run workflow (choose the branch, eg. dev).
+# Image tag: dev-<ASTERISK_MAJOR>.<FREEPBX_VER> (eg. dev-20.16)
+# Pushes ONLY to the Gitea registry. To publish on Docker Hub run izpbx-promote with version dev-XX.YY.
+# Empty version inputs fall back to the ARG defaults in izpbx-asterisk/Dockerfile (single source of truth).
+# Build/push logic: .gitea/actions/build-push  -  notification: .gitea/actions/matrix-notify
+#
+# Required secrets: REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+
+name: izpbx-dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      asterisk_ver:
+        description: Asterisk version (empty = Dockerfile default)
+        default: ''
+        required: false
+      freepbx_ver:
+        description: FreePBX version (empty = Dockerfile default)
+        default: ''
+        required: false
+      app_debug:
+        description: APP_DEBUG (0/1)
+        default: '1'
+        required: true
+
+concurrency:
+  group: izpbx-dev
+  cancel-in-progress: false
+
+jobs:
+  dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: resolve versions
+        id: ver
+        env:
+          IN_ASTERISK_VER: ${{ inputs.asterisk_ver }}
+          IN_FREEPBX_VER: ${{ inputs.freepbx_ver }}
+        run: |
+          set -eu
+          dockerfile_arg() { sed -n "s/^ARG $1=//p" izpbx-asterisk/Dockerfile | head -1; }
+          ASTERISK_VER="${IN_ASTERISK_VER:-$(dockerfile_arg ASTERISK_VER)}"
+          FREEPBX_VER="${IN_FREEPBX_VER:-$(dockerfile_arg FREEPBX_VER)}"
+          DEV_TAG="dev-${ASTERISK_VER%%.*}.${FREEPBX_VER}"
+          echo "asterisk=${ASTERISK_VER}" >> "$GITHUB_OUTPUT"
+          echo "freepbx=${FREEPBX_VER}" >> "$GITHUB_OUTPUT"
+          echo "tag=${DEV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Asterisk ${ASTERISK_VER} / FreePBX ${FREEPBX_VER} -> ${DEV_TAG}"
+
+      - name: build and push
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ${{ steps.ver.outputs.tag }}
+          cache-tag: buildcache-dev
+          build-args: |
+            APP_DEBUG=${{ inputs.app_debug }}
+            ASTERISK_VER=${{ steps.ver.outputs.asterisk }}
+            FREEPBX_VER=${{ steps.ver.outputs.freepbx }}
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: matrix notify
+        if: always()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: dev:${{ steps.ver.outputs.tag }} ref:${{ gitea.ref_name }}
+          password: ${{ secrets.MATRIX_PASSWORD }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+          user: ${{ vars.MATRIX_USER }}

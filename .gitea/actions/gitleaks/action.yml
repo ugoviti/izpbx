@@ -1,0 +1,36 @@
+name: izpbx gitleaks
+description: Install the pinned gitleaks release and scan the full git history (requires checkout with fetch-depth 0)
+
+# GITLEAKS_VERSION / GITLEAKS_SHA256 below are the single source of truth,
+# also read by the local hook .githooks/pre-commit
+
+inputs:
+  config:
+    description: Private extra rules (TOML content, from secrets.GITLEAKS_CONFIG). Empty = default rules only
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: gitleaks scan
+      shell: bash
+      env:
+        GITLEAKS_VERSION: 8.21.2
+        GITLEAKS_SHA256: 5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba
+        PRIVATE_CONFIG: ${{ inputs.config }}
+      run: |
+        set -euo pipefail
+        TGZ="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+        mkdir -p "$RUNNER_TEMP/gitleaks"
+        curl -fsSL -o "$RUNNER_TEMP/$TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TGZ}"
+        echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$TGZ" | sha256sum -c -
+        tar xzf "$RUNNER_TEMP/$TGZ" -C "$RUNNER_TEMP/gitleaks" gitleaks
+
+        ARGS=(git --redact --verbose --no-banner)
+        if [ -n "$PRIVATE_CONFIG" ]; then
+          printf '%s\n' "$PRIVATE_CONFIG" > "$RUNNER_TEMP/gitleaks.toml"
+          ARGS+=(--config "$RUNNER_TEMP/gitleaks.toml")
+        else
+          echo "::warning::GITLEAKS_CONFIG secret not set, scanning with default rules only"
+        fi
+        "$RUNNER_TEMP/gitleaks/gitleaks" "${ARGS[@]}" .

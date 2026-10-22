@@ -1,0 +1,40 @@
+# Secret scanning with gitleaks (Gitea Actions)
+# Runs on every push/PR to Gitea, before anything is published on GitHub (see izpbx-promote).
+# Scan logic and pinned version: .gitea/actions/gitleaks  -  local hook: .githooks/pre-commit
+#
+# Optional secret: GITLEAKS_CONFIG  private extra rules (TOML), kept out of the repo because
+#                                   it contains the private hostnames it has to detect.
+# Failure notify:  MATRIX_PASSWORD (secret), MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER (variables)
+
+name: gitleaks
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: ./.gitea/actions/gitleaks
+        with:
+          config: ${{ secrets.GITLEAKS_CONFIG }}
+
+      - name: matrix notify
+        if: failure()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: gitleaks ref:${{ gitea.ref_name }}
+          password: ${{ secrets.MATRIX_PASSWORD }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+          user: ${{ vars.MATRIX_USER }}
