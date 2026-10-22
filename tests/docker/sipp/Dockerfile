@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 # SIPp for SIP call tests, built from the release tarball with a pinned sha256.
 FROM debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS build
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG SIPP_VER=3.7.3
 ARG SIPP_SHA256=f7cf9ced5e2915c6aa8d88b48a32869ce5bc1f23b0b8da0de4df928db4925bf7
 RUN apt-get update \

@@ -1,0 +1,6 @@
+# hadolint settings for izpbx (used by tests/lint.sh)
+failure-threshold: warning
+ignored:
+  # Debian package versions are not pinned: pins break on every security
+  # update. Reproducibility comes from the base image pinned by digest.
+  - DL3008

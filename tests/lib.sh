@@ -9,6 +9,7 @@ set -Eeuo pipefail
 
 TESTS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_DIR=$(cd "$TESTS_DIR/.." && pwd)
+export REPO_DIR
 COMPOSE_FILE="$TESTS_DIR/compose.test.yml"
 
 : "${TEST_ID:=$(basename "${0%.sh}")}"

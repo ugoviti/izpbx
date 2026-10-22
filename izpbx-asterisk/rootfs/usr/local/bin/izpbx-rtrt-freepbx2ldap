@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # autoprovisiong of ldap addressbook from asterisk freepbx mysql database
 # release 20111129
 # author: ugo.viti@initzero.it
@@ -19,7 +19,7 @@ ldap_basedn="l=Toscana,c=IT"
 ldap_ou="Lab Test"
  
 run_query() {
- mysql -h $mysql_host -u $mysql_username --password=$mysql_password --batch --skip-column-names $mysql_database --execute="$@"
+ mysql -h $mysql_host -u $mysql_username --password=$mysql_password --batch --skip-column-names $mysql_database --execute="$*"
 }
  
  
@@ -50,8 +50,9 @@ telephoneNumber: $telephoneNumber
 uid: $uid
 "
   done
+rc=$?
  
-[ $? != 0 ] && exit $?
+[ $rc != 0 ] && exit $rc
 return 0
 }
  

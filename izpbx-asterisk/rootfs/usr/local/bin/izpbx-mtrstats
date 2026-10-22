@@ -11,4 +11,4 @@ while true ; do
 done
 }
  
-[ ! -z "$1" ] && mtr_stats "$1" 2>&1 >~/izmtrstats-$1-$(date +"%Y%m%d-%H%M%S").log || exit 1
+[ ! -z "$1" ] && mtr_stats "$1" >~/"izmtrstats-$1-$(date +"%Y%m%d-%H%M%S").log" 2>&1 || exit 1

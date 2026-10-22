@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+# shellcheck disable=SC2034 # every field of "core show channels concise" is parsed, not all are printed
 # asterisk realtime calls status
 # written by Ugo Viti <ugo.viti@initzero.it>
 # version: 20170317
@@ -6,7 +7,7 @@
 izcallstats() {
  channels_file=/tmp/izcallstats.test
  #channels_file=$(mktemp)
- asterisk -r -x "core show channels concise" 2>&1 > $channels_file
+ asterisk -r -x "core show channels concise" > $channels_file 2>&1
  n=1
 
  #cat $channels_file | grep -v ^Local | while read call; do
@@ -115,6 +116,8 @@ do
         ;;
     d ) # debug switch
         DEBUG=1
+        ;;
+    * ) exit $E_OPTERROR
         ;;
   esac
 done

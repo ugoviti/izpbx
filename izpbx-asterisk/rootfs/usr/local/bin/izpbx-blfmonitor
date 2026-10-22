@@ -46,12 +46,12 @@ do
 	fi
  
 	for ((i = 1 ; i <= $LINEE_ATTIVE ; i++ )); do
-       		asterisk -rvx "DEVSTATE CHANGE Custom:linea"$i" BUSY" >/dev/null
+       		asterisk -rvx "DEVSTATE CHANGE Custom:linea$i BUSY" >/dev/null
         done
  
 	for ((i = 0 ; i < $LINEE_INATTIVE ; i++ )); do
 		ESIMA=`expr "$LINEE_TOT" - "$i"`
-                asterisk -rvx "DEVSTATE CHANGE Custom:linea"$ESIMA" NOT_INUSE" >/dev/null
+                asterisk -rvx "DEVSTATE CHANGE Custom:linea$ESIMA NOT_INUSE" >/dev/null
         done
  
 	sleep $REFRESH_TIME
@@ -109,6 +109,7 @@ pidofproc() {
                 pid_file=$2
                 shift 2
         fi
+        # shellcheck disable=SC2034 # LSB pidofproc exit code, kept for reference
         fail_code=3 # "Program is not running"
  
         # First try "/var/run/*.pid" files
@@ -153,7 +154,7 @@ stop_daemon() {
           then
             echo "INFO: the $(basename $0) daemon is not running right now"
           else
-            for LPID in $PID ; do kill $PID; done
+            for LPID in $PID ; do kill "$LPID"; done
             echo "$(date +"%Y-%m-%d %H:%M:%S") INFO: stopping $(basename $0) daemon running with pid ($PID)" 2>&1 | tee -a $LOG
         fi
 }
@@ -184,8 +185,6 @@ example: $progname -t terra -l 4"
 #################### default program menu and arguments validations
 NO_ARGS=0
 _OPTERROR=65
-command="$0"
-command_args="$@"
  
 if [ $# -eq "$NO_ARGS" ]  # Script invoked with no command-line args?
 then

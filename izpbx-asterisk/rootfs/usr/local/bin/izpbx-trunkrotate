@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # questo script ruota in automatico le rotte specificate ogni volta che viene eseguito
 # è utile ad esempio per ruotare le sim di un gsm box in modo che le chiamate vengano
 # distribuite giorno dopo giorno, in modo uguale fra le due sim
@@ -10,7 +10,7 @@ ROUTE_NAME="gsm"
 TRUNK_NAME="portech1-sim1 portech1-sim2"
  
 run_query() {
- mysql -u asterisk --password=pbxizpwd --batch --skip-column-names --execute="$(eval $@)" asterisk
+ mysql -u asterisk --password=pbxizpwd --batch --skip-column-names --execute="$(eval "$*")" asterisk
 }
  
  
@@ -30,13 +30,7 @@ for TRUNK in $TRUNK_NAME
  
 # caclcola il numero totale di trunk da switchare in round robin
 count_args() {
-args=0
-for arg in $@
-  do
-    let args=$args+1
-  done
-let args=$args-1
-echo $args
+echo $(( $# - 1 ))
 }
  
 # se l'ordine di sequenza corrente è uguale a 0, allora imposta questo trunk come ultima posizione nella sequenza
@@ -45,7 +39,7 @@ calc_seq_new() {
     then
      echo $2
     else
-     let cnt=$1-1
+     cnt=$(( $1 - 1 ))
      echo $cnt
   fi
 }

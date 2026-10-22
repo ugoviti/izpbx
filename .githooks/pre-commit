@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# gitleaks pre-commit hook: blocks commits that add secrets or private infrastructure references.
+# pre-commit hook: lint (shellcheck, hadolint) then gitleaks, which blocks commits
+# that add secrets or private infrastructure references.
 #
 # enable once per clone:  git config core.hooksPath .githooks
 # private extra rules:    ~/.config/gitleaks/izpbx.toml (outside the repo, same content as the
@@ -33,6 +34,11 @@ find_gitleaks() {
   fi
   command -v gitleaks || true
 }
+
+# lint first: tests/lint.sh runs shellcheck and hadolint as pinned containers
+if [ -x "$ROOT/tests/lint.sh" ]; then
+  "$ROOT/tests/lint.sh" "$ROOT" || { echo "lint: commit blocked, fix the findings above" >&2; exit 1; }
+fi
 
 GITLEAKS=$(find_gitleaks)
 if [ -z "$GITLEAKS" ]; then

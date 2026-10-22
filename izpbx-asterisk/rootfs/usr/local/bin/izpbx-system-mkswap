@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 size="1"
  
 make_swap() {
@@ -16,7 +16,7 @@ add_replace_line() {
  match="$1"
  match_sed="$(echo $match | sed 's/\//\\\//g')"
  shift
- string="$@"
+ string="$*"
  string_sed="$(echo $string | sed 's/\//\\\//g')"
  
  grep -q "^$match" $file && sed -i "s/^$match_sed.*/$string_sed/" $file || echo "$string" >> $file

@@ -139,6 +139,7 @@ ARG APP_INSTALL_EXTRA=""
 ARG OS_UPDATE_STAMP=""
 
 ### STEP 1: INSTALL BASE PACKAGES
+# hadolint ignore=DL3038,DL3041,DL4006,SC3009  # legacy RHEL Dockerfile, rewritten by P1-04
 RUN set -xe && \
   : "os update stamp: ${OS_UPDATE_STAMP}" && \
   ## import system information vars
@@ -335,6 +336,7 @@ RUN set -xe && \
 
 ### STEP 2: PREPARE SYSTEM USERS
 ## prep users
+# hadolint ignore=DL3046  # legacy RHEL Dockerfile, rewritten by P1-04
 RUN set -xe && \
   groupadd -g ${APP_GID} ${APP_GRP} && \
   useradd -u ${APP_UID} -c "${APP_DESCRIPTION} User" -g ${APP_GRP} -s /sbin/nologin ${APP_USR} && \
@@ -345,6 +347,7 @@ RUN set -xe && \
 
 ### STEP 3: BUILD STAGE
 ## build asterisk
+# hadolint ignore=DL3003,DL3038,DL3041,DL4006  # legacy RHEL Dockerfile, rewritten by P1-04
 RUN set -xe && \
   . /etc/os-release && export OSARCH=$(uname -m) && \
   \
@@ -761,10 +764,11 @@ RUN set -xe && \
 ## curl -fSL https://github.com/FreePBX/framework/archive/release/${FREEPBX_VER_FRAMEWORK}.tar.gz| tar xfz - --strip 1 -C freepbx
 
 ## copy external sources files again
-ADD build/ /usr/src/
+COPY build/ /usr/src/
 
 ## deploy freepbx
 # NOTE: pipefail: a failed curl into 'curl | tar' pipes must fail the build
+# hadolint ignore=DL3003,DL4006  # legacy RHEL Dockerfile, rewritten by P1-04
 RUN set -xe -o pipefail && \
   \
   cd /usr/src && \
@@ -851,6 +855,7 @@ RUN set -xe -o pipefail && \
   ; done
   
 ## install other components
+# hadolint ignore=DL3003,DL4006  # legacy RHEL Dockerfile, rewritten by P1-04
 RUN set -xe && \
   . /etc/os-release && export OSARCH=$(uname -m) && \
   : "---------- START install izsynth by InitZero ----------" && \
@@ -901,7 +906,7 @@ RUN set -xe && \
   su - asterisk -s /bin/bash -c 'gpg --refresh-keys --keyserver keys.openpgp.org'
 
 ## copy external sources files
-ADD patch/ /usr/src/
+COPY patch/ /usr/src/
 
 ## FIXME: fix for FreePBX 16 upgrade error (20211121: MUST be removed in a future release for better security)
 ## other problem when upgrading to FreePBX 16: https://issues.freepbx.org/browse/FREEPBX-22842
@@ -964,7 +969,7 @@ ENV APP_BUILD_COMMIT="${APP_BUILD_COMMIT}"
 ENV APP_BUILD_DATE="${APP_BUILD_DATE}"
 
 ## add files to container
-ADD rootfs Dockerfile README.md /
+COPY rootfs Dockerfile README.md /
 
 ## start the container process
 ENTRYPOINT ["/entrypoint.sh"]

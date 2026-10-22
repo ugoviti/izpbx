@@ -22,12 +22,11 @@ if [ ! -z "$(cat /var/log/asterisk/h323_log | grep -i "Error:" | grep -i "gateke
                 echo "running: asterisk -r -x 'module load chan_ooh323.so'"
                 echo "RESULT:"
                 asterisk -r -x 'module load chan_ooh323.so'
-                RETVAL=$?
                 echo "------------------------------------------------------"
                 echo
 
                 #set -x
-                if [ $(du -b /var/log/asterisk/h323_log | awk '{print $1}') -gt 512 ]
+                if [ "$(du -b /var/log/asterisk/h323_log | awk '{print $1}')" -gt 512 ]
                   then
                         echo "detected ooh323 unload failed"
                         echo "forcing asterisk restart"
