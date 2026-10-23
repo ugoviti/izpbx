@@ -4,7 +4,7 @@
 source "$(dirname "$0")/../lib.sh"
 
 work=$(mktemp -d)
-t_on_cleanup "rm -rf '$work'"
+t_on_cleanup "t_rmtree '$work'"
 
 lint() { "$TESTS_DIR/lint.sh" "$@" >"$work/lint.log" 2>&1; }
 

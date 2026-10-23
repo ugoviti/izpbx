@@ -16,7 +16,10 @@ COMPOSE_FILE="$TESTS_DIR/compose.test.yml"
 # Lowercase and safe for compose project names; unique per run.
 : "${TEST_PROJECT:=izpbxt-$(printf '%s' "$TEST_ID" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-')$$}"
 : "${TEST_TIMEOUT:=300}"
-export TEST_ID TEST_PROJECT
+# TEST_PROJECT is not exported: a script run by a check (verify-fixture.sh,
+# make-fixture.sh) gets its own project, so its cleanup cannot remove the
+# containers of the caller. Pass it explicitly to share a project.
+export TEST_ID
 
 TEST_FAILS=0
 TEST_CLEANUP_HOOKS=()
@@ -40,9 +43,17 @@ assert_contains() { # haystack needle message
   if [[ "$1" == *"$2"* ]]; then pass "$3"; else fail "$3 (missing '$2')"; fi
 }
 
-assert_cmd() { # message -- command...
-  local msg=$1; shift; [ "${1:-}" == "--" ] && shift
-  if "$@" >/dev/null 2>&1; then pass "$msg"; else fail "$msg (command failed: $*)"; fi
+assert_cmd() { # message -- command...   (on failure, shows the end of the command output)
+  # _lib_ prefix: the command may be a function of the check using any name
+  local _lib_msg=$1 _lib_out; shift; [ "${1:-}" == "--" ] && shift
+  _lib_out=$(mktemp)
+  if "$@" >"$_lib_out" 2>&1; then
+    pass "$_lib_msg"
+  else
+    fail "$_lib_msg (command failed: $*)"
+    tail -n 8 "$_lib_out" | sed 's/^/    | /' >&2
+  fi
+  rm -f "$_lib_out"
 }
 
 assert_cmd_fails() { # message -- command...  (negative checks)
@@ -64,7 +75,7 @@ finish() {
 
 # --- containers
 
-t_compose() { docker compose -p "$TEST_PROJECT" -f "$COMPOSE_FILE" "$@"; }
+t_compose() { env TEST_PROJECT="$TEST_PROJECT" docker compose -p "$TEST_PROJECT" -f "$COMPOSE_FILE" "$@"; }
 
 t_up() { t_compose up -d --quiet-pull "$@" >&2; }
 
@@ -123,6 +134,9 @@ t_wait_for() { # timeout_s -- command...
 # --- cleanup
 
 t_on_cleanup() { TEST_CLEANUP_HOOKS+=("$1"); }
+
+# rm -rf that also removes trees unpacked from fixtures (they hold read-only dirs)
+t_rmtree() { [ -e "$1" ] || return 0; chmod -R u+w "$1" 2>/dev/null; rm -rf "$1"; }
 
 t_cleanup() {
   local rc=$? hook

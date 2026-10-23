@@ -40,7 +40,7 @@ case "$variant" in
     line=$(grep -n 'Macro(' "$work/$conf" | tail -1 | cut -d: -f1)
     extra+=("anomaly=$conf:$line")
     tar --numeric-owner -C "$work" -czf "$dest.tmp/data.tar.gz" .
-    rm -rf "$work"
+    chmod -R u+w "$work" && rm -rf "$work"   # the unpacked tree holds read-only dirs
     ;;
   diskfull)
     cp "$base/data.tar.gz" "$dest.tmp/"

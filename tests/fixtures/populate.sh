@@ -2,18 +2,21 @@
 # Populate an izPBX 20.16.x install with the T5 fixture content.
 # Runs inside the izPBX container as root, from the directory holding
 # populate.php and extensions.csv (copied there by make-fixture.sh).
+# DB access uses the container's MYSQL_USER/MYSQL_PASSWORD (works without root).
 set -Eeuo pipefail
 trap 'echo "populate.sh: error at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 here=$(cd "$(dirname "$0")" && pwd)
 : "${RINGGROUPS_TAG:=16.0.11}"
-: "${MYSQL_ROOT_PASSWORD:?}"
 : "${MYSQL_SERVER:=db}"
+: "${MYSQL_USER:=asterisk}"
+: "${MYSQL_PASSWORD:?}"
 : "${MYSQL_DATABASE_CDR:=asteriskcdrdb}"
+: "${APP_PORT_MYSQL:=3306}"
 
 step() { echo "populate.sh: $*" >&2; }
 as_ast() { su - asterisk -s /bin/bash -c "$*"; }
-sql_cdr() { mysql -h "$MYSQL_SERVER" -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE_CDR" -e "$1"; }
+sql_cdr() { MYSQL_PWD="$MYSQL_PASSWORD" mysql -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$MYSQL_USER" "$MYSQL_DATABASE_CDR" -e "$1"; }
 
 step "ring groups module ($RINGGROUPS_TAG, not in the image local repo)"
 as_ast "fwconsole ma downloadinstall ringgroups --tag=$RINGGROUPS_TAG" >/dev/null

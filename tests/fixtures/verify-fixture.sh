@@ -16,7 +16,7 @@ for f in asterisk.sql.gz asteriskcdrdb.sql.gz data.tar.gz manifest.txt; do
 done
 
 work=$(mktemp -d)
-t_on_cleanup "rm -rf '$work'"
+t_on_cleanup "t_rmtree '$work'"
 tar -C "$work" -xzf "$dir/data.tar.gz" 2>/dev/null || die "cannot unpack data.tar.gz"
 d="$work"
 
@@ -37,7 +37,9 @@ check() { # category count
   if [ "${2:-0}" -gt 0 ] 2>/dev/null; then pass "$1"; else fail "$1 is empty"; fi
 }
 
-A=asterisk
+# real database names (the dump files keep their role names)
+A=$(sed -n 's/^db_config=//p' "$dir/manifest.txt"); A=${A:-asterisk}
+C=$(sed -n 's/^db_cdr=//p' "$dir/manifest.txt"); C=${C:-asteriskcdrdb}
 check "extension chan_sip"            "$(q "SELECT count(*) FROM $A.devices WHERE tech='sip'")"
 check "extension pjsip"               "$(q "SELECT count(*) FROM $A.devices WHERE tech='pjsip'")"
 check "trunk chan_sip ip auth"        "$(q "SELECT count(*) FROM $A.trunks t JOIN $A.sip s ON s.id=CONCAT('tr-peer-',t.trunkid) AND s.keyword='insecure' WHERE t.tech='sip'")"
@@ -52,12 +54,13 @@ check "time condition"                "$(q "SELECT count(*) FROM $A.timeconditio
 check "voicemail box"                 "$(q "SELECT count(*) FROM $A.users WHERE voicemail='default'")"
 check "voicemail messages"            "$(files var/spool/asterisk/voicemail/default 'msg*.txt')"
 check "call recordings"               "$(files var/spool/asterisk/monitor '*.wav')"
-check "call recordings in cdr"        "$(q "SELECT count(*) FROM asteriskcdrdb.cdr WHERE recordingfile<>''")"
+check "call recordings in cdr"        "$(q "SELECT count(*) FROM $C.cdr WHERE recordingfile<>''")"
 check "astdb call forward"            "$(astdb '/CF%')"
 check "astdb do not disturb"          "$(astdb '/DND/%')"
 check "custom prompt"                 "$(q "SELECT count(*) FROM $A.recordings")"
 check "custom prompt file"            "$(files var/lib/asterisk/sounds/custom)"
-check "music on hold category"        "$(q "SELECT count(*) FROM $A.music WHERE category<>'default'")"
+# a row in the music table, or only the directory with older music modules (20.16.0)
+check "music on hold category"        "$(( $(q "SELECT count(*) FROM $A.music WHERE category<>'default'") + $(test -d "$d/var/lib/asterisk/moh/fixture-moh" && echo 1 || echo 0) ))"
 check "music on hold files"           "$(files var/lib/asterisk/moh/fixture-moh)"
 check "fax detection"                 "$(q "SELECT count(*) FROM $A.fax_incoming WHERE detection<>''")"
 check "fax users"                     "$(q "SELECT count(*) FROM $A.fax_users WHERE faxenabled='true'")"

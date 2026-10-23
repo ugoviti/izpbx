@@ -6,7 +6,7 @@ source "$(dirname "$0")/../lib.sh"
 
 golden="$TESTS_DIR/golden"
 work=$(mktemp -d)
-t_on_cleanup "rm -rf '$work'"
+t_on_cleanup "t_rmtree '$work'"
 
 # expected files of a case: the "# expect:" header of its .env
 expected_ok() { # run_dir -> 0 if every case has all its expected files, non-empty

@@ -6,7 +6,7 @@ source "$(dirname "$0")/../lib.sh"
 out="$TESTS_DIR/fixtures/out"
 fx="$out/20.16.22"
 work=$(mktemp -d)
-t_on_cleanup "rm -rf '$work'"
+t_on_cleanup "t_rmtree '$work'"
 
 # TEST_REUSE_FIXTURES=1 (run.sh all-done) reuses a fixture built from unchanged inputs
 [ -n "${TEST_REUSE_FIXTURES:-}" ] || rm -rf "$fx"
@@ -23,7 +23,7 @@ cp "$fx/asteriskcdrdb.sql.gz" "$fx/manifest.txt" "$bad/"
 gzip -dc "$fx/asterisk.sql.gz" | awk '/^INSERT INTO `ivr_details`/{skip=1} !skip{print} skip&&/;$/{skip=0}' | gzip -n > "$bad/asterisk.sql.gz"
 tar -C "$bad/data" -xzf "$fx/data.tar.gz" 2>/dev/null
 find "$bad/data/var/spool/asterisk/voicemail" -name 'msg*' -delete
-tar -C "$bad/data" -czf "$bad/data.tar.gz" . && rm -rf "$bad/data"
+tar -C "$bad/data" -czf "$bad/data.tar.gz" . && t_rmtree "$bad/data"
 "$TESTS_DIR/fixtures/verify-fixture.sh" "$bad" >"$work/bad.log" 2>&1 && rc=0 || rc=$?
 assert_ne 0 "$rc" "a tampered fixture is rejected"
 assert_contains "$(cat "$work/bad.log")" "FAIL: ivr is empty" "missing IVR is reported"

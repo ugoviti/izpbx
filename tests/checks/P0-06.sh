@@ -7,7 +7,7 @@ source "$(dirname "$0")/../lib.sh"
 REF=20.16.22
 contract="$REPO_DIR/docs/env-contract.md"
 work=$(mktemp -d)
-t_on_cleanup "rm -rf '$work'"
+t_on_cleanup "t_rmtree '$work'"
 
 old() { git -C "$REPO_DIR" show "$REF:$1"; }
 

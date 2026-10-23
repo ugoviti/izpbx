@@ -11,6 +11,18 @@ $core = FreePBX::Core();
 
 function step($msg) { fwrite(STDERR, "populate: $msg\n"); }
 
+// keep only the columns that exist: older module schemas (20.16.0) lack some
+function existing_columns($pdo, $table, $vals) {
+  $cols = $pdo->query("SHOW COLUMNS FROM `$table`")->fetchAll(PDO::FETCH_COLUMN);
+  return array_intersect_key($vals, array_flip($cols));
+}
+function insert_row($pdo, $table, $vals) {
+  $vals = existing_columns($pdo, $table, $vals);
+  $sql = sprintf('INSERT INTO `%s` (`%s`) VALUES (%s)', $table, implode('`,`', array_keys($vals)), rtrim(str_repeat('?,', count($vals)), ','));
+  $pdo->prepare($sql)->execute(array_values($vals));
+  return $pdo->lastInsertId();
+}
+
 // --- trunks
 step('chan_sip trunk with IP auth (provider sends to port 5160)');
 $core->addTrunk('prov-sip-ip', 'sip', [
@@ -51,13 +63,15 @@ core_routing_addbyid('fixture-out', '', '', '', '', '', 'default', '', [
 
 // --- custom system recording (the audio file is created by populate.sh)
 step('system recording');
-$pdo->prepare("INSERT INTO recordings (displayname, filename, description, fcode, fcode_pass, fcode_lang) VALUES (?, ?, ?, 0, '', '')")
-   ->execute(['fixture-welcome', 'custom/fixture-welcome', 'fixture custom prompt']);
-$rec_id = $pdo->lastInsertId();
+$rec_id = insert_row($pdo, 'recordings', ['displayname' => 'fixture-welcome', 'filename' => 'custom/fixture-welcome',
+  'description' => 'fixture custom prompt', 'fcode' => 0, 'fcode_pass' => '', 'fcode_lang' => '']);
 
 // --- custom MoH category (files created by populate.sh)
 step('music on hold category');
-$pdo->prepare("INSERT INTO music (category, type, random, application, format) VALUES ('fixture-moh', 'files', 0, '', '')")->execute();
+// older music modules (16.0.x of 20.16.0) have no table: a directory is the category
+if ($pdo->query("SHOW TABLES LIKE 'music'")->fetchColumn()) {
+  $pdo->prepare("INSERT INTO music (category, type, random, application, format) VALUES ('fixture-moh', 'files', 0, '', '')")->execute();
+}
 
 // --- ring group 600 (1002, 1003)
 step('ring group 600');
@@ -70,7 +84,7 @@ queues_add('700', 'Fixture Queue', '', '', 'app-blackhole,hangup,1', '0', ['Loca
 // --- IVR: 1 -> ext 1002, 2 -> queue 700, 3 -> ring group 600
 step('IVR');
 $ivr = FreePBX::Ivr();
-$ivr_id = $ivr->saveDetails([
+$ivr_id = $ivr->saveDetails(existing_columns($pdo, 'ivr_details', [
   'id' => '', 'name' => 'Fixture IVR', 'description' => 'fixture main menu',
   'announcement' => $rec_id, 'directdial' => 'ext-local', 'invalid_loops' => '3',
   'invalid_retry_recording' => 'default', 'invalid_destination' => 'app-blackhole,hangup,1',
@@ -80,7 +94,7 @@ $ivr_id = $ivr->saveDetails([
   'timeout_append_announce' => '1', 'invalid_append_announce' => '1',
   'timeout_ivr_ret' => '0', 'invalid_ivr_ret' => '0', 'alertinfo' => '', 'rvolume' => '',
   'strict_dial_timeout' => '2', 'accept_pound_key' => '0',
-]);
+]) + ['id' => '']);
 $ivr->saveEntries($ivr_id, [
   'ext' => ['1', '2', '3'],
   'goto' => ['from-did-direct,1002,1', 'ext-queues,700,1', 'ext-group,600,1'],
@@ -90,15 +104,16 @@ $ivr->saveEntries($ivr_id, [
 // --- time group + time condition: office hours -> IVR, otherwise voicemail of 1001
 step('time condition');
 $tg = timeconditions_timegroups_add_group_timestrings('Fixture office hours', ['09:00-18:00|mon-fri|*|*']);
-$pdo->prepare("INSERT INTO timeconditions (displayname, time, truegoto, falsegoto, deptname, generate_hint, invert_hint, fcc_password, priority, timezone, mode) VALUES (?, ?, ?, ?, '', '1', '0', '', '0', 'Europe/Rome', 'time-group')")
-   ->execute(['Fixture office hours', $tg, "ivr-$ivr_id,s,1", 'ext-local,vmu1001,1']);
-$tc_id = $pdo->lastInsertId();
+$tc_id = insert_row($pdo, 'timeconditions', ['displayname' => 'Fixture office hours', 'time' => $tg,
+  'truegoto' => "ivr-$ivr_id,s,1", 'falsegoto' => 'ext-local,vmu1001,1', 'deptname' => '', 'generate_hint' => '1',
+  'invert_hint' => '0', 'fcc_password' => '', 'priority' => '0', 'timezone' => 'Europe/Rome', 'mode' => 'time-group']);
 
 // --- inbound routes: main DID -> time condition, fax DID with fax detection
 step('inbound routes and fax');
 $core->addDID(['extension' => '0612345678', 'cidnum' => '', 'destination' => "timeconditions,$tc_id,1", 'description' => 'Fixture main DID']);
 $core->addDID(['extension' => '0612345679', 'cidnum' => '', 'destination' => 'from-did-direct,1003,1', 'description' => 'Fixture fax DID']);
-$pdo->prepare("INSERT INTO fax_incoming (cidnum, extension, detection, detectionwait, destination, legacy_email, ring) VALUES ('', '0612345679', 'spandsp', '4', 'from-did-direct,1003,1', NULL, 0)")->execute();
+insert_row($pdo, 'fax_incoming', ['cidnum' => '', 'extension' => '0612345679', 'detection' => 'spandsp',
+  'detectionwait' => '4', 'destination' => 'from-did-direct,1003,1', 'legacy_email' => null, 'ring' => 0]);
 
 // --- userman / UCP users, one per extension; fax to email on 1003
 step('userman users');
