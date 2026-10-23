@@ -9,4 +9,6 @@
 . /usr/local/lib/izpbx/service.sh
 service_gate asterisk
 log_info "asterisk: starting under s6"
+# start time for "finish": a failure after a long run is not "in a row"
+date +%s > /run/izpbx-asterisk-started
 service_run asterisk asterisk -f -U asterisk -G asterisk
