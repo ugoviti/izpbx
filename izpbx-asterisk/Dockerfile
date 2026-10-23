@@ -49,6 +49,10 @@ RUN --mount=type=cache,target=/usr/src/download-cache \
 RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/s6.sh
 RUN /usr/src/izpbx/build/runtime.sh
+# izPBX init and services (s6-rc): only the parts already ported to 22.17
+COPY rootfs/etc/s6-overlay/ /etc/s6-overlay/
+COPY rootfs/usr/local/lib/izpbx/ /usr/local/lib/izpbx/
+COPY rootfs/usr/local/sbin/izpbx-init /usr/local/sbin/izpbx-init
 
 ARG APP_VER
 ARG APP_VER_BUILD
@@ -62,7 +66,12 @@ ENV APP_NAME="izpbx-asterisk" \
     APP_VER="${APP_VER:-dev}" \
     APP_VER_BUILD="${APP_VER_BUILD}" \
     APP_BUILD_COMMIT="${APP_BUILD_COMMIT}" \
-    APP_BUILD_DATE="${APP_BUILD_DATE}"
+    APP_BUILD_DATE="${APP_BUILD_DATE}" \
+    S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
+    S6_BEHAVIOUR_IF_STAGE2_FAILS=2
+# S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0: the first izpbx-init (FreePBX install)
+# takes minutes; S6_BEHAVIOUR_IF_STAGE2_FAILS=2: a failed izpbx-init stops
+# the container instead of leaving it up without services
 # s6-overlay is PID 1 (s6-svscan); without a CMD it runs the services only
 ENTRYPOINT ["/init"]
 CMD []

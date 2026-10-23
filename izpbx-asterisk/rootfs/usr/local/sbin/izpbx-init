@@ -1,0 +1,23 @@
+#!/bin/bash
+# izpbx-init: container initialization, run once at start by the s6-rc
+# oneshot "izpbx-init" (/etc/s6-overlay/s6-rc.d/izpbx-init) before any
+# service: every service has izpbx-init in its dependencies.d, so if this
+# script fails no service starts and the container stops
+# (S6_BEHAVIOUR_IF_STAGE2_FAILS=2).
+#
+# Steps: /usr/local/lib/izpbx/init.d/*.sh, sourced in lexical order (NN-name.sh)
+# in strict mode: the first failing command stops the init with file:line.
+# shellcheck source=../lib/izpbx/common.sh
+. /usr/local/lib/izpbx/common.sh
+izpbx_strict
+
+: "${IZPBX_INIT_DIR:=/usr/local/lib/izpbx/init.d}"
+start=$SECONDS
+log_info "izpbx-init: start"
+shopt -s nullglob
+for step in "$IZPBX_INIT_DIR"/*.sh; do
+  log_info "izpbx-init: step $(basename "$step")"
+  # shellcheck source=/dev/null
+  . "$step"
+done
+log_info "izpbx-init: done in $((SECONDS - start))s"

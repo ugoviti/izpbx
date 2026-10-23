@@ -1,0 +1,4 @@
+#!/bin/bash
+# test service: logs its start, then stays up
+echo "probe: started"
+exec sleep infinity
