@@ -82,4 +82,4 @@ zabbix-agent2
 # database client, node (D27)
 mariadb-client
 nodejs
-npm
+# npm: from the registry tarball (extras.sh, NPM_VER)

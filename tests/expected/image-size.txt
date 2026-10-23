@@ -1,0 +1,6 @@
+# izpbx-asterisk image size in bytes (docker image inspect .Size, x86_64).
+# "22.17" is the size of the current build, re-recorded when it changes on
+# purpose; P1-10 fails if a build moves more than 5% away from it, or grows
+# beyond "20.16.22" (izdock/izpbx-asterisk:20.16.22).
+22.17 1246768808
+20.16.22 1604666341

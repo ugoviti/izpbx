@@ -134,6 +134,11 @@ lookup FOP2_VER_AARCH64 "$FOP2_VER_AARCH64" "$new" "fop2.com" || propose "FOP2_V
 # --- Zabbix: LTS major chosen by hand
 report ZABBIX_VER "$ZABBIX_VER" "" "LTS branch, key $ZABBIX_GPG_FPR" || true
 
+# --- npm: newest release of the major in versions.env (npm 11+ needs Node 20)
+tags=$(fetch https://registry.npmjs.org/-/package/npm/dist-tags || true)
+new=$(grep -oE "\"next-${NPM_VER%%.*}\": *\"[^\"]+\"" <<< "$tags" | cut -d'"' -f4 || true)
+lookup NPM_VER "$NPM_VER" "$new" "registry.npmjs.org" || propose "NPM_VER=$new" "NPM_SHA256=$(sha_of "https://registry.npmjs.org/npm/-/npm-$new.tgz")"
+
 # --- izPBX tools
 new=$(gh_latest_tag ugoviti/izsynth || true)
 lookup IZSYNTH_VER "$IZSYNTH_VER" "$new" "GitHub API" || propose "IZSYNTH_VER=$new" "IZSYNTH_SHA256=$(sha_of "https://github.com/ugoviti/izsynth/archive/$new.tar.gz")"

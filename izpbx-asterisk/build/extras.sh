@@ -1,6 +1,6 @@
 #!/bin/bash
 # Stage "runtime": ionCube loader for PHP 8.2 (every SAPI: cli, apache2, fpm),
-# izsynth, the Asterisk templates for zabbix-agent2. Every download is pinned
+# npm, izsynth, the Asterisk templates for zabbix-agent2. Every download is pinned
 # by sha256 in versions.env.
 set -Eeuo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -25,6 +25,14 @@ phpenmod -v "$php_ver" -s ALL ioncube
 got=$(php -v | grep -oE 'ionCube PHP Loader v[0-9.]+' | grep -oE '[0-9.]+$' || true)
 [ "$got" == "$IONCUBE_VER" ] || build_die "ionCube: php -v reports '${got:-no loader}', expected $IONCUBE_VER"
 
+# --- npm (pure JavaScript; Node.js comes from Debian)
+fetch_verified "https://registry.npmjs.org/npm/-/npm-$NPM_VER.tgz" "$NPM_SHA256" "$cache/npm-$NPM_VER.tgz"
+rm -rf /usr/local/lib/node_modules/npm && mkdir -p /usr/local/lib/node_modules/npm
+tar -xzf "$cache/npm-$NPM_VER.tgz" -C /usr/local/lib/node_modules/npm --strip-components=1 --no-same-owner
+ln -sf ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
+ln -sf ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+[ "$(npm --version)" == "$NPM_VER" ] || build_die "npm: $(npm --version) installed, expected $NPM_VER"
+
 # --- izsynth
 fetch_verified "https://github.com/ugoviti/izsynth/archive/$IZSYNTH_VER.tar.gz" "$IZSYNTH_SHA256" "$cache/izsynth-$IZSYNTH_VER.tar.gz"
 tar -xzf "$cache/izsynth-$IZSYNTH_VER.tar.gz" -C "$tmp" "izsynth-$IZSYNTH_VER/izsynth"
@@ -37,4 +45,4 @@ tar -xzf "$cache/zabbix-templates-$ZABBIX_TEMPLATE_VER.tar.gz" -C /etc/zabbix/za
   "zabbix-templates-$ZABBIX_TEMPLATE_VER/asterisk/zabbix_agent2.d"
 chmod 755 /etc/zabbix/zabbix_agent2.d/scripts/asterisk.sh
 
-build_log "extras: ionCube $IONCUBE_VER (PHP $php_ver), izsynth $IZSYNTH_VER, zabbix templates ${ZABBIX_TEMPLATE_VER:0:12}"
+build_log "extras: ionCube $IONCUBE_VER (PHP $php_ver), npm $NPM_VER, izsynth $IZSYNTH_VER, zabbix templates ${ZABBIX_TEMPLATE_VER:0:12}"
