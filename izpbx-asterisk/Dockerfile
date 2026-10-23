@@ -46,6 +46,8 @@ COPY versions.env /usr/src/izpbx/versions.env
 COPY build/ /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/extras.sh
+RUN --mount=type=cache,target=/usr/src/download-cache \
+    /usr/src/izpbx/build/s6.sh
 RUN /usr/src/izpbx/build/runtime.sh
 
 ARG APP_VER
@@ -61,4 +63,6 @@ ENV APP_NAME="izpbx-asterisk" \
     APP_VER_BUILD="${APP_VER_BUILD}" \
     APP_BUILD_COMMIT="${APP_BUILD_COMMIT}" \
     APP_BUILD_DATE="${APP_BUILD_DATE}"
-CMD ["/bin/bash"]
+# s6-overlay is PID 1 (s6-svscan); without a CMD it runs the services only
+ENTRYPOINT ["/init"]
+CMD []
