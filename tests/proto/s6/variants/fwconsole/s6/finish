@@ -1,0 +1,19 @@
+#!/bin/bash
+# variant fwconsole. s6 finish: $1 = exit code (256 if killed by a signal), $2 = signal.
+# fwconsole start runs Asterisk under safe_asterisk, a second supervisor: kill
+# it when the service ends, so no orphan safe_asterisk loop survives.
+# Exits but 0 and SIGTERM = failure; MAX consecutive failures halt the container.
+pkill -x safe_asterisk 2>/dev/null || true
+MAX=3
+count_file=/run/izpbx-asterisk-failures
+if [ "$1" -eq 0 ] || [ "${2:-}" = "15" ]; then
+  rm -f "$count_file"; exit 0
+fi
+n=$(( $(cat "$count_file" 2>/dev/null || echo 0) + 1 ))
+echo "$n" > "$count_file"
+echo "izpbx: asterisk service failed ($n/$MAX, exit=$1 signal=${2:-})" >&2
+if [ "$n" -ge "$MAX" ]; then
+  echo "izpbx: asterisk failed $MAX times in a row, halting the container" >&2
+  echo 1 > /run/s6-linux-init-container-results/exitcode
+  exec /run/s6/basedir/bin/halt
+fi

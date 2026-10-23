@@ -1,0 +1,10 @@
+#!/command/with-contenv bash
+# variant fwconsole: FreePBX starts Asterisk, the service lives as long as it does
+fwconsole start >/dev/null 2>&1 || exit 1
+pid=$(cat /var/run/asterisk/asterisk.pid 2>/dev/null || pgrep -xo asterisk)
+[ -n "$pid" ] || exit 1
+echo "izpbx: asterisk started by fwconsole (pid $pid)" >&2
+trap 'echo "izpbx: stopping asterisk (fwconsole stop)" >&2; fwconsole stop >/dev/null 2>&1; exit 0' TERM
+while kill -0 "$pid" 2>/dev/null; do sleep 1 & wait $!; done
+echo "izpbx: asterisk (pid $pid) is gone" >&2
+exit 1

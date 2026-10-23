@@ -1,0 +1,4 @@
+#!/command/with-contenv bash
+# variant direct: s6 supervises Asterisk in the foreground
+echo "izpbx: starting asterisk under s6" >&2
+exec asterisk -f -U asterisk -G asterisk

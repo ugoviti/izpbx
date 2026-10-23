@@ -1,0 +1,21 @@
+#!/bin/bash
+# variant direct. s6 finish: $1 = exit code (256 if killed by a signal), $2 = signal.
+# exit 0 = Asterisk stopped on request (core stop / fwconsole stop): stay down
+# until "fwconsole start" (safe_asterisk shim) brings it up again.
+# Other exits but SIGTERM = failure; MAX consecutive failures halt the container.
+MAX=3
+count_file=/run/izpbx-asterisk-failures
+if [ "$1" -eq 0 ]; then
+  rm -f "$count_file"
+  echo "izpbx: asterisk stopped on request, service left down" >&2
+  exec /command/s6-svc -d /run/service/asterisk
+fi
+[ "${2:-}" = "15" ] && { rm -f "$count_file"; exit 0; }
+n=$(( $(cat "$count_file" 2>/dev/null || echo 0) + 1 ))
+echo "$n" > "$count_file"
+echo "izpbx: asterisk service failed ($n/$MAX, exit=$1 signal=${2:-})" >&2
+if [ "$n" -ge "$MAX" ]; then
+  echo "izpbx: asterisk failed $MAX times in a row, halting the container" >&2
+  echo 1 > /run/s6-linux-init-container-results/exitcode
+  exec /run/s6/basedir/bin/halt
+fi

@@ -1,0 +1,10 @@
+#!/bin/sh
+# izpbx (variant direct): Asterisk is supervised by s6. "fwconsole start"
+# runs "safe_asterisk ... &": ask s6 to bring the service up instead of
+# starting a second, unsupervised Asterisk.
+/command/s6-svc -u /run/service/asterisk
+for _ in $(seq 1 30); do
+  asterisk -rx 'core show uptime' >/dev/null 2>&1 && exit 0
+  sleep 1
+done
+exit 1
