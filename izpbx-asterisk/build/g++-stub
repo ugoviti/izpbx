@@ -1,0 +1,10 @@
+#!/bin/sh
+# izPBX ships no C/C++ compiler. The FreePBX UCP installer only checks that
+# "g++ --version" answers (its node modules are pure JavaScript): answer that,
+# and fail any real compilation with a clear message.
+if [ "$1" = "--version" ]; then
+  echo "g++ (izPBX stub, no C++ compiler installed)"
+  exit 0
+fi
+echo "g++: izPBX has no C/C++ compiler (stub for the FreePBX UCP install check)" >&2
+exit 1

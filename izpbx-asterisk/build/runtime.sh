@@ -11,4 +11,7 @@ for d in /etc/asterisk /var/lib/asterisk /var/spool/asterisk /var/log/asterisk /
   mkdir -p "$d"
   chown -R asterisk:asterisk "$d"
 done
+# no C/C++ toolchain in the runtime (P0-14): the UCP installer refuses to run
+# unless "g++ --version" answers, although its node modules build nothing
+install -m 755 "$here/g++-stub" /usr/local/bin/g++
 build_log "runtime ready"

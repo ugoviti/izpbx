@@ -19,6 +19,8 @@ proto_up() {
     --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 2s --health-retries 60)
   pbx=$(t_run pbx "$proto_image" --network "$net" --hostname izpbx-proto -e MYSQL_PASSWORD=proto-pw -e MYSQL_ROOT_PASSWORD=proto-root)
   t_wait_healthy "$db" 120 || return 1
+  # optional hook, defined by the check before calling proto_up
+  if [ "$(type -t proto_pre_install)" == function ]; then proto_pre_install || return 1; fi
   docker exec "$pbx" proto-install.sh
 }
 
