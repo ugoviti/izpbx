@@ -48,9 +48,9 @@ service_off() {
 # drop a SIGTERM received while they are still starting (Asterisk, fail2ban)
 # or do not stop on it at all (FOP2 without a configuration), and s6 would
 # wait for them: on TERM keep sending it every second, and after
-# SERVICE_STOP_GRACE seconds (default 20) send KILL. A requested stop exits 0
-# (also when the TERM killed CMD during its start); otherwise CMD's own exit
-# status, so "finish" still sees crashes and kills as failures.
+# SERVICE_STOP_GRACE seconds (default 20) send KILL. A requested stop ends
+# by SIGTERM (also when the TERM killed CMD during its start); otherwise CMD's
+# own exit status, so "finish" still sees crashes and kills as failures.
 service_run() {
   _svc_name=$1; shift
   _svc_stop=
@@ -59,7 +59,9 @@ service_run() {
   trap _service_stop TERM
   wait "$_svc_child"
   local rc=$?
-  [ -n "$_svc_stop" ] && exit 0
+  # a requested stop ends with the TERM itself: "finish" sees signal 15 and s6
+  # keeps the state it was asked for (up again on "s6-svc -r", down on -d)
+  if [ -n "$_svc_stop" ]; then trap - TERM; kill -TERM "$BASHPID"; exit 0; fi
   exit "$rc"
 }
 _service_stop() {

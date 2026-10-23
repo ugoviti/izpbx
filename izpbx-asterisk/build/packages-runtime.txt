@@ -9,6 +9,7 @@ iputils-ping
 net-tools
 less
 cron
+logrotate         # run daily by cron (/etc/logrotate.d)
 sudo
 xz-utils
 bzip2

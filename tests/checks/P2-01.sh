@@ -16,6 +16,8 @@ assert_eq '["/init"]' "$(docker image inspect -f '{{json .Config.Entrypoint}}' "
 
 c=$(t_run svc "$image")
 t_wait_for 30 -- docker exec "$c" true || die "container did not start"
+# during the boot PID 1 is s6-linux-init, which then execs into s6-svscan
+t_wait_for 30 -- sh -c "[ \"\$(docker exec $c cat /proc/1/comm)\" = s6-svscan ]" || true
 assert_eq "s6-svscan" "$(docker exec "$c" cat /proc/1/comm)" "PID 1 is s6-svscan"
 o=$(t_run other "$image" --entrypoint /bin/sleep -- infinity)
 assert_ne "s6-svscan" "$(docker exec "$o" cat /proc/1/comm)" "control: with another entrypoint PID 1 is not s6-svscan"

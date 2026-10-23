@@ -54,6 +54,9 @@ COPY rootfs/etc/s6-overlay/ /etc/s6-overlay/
 COPY rootfs/usr/local/lib/izpbx/ /usr/local/lib/izpbx/
 COPY rootfs/usr/local/sbin/izpbx-init /usr/local/sbin/izpbx-init
 COPY rootfs/usr/sbin/safe_asterisk /usr/sbin/safe_asterisk
+COPY rootfs/usr/local/sbin/izpbx-service /usr/local/sbin/izpbx-service
+COPY rootfs/etc/logrotate.d/httpd /etc/logrotate.d/httpd
+COPY rootfs/etc/cron.daily/freepbx-le-renew /etc/cron.daily/freepbx-le-renew
 
 ARG APP_VER
 ARG APP_VER_BUILD

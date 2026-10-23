@@ -11,7 +11,7 @@ if [[ "${HTTPD_HTTPS_ENABLED}" == "true" && "${LETSENCRYPT_ENABLED}" == "true" ]
   fwconsole certificates --updateall -q
   FNGR_NEW=$(openssl x509 -noout -fingerprint -in "/etc/asterisk/keys/${APP_FQDN}.crt")
   if [ "$FNGR_OLD" != "$FNGR_NEW" ]; then
-    supervisorctl restart httpd 1>/dev/null
+    izpbx-service restart httpd 1>/dev/null
     fwconsole restart
   fi
 fi

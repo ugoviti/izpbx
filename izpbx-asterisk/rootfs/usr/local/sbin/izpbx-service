@@ -1,0 +1,24 @@
+#!/bin/bash
+# izpbx-service ACTION NAME: control an izPBX service (design S6), so that
+# cron jobs, logrotate and custom scripts do not depend on the supervisor.
+#   restart   restart NAME and wait until it is up again
+#   start     start NAME and wait until it is up
+#   stop      stop NAME and wait until it is down
+#   status    print the state; exit 0 when NAME is up
+# NAME is an s6 service of /run/service (asterisk, httpd, php-fpm, cron, ...).
+# shellcheck source=../lib/izpbx/common.sh
+. /usr/local/lib/izpbx/common.sh
+
+usage() { echo "usage: izpbx-service restart|start|stop|status NAME" >&2; exit 2; }
+[ $# -eq 2 ] || usage
+action=$1 name=$2 svc=/run/service/$2
+[[ "$name" =~ ^[a-z0-9-]+$ ]] && [ -d "$svc" ] || die "izpbx-service: unknown service '$name'"
+timeout=${IZPBX_SERVICE_TIMEOUT:-60000}
+
+case "$action" in
+  restart) /command/s6-svc -r -wr -T "$timeout" "$svc" ;;
+  start)   /command/s6-svc -u -wu -T "$timeout" "$svc" ;;
+  stop)    /command/s6-svc -d -wd -T "$timeout" "$svc" ;;
+  status)  /command/s6-svstat "$svc"; [ "$(/command/s6-svstat -o up "$svc")" == "true" ] ;;
+  *)       usage ;;
+esac

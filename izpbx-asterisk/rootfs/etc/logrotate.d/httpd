@@ -1,4 +1,6 @@
-/var/log/httpd/*log {
+# Apache logs (Debian: /var/log/apache2); replaces Debian's
+# /etc/logrotate.d/apache2, which reloads through invoke-rc.d
+/var/log/apache2/*log {
   daily
   ifempty
   rotate 7
@@ -8,8 +10,8 @@
   copytruncate
   sharedscripts
   postrotate
-    if /usr/bin/supervisorctl status httpd > /dev/null 2>/dev/null ; then \
-      /usr/bin/supervisorctl restart httpd > /dev/null 2>/dev/null; \
+    if izpbx-service status httpd > /dev/null 2>&1; then \
+      izpbx-service restart httpd > /dev/null 2>&1; \
     fi;
   endscript
-} 
+}

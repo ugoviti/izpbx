@@ -17,6 +17,9 @@ install -m 755 "$here/g++-stub" /usr/local/bin/g++
 # Debian enables an sshd jail by default: izPBX has no sshd, and without its
 # log file fail2ban refuses to start (the izPBX jails are written at start)
 rm -f /etc/fail2ban/jail.d/defaults-debian.conf
+# Apache logs are rotated by /etc/logrotate.d/httpd (rootfs, restart through
+# izpbx-service); Debian's own file reloads through invoke-rc.d
+rm -f /etc/logrotate.d/apache2
 # /usr/sbin/sendmail is chosen at start (init.d/10-services.sh): msmtp, or
 # Postfix's own, kept aside here (the diversion survives package upgrades)
 dpkg-divert --local --rename --divert /usr/sbin/sendmail.postfix --add /usr/sbin/sendmail
