@@ -45,6 +45,10 @@ apt-get update
 # OS_UPDATE_STAMP (build arg) only changes the cache key of this step
 build_log "upgrading the base system (stamp: ${OS_UPDATE_STAMP:-none})"
 DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
+# postfix installs without questions as a local MTA; its real configuration
+# is written at start by izpbx-init (P3)
+printf '%s\n' "postfix postfix/main_mailer_type select Local only" \
+  "postfix postfix/mailname string izpbx.localdomain" | debconf-set-selections
 apt_install "$here/packages-runtime.txt"
 zbx=$(dpkg-query -W -f '${Version}' zabbix-agent2)
 [[ "$zbx" == 1:"$ZABBIX_VER".* ]] || build_die "zabbix-agent2 $zbx installed, expected $ZABBIX_VER.x from repo.zabbix.com"

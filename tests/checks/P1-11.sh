@@ -14,7 +14,7 @@ image=izpbx-asterisk:p1-11-arm64
 
 assert_cmd "docker buildx build --platform linux/arm64 succeeds" -- \
   docker buildx build -q --platform linux/arm64 --load -t "$image" "$dir"
-bin() { docker run --rm --platform "$1" "$2" file -b /usr/sbin/asterisk; }
+bin() { docker run --rm --entrypoint "" --platform "$1" "$2" file -b /usr/sbin/asterisk; }
 assert_contains "$(bin linux/arm64 "$image")" "ARM aarch64" "/usr/sbin/asterisk is an aarch64 binary"
 assert_cmd "x86_64 image builds" -- docker build -q --platform linux/amd64 -t izpbx-asterisk:p1-11-amd64 "$dir"
 assert_cmd_fails "control: the x86_64 binary is not aarch64" -- grep -q aarch64 <<< "$(bin linux/amd64 izpbx-asterisk:p1-11-amd64)"

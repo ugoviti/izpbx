@@ -1,0 +1,6 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+# DHCP and TFTP are served by dnsmasq: either of them turns it on
+. /usr/local/lib/izpbx/service.sh
+service_enabled DNSMASQ_ENABLED false || service_enabled DHCP_ENABLED false || service_enabled TFTP_ENABLED false || service_off dnsmasq
+exec dnsmasq --keep-in-foreground --log-facility=-

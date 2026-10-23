@@ -14,4 +14,7 @@ done
 # no C/C++ toolchain in the runtime (P0-14): the UCP installer refuses to run
 # unless "g++ --version" answers, although its node modules build nothing
 install -m 755 "$here/g++-stub" /usr/local/bin/g++
+# Debian enables an sshd jail by default: izPBX has no sshd, and without its
+# log file fail2ban refuses to start (the izPBX jails are written at start)
+rm -f /etc/fail2ban/jail.d/defaults-debian.conf
 build_log "runtime ready"

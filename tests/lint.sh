@@ -32,6 +32,9 @@ shell_files() {
     find_in izpbx-asterisk/build -- -name '*.sh'
     find_in izpbx-asterisk/rootfs/usr/local/lib/izpbx -- -type f
     find_in izpbx-asterisk/rootfs/usr/local/sbin izpbx-asterisk/rootfs/usr/local/bin -- -maxdepth 1 -type f -name 'izpbx*'
+    # s6 service scripts (execline "up" files are not shell)
+    find_in izpbx-asterisk/rootfs/etc/s6-overlay/s6-rc.d tests/s6probe -- -type f \( -name run -o -name finish \)
+    find_in izpbx-asterisk/rootfs/usr/sbin -- -type f -name safe_asterisk
     find_in tests -- -name '*.sh' -not -path '*/fixtures/data/*'
     find_in .githooks -- -type f
   } | sort -u

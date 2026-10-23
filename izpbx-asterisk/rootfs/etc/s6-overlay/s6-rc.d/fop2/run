@@ -1,0 +1,13 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+# FOP2 is installed at start into /usr/local/fop2 (P3-13): without it the
+# service stays down with an error instead of restarting in a loop
+. /usr/local/lib/izpbx/service.sh
+service_enabled FOP2_ENABLED false || service_off fop2
+if [ ! -x /usr/local/fop2/fop2_server ]; then
+  log_error "fop2: FOP2_ENABLED=true but FOP2 is not installed (/usr/local/fop2/fop2_server)"
+  exec /command/s6-svc -O .
+fi
+mkdir -p /usr/local/fop2/temp && rm -rf /usr/local/fop2/temp/par-root
+# nothing to save on stop: a short grace keeps "docker stop" (10 s) clean
+SERVICE_STOP_GRACE=5 service_run fop2 /usr/local/fop2/fop2_server -c /usr/local/fop2

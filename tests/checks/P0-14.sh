@@ -25,10 +25,10 @@ image=izpbx-asterisk:p0-14
 # --- the izPBX image
 assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
 for t in gcc cc make c++ cpp; do
-  assert_cmd_fails "image: no $t" -- docker run --rm "$image" sh -c "command -v $t"
+  assert_cmd_fails "image: no $t" -- docker run --rm --entrypoint "" "$image" sh -c "command -v $t"
 done
-assert_cmd "image: g++ --version answers (stub)" -- docker run --rm "$image" g++ --version
-assert_cmd_fails "image: g++ cannot compile" -- docker run --rm "$image" sh -c 'echo "int main(){return 0;}" | g++ -x c++ -o /tmp/a -'
+assert_cmd "image: g++ --version answers (stub)" -- docker run --rm --entrypoint "" "$image" g++ --version
+assert_cmd_fails "image: g++ cannot compile" -- docker run --rm --entrypoint "" "$image" sh -c 'echo "int main(){return 0;}" | g++ -x c++ -o /tmp/a -'
 docker rmi "$image" >/dev/null 2>&1 || true
 
 # --- prototype without toolchain

@@ -1,0 +1,12 @@
+#!/command/with-contenv bash
+# shellcheck shell=bash
+# Asterisk supervised by s6 (P0-15: variant "direct"). FreePBX + Asterisk
+# (IZPBX_ENABLED, default true) and plain Asterisk (ASTERISK_ENABLED) run the
+# same process. /usr/sbin/safe_asterisk is a shim that asks s6 to start this
+# service, so "fwconsole start/restart" never start a second Asterisk.
+# Asterisk drops a SIGTERM received while it is still booting: service_run
+# repeats it until Asterisk exits (service.sh).
+. /usr/local/lib/izpbx/service.sh
+service_enabled IZPBX_ENABLED true || service_enabled ASTERISK_ENABLED false || service_off asterisk
+log_info "asterisk: starting under s6"
+service_run asterisk asterisk -f -U asterisk -G asterisk

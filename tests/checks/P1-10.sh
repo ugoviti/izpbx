@@ -13,21 +13,21 @@ dir="$REPO_DIR/izpbx-asterisk"
 image=izpbx-asterisk:p1-10
 sizes="$TESTS_DIR/expected/image-size.txt"
 npm_ver=$(sed -n 's/^NPM_VER=//p' "$dir/versions.env")
-devpkgs() { docker run --rm "$1" sh -c 'dpkg-query -W -f "\${Package}\n" | grep -E -- "-dev(:|$)" || true'; }
+devpkgs() { docker run --rm --entrypoint "" "$1" sh -c 'dpkg-query -W -f "\${Package}\n" | grep -E -- "-dev(:|$)" || true'; }
 
 assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
 for t in gcc cc make c++ cpp; do
-  assert_cmd_fails "no $t" -- docker run --rm "$image" sh -c "command -v $t"
+  assert_cmd_fails "no $t" -- docker run --rm --entrypoint "" "$image" sh -c "command -v $t"
 done
-assert_cmd_fails "g++ is only the stub (cannot compile)" -- docker run --rm "$image" sh -c 'echo "int main(){return 0;}" | g++ -x c++ -o /tmp/a -'
+assert_cmd_fails "g++ is only the stub (cannot compile)" -- docker run --rm --entrypoint "" "$image" sh -c 'echo "int main(){return 0;}" | g++ -x c++ -o /tmp/a -'
 assert_eq "" "$(devpkgs "$image")" "no -dev package"
-assert_eq "$npm_ver" "$(docker run --rm -u asterisk "$image" npm --version)" "npm $npm_ver runs as asterisk"
-assert_contains "$(docker run --rm "$image" node -v)" "v18." "Node.js is Debian 12's 18.x"
+assert_eq "$npm_ver" "$(docker run --rm --entrypoint "" -u asterisk "$image" npm --version)" "npm $npm_ver runs as asterisk"
+assert_contains "$(docker run --rm --entrypoint "" "$image" node -v)" "v18." "Node.js is Debian 12's 18.x"
 
 # negative: the same checks see the toolchain of the builder stage
 assert_cmd "builder stage builds" -- docker build -q --target builder -t "$image-builder" "$dir"
 assert_ne "" "$(devpkgs "$image-builder")" "control: the builder stage has -dev packages"
-assert_cmd "control: the builder stage has gcc" -- docker run --rm "$image-builder" sh -c 'command -v gcc'
+assert_cmd "control: the builder stage has gcc" -- docker run --rm --entrypoint "" "$image-builder" sh -c 'command -v gcc'
 docker rmi "$image-builder" >/dev/null 2>&1 || true
 
 # size

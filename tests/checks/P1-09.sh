@@ -16,7 +16,7 @@ dir="$REPO_DIR/izpbx-asterisk"
 image=izpbx-asterisk:p1-09
 v() { sed -n "s/^$1=//p" "$dir/versions.env"; }
 ioncube=$(v IONCUBE_VER); izsynth=$(v IZSYNTH_VER); asterisk=$(v ASTERISK_VER)
-img() { docker run --rm "$image" bash -c "$1"; }
+img() { docker run --rm --entrypoint "" "$image" bash -c "$1"; }
 
 assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
 
@@ -42,7 +42,7 @@ assert_eq "" "$(img "find $z -perm /022")" "templates not group/other writable"
 zbx=$(sed -n 's/^ZABBIX_VER=//p' "$dir/versions.env")
 assert_contains "$(img 'dpkg-query -W -f "\${Version}" zabbix-agent2')" "1:$zbx." "zabbix-agent2 $zbx.x from repo.zabbix.com"
 assert_cmd "zabbix_agent2 configuration validates" -- img 'zabbix_agent2 -c /etc/zabbix/zabbix_agent2.conf -T'
-c=$(t_run ast "$image" -- asterisk -f -U asterisk -G asterisk)
+c=$(t_run ast "$image" --entrypoint "" -- asterisk -f -U asterisk -G asterisk)
 # "core waitfullybooted": before full boot (slow under arm64 emulation) the
 # agent script gets "No such command 'core show version'"
 t_wait_for 120 -- docker exec "$c" asterisk -rx "core waitfullybooted" || die "Asterisk did not start"

@@ -29,7 +29,7 @@ while read -r name ver sha; do
   s=$(gpg --homedir $g --batch --status-fd 1 --output /dev/null --decrypt $p 2>/dev/null | awk "\$2==\"VALIDSIG\"{print \$NF}")
   if [ -n "$s" ] && grep -qx "$s" <<< "$trusted"; then echo "ok $name"; else echo "badsig $name"; fi
 done'
-out=$(docker run --rm -i -v "$list:/list:ro" "$image" bash -c "$verify < /list")
+out=$(docker run --rm --entrypoint "" -i -v "$list:/list:ro" "$image" bash -c "$verify < /list")
 assert_eq "$n" "$(grep -c '^ok ' <<< "$out")" "all $n modules: directory, version, .tgz.gpg, sha256 and trusted signature"
 bad=$(grep -vE '^(ok|framework) ' <<< "$out" || true)
 assert_eq "" "$bad" "no module with a missing directory/package or a bad version/sha256/signature"
@@ -39,12 +39,12 @@ assert_eq "17.0.33" "$(printf '%s\n' 17.0.33 "$fw" | sort -V | head -1)" "framew
 # negative: the same check on a tampered package (one byte changed) fails its signature
 tamper='m=/usr/src/freepbx/amp_conf/htdocs/admin/modules/_cache; p=$(ls $m/core-*.tgz.gpg); sz=$(stat -c %s $p)
 printf "\x00" | dd of=$p bs=1 seek=$((sz / 2)) conv=notrunc 2>/dev/null; '
-out=$(docker run --rm -i -v "$list:/list:ro" "$image" bash -c "$tamper $verify < /list")
+out=$(docker run --rm --entrypoint "" -i -v "$list:/list:ro" "$image" bash -c "$tamper $verify < /list")
 assert_contains "$out" "badsha core" "control: a tampered package is detected (sha256)"
 # (core listed without its sha256, so only the signature can catch it)
 work=$(mktemp -d); t_on_cleanup "t_rmtree $work"
 awk '$1 == "core" { print $1, $2; next } 1' "$list" > "$work/nosha.list"
-out=$(docker run --rm -i -v "$work/nosha.list:/list:ro" "$image" bash -c "$tamper $verify < /list")
+out=$(docker run --rm --entrypoint "" -i -v "$work/nosha.list:/list:ro" "$image" bash -c "$tamper $verify < /list")
 assert_contains "$out" "badsig core" "control: a tampered package fails the GPG signature check"
 
 # negative: build of the freepbx stage with a broken module list

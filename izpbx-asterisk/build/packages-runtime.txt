@@ -92,3 +92,8 @@ vim               # vim-tiny has no "vim" command
 lsof
 netcat-openbsd    # nc
 jq
+# services (D14, s6 services in rootfs/etc/s6-overlay/s6-rc.d)
+fail2ban
+postfix
+dnsmasq
+chrony            # ntp service

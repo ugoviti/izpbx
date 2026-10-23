@@ -40,7 +40,7 @@ assert_eq 0 "$rc" "Dockerfile structure and pinning"
 mkdir -p "$work/lint"; cp "$df" "$work/lint/Dockerfile"
 assert_cmd "hadolint is clean" -- "$TESTS_DIR/lint.sh" "$work/lint"
 assert_cmd "docker build izpbx-asterisk (no build arguments) succeeds" -- docker build -q -t izpbx-asterisk:p1-04 "$dir"
-assert_eq "Asterisk 22.11.0" "$(docker run --rm izpbx-asterisk:p1-04 asterisk -V 2>/dev/null)" "the built image runs Asterisk 22.11.0"
+assert_eq "Asterisk 22.11.0" "$(docker run --rm --entrypoint "" izpbx-asterisk:p1-04 asterisk -V)" "the built image runs Asterisk 22.11.0"
 
 # negatives on copies
 { cat "$df"; printf 'RUN apt-get update && \\\n    true\n'; } > "$work/chain"

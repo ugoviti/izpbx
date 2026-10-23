@@ -14,17 +14,17 @@ image=izpbx-asterisk:p1-06
 assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
 assert_cmd "builder stage builds" -- docker build -q --target builder -t "$image-builder" "$dir"
 
-assert_eq "Asterisk 22.11.0" "$(docker run --rm "$image" asterisk -V)" "asterisk -V"
+assert_eq "Asterisk 22.11.0" "$(docker run --rm --entrypoint "" "$image" asterisk -V)" "asterisk -V"
 # the expected list depends on the architecture (P1-11 runs this check on
 # arm64 with DOCKER_DEFAULT_PLATFORM): no Digium binary codecs on aarch64
-arch=$(docker run --rm "$image" uname -m)
+arch=$(docker run --rm --entrypoint "" "$image" uname -m)
 case "$arch" in
   x86_64) expected="$TESTS_DIR/expected/asterisk-modules.txt"; binary_codecs="codec_opus codec_silk format_ogg_opus" ;;
   aarch64) expected="$TESTS_DIR/expected/asterisk-modules-aarch64.txt"; binary_codecs="" ;;
   *) die "unsupported architecture $arch" ;;
 esac
 log "architecture $arch, expected modules from $(basename "$expected")"
-docker run --rm "$image" sh -c 'ls /usr/lib64/asterisk/modules/ | grep "\.so$"' | LC_ALL=C sort > "$work/modules"
+docker run --rm --entrypoint "" "$image" sh -c 'ls /usr/lib64/asterisk/modules/ | grep "\.so$"' | LC_ALL=C sort > "$work/modules"
 grep -v '^#' "$expected" > "$work/expected"
 diff "$work/expected" "$work/modules" > "$work/diff" && rc=0 || rc=$?
 [ "$rc" -eq 0 ] || log "module list differs from $expected:"$'\n'"$(cat "$work/diff")"
@@ -35,11 +35,11 @@ done
 for m in chan_sip app_macro app_meetme res_digium_phone; do
   assert_cmd_fails "$m.so is absent" -- grep -qx "$m.so" "$work/modules"
 done
-missing=$(docker run --rm "$image" sh -c 'for m in /usr/sbin/asterisk /usr/lib64/asterisk/modules/*.so; do ldd "$m" | grep -q "not found" && basename "$m"; done; true')
+missing=$(docker run --rm --entrypoint "" "$image" sh -c 'for m in /usr/sbin/asterisk /usr/lib64/asterisk/modules/*.so; do ldd "$m" | grep -q "not found" && basename "$m"; done; true')
 assert_eq "" "$missing" "every module resolves its shared libraries"
 # MENUSELECT_CFLAGS lists the enabled build options
 debug_flags() { grep -E '^MENUSELECT_CFLAGS=' | grep -oE 'DONT_OPTIMIZE|BETTER_BACKTRACES' || true; }
-cflags=$(docker run --rm "$image-builder" grep -E '^MENUSELECT_CFLAGS=' /usr/src/build/asterisk/menuselect.makeopts)
+cflags=$(docker run --rm --entrypoint "" "$image-builder" grep -E '^MENUSELECT_CFLAGS=' /usr/src/build/asterisk/menuselect.makeopts)
 log "$cflags"
 assert_eq "" "$(debug_flags <<< "$cflags")" "no DONT_OPTIMIZE / BETTER_BACKTRACES in menuselect.makeopts (D10)"
 assert_eq "DONT_OPTIMIZE" "$(debug_flags <<< "MENUSELECT_CFLAGS=OPTIONAL_API DONT_OPTIMIZE")" "control: an enabled DONT_OPTIMIZE is detected"

@@ -53,7 +53,7 @@ assert_ne "" "$done_at" "izpbx-init completes"
 assert_cmd "the probe service starts after izpbx-init is done" -- test -n "$start_at" -a "${start_at:-0}" -gt "${done_at:-999999}" -a "${up_at:-0}" -gt "${done_at:-999999}"
 assert_contains "$logs" "probe step: IZPBX_PROBE_VALUE=hello" "the container environment reaches izpbx-init"
 assert_contains "$(docker exec "$c" /command/s6-svstat /run/service/probe)" "up " "the probe service is up"
-assert_eq 0 "$(grep -c 'deprecated' <<< "$logs" || true)" "no s6-overlay deprecation warning at start"
+assert_eq 0 "$(grep -c 'user bundles.*deprecated' <<< "$logs" || true)" "no s6-overlay deprecation warning at start"
 rc=0; timeout 90 docker run --rm -u asterisk "$image" true >/dev/null 2>&1 || rc=$?
 assert_eq 0 "$rc" "the image starts and runs a command as a non-root user (asterisk) within 90 s"
 

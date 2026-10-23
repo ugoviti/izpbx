@@ -53,6 +53,7 @@ RUN /usr/src/izpbx/build/runtime.sh
 COPY rootfs/etc/s6-overlay/ /etc/s6-overlay/
 COPY rootfs/usr/local/lib/izpbx/ /usr/local/lib/izpbx/
 COPY rootfs/usr/local/sbin/izpbx-init /usr/local/sbin/izpbx-init
+COPY rootfs/usr/sbin/safe_asterisk /usr/sbin/safe_asterisk
 
 ARG APP_VER
 ARG APP_VER_BUILD

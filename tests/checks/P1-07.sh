@@ -11,10 +11,10 @@ sngrep_ver=$(sed -n 's/^SNGREP_VER=//p' "$dir/versions.env")
 
 assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
 for m in codec_g729.so chan_dongle.so; do
-  assert_cmd "$m is installed" -- docker run --rm "$image" test -f "/usr/lib64/asterisk/modules/$m"
+  assert_cmd "$m is installed" -- docker run --rm --entrypoint "" "$image" test -f "/usr/lib64/asterisk/modules/$m"
 done
 
-c=$(t_run ast "$image" -- asterisk -f -U asterisk -G asterisk)
+c=$(t_run ast "$image" --entrypoint "" -- asterisk -f -U asterisk -G asterisk)
 t_wait_for 60 -- docker exec "$c" asterisk -rx "core show uptime" || die "Asterisk did not start"
 printf '[general]\ninterval=15\n\n[defaults]\ncontext=from-trunk\ngroup=0\n' \
   | docker exec -i -u asterisk "$c" sh -c 'cat > /etc/asterisk/dongle.conf'
