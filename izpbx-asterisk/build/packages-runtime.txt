@@ -83,3 +83,12 @@ zabbix-agent2
 mariadb-client
 nodejs
 # npm: from the registry tarball (extras.sh, NPM_VER)
+# debug tools (D15); sngrep is built from source (addons.sh)
+tcpdump
+strace
+mtr-tiny          # mtr
+iftop
+vim               # vim-tiny has no "vim" command
+lsof
+netcat-openbsd    # nc
+jq
