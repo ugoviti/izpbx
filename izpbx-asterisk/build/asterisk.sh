@@ -41,11 +41,11 @@ got=$(cd addons && tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owne
 grep -q ASTMM_LIBC addons/mp3/interface.c || sed -i -e '/#include "asterisk.h"/i#define ASTMM_LIBC ASTMM_REDIRECT' addons/mp3/interface.c
 
 ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled \
-  --with-download-cache="$cache" >/dev/null
+  --with-download-cache="$cache" --with-externals-cache="$cache" >/dev/null
 make menuselect.makeopts >/dev/null
 while read -r action name; do
   menuselect/menuselect "--$action" "$name" menuselect.makeopts
-done < <(sed -e 's/#.*//' "$here/asterisk-menuselect.txt" | grep -E '^(enable|disable) ')
+done < <(sed -e 's/#.*//' "$here/asterisk-menuselect.txt" | grep -E '^(enable|disable)(-category)? ')
 menuselect/menuselect --check-deps menuselect.makeopts
 make -j"$jobs" >/dev/null
 make install DESTDIR="$STAGING" >/dev/null

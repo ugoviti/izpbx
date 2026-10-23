@@ -1,8 +1,77 @@
-# Asterisk 22 menuselect changes applied on top of the defaults (one per line):
-#   enable <name> / disable <name>, categories and modules alike
-# D10: no DONT_OPTIMIZE / BETTER_BACKTRACES; B2: app_sla; D23: no app_meetme
-disable BUILD_NATIVE
-enable format_mp3
-enable res_config_mysql
+# Asterisk 22 menuselect changes applied on top of the defaults, in order:
+#   enable|disable <module or option>   enable-category|disable-category <MENUSELECT_...>
+# Ported from the Asterisk >= 20 branch of the 20.16 Dockerfile. Removed (B2,
+# D10): chan_sip, app_macro, res_monitor, res_pktccops (gone in Asterisk 21+),
+# DONT_OPTIMIZE, BETTER_BACKTRACES; chan_alsa, chan_mgcp, chan_skinny (not in
+# Asterisk 22). Added: app_sla (D23). app_meetme stays off.
+enable-category MENUSELECT_ADDONS
+enable-category MENUSELECT_CHANNELS
+enable-category MENUSELECT_APPS
+enable-category MENUSELECT_CDR
+enable-category MENUSELECT_FORMATS
+enable-category MENUSELECT_FUNCS
+enable-category MENUSELECT_PBX
+enable-category MENUSELECT_RES
+enable-category MENUSELECT_CEL
+enable G711_NEW_ALGORITHM
+enable app_confbridge
+enable app_page
+enable app_statsd
 enable app_sla
+enable binaural_rendering_in_bridge_softmix
+enable chan_motif
+enable chan_pjsip
+# binary codecs downloaded by the Asterisk build from downloads.digium.com (x86_64)
+enable codec_silk
+enable codec_opus
+enable format_mp3
+enable res_ari
+enable res_chan_stats
+enable res_calendar
+enable res_calendar_caldav
+enable res_calendar_icalendar
+enable res_endpoint_stats
+enable res_fax
+enable res_fax_spandsp
+enable res_snmp
+enable res_srtp
+enable res_xmpp
+enable res_config_sqlite3
+enable res_phoneprov
+enable res_pjsip_phoneprov_provider
+disable-category MENUSELECT_CORE_SOUNDS
+disable-category MENUSELECT_EXTRA_SOUNDS
+disable-category MENUSELECT_MOH
+disable BUILD_NATIVE
 disable app_meetme
+disable app_ivrdemo
+disable app_jack
+disable app_saycounted
+disable app_skel
+disable app_voicemail_imap
+disable cdr_pgsql
+disable cel_pgsql
+disable cdr_sqlite3_custom
+disable cel_sqlite3_custom
+disable cdr_tds
+disable cel_tds
+disable cdr_radius
+disable cel_radius
+disable chan_console
+disable chan_ooh323
+disable chan_mobile
+disable chan_unistim
+disable res_calendar_ews
+disable res_calendar_exchange
+# commercial binary modules downloaded from Digium (enabled by the RES category):
+# the phone module also brings res_pjsip_dialog_info_digium_body_supplement and
+# res_pjsip_endpoint_identifier_dpma, whose libraries are not installed
+disable res_digium_phone
+disable res_pjsip_config_sangoma
+disable res_mwi_external
+disable res_mwi_external_ami
+disable res_config_pgsql
+disable res_config_mysql
+disable res_config_ldap
+disable res_adsi
+disable res_geolocation
