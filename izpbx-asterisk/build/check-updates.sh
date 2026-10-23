@@ -4,9 +4,12 @@
 #   build/check-updates.sh [--versions FILE]
 #
 # Prints one line per component of versions.env: current, latest, status
-# (ok | UPDATE | manual), and for every UPDATE the new KEY=value lines with
-# the sha256 of the new files. Exit code: 0 all current, 10 updates
-# available, 1 error. GITHUB_TOKEN (optional) raises the GitHub API rate limit.
+# (ok | UPDATE | manual | unavailable), and for every UPDATE the new KEY=value
+# lines with the sha256 of the new files. "manual" = no automatic source,
+# "unavailable" = the upstream lookup failed (e.g. GitHub API rate limit).
+# Exit code: 0 all current, 10 updates available, 2 incomplete (lookups
+# unavailable, no update found), 1 error. GITHUB_TOKEN (optional) raises the
+# GitHub API rate limit (60 requests/hour without it).
 
 set -Eeuo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -17,10 +20,11 @@ versions="$here/../versions.env"
 load_versions "$versions"
 
 updates=0
+unavailable=0
 proposals=()
 
 row() { printf '%-22s %-44s %-44s %s\n' "$1" "$2" "$3" "$4"; }
-report() { # component current latest [note]
+report() { # component current latest [note]   (empty latest = manual check)
   local name=$1 cur=$2 new=$3 note=${4:-}
   if [ -z "$new" ]; then row "$name" "$cur" "?" "manual${note:+ ($note)}"
   elif [ "$cur" == "$new" ]; then row "$name" "$cur" "$new" "ok"
@@ -28,6 +32,11 @@ report() { # component current latest [note]
   fi
 }
 propose() { proposals+=("$@"); }
+# lookup: like report, but an empty "latest" means the upstream lookup failed
+lookup() { # component current latest source
+  if [ -z "$3" ]; then row "$1" "$2" "?" "unavailable ($4)"; unavailable=$((unavailable + 1)); return 0; fi
+  report "$1" "$2" "$3"
+}
 sha_of() { curl -fsSL --proto '=https' --connect-timeout 30 "$1" | sha256sum | cut -d' ' -f1; }
 
 gh_api() { # path
@@ -43,11 +52,11 @@ row COMPONENT CURRENT LATEST STATUS
 
 # --- base image
 new=$(docker buildx imagetools inspect docker.io/library/debian:bookworm-slim 2>/dev/null | awk '/^Digest:/{print $2; exit}' || true)
-report DEBIAN_IMAGE "${DEBIAN_IMAGE##*@}" "$new" || propose "DEBIAN_IMAGE=docker.io/library/debian:bookworm-slim@$new"
+lookup DEBIAN_IMAGE "${DEBIAN_IMAGE##*@}" "$new" "docker hub" || propose "DEBIAN_IMAGE=docker.io/library/debian:bookworm-slim@$new"
 
 # --- s6-overlay
 new=$(gh_latest_release just-containers/s6-overlay | sed 's/^v//' || true)
-if ! report S6_OVERLAY_VER "$S6_OVERLAY_VER" "$new"; then
+if ! lookup S6_OVERLAY_VER "$S6_OVERLAY_VER" "$new" "GitHub API"; then
   propose "S6_OVERLAY_VER=$new"
   for a in noarch x86_64 aarch64; do
     propose "S6_OVERLAY_SHA256_${a^^}=$(curl -fsSL "https://github.com/just-containers/s6-overlay/releases/download/v$new/s6-overlay-$a.tar.xz.sha256" | cut -d' ' -f1)"
@@ -56,7 +65,8 @@ fi
 
 # --- Asterisk 22.x (stable releases only)
 new=$(curl -fsSL https://downloads.asterisk.org/pub/telephony/asterisk/releases/ | grep -oE "asterisk-${ASTERISK_VER%%.*}\.[0-9]+\.[0-9]+\.tar\.gz\"" | tr -d '"' | sed 's/^asterisk-//; s/\.tar\.gz$//' | sort -V | tail -1 || true)
-if ! report ASTERISK_VER "$ASTERISK_VER" "$new" "then refresh PJPROJECT/JANSSON from third-party/versions.mak"; then
+if [ -z "$new" ]; then lookup ASTERISK_VER "$ASTERISK_VER" "" downloads.asterisk.org
+elif ! report ASTERISK_VER "$ASTERISK_VER" "$new" "then refresh PJPROJECT/JANSSON from third-party/versions.mak"; then
   propose "ASTERISK_VER=$new" "ASTERISK_SHA256=$(curl -fsSL "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$new.sha256" | cut -d' ' -f1)"
 fi
 report PJPROJECT_VER "$PJPROJECT_VER" "" "follows ASTERISK_VER" || true
@@ -66,13 +76,13 @@ report ASTERISK_MP3_SVN_REV "$ASTERISK_MP3_SVN_REV" "" "svn info https://svn.dig
 # --- addons
 report SPANDSP_VER "$SPANDSP_VER" "" "git snapshot on sources.buildroot.net" || true
 new=$(gh_latest_tag BelledonneCommunications/bcg729 || true)
-report BCG729_VER "$BCG729_VER" "$new" || propose "BCG729_VER=$new" "BCG729_SHA256=$(sha_of "https://github.com/BelledonneCommunications/bcg729/archive/$new.tar.gz")"
+lookup BCG729_VER "$BCG729_VER" "$new" "GitHub API" || propose "BCG729_VER=$new" "BCG729_SHA256=$(sha_of "https://github.com/BelledonneCommunications/bcg729/archive/$new.tar.gz")"
 new=$(gh_head arkadijs/asterisk-g72x master || true)
-report ASTERISK_G72X_VER "$ASTERISK_G72X_VER" "$new" || propose "ASTERISK_G72X_VER=$new" "ASTERISK_G72X_SHA256=$(sha_of "https://github.com/arkadijs/asterisk-g72x/archive/$new.tar.gz")"
+lookup ASTERISK_G72X_VER "$ASTERISK_G72X_VER" "$new" "GitHub API" || propose "ASTERISK_G72X_VER=$new" "ASTERISK_G72X_SHA256=$(sha_of "https://github.com/arkadijs/asterisk-g72x/archive/$new.tar.gz")"
 new=$(gh_head "$ASTERISK_CHAN_DONGLE_REPO" master || true)
-report ASTERISK_CHAN_DONGLE_VER "$ASTERISK_CHAN_DONGLE_VER" "$new" || propose "ASTERISK_CHAN_DONGLE_VER=$new" "ASTERISK_CHAN_DONGLE_SHA256=$(sha_of "https://github.com/$ASTERISK_CHAN_DONGLE_REPO/archive/$new.tar.gz")"
+lookup ASTERISK_CHAN_DONGLE_VER "$ASTERISK_CHAN_DONGLE_VER" "$new" "GitHub API" || propose "ASTERISK_CHAN_DONGLE_VER=$new" "ASTERISK_CHAN_DONGLE_SHA256=$(sha_of "https://github.com/$ASTERISK_CHAN_DONGLE_REPO/archive/$new.tar.gz")"
 new=$(gh_latest_release irontec/sngrep | sed 's/^v//' || true)
-report SNGREP_VER "$SNGREP_VER" "$new" || propose "SNGREP_VER=$new" "SNGREP_SHA256=$(sha_of "https://github.com/irontec/sngrep/releases/download/v$new/sngrep-$new.tar.gz")"
+lookup SNGREP_VER "$SNGREP_VER" "$new" "GitHub API" || propose "SNGREP_VER=$new" "SNGREP_SHA256=$(sha_of "https://github.com/irontec/sngrep/releases/download/v$new/sngrep-$new.tar.gz")"
 
 # --- FreePBX: the mirror only has "17.0-latest", so compare the content
 fpbx=https://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz
@@ -82,7 +92,7 @@ if curl -fsSL --connect-timeout 30 -o "$tmp" "$fpbx"; then
   row FREEPBX_VER "$FREEPBX_VER" "$FREEPBX_VER" "ok"
   report FREEPBX_FRAMEWORK_VER "$FREEPBX_FRAMEWORK_VER" "$new" || propose "FREEPBX_FRAMEWORK_VER=$new" "FREEPBX_SHA256=$(sha256sum "$tmp" | cut -d' ' -f1)"
 else
-  report FREEPBX_FRAMEWORK_VER "$FREEPBX_FRAMEWORK_VER" "" "mirror unreachable" || true
+  lookup FREEPBX_FRAMEWORK_VER "$FREEPBX_FRAMEWORK_VER" "" mirror.freepbx.org
 fi
 
 # --- ionCube: the unversioned tarball holds the latest loaders; same sha256
@@ -96,7 +106,7 @@ else
   new=
 fi
 rm -f "$ic"
-if ! report IONCUBE_VER "$IONCUBE_VER" "$new"; then
+if ! lookup IONCUBE_VER "$IONCUBE_VER" "$new" "ioncube.com"; then
   propose "IONCUBE_VER=$new" \
     "IONCUBE_SHA256_X86_64=$(sha_of "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64_$new.tar.gz")" \
     "IONCUBE_SHA256_AARCH64=$(sha_of "https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_aarch64_$new.tar.gz")"
@@ -105,21 +115,23 @@ fi
 # --- FOP2: the download links redirect to the current files
 fop2_file() { curl -fsSI -L "https://www.fop2.com/$1" | grep -i '^location:.*download2' | tail -1 | grep -oE 'fop2-[0-9.]+-debian-[a-z0-9_]+\.tgz' || true; }
 f=$(fop2_file download/debian64); new=$(sed -E 's/^fop2-([0-9.]+)-.*/\1/' <<< "$f")
-report FOP2_VER "$FOP2_VER" "$new" || propose "FOP2_VER=$new" "FOP2_SHA256_X86_64=$(sha_of "https://download2.fop2.com/$f")"
+lookup FOP2_VER "$FOP2_VER" "$new" "fop2.com" || propose "FOP2_VER=$new" "FOP2_SHA256_X86_64=$(sha_of "https://download2.fop2.com/$f")"
 f=$(fop2_file 'file.php?file=24'); new=$(sed -E 's/^fop2-([0-9.]+)-.*/\1/' <<< "$f")
-report FOP2_VER_AARCH64 "$FOP2_VER_AARCH64" "$new" "file $f" || propose "FOP2_VER_AARCH64=$new" "FOP2_SHA256_AARCH64=$(sha_of "https://download2.fop2.com/$f")"
+lookup FOP2_VER_AARCH64 "$FOP2_VER_AARCH64" "$new" "fop2.com" || propose "FOP2_VER_AARCH64=$new" "FOP2_SHA256_AARCH64=$(sha_of "https://download2.fop2.com/$f")"
 
 # --- Zabbix: LTS major chosen by hand
 report ZABBIX_VER "$ZABBIX_VER" "" "LTS branch, key $ZABBIX_GPG_FPR" || true
 
 # --- izPBX tools
 new=$(gh_latest_tag ugoviti/izsynth || true)
-report IZSYNTH_VER "$IZSYNTH_VER" "$new" || propose "IZSYNTH_VER=$new" "IZSYNTH_SHA256=$(sha_of "https://github.com/ugoviti/izsynth/archive/$new.tar.gz")"
+lookup IZSYNTH_VER "$IZSYNTH_VER" "$new" "GitHub API" || propose "IZSYNTH_VER=$new" "IZSYNTH_SHA256=$(sha_of "https://github.com/ugoviti/izsynth/archive/$new.tar.gz")"
 new=$(gh_head ugoviti/zabbix-templates main || true)
-report ZABBIX_TEMPLATE_VER "$ZABBIX_TEMPLATE_VER" "$new" || propose "ZABBIX_TEMPLATE_VER=$new" "ZABBIX_TEMPLATE_SHA256=$(sha_of "https://github.com/ugoviti/zabbix-templates/archive/$new.tar.gz")"
+lookup ZABBIX_TEMPLATE_VER "$ZABBIX_TEMPLATE_VER" "$new" "GitHub API" || propose "ZABBIX_TEMPLATE_VER=$new" "ZABBIX_TEMPLATE_SHA256=$(sha_of "https://github.com/ugoviti/zabbix-templates/archive/$new.tar.gz")"
 
 echo
+[ "$unavailable" -eq 0 ] || echo "$unavailable lookup(s) unavailable: the report is incomplete" >&2
 if [ "$updates" -eq 0 ]; then
+  [ "$unavailable" -eq 0 ] || exit 2
   echo "all components are current"
   exit 0
 fi
