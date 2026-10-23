@@ -34,7 +34,7 @@ RUN --mount=type=cache,target=/root/.ccache \
 ## freepbx: FreePBX 17 install tree (independent of builder: built in parallel)
 FROM base AS freepbx
 COPY versions.env /usr/src/izpbx/versions.env
-COPY build/freepbx.sh /usr/src/izpbx/build/
+COPY build/freepbx.sh build/freepbx-modules.txt /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/freepbx.sh
 
