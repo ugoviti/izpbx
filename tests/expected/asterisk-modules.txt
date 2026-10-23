@@ -92,6 +92,7 @@ cel_manager.so
 cel_odbc.so
 chan_audiosocket.so
 chan_bridge_media.so
+chan_dongle.so
 chan_iax2.so
 chan_motif.so
 chan_pjsip.so
@@ -103,6 +104,7 @@ codec_alaw.so
 codec_codec2.so
 codec_g722.so
 codec_g726.so
+codec_g729.so
 codec_gsm.so
 codec_ilbc.so
 codec_lpc10.so

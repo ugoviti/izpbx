@@ -46,7 +46,7 @@ COPY versions.env /usr/src/izpbx/versions.env
 COPY build/ /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/extras.sh
-RUN ldconfig
+RUN /usr/src/izpbx/build/runtime.sh
 
 ARG APP_VER
 ARG APP_VER_BUILD

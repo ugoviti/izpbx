@@ -49,3 +49,5 @@ xmlstarlet
 # codec_codec2, pbx_lua
 libcodec2-dev
 liblua5.4-dev
+# bcg729
+cmake
