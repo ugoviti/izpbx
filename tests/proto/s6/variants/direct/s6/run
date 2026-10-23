@@ -1,4 +1,24 @@
 #!/command/with-contenv bash
-# variant direct: s6 supervises Asterisk in the foreground
+# variant direct: s6 supervises Asterisk in the foreground.
+# Asterisk drops a SIGTERM received while it is still booting (it keeps
+# running and "docker stop" waits for the whole timeout): on TERM keep
+# sending it every second until Asterisk exits. Its exit status is ours, so
+# s6 "finish" still sees a kill -9 as a failure.
 echo "izpbx: starting asterisk under s6" >&2
-exec asterisk -f -U asterisk -G asterisk
+asterisk -f -U asterisk -G asterisk &
+ast=$!
+stop_requested=
+stopping() {
+  stop_requested=1
+  echo "izpbx: stopping asterisk (pid $ast)" >&2
+  while kill -0 "$ast" 2>/dev/null; do
+    kill -TERM "$ast" 2>/dev/null
+    sleep 1
+  done
+}
+trap stopping TERM
+wait "$ast"; rc=$?
+# when the trap fires, wait returns 143: the second wait gives Asterisk's
+# own exit status (0 on a clean stop)
+if [ -n "$stop_requested" ]; then wait "$ast"; rc=$?; fi
+exit "$rc"
