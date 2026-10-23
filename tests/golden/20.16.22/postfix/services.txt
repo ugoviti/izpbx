@@ -1,0 +1,10 @@
+asterisk false
+cron true
+dnsmasq false
+fail2ban true
+fop2 false
+httpd true
+izpbx false
+ntp false
+postfix true
+zabbix false
