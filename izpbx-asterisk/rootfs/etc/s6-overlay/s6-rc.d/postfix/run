@@ -2,4 +2,9 @@
 # shellcheck shell=bash
 . /usr/local/lib/izpbx/service.sh
 service_gate postfix
-exec /usr/sbin/postfix start-fg
+# "postfix start-fg" execs the master only as PID 1; otherwise it starts it
+# as a child, and a stop (SIGTERM to the script) leaves master, qmgr and
+# pickup behind: run its integrity check, then the master in the foreground
+# directly (-s, the mode start-fg uses), so s6 supervises the master itself
+/usr/sbin/postfix check
+exec /usr/lib/postfix/sbin/master -s
