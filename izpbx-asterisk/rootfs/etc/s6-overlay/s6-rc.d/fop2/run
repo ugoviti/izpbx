@@ -3,7 +3,7 @@
 # FOP2 is installed at start into /usr/local/fop2 (P3-13): without it the
 # service stays down with an error instead of restarting in a loop
 . /usr/local/lib/izpbx/service.sh
-service_enabled FOP2_ENABLED false || service_off fop2
+service_gate fop2
 if [ ! -x /usr/local/fop2/fop2_server ]; then
   log_error "fop2: FOP2_ENABLED=true but FOP2 is not installed (/usr/local/fop2/fop2_server)"
   exec /command/s6-svc -O .

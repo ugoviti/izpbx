@@ -7,6 +7,6 @@
 # Asterisk drops a SIGTERM received while it is still booting: service_run
 # repeats it until Asterisk exits (service.sh).
 . /usr/local/lib/izpbx/service.sh
-service_enabled IZPBX_ENABLED true || service_enabled ASTERISK_ENABLED false || service_off asterisk
+service_gate asterisk
 log_info "asterisk: starting under s6"
 service_run asterisk asterisk -f -U asterisk -G asterisk

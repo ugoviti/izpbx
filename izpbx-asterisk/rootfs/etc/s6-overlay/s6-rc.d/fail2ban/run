@@ -1,7 +1,7 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
 . /usr/local/lib/izpbx/service.sh
-service_enabled FAIL2BAN_ENABLED true || service_off fail2ban
+service_gate fail2ban
 mkdir -p /run/fail2ban
 # the client runs the server in the foreground (-f) and loads the jails; it
 # drops a SIGTERM received while starting (service_run repeats it)

@@ -95,5 +95,6 @@ jq
 # services (D14, s6 services in rootfs/etc/s6-overlay/s6-rc.d)
 fail2ban
 postfix
+msmtp             # sendmail when POSTFIX_ENABLED is false (MSMTP_ENABLED)
 dnsmasq
 chrony            # ntp service

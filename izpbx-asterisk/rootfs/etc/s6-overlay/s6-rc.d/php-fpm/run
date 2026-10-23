@@ -2,6 +2,6 @@
 # shellcheck shell=bash
 # php-fpm serves the FreePBX web interface: it runs when httpd does
 . /usr/local/lib/izpbx/service.sh
-service_enabled HTTPD_ENABLED true || service_off php-fpm
+service_gate php-fpm
 mkdir -p /run/php
 exec php-fpm8.2 -F

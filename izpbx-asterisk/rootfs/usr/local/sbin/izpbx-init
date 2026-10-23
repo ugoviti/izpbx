@@ -12,6 +12,13 @@
 izpbx_strict
 
 : "${IZPBX_INIT_DIR:=/usr/local/lib/izpbx/init.d}"
+# the steps write the system configuration: a container started with
+# "--user" (a one-off command as asterisk) gets no initialization, and its
+# services cannot run either
+if [ "$(id -u)" -ne 0 ]; then
+  log_warn "izpbx-init: running as uid $(id -u), not root: initialization skipped"
+  exit 0
+fi
 start=$SECONDS
 log_info "izpbx-init: start"
 shopt -s nullglob

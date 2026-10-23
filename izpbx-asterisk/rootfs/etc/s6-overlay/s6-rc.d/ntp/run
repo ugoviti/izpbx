@@ -3,6 +3,6 @@
 # chronyd without control of the system clock (-x): a container has no
 # CAP_SYS_TIME; it serves time to the LAN and reports the offset
 . /usr/local/lib/izpbx/service.sh
-service_enabled NTP_ENABLED false || service_off ntp
+service_gate ntp
 mkdir -p /run/chrony
 exec chronyd -d -x
