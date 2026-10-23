@@ -26,9 +26,16 @@ gnupg_home=$(mktemp -d)
 gpg --homedir "$gnupg_home" --quiet --import "$key"
 gpg --homedir "$gnupg_home" --export "$ZABBIX_GPG_FPR" > /usr/share/keyrings/zabbix.gpg
 rm -rf "$key" "$gnupg_home"
+# Zabbix publishes amd64 under .../debian and arm64 under .../debian-arm64
+# (same signing key): with the wrong one apt silently falls back to Debian's
+# older zabbix-agent2 (6.0)
+case "$(build_arch)" in
+  x86_64) zabbix_repo=debian ;;
+  aarch64) zabbix_repo=debian-arm64 ;;
+esac
 cat > /etc/apt/sources.list.d/zabbix.sources <<SRC
 Types: deb
-URIs: https://repo.zabbix.com/zabbix/$ZABBIX_VER/debian
+URIs: https://repo.zabbix.com/zabbix/$ZABBIX_VER/$zabbix_repo
 Suites: bookworm
 Components: main
 Signed-By: /usr/share/keyrings/zabbix.gpg
@@ -39,6 +46,8 @@ apt-get update
 build_log "upgrading the base system (stamp: ${OS_UPDATE_STAMP:-none})"
 DEBIAN_FRONTEND=noninteractive apt-get -y upgrade
 apt_install "$here/packages-runtime.txt"
+zbx=$(dpkg-query -W -f '${Version}' zabbix-agent2)
+[[ "$zbx" == 1:"$ZABBIX_VER".* ]] || build_die "zabbix-agent2 $zbx installed, expected $ZABBIX_VER.x from repo.zabbix.com"
 
 # Asterisk is built with --libdir=/usr/lib64 (ASTMODDIR kept from 20.16)
 echo /usr/lib64 > /etc/ld.so.conf.d/asterisk.conf

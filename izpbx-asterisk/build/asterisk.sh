@@ -11,6 +11,10 @@ src=/usr/src/build
 cache=/usr/src/download-cache
 mkdir -p "$src" "$cache" "$STAGING"
 export CC="ccache gcc" CXX="ccache g++" CCACHE_DIR=${CCACHE_DIR:-/root/.ccache}
+# the libraries built here go to /usr/lib64, which the linker searches by
+# default on x86_64 but not on aarch64 (P1-11): without this, configure
+# checks fail there and modules such as res_fax_spandsp are silently skipped
+export LIBRARY_PATH=/usr/lib64 PKG_CONFIG_PATH=/usr/lib64/pkgconfig
 jobs=$(nproc)
 
 ## spandsp (T.38): needed by res_fax_spandsp at build time and at runtime
@@ -59,4 +63,9 @@ if [ -d "$STAGING/var/run" ] && [ ! -L "$STAGING/var/run" ]; then
   cp -a "$STAGING/var/run/." "$STAGING/run/"
   rm -rf "$STAGING/var/run"
 fi
+# modules that depend on libraries found by configure: a failed check would
+# drop them without an error
+for m in res_fax_spandsp format_mp3 res_xmpp chan_pjsip res_config_odbc; do
+  [ -f "$STAGING/usr/lib64/asterisk/modules/$m.so" ] || build_die "$m.so was not built (configure did not find its library?)"
+done
 build_log "Asterisk $ASTERISK_VER installed into $STAGING"

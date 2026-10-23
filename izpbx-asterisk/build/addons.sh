@@ -12,8 +12,14 @@ src=/usr/src/build
 cache=/usr/src/download-cache
 mkdir -p "$src" "$cache"
 export CC="ccache gcc" CXX="ccache g++" CCACHE_DIR=${CCACHE_DIR:-/root/.ccache}
+# the libraries built here go to /usr/lib64, which the linker searches by
+# default on x86_64 but not on aarch64 (P1-11): without this, configure
+# checks fail there and modules such as res_fax_spandsp are silently skipped
+export LIBRARY_PATH=/usr/lib64 PKG_CONFIG_PATH=/usr/lib64/pkgconfig
 jobs=$(nproc)
 arch=$(build_arch)
+
+configure_failed() { tail -n 25 config.log >&2; build_die "$1: configure failed"; }
 
 unpack() { # name url sha256 -> extracted into $src/name, cwd there
   fetch_verified "$2" "$3" "$cache/$1.tar.gz"
@@ -36,7 +42,7 @@ unpack asterisk-g72x "https://github.com/arkadijs/asterisk-g72x/archive/$ASTERIS
 ./autogen.sh >/dev/null 2>&1
 g72x_opts=(--prefix=/usr --libdir=/usr/lib64 --with-bcg729)
 [ "$arch" == "x86_64" ] && g72x_opts+=(--disable-penryn)
-./configure "${g72x_opts[@]}" >/dev/null
+./configure "${g72x_opts[@]}" >/dev/null || configure_failed asterisk-g72x
 make -j"$jobs" >/dev/null
 make install DESTDIR="$STAGING" >/dev/null
 

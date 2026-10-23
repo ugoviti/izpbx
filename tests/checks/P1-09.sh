@@ -6,7 +6,8 @@
 #   every command it needs (curl md5sum file iconv soxi sox lame) present;
 # - zabbix-agent2: asterisk.conf + scripts/asterisk.sh in zabbix_agent2.d,
 #   not group/other writable, the configuration validates and, with Asterisk
-#   running, "check.asterisk[version]" answers with the Asterisk version.
+#   running, "check.asterisk[version]" answers with the Asterisk version;
+#   zabbix-agent2 is the $ZABBIX_VER.x of repo.zabbix.com (not Debian's 6.0).
 # Negative: "php -n" (no ini files) shows no ionCube; an unknown agent key
 # is ZBX_NOTSUPPORTED; a command that does not exist is reported missing.
 source "$(dirname "$0")/../lib.sh"
@@ -38,9 +39,13 @@ assert_eq "izpbx-nosuch-cmd" "$(missing curl izpbx-nosuch-cmd)" "control: a miss
 z=/etc/zabbix/zabbix_agent2.d
 assert_cmd "asterisk.conf and scripts/asterisk.sh installed" -- img "test -f $z/asterisk.conf && test -x $z/scripts/asterisk.sh"
 assert_eq "" "$(img "find $z -perm /022")" "templates not group/other writable"
+zbx=$(sed -n 's/^ZABBIX_VER=//p' "$dir/versions.env")
+assert_contains "$(img 'dpkg-query -W -f "\${Version}" zabbix-agent2')" "1:$zbx." "zabbix-agent2 $zbx.x from repo.zabbix.com"
 assert_cmd "zabbix_agent2 configuration validates" -- img 'zabbix_agent2 -c /etc/zabbix/zabbix_agent2.conf -T'
 c=$(t_run ast "$image" -- asterisk -f -U asterisk -G asterisk)
-t_wait_for 60 -- docker exec "$c" asterisk -rx "core show uptime" || die "Asterisk did not start"
+# "core waitfullybooted": before full boot (slow under arm64 emulation) the
+# agent script gets "No such command 'core show version'"
+t_wait_for 120 -- docker exec "$c" asterisk -rx "core waitfullybooted" || die "Asterisk did not start"
 key() { docker exec "$c" zabbix_agent2 -c /etc/zabbix/zabbix_agent2.conf -t "$1" 2>&1; }
 assert_contains "$(key 'check.asterisk[version]')" "Asterisk $asterisk" "check.asterisk[version] answers Asterisk $asterisk"
 assert_contains "$(key 'izpbx.nosuch.key')" "ZBX_NOTSUPPORTED" "control: an unknown key is not supported"

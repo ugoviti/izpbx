@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # P1-06: Asterisk 22.11.0 built by build/asterisk.sh. asterisk -V = 22.11.0;
-# the module list equals tests/expected/asterisk-modules.txt (no chan_sip.so,
+# the module list equals tests/expected/asterisk-modules[-aarch64].txt (no chan_sip.so,
 # app_macro.so, app_meetme.so; app_sla.so, res_fax_spandsp.so, codec_opus.so,
 # format_mp3.so, res_xmpp.so present); every module resolves its libraries;
 # menuselect.makeopts has no DONT_OPTIMIZE / BETTER_BACKTRACES (D10).
@@ -9,19 +9,27 @@ source "$(dirname "$0")/../lib.sh"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 dir="$REPO_DIR/izpbx-asterisk"
-expected="$TESTS_DIR/expected/asterisk-modules.txt"
 image=izpbx-asterisk:p1-06
 
 assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
 assert_cmd "builder stage builds" -- docker build -q --target builder -t "$image-builder" "$dir"
 
 assert_eq "Asterisk 22.11.0" "$(docker run --rm "$image" asterisk -V)" "asterisk -V"
+# the expected list depends on the architecture (P1-11 runs this check on
+# arm64 with DOCKER_DEFAULT_PLATFORM): no Digium binary codecs on aarch64
+arch=$(docker run --rm "$image" uname -m)
+case "$arch" in
+  x86_64) expected="$TESTS_DIR/expected/asterisk-modules.txt"; binary_codecs="codec_opus codec_silk format_ogg_opus" ;;
+  aarch64) expected="$TESTS_DIR/expected/asterisk-modules-aarch64.txt"; binary_codecs="" ;;
+  *) die "unsupported architecture $arch" ;;
+esac
+log "architecture $arch, expected modules from $(basename "$expected")"
 docker run --rm "$image" sh -c 'ls /usr/lib64/asterisk/modules/ | grep "\.so$"' | LC_ALL=C sort > "$work/modules"
 grep -v '^#' "$expected" > "$work/expected"
 diff "$work/expected" "$work/modules" > "$work/diff" && rc=0 || rc=$?
 [ "$rc" -eq 0 ] || log "module list differs from $expected:"$'\n'"$(cat "$work/diff")"
-assert_eq 0 "$rc" "module list equals tests/expected/asterisk-modules.txt ($(wc -l < "$work/modules") modules)"
-for m in app_sla res_fax_spandsp codec_opus format_mp3 res_xmpp chan_pjsip; do
+assert_eq 0 "$rc" "module list equals $(basename "$expected") ($(wc -l < "$work/modules") modules)"
+for m in app_sla res_fax_spandsp format_mp3 res_xmpp chan_pjsip $binary_codecs; do
   assert_cmd "$m.so is present" -- grep -qx "$m.so" "$work/modules"
 done
 for m in chan_sip app_macro app_meetme res_digium_phone; do
