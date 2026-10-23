@@ -1,0 +1,4 @@
+extension,name,tech,secret,voicemail_enable,voicemail,voicemail_vmpwd,voicemail_email
+1001,Fixture SIP One,sip,Fx-sip-1001-pw,yes,default,1001,
+1002,Fixture PJSIP Two,pjsip,Fx-pjsip-1002-pw,yes,default,1002,
+1003,Fixture PJSIP Three,pjsip,Fx-pjsip-1003-pw,yes,default,1003,
