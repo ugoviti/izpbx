@@ -925,8 +925,6 @@ function cfgService_izpbx() {
       }
     fi
     
-    # FIXME @20200318 freepbx 15.x warnings workaround
-    sed 's/^preload = chan_local.so/;preload = chan_local.so/' -i ${fpbxDirs[ASTETCDIR]}/modules.conf
     # HEP (Homer capture) is configured only if HEP_ENABLED is defined (true|false)
     if [ -n "${HEP_ENABLED}" ] && [ -e "${fpbxDirs[ASTETCDIR]}/hep.conf" ]; then
       [ "${HEP_ENABLED}" = "true" ] && hepEnabled="yes" || hepEnabled="no"
@@ -1147,29 +1145,26 @@ function cfgService_freepbx_upgrade() {
   # FIXME: @20211128 workaround
   [ -e "/tmp/cron.error" ] && rm -f /tmp/cron.error
   
-  # FIXME: @20211130 check on future version if this is still needed
-  echo "--> step:[1] FIXME: patching 'Encoding.php' for issue: https://issues.freepbx.org/browse/FREEPBX-21703"
-  patch "${fpbxDirs[AMPWEBROOT]}/admin/libraries/Composer/vendor/neitanod/forceutf8/src/ForceUTF8/Encoding.php" "/usr/src/php74.patch"
-  echo "--> step:[2] starting freepbx services"
+  echo "--> step:[1] starting freepbx services"
   fwconsole start
-  echo "--> step:[3] upgrading all modules"
+  echo "--> step:[2] upgrading all modules"
   fwconsole ma upgradeall
-  echo "--> step:[4] installing versionupgrade modules"
+  echo "--> step:[3] installing versionupgrade modules"
   fwconsole ma downloadinstall versionupgrade
   fwconsole chown
   fwconsole reload
-  echo "--> step:[5] upgrading from FreePBX $FREEPBX_VER_INSTALLED to $FREEPBX_VER"
+  echo "--> step:[4] upgrading from FreePBX $FREEPBX_VER_INSTALLED to $FREEPBX_VER"
   #fwconsole versionupgrade --check
   fwconsole versionupgrade --upgrade
   if [ $? != 0 ]; then
     # FIXME: @20211130 check on future version if this is still needed
-    echo "--> step:[5-b] FIXME: applying workaround for issue: https://issues.freepbx.org/browse/FREEPBX-22983"
+    echo "--> step:[4-b] FIXME: applying workaround for issue: https://issues.freepbx.org/browse/FREEPBX-22983"
     # refs: https://community.freepbx.org/t/2021-09-17-security-fixes-release-update/78054
     fwconsole ma downloadinstall framework --tag=16.0.10.42
-    echo "--> step:[5-c] upgradind all modules again"
+    echo "--> step:[4-c] upgradind all modules again"
     fwconsole ma upgradeall
   fi
-  echo "--> step:[6] finalizing upgrade"
+  echo "--> step:[5] finalizing upgrade"
   fwconsole chown
   fwconsole reload
   fwconsole stop
@@ -1355,10 +1350,6 @@ function cfgService_freepbx_install() {
     
     # apply workarounds and fix for FreePBX unresolved issues
     freepbxSettingsFix
-
-    # FIXME @20251014 framework 16.0.41 issue preventing initial setup completion
-    FRAMEWORK_VERSION=$(fwconsole ma list --format=json | jq -s -r '.[] | select(.data | type=="array") | .data[] | select(.[0]=="framework") | .[1]')
-    [[ $FRAMEWORK_VERSION =~ ^16\.0\.41($|\.) ]] && fwconsole ma downloadinstall framework --tag=16.0.40
 
     # fix permissions before installing FreePBX modules
     freepbxChown
