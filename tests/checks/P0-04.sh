@@ -8,8 +8,9 @@ fx="$out/20.16.22"
 work=$(mktemp -d)
 t_on_cleanup "rm -rf '$work'"
 
-rm -rf "$fx"
-assert_cmd "fixture regenerates from scratch" -- "$TESTS_DIR/fixtures/make-fixture.sh" -v 20.16.22 -o "$out"
+# TEST_REUSE_FIXTURES=1 (run.sh all-done) reuses a fixture built from unchanged inputs
+[ -n "${TEST_REUSE_FIXTURES:-}" ] || rm -rf "$fx"
+assert_cmd "fixture regenerates from scratch" -- "$TESTS_DIR/fixtures/make-fixture.sh" -v 20.16.22 -o "$out" ${TEST_REUSE_FIXTURES:+--reuse}
 "$TESTS_DIR/fixtures/verify-fixture.sh" "$fx" >"$work/verify.log" 2>&1 && rc=0 || rc=$?
 cat "$work/verify.log" | grep -v ' PASS: ' >&2
 assert_eq 0 "$rc" "every T5 category has at least one element"

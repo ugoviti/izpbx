@@ -52,7 +52,9 @@ case "$1" in
   selftest)  TEST_ID=selftest exec bash "$TESTS_DIR/selftest.sh" ;;
   all)       mapfile -t ids < <(find "$CHECKS_DIR" -name '*.sh' -printf '%f\n' | sed 's/\.sh$//' | sort -V)
              run_many "${ids[@]}" ;;
-  all-done)  mapfile -t ids < <(done_ids)
+  all-done)  # regression run: reuse fixtures whose inputs did not change
+             export TEST_REUSE_FIXTURES=1
+             mapfile -t ids < <(done_ids)
              [ ${#ids[@]} -gt 0 ] || { echo "no items in $DONE_LIST"; exit 0; }
              run_many "${ids[@]}" ;;
   *)         run_many "$@" ;;
