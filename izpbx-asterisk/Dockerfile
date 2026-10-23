@@ -9,6 +9,7 @@ FROM docker.io/library/debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG OS_UPDATE_STAMP=""
 # only what base.sh reads: other changes do not invalidate the base layer
+COPY versions.env /usr/src/izpbx/versions.env
 COPY build/lib.sh build/base.sh build/packages-runtime.txt /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \

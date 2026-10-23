@@ -73,6 +73,8 @@ php8.2-soap
 php8.2-ldap
 php8.2-sqlite3
 php-pear
+# monitoring (repository set up by base.sh)
+zabbix-agent2
 # database client, node (D27)
 mariadb-client
 nodejs

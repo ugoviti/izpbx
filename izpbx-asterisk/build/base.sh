@@ -1,14 +1,38 @@
 #!/bin/bash
-# Stage "base": runtime packages, linker path, asterisk user.
+# Stage "base": Zabbix repository (pinned key), runtime packages, linker path,
+# asterisk user.
 #   build/base.sh   (run from the Dockerfile with versions.env and build/ in /usr/src/izpbx)
 set -Eeuo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=lib.sh
 . "$here/lib.sh"
+load_versions "$here/../versions.env"
 
 # keep downloaded .deb files: /var/cache/apt is a BuildKit cache mount
 rm -f /etc/apt/apt.conf.d/docker-clean
 echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
+# bootstrap: what the repository setup below needs (debian slim has none of it)
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl gnupg
+
+# Zabbix agent 2 repository: the published key file is a bundle of several
+# keys, only the one with the pinned fingerprint goes into the keyring
+key=$(mktemp)
+curl -fsSL --proto '=https' --retry 5 -o "$key" https://repo.zabbix.com/zabbix-official-repo.key
+gpg --show-keys --with-colons "$key" | awk -F: '$1=="fpr"{print $10}' | grep -qx "$ZABBIX_GPG_FPR" \
+  || build_die "the Zabbix key file does not contain $ZABBIX_GPG_FPR"
+gnupg_home=$(mktemp -d)
+gpg --homedir "$gnupg_home" --quiet --import "$key"
+gpg --homedir "$gnupg_home" --export "$ZABBIX_GPG_FPR" > /usr/share/keyrings/zabbix.gpg
+rm -rf "$key" "$gnupg_home"
+cat > /etc/apt/sources.list.d/zabbix.sources <<SRC
+Types: deb
+URIs: https://repo.zabbix.com/zabbix/$ZABBIX_VER/debian
+Suites: bookworm
+Components: main
+Signed-By: /usr/share/keyrings/zabbix.gpg
+SRC
 
 apt-get update
 # OS_UPDATE_STAMP (build arg) only changes the cache key of this step
