@@ -1,0 +1,8 @@
+# Asterisk 22 menuselect changes applied on top of the defaults (one per line):
+#   enable <name> / disable <name>, categories and modules alike
+# D10: no DONT_OPTIMIZE / BETTER_BACKTRACES; B2: app_sla; D23: no app_meetme
+disable BUILD_NATIVE
+enable format_mp3
+enable res_config_mysql
+enable app_sla
+disable app_meetme

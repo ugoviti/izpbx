@@ -85,3 +85,13 @@ load_versions() {
     export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"
   done < "$file"
 }
+
+# pkg_list FILE -> package names, comments and blank lines removed
+pkg_list() { sed -e 's/#.*//' -e 's/[[:space:]]//g' "${1:?package list}" | grep -v '^$'; }
+
+# apt_install FILE: install a package list without recommends (apt cache may be a BuildKit mount)
+apt_install() {
+  local pkgs
+  mapfile -t pkgs < <(pkg_list "$1")
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${pkgs[@]}"
+}
