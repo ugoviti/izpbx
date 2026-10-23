@@ -27,7 +27,11 @@ for f in asterisk asteriskcdrdb; do
   gzip -dc "$dir/$f.sql.gz" | docker exec -i "$db" mariadb -uroot || die "cannot load $f dump"
 done
 
-q() { docker exec "$db" mariadb -uroot -N -B -e "$1" 2>/dev/null || echo 0; }
+q() { # a failed query counts 0 (the check fails) and its error is shown
+  local r
+  if r=$(docker exec "$db" mariadb -uroot -N -B -e "$1" 2>&1); then printf '%s\n' "$r"
+  else log "query failed: $1: $r"; echo 0; fi
+}
 files() { find "$d/$1" -type f ${2:+-name "$2"} 2>/dev/null | wc -l; }
 astdb() { python3 -I -c 'import sqlite3,sys; print(sqlite3.connect(sys.argv[1]).execute("SELECT count(*) FROM astdb WHERE key LIKE ?", (sys.argv[2],)).fetchone()[0])' \
   "$d/var/lib/asterisk/astdb.sqlite3" "$1" 2>/dev/null || echo 0; }

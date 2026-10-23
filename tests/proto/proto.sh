@@ -6,11 +6,13 @@
 #   proto_sql SQL           query the prototype DB (asterisk schema)
 # and the variables proto_image, pbx, db, work.
 
-proto_image=izpbx-proto/fpbx17:17.0.33
+# proto_image / proto_dir can be set before sourcing to use a variant
+: "${proto_image:=izpbx-proto/fpbx17:17.0.33}"
+: "${proto_dir:=$TESTS_DIR/proto/fpbx17}"
 : "${work:?set work before sourcing proto.sh}"
 
 proto_up() {
-  docker build -q -t "$proto_image" "$TESTS_DIR/proto/fpbx17" >/dev/null || return 1
+  docker build -q -t "$proto_image" "$proto_dir" >/dev/null || return 1
   local net="$TEST_PROJECT-net"
   docker network create --label "izpbx.test=$TEST_PROJECT" "$net" >/dev/null
   db=$(t_run db docker.io/mariadb:10.11.19 --network "$net" --network-alias db -e MARIADB_ROOT_PASSWORD=proto-root \

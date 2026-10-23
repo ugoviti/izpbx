@@ -10,7 +10,10 @@ source "$(dirname "$0")/../lib.sh"
 out="$TESTS_DIR/fixtures/out"
 base="$out/20.16.22"
 make() { "$TESTS_DIR/fixtures/make-fixture.sh" -o "$out" ${TEST_REUSE_FIXTURES:+--reuse} "$@" >/dev/null 2>&1; }
-verify() { "$TESTS_DIR/fixtures/verify-fixture.sh" "$1" >/dev/null 2>&1; }
+verify() { # quiet when it passes, the end of its output when it fails
+  local o
+  o=$("$TESTS_DIR/fixtures/verify-fixture.sh" "$1" 2>&1) || { printf '%s\n' "$o" | grep -vE '\] PASS: ' | tail -15; return 1; }
+}
 mf() { sed -n "s/^$2=//p" "$1/manifest.txt"; }
 dump() { gzip -dc "$1/asterisk.sql.gz"; }
 # grep -c reads all its input: "gzip -dc | grep -q" would end in SIGPIPE, a
