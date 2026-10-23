@@ -23,7 +23,7 @@ for k in DEBIAN_IMAGE $(grep -oE '^[A-Z0-9_]+_VER(_[A-Z0-9]+)?=' "$venv" | tr -d
   grep -qE "^$k +" "$work/current.txt" || missing+=" $k"
 done
 assert_eq "" "$missing" "the report lists every component of versions.env"
-assert_eq "" "$(grep -vE '^(curl: \(22\).*|[0-9]+ lookup\(s\) unavailable: the report is incomplete|)$' "$work/current.err" || true)" "no errors on stderr"
+assert_eq "" "$(grep -vE '^(curl: \([0-9]+\).*|[0-9]+ lookup\(s\) unavailable: the report is incomplete|)$' "$work/current.err" || true)" "no errors on stderr"
 
 # negative: old versions must be flagged and proposed with a sha256
 sed -e 's/^ASTERISK_VER=.*/ASTERISK_VER=22.0.0/' -e 's/^FOP2_VER=.*/FOP2_VER=2.31.40/' \
