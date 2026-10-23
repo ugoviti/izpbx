@@ -1,0 +1,6 @@
+# Checks left out of "tests/run.sh all-done" during development: they are
+# slow (arm64 build under QEMU emulation, ~35 min when the base stage
+# changes). Decision of the user (2026-10-23): arm64 is checked at the end of
+# the project. Before the release run everything:
+#   TEST_INCLUDE_DEFERRED=1 tests/run.sh all-done
+P1-11

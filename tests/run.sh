@@ -3,7 +3,9 @@
 #
 #   tests/run.sh <ID>...    run tests/checks/<ID>.sh
 #   tests/run.sh all        run every check
-#   tests/run.sh all-done   run the checks of the items already done (tests/done.list)
+#   tests/run.sh all-done   run the checks of the items already done (tests/done.list),
+#                           except the slow ones of tests/deferred.list (arm64 under
+#                           emulation): TEST_INCLUDE_DEFERRED=1 runs them too
 #   tests/run.sh selftest   test the harness itself
 #
 # Exit code: 0 if every selected check passed, 1 otherwise.
@@ -13,8 +15,9 @@ set -Eeuo pipefail
 TESTS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 CHECKS_DIR="$TESTS_DIR/checks"
 DONE_LIST="$TESTS_DIR/done.list"
+DEFERRED_LIST="$TESTS_DIR/deferred.list"
 
-usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 run_one() { # id
   local id=$1 script="$CHECKS_DIR/$1.sh" start=$SECONDS rc=0
@@ -56,6 +59,16 @@ case "$1" in
              export TEST_REUSE_FIXTURES=1
              mapfile -t ids < <(done_ids)
              [ ${#ids[@]} -gt 0 ] || { echo "no items in $DONE_LIST"; exit 0; }
+             deferred=()
+             if [ -z "${TEST_INCLUDE_DEFERRED:-}" ] && [ -f "$DEFERRED_LIST" ]; then
+               mapfile -t deferred < <(grep -vE '^(#|$)' "$DEFERRED_LIST")
+               kept=()
+               for id in "${ids[@]}"; do
+                 [[ " ${deferred[*]} " == *" $id "* ]] || kept+=("$id")
+               done
+               ids=("${kept[@]}")
+             fi
+             [ ${#deferred[@]} -eq 0 ] || echo "deferred (not run, TEST_INCLUDE_DEFERRED=1 to run them): ${deferred[*]}"
              run_many "${ids[@]}" ;;
   *)         run_many "$@" ;;
 esac
