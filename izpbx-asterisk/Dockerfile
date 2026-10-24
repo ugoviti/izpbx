@@ -84,6 +84,9 @@ ENV APP_NAME="izpbx-asterisk" \
 # S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0: the first izpbx-init (FreePBX install)
 # takes minutes; S6_BEHAVIOUR_IF_STAGE2_FAILS=2: a failed izpbx-init stops
 # the container instead of leaving it up without services
+# health (design H5): the first start installs FreePBX and a migration can
+# take tens of minutes, so failures count only after 30 minutes
+HEALTHCHECK --interval=30s --timeout=20s --start-period=30m --retries=3 CMD ["/usr/local/bin/izpbx-healthcheck"]
 # s6-overlay is PID 1 (s6-svscan); without a CMD it runs the services only
 ENTRYPOINT ["/init"]
 CMD []
