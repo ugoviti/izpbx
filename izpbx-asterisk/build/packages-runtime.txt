@@ -93,6 +93,8 @@ netcat-openbsd    # nc
 jq
 # services (D14, s6 services in rootfs/etc/s6-overlay/s6-rc.d)
 fail2ban
+# ban actions (iptables-allports, the default banaction; needs NET_ADMIN)
+iptables
 postfix
 # SASL PLAIN/LOGIN for the relay authentication (smtp_sasl_auth_enable)
 libsasl2-modules
