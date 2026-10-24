@@ -4,6 +4,7 @@
 #   service_is_enabled NAME       NAME enabled? (SERVICE_VARS, after the rules)
 #   service_off NAME              the service is disabled: stay down, no restart
 #   service_run NAME CMD...       run CMD, reliable stop (see below)
+#   service_reap PROCESS          kill what is left of a previous instance
 # The run scripts start with "#!/command/with-contenv bash" so they see the
 # container environment.
 # shellcheck source=common.sh
@@ -49,6 +50,17 @@ service_gate() {
 service_off() {
   log_info "$1: disabled"
   exec /command/s6-svc -O .
+}
+
+# service_reap PROCESS: s6 runs one instance of the service, so at this point
+# any PROCESS left is an orphan of a previous one (its parent killed or
+# crashed) still holding ports or sockets: kill it and wait a little for it
+service_reap() {
+  local _
+  pkill -KILL -x "$1" 2>/dev/null || return 0
+  log_warn "$1: killed processes left by the previous instance"
+  for _ in 1 2 3 4 5 6 7 8 9 10; do pgrep -x "$1" >/dev/null || return 0; sleep 0.2; done
+  return 0
 }
 
 # service_run NAME CMD...: run CMD as a child of the run script. Some daemons

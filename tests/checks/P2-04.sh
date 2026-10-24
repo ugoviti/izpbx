@@ -34,7 +34,9 @@ assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
 up() { docker exec "$1" /command/s6-svstat -o up "/run/service/$2" 2>/dev/null; }
 running() { docker exec "$1" pgrep -x "$2" >/dev/null; }
 settled() { # container: izpbx-init done and every enabled service up
-  docker logs "$1" 2>&1 | grep -q 'service izpbx-init successfully started' && sleep 5
+  # grep reads the whole log (no -q): with a long log (zabbix_agent2 logs to
+  # the console) an early exit of grep breaks docker logs and the pipeline
+  docker logs "$1" 2>&1 | grep 'service izpbx-init successfully started' >/dev/null && sleep 5
 }
 states() { local s; for s in $services; do printf '%s=%s ' "$s" "$(up "$1" "$s")"; done; }
 

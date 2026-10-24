@@ -5,4 +5,7 @@ service_gate httpd
 # shellcheck source=/dev/null
 . /etc/apache2/envvars
 mkdir -p "$APACHE_RUN_DIR" "$APACHE_LOCK_DIR" "$APACHE_LOG_DIR"
+# workers left by a parent that died (kill -9, crash) still hold the
+# listening ports: the new apache2 would fail to bind until they exit
+service_reap apache2
 exec apache2 -DFOREGROUND
