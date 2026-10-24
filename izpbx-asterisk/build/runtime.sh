@@ -23,4 +23,12 @@ rm -f /etc/logrotate.d/apache2
 # /usr/sbin/sendmail is chosen at start (init.d/10-services.sh): msmtp, or
 # Postfix's own, kept aside here (the diversion survives package upgrades)
 dpkg-divert --local --rename --divert /usr/sbin/sendmail.postfix --add /usr/sbin/sendmail
+# Apache (Debian layout): the izPBX vhost and global conf are written at start
+# by services/httpd.sh; Debian's default site is off
+a2enmod -q rewrite ssl
+a2dissite -q 000-default
+: > /etc/apache2/sites-available/izpbx.conf
+: > /etc/apache2/conf-available/izpbx.conf
+a2ensite -q izpbx
+a2enconf -q izpbx
 build_log "runtime ready"

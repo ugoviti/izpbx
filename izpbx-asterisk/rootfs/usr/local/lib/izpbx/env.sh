@@ -219,6 +219,8 @@ _izpbx_version() { [ -r "$IZPBX_VERSIONS_FILE" ] && sed -n "s/^$1=//p" "$IZPBX_V
 : "${FAIL2BAN_DEFAULT_DESTEMAIL:=${SMTP_MAIL_TO}}"
 : "${FREEPBX_HTTPBINDPORT:=${APP_PORT_AMI}}"
 : "${ZABBIX_SERVER_ACTIVE:=${ZABBIX_SERVER}}"
+# APP_FQDN is the hostname of the services (20.16: hostname + export HOSTNAME)
+[ -n "$APP_FQDN" ] && export HOSTNAME="$APP_FQDN"
 : "${SERVERNAME:=${HOSTNAME:-}}"
 : "${ZABBIX_HOSTNAME:=${HOSTNAME:-}}"
 
