@@ -7,11 +7,22 @@
 #
 # Steps: /usr/local/lib/izpbx/init.d/*.sh, sourced in lexical order (NN-name.sh)
 # in strict mode: the first failing command stops the init with file:line.
+#
+# --dry-run (or IZPBX_DRY_RUN=true): the files are generated, but database
+# writes, "fwconsole setting" and other commands with outside effects are
+# recorded in IZPBX_DRY_RUN_LOG instead of run (actions.sh), and the s6
+# services stay down (service_gate). Used by the golden tests (design R3):
+#   docker run --rm --entrypoint "" <image> izpbx-init --dry-run
 # shellcheck source=../lib/izpbx/common.sh
 . /usr/local/lib/izpbx/common.sh
 izpbx_strict
 
 : "${IZPBX_INIT_DIR:=/usr/local/lib/izpbx/init.d}"
+case "${1:-}" in
+  "") ;;
+  --dry-run) export IZPBX_DRY_RUN=true ;;
+  *) die "izpbx-init: unknown option '$1' (usage: izpbx-init [--dry-run])" ;;
+esac
 # the steps write the system configuration: a container started with
 # "--user" (a one-off command as asterisk) gets no initialization, and its
 # services cannot run either
@@ -20,7 +31,13 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 0
 fi
 start=$SECONDS
-log_info "izpbx-init: start"
+if [ "${IZPBX_DRY_RUN:-false}" == "true" ]; then
+  : "${IZPBX_DRY_RUN_LOG:=/run/izpbx/dry-run.log}"
+  mkdir -p "$(dirname "$IZPBX_DRY_RUN_LOG")" && : > "$IZPBX_DRY_RUN_LOG"
+  log_info "izpbx-init: start (dry-run: actions recorded in $IZPBX_DRY_RUN_LOG)"
+else
+  log_info "izpbx-init: start"
+fi
 shopt -s nullglob
 for step in "$IZPBX_INIT_DIR"/*.sh; do
   log_info "izpbx-init: step $(basename "$step")"

@@ -35,8 +35,15 @@ service_is_enabled() {
   return 1
 }
 
-# service_gate NAME: in a run script, stay down unless the service is enabled
-service_gate() { service_is_enabled "$1" || service_off "$1"; }
+# service_gate NAME: in a run script, stay down unless the service is enabled;
+# in dry-run (IZPBX_DRY_RUN=true) every service stays down
+service_gate() {
+  if [ "${IZPBX_DRY_RUN:-false}" == "true" ]; then
+    log_info "$1: dry-run, not started"
+    exec /command/s6-svc -O .
+  fi
+  service_is_enabled "$1" || service_off "$1"
+}
 
 # s6-svc -O: run at most once, so the exit below leaves the service down
 service_off() {

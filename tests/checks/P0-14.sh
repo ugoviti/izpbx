@@ -39,6 +39,17 @@ proto_pre_install() {
 }
 assert_cmd "FreePBX 17 installs on the prototype without toolchain" -- proto_up
 fc() { docker exec -u asterisk "$pbx" fwconsole "$@"; }
+# right after the ucp reinstall "fwconsole setting" fails now and then (seen
+# twice in all-done): retry it a few times instead of stopping the test
+fc_setting() {
+  local try
+  for try in 1 2 3 4 5; do
+    fc setting "$@" >/dev/null 2>&1 && return 0
+    log "fwconsole setting $* failed (try $try), retrying"
+    sleep 3
+  done
+  fail "fwconsole setting $* failed 5 times"
+}
 enabled() { fc ma list | grep -cE "^\| $1 +\| [0-9.]+ +\| Enabled" >/dev/null; }
 assert_cmd "pm2 installed and enabled" -- enabled pm2
 assert_cmd "ucp installed and enabled" -- enabled ucp
@@ -61,11 +72,11 @@ stable_online() { # ucp online, then same PID and restarts after 20 s
   log "ucp: $a -> $b"
   [ "${a%% *}" == online ] && [ "$a" == "$b" ]
 }
-fc setting ASTMANAGERHOST localhost >/dev/null
-fc pm2 --restart=ucp >/dev/null 2>&1
+fc_setting ASTMANAGERHOST localhost
+fc pm2 --restart=ucp >/dev/null 2>&1 || log "pm2 restart of ucp returned non-zero"
 assert_cmd_fails "control: with ASTMANAGERHOST=localhost ucp is not stable" -- stable_online
-fc setting ASTMANAGERHOST 127.0.0.1 >/dev/null
-fc pm2 --restart=ucp >/dev/null 2>&1
+fc_setting ASTMANAGERHOST 127.0.0.1
+fc pm2 --restart=ucp >/dev/null 2>&1 || log "pm2 restart of ucp returned non-zero"
 assert_cmd "with ASTMANAGERHOST=127.0.0.1 ucp is online and stable" -- stable_online
 
 # negative: without the stub the ucp (re)install fails on its g++ check
