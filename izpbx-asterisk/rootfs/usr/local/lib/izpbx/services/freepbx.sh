@@ -74,6 +74,20 @@ freepbx_fix_paths() {
   done
 }
 
+# database connection of an installed FreePBX from the environment, at every
+# start (20.16): the values are PHP-escaped and written without sed, the
+# password never on a command line (P3-21); an empty value is not applied
+freepbx_conf_update() {
+  local f=$IZPBX_FREEPBX_CONF k var _fpbx_val
+  for k in AMPDBHOST:MYSQL_SERVER AMPDBPORT:APP_PORT_MYSQL AMPDBNAME:MYSQL_DATABASE AMPDBUSER:MYSQL_USER AMPDBPASS:MYSQL_PASSWORD; do
+    var=${k#*:}; k=${k%%:*}
+    [ -n "${!var}" ] || continue
+    _fpbx_val="$(phpSquote "${!var}")';"
+    set_line_secret "$f" "^[$]amp_conf[[]'$k'[]] *=" "\$amp_conf['$k'] = '" _fpbx_val ||
+      { log_warn "freepbx: cannot update $k in $f"; return 0; }
+  done
+}
+
 # fwconsole and amportal in /usr/sbin (not persisted: at every start, 20.16)
 freepbx_links() {
   local f
@@ -87,7 +101,9 @@ fwconsole_as_asterisk() { su -s /bin/bash "$APP_USR" -c "fwconsole $*"; }
 
 # database as root (or as MYSQL_USER without MYSQL_ROOT_PASSWORD)
 _fpbx_dbroot() {
-  MYSQL_PWD="${_fpbx_dbpass}" mysql --connect-timeout=5 -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$_fpbx_dbuser" -N -B -e "$1"
+  # password in the environment, statement on stdin (CREATE USER holds a
+  # password): nothing secret on the command line (P3-21)
+  printf '%s\n' "$1" | MYSQL_PWD="${_fpbx_dbpass}" mysql --connect-timeout=5 -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$_fpbx_dbuser" -N -B
 }
 
 _fpbx_wait_db() {
@@ -144,10 +160,12 @@ _fpbx_install_once() {
   [ -s /etc/machine-id ] || tr -d - < /proc/sys/kernel/random/uuid > /etc/machine-id
   _fpbx_asterisk_start || return 1
   log_info "freepbx: running the FreePBX $(_izpbx_version FREEPBX_FRAMEWORK_VER) installer"
-  # the password goes only on the installer command line, never in the log
+  # the installer takes the password only as --dbpass: freepbx-install.php
+  # adds it from the environment, so it is not on any command line (P3-21)
   # NOTE: the 17.0.33 installer exits 1 even when it reports success
-  ( cd "$IZPBX_FREEPBX_SRC" && ./install -n --skip-install --no-ansi --dbhost="$MYSQL_SERVER" --dbport="$APP_PORT_MYSQL" \
-      --dbuser="$MYSQL_USER" --dbpass="$MYSQL_PASSWORD" --dbname="$MYSQL_DATABASE" --cdrdbname="$MYSQL_DATABASE_CDR" \
+  ( cd "$IZPBX_FREEPBX_SRC" && IZPBX_INSTALL_DBPASS=$MYSQL_PASSWORD php /usr/local/share/izpbx/freepbx-install.php \
+      -n --skip-install --no-ansi --dbhost="$MYSQL_SERVER" --dbport="$APP_PORT_MYSQL" \
+      --dbuser="$MYSQL_USER" --dbname="$MYSQL_DATABASE" --cdrdbname="$MYSQL_DATABASE_CDR" \
       "${dirs[@]}" ) > "$log" 2>&1 || true
   if ! grep -q 'You have successfully installed FreePBX' "$log"; then
     log_error "freepbx: installer failed, last lines of $log:"
@@ -194,8 +212,10 @@ freepbx_install() {
     izpbx_record "freepbx install: databases ${MYSQL_DATABASE}/${MYSQL_DATABASE_CDR} on ${MYSQL_SERVER}, modules: $FREEPBX_MODULES_PRE $FREEPBX_MODULES_EXTRA"
     return 0
   fi
-  if [[ "$MYSQL_PASSWORD" == *"'"* || "$MYSQL_PASSWORD" == *"\\"* ]]; then
-    die "freepbx: MYSQL_PASSWORD contains characters the FreePBX installer cannot write in freepbx.conf: single quote or backslash"
+  # the installer writes the password unescaped in a PHP single quoted string:
+  # a quote, or a backslash before a backslash, a quote or the end, would break it
+  if [[ "$MYSQL_PASSWORD" == *"'"* || "$MYSQL_PASSWORD" == *'\\'* || "$MYSQL_PASSWORD" == *'\' ]]; then
+    die "freepbx: MYSQL_PASSWORD not supported by the FreePBX installer: single quote, double backslash or final backslash"
   fi
   [ -n "$MYSQL_PASSWORD" ] || die "freepbx: MYSQL_PASSWORD is empty"
   _fpbx_dbuser=$MYSQL_ROOT_USER _fpbx_dbpass=$MYSQL_ROOT_PASSWORD

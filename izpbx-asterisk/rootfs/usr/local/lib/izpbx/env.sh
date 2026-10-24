@@ -68,6 +68,10 @@ _izpbx_version() { [ -r "$IZPBX_VERSIONS_FILE" ] && sed -n "s/^$1=//p" "$IZPBX_V
 : "${MYSQL_RANDOM_ROOT_PASSWORD:=}"
 : "${MYSQL_ALLOW_EMPTY_ROOT_PASSWORD:=}"
 
+# Docker secrets (20.16): the file is read only when the variable is empty
+[ -z "$IZPBX_MYSQL_PASSWORD_FILE" ] || readfsecret IZPBX_MYSQL_PASSWORD_FILE MYSQL_PASSWORD || true
+[ -z "$IZPBX_MYSQL_ROOT_PASSWORD_FILE" ] || readfsecret IZPBX_MYSQL_ROOT_PASSWORD_FILE MYSQL_ROOT_PASSWORD || true
+
 ## 5. Services (supervisord)
 : "${IZPBX_ENABLED:=true}"
 : "${ASTERISK_ENABLED:=false}"

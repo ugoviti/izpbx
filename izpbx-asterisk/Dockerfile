@@ -60,6 +60,7 @@ COPY rootfs/usr/local/sbin/izpbx-service /usr/local/sbin/izpbx-service
 COPY rootfs/etc/fail2ban/ /etc/fail2ban/
 COPY rootfs/etc/dnsmasq.d/ /etc/dnsmasq.d/
 COPY rootfs/usr/local/share/phonebook/ /usr/local/share/phonebook/
+COPY rootfs/usr/local/share/izpbx/ /usr/local/share/izpbx/
 COPY --chmod=0440 rootfs/etc/sudoers.d/zabbix /etc/sudoers.d/zabbix
 COPY rootfs/etc/logrotate.d/httpd /etc/logrotate.d/httpd
 COPY rootfs/etc/cron.daily/freepbx-le-renew /etc/cron.daily/freepbx-le-renew

@@ -123,7 +123,7 @@ cfg_fop2() {
   [ -n "$FOP2_AMI_HOST" ] && sed "s|^manager_host.*=.*|manager_host=$(sedEscape "$FOP2_AMI_HOST")|" -i "$f"
   [ -n "$FOP2_AMI_PORT" ] && sed "s|^manager_port.*=.*|manager_port=$(sedEscape "$FOP2_AMI_PORT")|" -i "$f"
   [ -n "$FOP2_AMI_USERNAME" ] && sed "s|^manager_user.*=.*|manager_user=$(sedEscape "$FOP2_AMI_USERNAME")|" -i "$f"
-  [ -n "$FOP2_AMI_PASSWORD" ] && sed "s|^manager_secret.*=.*|manager_secret=$(sedEscape "$FOP2_AMI_PASSWORD")|" -i "$f"
+  [ -n "$FOP2_AMI_PASSWORD" ] && set_line_secret "$f" '^manager_secret.*=' 'manager_secret=' FOP2_AMI_PASSWORD
   if [ "$HTTPD_HTTPS_ENABLED" == "true" ]; then
     sed "s|^ssl_certificate_file.*=.*|ssl_certificate_file=$(sedEscape "$HTTPD_HTTPS_CERT_FILE")|" -i "$f"
     sed "s|^ssl_certificate_key_file.*=.*|ssl_certificate_key_file=$(sedEscape "$HTTPD_HTTPS_KEY_FILE")|" -i "$f"

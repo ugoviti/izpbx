@@ -32,10 +32,11 @@ izpbx_do() {
 
 fpbx_setting() { izpbx_do fwconsole setting "$1" "$2"; }
 
-# the password goes through the environment, not the command line
+# the password goes through the environment, not the command line (P3-21)
 _izpbx_mariadb() {
-  MYSQL_PWD="$MYSQL_PASSWORD" mariadb -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" \
-    -u "$MYSQL_USER" --connect-timeout=5 --batch --skip-column-names "$MYSQL_DATABASE" -e "$1"
+  # the statement on stdin: it may hold secrets, the command line is public
+  printf '%s\n' "$1" | MYSQL_PWD="$MYSQL_PASSWORD" mariadb -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" \
+    -u "$MYSQL_USER" --connect-timeout=5 --batch --skip-column-names "$MYSQL_DATABASE"
 }
 
 izpbx_sql() {

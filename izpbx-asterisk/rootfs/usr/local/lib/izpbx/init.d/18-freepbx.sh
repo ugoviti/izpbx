@@ -9,6 +9,7 @@
 if [ "$IZPBX_ENABLED" != "true" ]; then
   log_info "freepbx: IZPBX_ENABLED=false, FreePBX not used"
 elif freepbx_installed; then
+  freepbx_conf_update
   freepbx_links
   freepbx_fix_paths
   log_info "freepbx: installed ($IZPBX_FREEPBX_CONF)"

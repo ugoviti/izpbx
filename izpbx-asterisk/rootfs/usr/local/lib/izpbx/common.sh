@@ -7,6 +7,7 @@
 # die MSG...                      log_error and exit 1
 # sedEscape / phpSquote / sqlEscape / sqlIdent   escaping of untrusted values
 # readfsecret FILEVAR TARGETVAR   read a secret file (docker secrets) into a variable
+# set_line_secret FILE RE PREFIX VAR   write a secret into a file, never on a command line
 # check_version VER               zero-padded number to compare versions
 #
 # Every function is self-contained, so tests can source this file alone.
@@ -49,6 +50,20 @@ phpSquote() { local s=${1//\\/\\\\}; printf '%s' "${s//\'/\\\'}"; }
 sqlEscape() { local s=${1//\\/\\\\}; printf '%s' "${s//\'/\\\'}"; }
 # SQL identifier between backticks: `...`
 sqlIdent() { printf '%s' "${1//\`/\`\`}"; }
+
+## secrets on the command line: set_line_secret FILE REGEX LINE_PREFIX VARNAME
+# Replace each line of FILE matching the extended REGEX with LINE_PREFIX and
+# the value of the variable VARNAME, read by awk from the environment: the
+# secret is never an argument of a process (sed would show it, P3-21). The
+# file keeps its inode, owner and mode. Return 1 if FILE cannot be written.
+set_line_secret() {
+  local file=$1 re=$2 prefix=$3 tmp
+  tmp=$(mktemp) || return 1
+  IZPBX_SECRET_VALUE=${!4} awk -v re="$re" -v prefix="$prefix" \
+    '$0 ~ re {print prefix ENVIRON["IZPBX_SECRET_VALUE"]; next} {print}' "$file" > "$tmp" || { rm -f "$tmp"; return 1; }
+  cmp -s "$tmp" "$file" || cat "$tmp" > "$file" || { rm -f "$tmp"; return 1; }
+  rm -f "$tmp"
+}
 
 ## secrets: readfsecret FILEVAR TARGETVAR
 # FILEVAR holds the path of the secret file, TARGETVAR receives its content.
