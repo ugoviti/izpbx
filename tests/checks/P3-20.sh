@@ -2,7 +2,7 @@
 # P3-20: FreePBX Advanced Settings (FREEPBX_*) and SIP Settings (C19, C20).
 # - golden: the fwconsole setting / sipsettings calls recorded by
 #   izpbx-init --dry-run for tests/fixtures/freepbx-settings/case.env = the
-#   calls of the 20.16.22 loops (run from entrypoint-hooks.sh with stubs of
+#   calls of the 20.16.22 loops (run from entrypoint-hooks.sh of the tag, with stubs of
 #   fwconsole and php) without the chan_sip bindport; no izPBX variable
 #   (FREEPBX_MODULES_*, FREEPBX_AUTOUPGRADE_*, ...) and no empty value applied;
 # - after a real start with FreePBX the values in freepbx_settings and the SIP
@@ -13,9 +13,11 @@
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p3-20
 fx="$TESTS_DIR/fixtures/freepbx-settings"
-hooks="$REPO_DIR/izpbx-asterisk/rootfs/entrypoint-hooks.sh"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
+# the 20.16.22 entrypoint, from its tag (no longer in rootfs, P3-22)
+hooks="$work/entrypoint-hooks.sh"
+git -C "$REPO_DIR" show 20.16.22:izpbx-asterisk/rootfs/entrypoint-hooks.sh > "$hooks" || die "tag 20.16.22 not available"
 assert_cmd "image builds" -- t_build_image "$image"
 
 # --- golden: 20.16 loops with stubs

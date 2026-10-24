@@ -9,7 +9,7 @@
 # (build/runtime.sh). The vhost text is the 20.16 one, apart from what has no
 # Debian equivalent: log paths under ${APACHE_LOG_DIR}, the passphrase helper
 # and SSL session cache of Debian, and the cipher list of Debian's ssl.conf
-# instead of the RHEL crypto policy (PROFILE=SYSTEM).
+# instead of the system crypto policy of the Rocky Linux based 20.16 (PROFILE=SYSTEM).
 # shellcheck source=../env.sh
 . /usr/local/lib/izpbx/env.sh
 

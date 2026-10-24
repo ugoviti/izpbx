@@ -26,10 +26,6 @@ run_query() {
 export_extensions() {
 run_query "SELECT extension,name,sipname FROM users;" | tr "\011" ";" | while read line
   do
-    #cn=$(run_query "SELECT name FROM users where extension='$EXTENTION';")
-    #givenName=$(echo $cn | awk '{print $1}')
-    #sn=$(echo $cn | awk '{print $2}')
-    #telephoneNumber=$(run_query "SELECT sipname FROM users where extension='$EXTENTION';")
     uid="$(echo $line | awk -F";" '{print $1}')"
     cn="$(echo $line | awk -F";" '{print $2}')"
     givenName=$(echo $cn | awk '{print $1}')
@@ -84,7 +80,3 @@ pbx2ldap
 #pbx2ldap_test
 exit $RETVAL;
  
-#[ $?  = 0 ] && /var/lib/asterisk/bin/retrieve_conf 1>/dev/null
-#[ $?  = 0 ] && /var/lib/asterisk/bin/module_admin reload 1>/dev/null
-#[ $?  = 0 ] && asterisk -rx "module reload"
-#[ $? != 0 ] && echo "errore nella configurazione di asterisk"
