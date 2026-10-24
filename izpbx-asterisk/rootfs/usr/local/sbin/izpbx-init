@@ -31,6 +31,9 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 0
 fi
 start=$SECONDS
+# runtime state of izPBX: the dry-run log, the maintenance flag read by
+# izpbx-healthcheck (a stale flag of a previous run does not survive /run)
+mkdir -p /run/izpbx
 if [ "${IZPBX_DRY_RUN:-false}" == "true" ]; then
   : "${IZPBX_DRY_RUN_LOG:=/run/izpbx/dry-run.log}"
   mkdir -p "$(dirname "$IZPBX_DRY_RUN_LOG")" && : > "$IZPBX_DRY_RUN_LOG"

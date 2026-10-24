@@ -1,0 +1,40 @@
+#!/bin/bash
+# izpbx-healthcheck: container health (design H5), for the Docker HEALTHCHECK.
+# Exit 0 when healthy; otherwise 1 with the reason on stdout. Checks, for the
+# services that are enabled:
+# - not in maintenance mode (IZPBX_MAINTENANCE_FLAG, written by the migration
+#   checks when no telephony service may run, design S10);
+# - the supervisor: s6-svscan running and the services tree in /run/service;
+# - Asterisk (IZPBX_ENABLED or ASTERISK_ENABLED): answers "core show uptime";
+# - FreePBX (IZPBX_ENABLED): the FreePBX database reachable, and HTTP 200 on
+#   /admin/config.php when httpd runs.
+# shellcheck source=../lib/izpbx/service.sh
+. /usr/local/lib/izpbx/service.sh
+# shellcheck source=../lib/izpbx/actions.sh
+. /usr/local/lib/izpbx/actions.sh
+
+: "${IZPBX_MAINTENANCE_FLAG:=/run/izpbx/maintenance}"
+
+unhealthy() { echo "unhealthy: $*"; exit 1; }
+
+[ -e "$IZPBX_MAINTENANCE_FLAG" ] && unhealthy "maintenance mode ($(head -c 200 "$IZPBX_MAINTENANCE_FLAG" 2>/dev/null))"
+pgrep -x s6-svscan >/dev/null && [ -d /run/service ] || unhealthy "s6 supervisor not running"
+
+if service_is_enabled asterisk; then
+  asterisk -rx 'core show uptime' 2>/dev/null | grep -q 'System uptime' || unhealthy "Asterisk not answering"
+fi
+
+if [ "$IZPBX_ENABLED" == "true" ]; then
+  # the database first: without it the FreePBX page fails too
+  izpbx_sql_query 'SELECT 1' >/dev/null 2>&1 || unhealthy "database ${MYSQL_SERVER}:${APP_PORT_MYSQL}/${MYSQL_DATABASE} not reachable"
+  if service_is_enabled httpd; then
+    if [ "$HTTPD_REDIRECT_HTTP_TO_HTTPS" == "true" ]; then
+      url="https://127.0.0.1:${APP_PORT_HTTPS}/admin/config.php"
+    else
+      url="http://127.0.0.1:${APP_PORT_HTTP}/admin/config.php"
+    fi
+    code=$(curl -ks -o /dev/null -m 10 -w '%{http_code}' "$url" 2>/dev/null) || true
+    [ "$code" == "200" ] || unhealthy "HTTP $code on $url"
+  fi
+fi
+echo "healthy"
