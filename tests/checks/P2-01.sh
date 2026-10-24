@@ -14,7 +14,7 @@ done
 assert_cmd "image builds" -- t_build_image "$image"
 assert_eq '["/init"]' "$(docker image inspect -f '{{json .Config.Entrypoint}}' "$image")" "docker inspect: entrypoint /init"
 
-c=$(t_run svc "$image")
+c=$(t_run svc "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 t_wait_for 30 -- docker exec "$c" true || die "container did not start"
 # during the boot PID 1 is s6-linux-init, which then execs into s6-svscan
 t_wait_for 30 -- sh -c "[ \"\$(docker exec $c cat /proc/1/comm)\" = s6-svscan ]" || true
@@ -22,7 +22,7 @@ assert_eq "s6-svscan" "$(docker exec "$c" cat /proc/1/comm)" "PID 1 is s6-svscan
 o=$(t_run other "$image" --entrypoint /bin/sleep -- infinity)
 assert_ne "s6-svscan" "$(docker exec "$o" cat /proc/1/comm)" "control: with another entrypoint PID 1 is not s6-svscan"
 
-rc=0; docker run --rm "$image" sh -c 'exit 3' 2>/dev/null || rc=$?
+rc=0; docker run --rm -e IZPBX_ENABLED=false "$image" sh -c 'exit 3' 2>/dev/null || rc=$?
 assert_eq 3 "$rc" "a one-off command keeps its exit code through /init"
 
 # negative: build/s6.sh, run in the image with a wrong sha256 for this arch

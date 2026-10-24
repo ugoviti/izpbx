@@ -45,7 +45,7 @@ assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "probe image builds" -- docker build -q -t "$probe" --build-arg BASE="$image" "$TESTS_DIR/s6probe"
 line() { grep -n -m1 -F -- "$2" <<< "$1" | cut -d: -f1; }
 
-c=$(t_run ok "$probe" -e IZPBX_PROBE_VALUE=hello)
+c=$(t_run ok "$probe" -e IZPBX_ENABLED=false -e IZPBX_PROBE_VALUE=hello)
 t_wait_for 60 -- sh -c "docker logs $c 2>&1 | grep -q 'probe: started'" || log "$(docker logs "$c" 2>&1 | tail -20)"
 logs=$(docker logs "$c" 2>&1)
 done_at=$(line "$logs" "izpbx: info: izpbx-init: done"); start_at=$(line "$logs" "s6-rc: info: service probe: starting"); up_at=$(line "$logs" "probe: started")
@@ -57,7 +57,7 @@ assert_eq 0 "$(grep -c 'user bundles.*deprecated' <<< "$logs" || true)" "no s6-o
 rc=0; timeout 90 docker run --rm -u asterisk "$image" true >/dev/null 2>&1 || rc=$?
 assert_eq 0 "$rc" "the image starts and runs a command as a non-root user (asterisk) within 90 s"
 
-f=$(t_run fail "$probe" -e IZPBX_PROBE_FAIL=1)
+f=$(t_run fail "$probe" -e IZPBX_ENABLED=false -e IZPBX_PROBE_FAIL=1)
 t_wait_for 60 -- sh -c "[ \"\$(docker inspect -f '{{.State.Status}}' $f)\" = exited ]" || log "container still running"
 logs=$(docker logs "$f" 2>&1)
 assert_contains "$logs" "izpbx: error: /usr/local/lib/izpbx/init.d/50-probe.sh:7: 'false' exited with status 1" "a failing izpbx-init logs file:line"

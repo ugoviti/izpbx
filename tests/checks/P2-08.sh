@@ -37,7 +37,7 @@ sleep "$IZPBX_TEST_INIT_SLEEP"
 log_info "test hook: done"
 EOF
 chmod 644 "$hook"
-mount=(-v "$hook:/usr/local/lib/izpbx/init.d/99-test-slow.sh:ro")
+mount=(-v "$hook:/usr/local/lib/izpbx/init.d/99-test-slow.sh:ro" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 health=(--health-cmd "asterisk -rx 'core waitfullybooted' >/dev/null" --health-interval 10s
         --health-timeout 10s --health-retries 3 --health-start-period 20m)
 state() { docker inspect -f '{{.State.Status}}/{{.State.Health.Status}}' "$1" 2>/dev/null || echo gone/none; }

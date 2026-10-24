@@ -56,7 +56,7 @@ fx="$TESTS_DIR/fixtures/asterisk-f2b"
 c=$(t_run pbx "$image" --network "$net" --ip 10.199.99.10 --cap-add NET_ADMIN \
   -v "$fx/pjsip.conf:/etc/asterisk/pjsip.conf:ro" -v "$fx/logger.conf:/etc/asterisk/logger.conf:ro" \
   -e FAIL2BAN_DEFAULT_MAXRETRY=3 -e FAIL2BAN_DEFAULT_IGNOREIP=127.0.0.0/8 -e FAIL2BAN_RECIDIVE_ENABLED=false \
-  -e HTTPD_ENABLED=false -e CRON_ENABLED=false)
+  -e HTTPD_ENABLED=false -e CRON_ENABLED=false -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 t_wait_for 120 -- docker exec "$c" asterisk -rx 'core waitfullybooted' >/dev/null || log "asterisk not booted"
 assert_cmd "jail asterisk active" -- t_wait_for 60 -- docker exec "$c" fail2ban-client status asterisk
 sipp() { # ip calls

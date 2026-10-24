@@ -1,0 +1,11 @@
+#!/bin/sh
+# izPBX ships no -dev packages (P1-10), so no .pc files. The FreePBX UCP
+# installer on Debian only asks "pkg-config --modversion icu-i18n" to check
+# the ICU version (its node modules build nothing): answer that with the
+# version of the ICU runtime library, written here by build/runtime.sh, and
+# fail anything else.
+case "$*" in
+  "--modversion icu-i18n"|"--modversion icu-uc") echo "@ICU_VERSION@"; exit 0 ;;
+esac
+echo "pkg-config: izPBX has no development files (stub for the FreePBX UCP install check)" >&2
+exit 1

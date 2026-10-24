@@ -69,7 +69,7 @@ assert_eq "" "$procs" "full start: no service process"
 assert_eq "$w0" "$(writes)" "full start: no write query"
 
 # --- negative check: without dry-run the step writes
-docker run --rm --entrypoint "" "${common[@]}" "$image" izpbx-init >/dev/null 2>&1 || true
+docker run --rm --entrypoint "" "${common[@]}" -e IZPBX_ENABLED=false "$image" izpbx-init >/dev/null 2>&1 || true
 assert_ne "$w0" "$(writes)" "control: without dry-run the writes show in the general log"
 assert_eq 43 "$(docker exec "$db" mariadb -uroot -prootpw -N asterisk -e 'SELECT v FROM t')" "control: the row was written"
 finish

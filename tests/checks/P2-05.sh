@@ -25,7 +25,7 @@ kill_asterisk() { # container: kill -9 Asterisk, wait for a new one (unless the 
 }
 
 # --- httpd and php-fpm restart
-c=$(t_run svc "$image")
+c=$(t_run svc "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 t_wait_for 90 -- sh -c "docker exec $c curl -fsS -o /dev/null http://localhost/" || log "httpd not answering"
 for s in httpd php-fpm; do
   p=$(svc_pid "$c" "$s")
@@ -38,7 +38,7 @@ assert_cmd "httpd answers after the restarts" -- t_wait_for 15 -- docker exec "$
 assert_cmd "php-fpm socket is back" -- t_wait_for 15 -- docker exec "$c" test -S /run/php/php8.2-fpm.sock
 
 # --- Asterisk: 3 failures in a row stop the container
-a=$(t_run halt "$image")
+a=$(t_run halt "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 t_wait_for 90 -- ast_ready "$a" || die "Asterisk did not start"
 for _ in 1 2 3; do kill_asterisk "$a"; done
 t_wait_for 30 -- sh -c "! docker inspect -f '{{.State.Running}}' $a | grep -q true" || true
@@ -47,7 +47,7 @@ assert_ne "0" "$(docker inspect -f '{{.State.ExitCode}}' "$a")" "3 Asterisk fail
 assert_contains "$(docker logs "$a" 2>&1)" "asterisk failed 3 times in a row, stopping the container" "the reason is logged"
 
 # --- a failure after a long run starts the count again
-w=$(t_run window "$image")
+w=$(t_run window "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 t_wait_for 90 -- ast_ready "$w" || die "Asterisk did not start"
 kill_asterisk "$w"; kill_asterisk "$w"
 sleep 65

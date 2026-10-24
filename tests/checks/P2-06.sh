@@ -20,7 +20,7 @@ assert_cmd "cron.daily/freepbx-le-renew restarts httpd through izpbx-service" --
 assert_cmd "logrotate.d/httpd restarts httpd through izpbx-service" -- grep -q 'izpbx-service restart httpd' "$dir/rootfs/etc/logrotate.d/httpd"
 
 assert_cmd "image builds" -- t_build_image "$image"
-c=$(t_run svc "$image")
+c=$(t_run svc "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 t_wait_for 90 -- docker exec "$c" asterisk -rx 'core waitfullybooted' || die "Asterisk did not start"
 pid() { docker exec "$c" /command/s6-svstat -o pid "/run/service/$1"; }
 up() { docker exec "$c" /command/s6-svstat -o up "/run/service/$1"; }

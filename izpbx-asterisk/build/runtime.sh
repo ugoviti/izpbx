@@ -14,6 +14,12 @@ done
 # no C/C++ toolchain in the runtime (P0-14): the UCP installer refuses to run
 # unless "g++ --version" answers, although its node modules build nothing
 install -m 755 "$here/g++-stub" /usr/local/bin/g++
+# ... and it checks ICU with "pkg-config --modversion icu-i18n" (no .pc files
+# without libicu-dev): a stub answers the version of the ICU runtime library
+icu=$(dpkg-query -W -f '${Version}' 'libicu[0-9]*' | sed 's/-.*//')
+[ -n "$icu" ] || build_die "ICU runtime library not installed"
+sed "s/@ICU_VERSION@/$icu/" "$here/pkg-config-stub" > /usr/local/bin/pkg-config
+chmod 755 /usr/local/bin/pkg-config
 # Debian enables an sshd jail by default: izPBX has no sshd, and without its
 # log file fail2ban refuses to start (the izPBX jails are written at start)
 rm -f /etc/fail2ban/jail.d/defaults-debian.conf

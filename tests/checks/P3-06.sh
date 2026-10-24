@@ -36,7 +36,7 @@ expect() { # output sapi user tz label
 
 start() { # name TZ -> container, page served
   local c
-  c=$(t_run "$1" "$image" -e TZ="$2")
+  c=$(t_run "$1" "$image" -e TZ="$2" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
   t_wait_for 90 -- docker exec "$c" curl -fsS -o /dev/null http://localhost/ || log "httpd not answering"
   docker exec "$c" sh -c "printf '<?php %s' '$(printf '%s' "$PHP" | sed "s/'/'\\\\''/g")' > /var/www/html/izpbx-test.php"
   printf '%s\n' "$c"

@@ -47,7 +47,7 @@ gen "$work/neg" --env-file "$golden/cases/zabbix.env" -e ZABBIX_SERVER=other.exa
 assert_cmd_fails "control: a different ZABBIX_SERVER is caught" -- diff -q "$old/zabbix_agent2.d/local.conf" "$work/neg/etc/zabbix/zabbix_agent2.d/local.conf"
 
 # --- sudo for the Asterisk template
-c=$(t_run sudo "$image" -e ZABBIX_ENABLED=true -e HTTPD_ENABLED=false -e FAIL2BAN_ENABLED=false -e CRON_ENABLED=false)
+c=$(t_run sudo "$image" -e ZABBIX_ENABLED=true -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true -e HTTPD_ENABLED=false -e FAIL2BAN_ENABLED=false -e CRON_ENABLED=false)
 t_wait_for 120 -- docker exec "$c" asterisk -rx 'core waitfullybooted' >/dev/null || log "asterisk not booted"
 assert_cmd "zabbix agent runs" -- t_wait_for 30 -- docker exec "$c" pgrep -x zabbix_agent2
 assert_cmd "as zabbix: sudo -u asterisk asterisk -rx works" -- sh -c "docker exec -u zabbix $c sudo -n -u asterisk asterisk -rx 'core show uptime' | grep -q 'System uptime'"
