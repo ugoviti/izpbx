@@ -23,7 +23,7 @@ stub="$REPO_DIR/izpbx-asterisk/build/g++-stub"
 image=izpbx-asterisk:p0-14
 
 # --- the izPBX image
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 for t in gcc cc make c++ cpp; do
   assert_cmd_fails "image: no $t" -- docker run --rm --entrypoint "" "$image" sh -c "command -v $t"
 done

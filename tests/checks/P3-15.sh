@@ -18,7 +18,7 @@ golden="$TESTS_DIR/golden"
 fx="$TESTS_DIR/fixtures/phonebook/freepbx.conf"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 for name in default https; do
   docker run --rm --entrypoint "" --hostname izpbx-golden --env-file "$golden/cases/$name.env" "$image" bash -c \

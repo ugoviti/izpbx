@@ -41,7 +41,7 @@ assert_eq "izpbx-fake" "$(without_init "$work/rc")" "control: a service without 
 assert_eq "" "$(without_init "$TESTS_DIR/s6probe/rootfs/etc/s6-overlay/s6-rc.d")" "the probe service depends on izpbx-init"
 
 # --- runtime
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "probe image builds" -- docker build -q -t "$probe" --build-arg BASE="$image" "$TESTS_DIR/s6probe"
 line() { grep -n -m1 -F -- "$2" <<< "$1" | cut -d: -f1; }
 

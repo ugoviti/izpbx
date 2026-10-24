@@ -14,7 +14,7 @@ golden="$TESTS_DIR/golden"
 fx="$TESTS_DIR/fixtures/le-renew"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 for name in default https letsencrypt; do
   docker run --rm --entrypoint "" --hostname izpbx-golden --env-file "$golden/cases/$name.env" "$image" bash -c \

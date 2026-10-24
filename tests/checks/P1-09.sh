@@ -19,7 +19,7 @@ v() { sed -n "s/^$1=//p" "$dir/versions.env"; }
 ioncube=$(v IONCUBE_VER); izsynth=$(v IZSYNTH_VER); asterisk=$(v ASTERISK_VER)
 img() { docker run --rm --entrypoint "" "$image" bash -c "$1"; }
 
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 
 # --- ionCube
 assert_contains "$(img 'php -v')" "with the ionCube PHP Loader v$ioncube" "php -v (cli): ionCube $ioncube"

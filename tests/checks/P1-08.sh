@@ -11,7 +11,7 @@ source "$(dirname "$0")/../lib.sh"
 dir="$REPO_DIR/izpbx-asterisk"
 image=izpbx-asterisk:p1-08
 list="$dir/build/freepbx-modules.txt"
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 n=$(grep -cvE '^(#|$)' "$list")
 [ "$n" -ge 40 ] || die "module list has only $n entries"
 

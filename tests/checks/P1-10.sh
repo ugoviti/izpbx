@@ -15,7 +15,7 @@ sizes="$TESTS_DIR/expected/image-size.txt"
 npm_ver=$(sed -n 's/^NPM_VER=//p' "$dir/versions.env")
 devpkgs() { docker run --rm --entrypoint "" "$1" sh -c 'dpkg-query -W -f "\${Package}\n" | grep -E -- "-dev(:|$)" || true'; }
 
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 for t in gcc cc make c++ cpp; do
   assert_cmd_fails "no $t" -- docker run --rm --entrypoint "" "$image" sh -c "command -v $t"
 done

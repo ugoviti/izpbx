@@ -8,7 +8,7 @@
 # - negative check: a crontab with the wrong owner is not run by cron.
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p3-17
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 c=$(t_run run "$image" -e CRON_ENABLED=true -e HTTPD_ENABLED=false -e ASTERISK_ENABLED=false \
   -e IZPBX_ENABLED=false -e FAIL2BAN_ENABLED=false -e POSTFIX_ENABLED=false)
@@ -21,11 +21,15 @@ assert_eq "$(docker exec "$c" stat -L -c '%U %G %a' /var/spool/cron/crontabs)" "
 assert_cmd "the job of asterisk runs within 2 minutes" -- t_wait_for 130 -- docker exec "$c" test -s /tmp/cron-ok
 assert_eq "$(docker exec "$c" head -1 /tmp/cron-ok)" "asterisk" "the job runs as asterisk"
 
-# wrong owner and modes: cron ignores the crontab (negative check)
+# wrong owner and modes: cron ignores the crontab (negative check). cron is
+# stopped while the files change and started again, so it loads the spool
+# from scratch (a change in the same second as its last scan, or a job still
+# running, would otherwise leave the old crontab in use)
+docker exec "$c" /command/s6-svc -wD -d /run/service/cron
 docker exec "$c" bash -c 'chown root:root /var/spool/cron/crontabs /var/spool/cron/crontabs/asterisk
-  chmod 0700 /var/spool/cron/crontabs; chmod 0644 /var/spool/cron/crontabs/asterisk
-  touch /var/spool/cron/crontabs; rm -f /tmp/cron-ok; echo "* * * * * id -un >> /tmp/cron-ok" > /tmp/ct
-  cat /tmp/ct > /var/spool/cron/crontabs/asterisk'
+  chmod 0700 /var/spool/cron/crontabs; chmod 0644 /var/spool/cron/crontabs/asterisk; rm -f /tmp/cron-ok'
+docker exec "$c" /command/s6-svc -u /run/service/cron
+assert_cmd "cron runs again" -- t_wait_for 30 -- docker exec "$c" pgrep -x cron
 sleep 125
 assert_cmd_fails "control: a crontab with the wrong owner is not run" -- docker exec "$c" test -s /tmp/cron-ok
 

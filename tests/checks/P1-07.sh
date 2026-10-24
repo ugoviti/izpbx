@@ -9,7 +9,7 @@ dir="$REPO_DIR/izpbx-asterisk"
 image=izpbx-asterisk:p1-07
 sngrep_ver=$(sed -n 's/^SNGREP_VER=//p' "$dir/versions.env")
 
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 for m in codec_g729.so chan_dongle.so; do
   assert_cmd "$m is installed" -- docker run --rm --entrypoint "" "$image" test -f "/usr/lib64/asterisk/modules/$m"
 done

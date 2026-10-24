@@ -52,6 +52,11 @@ FIXTURES_DIR="$TESTS_DIR/fixtures"
 OUTDIR=${OUTDIR:-$FIXTURES_DIR/out}
 NAME=$VERSION${VARIANT:+-$VARIANT}
 dest="$OUTDIR/$NAME"
+# checks running in parallel (tests/run.sh -j) may ask for the same fixture:
+# one builds it, the others wait here and then reuse it
+mkdir -p "$OUTDIR"
+exec 9>"$OUTDIR/.$NAME.lock"
+flock 9
 variant_file=
 if [ -n "$VARIANT" ]; then
   variant_file="$FIXTURES_DIR/variants/$VARIANT.sh"

@@ -94,6 +94,16 @@ t_run() { # name image [docker run args...] [-- command...]
   printf '%s\n' "$name"
 }
 
+# Tag the izpbx-asterisk image of this run (built once by tests/run.sh,
+# TEST_IMAGE) as TAG, or build it when the check runs on its own.
+t_build_image() { # tag
+  if [ -n "${TEST_IMAGE:-}" ]; then
+    docker tag "$TEST_IMAGE" "$1"
+  else
+    docker build -q -t "$1" "$REPO_DIR/izpbx-asterisk"
+  fi
+}
+
 t_volume() { # name -> prints volume name
   local name="$TEST_PROJECT-$1"
   docker volume create --label "izpbx.test=$TEST_PROJECT" "$name" >/dev/null

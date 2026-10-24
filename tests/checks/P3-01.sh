@@ -16,7 +16,7 @@ image=izpbx-asterisk:p3-01
 mounts=(-v "$common:/c/common.sh:ro" -v "$unit:/c/t.sh:ro" -v "$work:/w:ro")
 
 assert_file "$common" "common.sh exists"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 in_img() { docker run --rm --entrypoint bash "${mounts[@]}" "$image" -c "$1" 2>&1; }
 
 # --- escaping

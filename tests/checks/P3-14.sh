@@ -16,7 +16,7 @@ image=izpbx-asterisk:p3-14
 golden="$TESTS_DIR/golden"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 docker run --rm --entrypoint "" --hostname izpbx-golden --env-file "$golden/cases/pma.env" "$image" bash -c \
   'izpbx-init --dry-run >/tmp/init.log 2>&1 || cat /tmp/init.log >&2

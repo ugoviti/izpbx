@@ -13,7 +13,7 @@ image=izpbx-asterisk:p3-12
 golden="$TESTS_DIR/golden"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 settings() { grep -Ev '^[[:space:]]*(#|$)' "$1"; }
 
 gen() { # outdir [docker args]

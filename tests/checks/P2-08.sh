@@ -7,12 +7,19 @@
 # - negative check: with a 30 s limit given at run time, a 60 s izpbx-init
 #   stops the container (so the hook below really makes the init slow and a
 #   limit would be seen);
-# - an init step that lasts 15 minutes (P2_08_INIT_SECONDS): the container
+# - an init step that lasts 15 minutes (P2_08_INIT_SECONDS; 3 in all-done): the container
 #   keeps running, Asterisk waits for the init, and then it becomes healthy.
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p2-08
-init_seconds=${P2_08_INIT_SECONDS:-900}
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+# the 15 minutes of the item run alone and at the end of a phase; in the
+# regression runs (all-done without TEST_INCLUDE_DEFERRED) 3 minutes, still
+# past every default limit of s6 and docker
+if [ -n "${TEST_REGRESSION:-}" ] && [ -z "${TEST_INCLUDE_DEFERRED:-}" ]; then
+  init_seconds=${P2_08_INIT_SECONDS:-180}
+else
+  init_seconds=${P2_08_INIT_SECONDS:-900}
+fi
+assert_cmd "image builds" -- t_build_image "$image"
 
 envs=$(docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$image")
 assert_contains "$envs" "S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0" "no limit on the wait for the services"

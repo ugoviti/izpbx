@@ -19,7 +19,7 @@ assert_ne 0 "$(grep -c supervisorctl <<< "$old" || true)" "control: the files be
 assert_cmd "cron.daily/freepbx-le-renew restarts httpd through izpbx-service" -- grep -q 'izpbx-service restart httpd' "$dir/rootfs/etc/cron.daily/freepbx-le-renew"
 assert_cmd "logrotate.d/httpd restarts httpd through izpbx-service" -- grep -q 'izpbx-service restart httpd' "$dir/rootfs/etc/logrotate.d/httpd"
 
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 c=$(t_run svc "$image")
 t_wait_for 90 -- docker exec "$c" asterisk -rx 'core waitfullybooted' || die "Asterisk did not start"
 pid() { docker exec "$c" /command/s6-svstat -o pid "/run/service/$1"; }

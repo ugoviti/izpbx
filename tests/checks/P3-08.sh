@@ -15,7 +15,7 @@ mailpit_image=docker.io/axllent/mailpit:v1.20.0
 golden="$TESTS_DIR/golden"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 CA_MAP='s|/etc/pki/tls/certs/ca-bundle.crt|/etc/ssl/certs/ca-certificates.crt|'
 gen() { # case [docker args] -> msmtprc on stdout, stat on stderr

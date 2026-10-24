@@ -10,7 +10,7 @@ dir="$REPO_DIR/izpbx-asterisk"
 fpr=$(sed -n 's/^ZABBIX_GPG_FPR=//p' "$dir/versions.env")
 image=izpbx-asterisk:p1-05
 
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 
 # data from the image (primary key fingerprints: subkeys also print an fpr record)
 sed -e 's/#.*//' -e 's/[[:space:]]//g' "$dir/build/packages-runtime.txt" | grep -v '^$' > "$work/wanted"

@@ -39,7 +39,7 @@ assert_cmd "httpd starts after php-fpm" -- test -e "$rc_dir/httpd/dependencies.d
 assert_cmd "fop2 starts after asterisk" -- test -e "$rc_dir/fop2/dependencies.d/asterisk"
 
 # --- images (FOP2 fetched on the host: the build needs no network)
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 fop2_ver=$(sed -n 's/^FOP2_VER=//p' "$dir/versions.env"); fop2_sha=$(sed -n 's/^FOP2_SHA256_X86_64=//p' "$dir/versions.env")
 cp "$TESTS_DIR/s6services/Dockerfile" "$work/"
 assert_cmd "FOP2 $fop2_ver downloaded (sha256 of versions.env)" -- sh -c "curl -fsSL --proto '=https' -o '$work/fop2.tgz' 'https://download2.fop2.com/fop2-$fop2_ver-debian-x86_64.tgz' && echo '$fop2_sha  $work/fop2.tgz' | sha256sum -c -"

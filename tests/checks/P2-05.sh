@@ -9,7 +9,7 @@
 #   again: 2 kills, 65 s up, 1 kill -> still running; 2 more kills -> exit.
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p2-05
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 svc_pid() { docker exec "$1" /command/s6-svstat -o up,pid "/run/service/$2" 2>/dev/null | awk '$1=="true"{print $2}'; }
 ast_pid() { docker exec "$1" pgrep -xo asterisk 2>/dev/null; }

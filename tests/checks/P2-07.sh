@@ -12,7 +12,7 @@ source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p2-07
 on=(-e POSTFIX_ENABLED=true -e DNSMASQ_ENABLED=true -e NTP_ENABLED=true -e ZABBIX_ENABLED=true)
 services="asterisk php-fpm httpd cron fail2ban postfix dnsmasq ntp zabbix"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 ready() { # every listed service up and Asterisk fully booted
   local s

@@ -22,7 +22,7 @@ image=izpbx-asterisk:p0-13
 # --- static scan: scanner self-test, then the image tree
 printf 'php_value a 1\n<IfModule php7_module>\nphp_value b 2\n</IfModule>\n<IfModule !php_module>\nphp_flag c on\n</IfModule>\n' > "$work/htaccess"
 assert_eq "2" "$(awk -f "$scan" "$work/htaccess" | wc -l)" "control: the scanner reports the 2 active directives of a synthetic .htaccess"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 found=$(docker run --rm --entrypoint "" -v "$scan:/scan.awk:ro" "$image" bash -c 'find /usr/src/freepbx -name .htaccess -exec awk -f /scan.awk {} +')
 assert_eq "" "$found" "image: no php_value/php_flag active under fpm in the .htaccess files"
 n=$(docker run --rm --entrypoint "" "$image" bash -c 'find /usr/src/freepbx -name .htaccess | wc -l')

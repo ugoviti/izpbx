@@ -30,7 +30,7 @@ for d in "$rc_dir"/*/; do
   assert_contains "$table" "[$s]=" "service $s is in SERVICE_VARS"
 done
 
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 up() { docker exec "$1" /command/s6-svstat -o up "/run/service/$2" 2>/dev/null; }
 running() { docker exec "$1" pgrep -x "$2" >/dev/null; }
 settled() { # container: izpbx-init done and every enabled service up

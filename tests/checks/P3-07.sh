@@ -14,7 +14,7 @@ mailpit_image=docker.io/axllent/mailpit:v1.20.0
 golden="$TESTS_DIR/golden"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 # view of one side, with the postconf of the image (old: the golden files mounted)
 view() { # dir

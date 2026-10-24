@@ -15,7 +15,7 @@ source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p3-13
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 v() { sed -n "s/^$1=//p" "$REPO_DIR/izpbx-asterisk/versions.env"; }
 ver=$(v FOP2_VER); sha=$(v FOP2_SHA256_X86_64)
 

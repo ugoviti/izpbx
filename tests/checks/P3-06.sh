@@ -12,7 +12,7 @@
 #   and Apache has no php_module (mod_php would serve the page instead of fpm).
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p3-06
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "php-fpm8.2 -t" -- docker run --rm --entrypoint "" "$image" php-fpm8.2 -t
 
 PHP='$u = posix_getpwuid(posix_geteuid())["name"];

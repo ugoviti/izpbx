@@ -14,7 +14,7 @@ sipp_image=izpbx-test-sipp:p3-09
 golden="$TESTS_DIR/golden"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "sipp image builds" -- docker build -q -t "$sipp_image" "$TESTS_DIR/sipp"
 t_on_cleanup "docker image rm $sipp_image >/dev/null 2>&1"
 

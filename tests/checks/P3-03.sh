@@ -16,7 +16,7 @@ image=izpbx-asterisk:p3-03
 fx="$TESTS_DIR/fixtures/out/20.16.22"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "20.16.22 fixture available" -- "$TESTS_DIR/fixtures/make-fixture.sh" -v 20.16.22 ${TEST_REUSE_FIXTURES:+--reuse}
 
 cat > "$work/lib.sh" <<'EOF'

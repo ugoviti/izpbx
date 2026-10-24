@@ -11,7 +11,7 @@ t_on_cleanup "t_rmtree '$work'"
 dir="$REPO_DIR/izpbx-asterisk"
 image=izpbx-asterisk:p1-06
 
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "builder stage builds" -- docker build -q --target builder -t "$image-builder" "$dir"
 
 assert_eq "Asterisk 22.11.0" "$(docker run --rm --entrypoint "" "$image" asterisk -V)" "asterisk -V"

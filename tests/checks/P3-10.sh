@@ -13,7 +13,7 @@ image=izpbx-asterisk:p3-10
 golden="$TESTS_DIR/golden"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 gen() { # case outfile [docker args]: local.conf on the file, checks on .err
   local name=$1 out=$2; shift 2

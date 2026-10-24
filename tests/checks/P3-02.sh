@@ -16,7 +16,7 @@ image=izpbx-asterisk:p3-02
 compare=("$TESTS_DIR/unit/env-compare.py" "$contract" "$dir/versions.env" "$TESTS_DIR/expected/env-differences.txt" "$design")
 [ -r "$design" ] || die "design document not found: $design"
 awk -F'|' '/^## 15\./{exit} /^\| `/{gsub(/[ `]/,"",$2); print $2}' "$contract" > "$work/vars"
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 
 values() { # env.sh -> VAR<tab>value for every contract variable, empty environment, set -u
   docker run --rm --entrypoint "" -v "$1:/e/env.sh:ro" -v "$work/vars:/e/vars:ro" "$image" \

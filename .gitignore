@@ -1,3 +1,4 @@
 /data*
 /test/
 /.env
+/tests/.logs/

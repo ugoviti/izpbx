@@ -11,7 +11,7 @@ image=izpbx-asterisk:p2-01
 for a in NOARCH X86_64 AARCH64; do
   assert_cmd "S6_OVERLAY_SHA256_$a pinned (64 hex)" -- grep -qE "^S6_OVERLAY_SHA256_$a=[0-9a-f]{64}$" "$dir/versions.env"
 done
-assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
+assert_cmd "image builds" -- t_build_image "$image"
 assert_eq '["/init"]' "$(docker image inspect -f '{{json .Config.Entrypoint}}' "$image")" "docker inspect: entrypoint /init"
 
 c=$(t_run svc "$image")

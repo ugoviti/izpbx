@@ -14,7 +14,7 @@ source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p3-04
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-assert_cmd "image builds" -- docker build -q -t "$image" "$REPO_DIR/izpbx-asterisk"
+assert_cmd "image builds" -- t_build_image "$image"
 
 net="$TEST_PROJECT-net"
 docker network create --label "izpbx.test=$TEST_PROJECT" "$net" >/dev/null
