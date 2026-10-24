@@ -3,6 +3,8 @@
 
   env-compare.py CONTRACT VERSIONS_ENV DIFFERENCES DESIGN ACTUAL
 
+DIFFERENCES: a 22.17 default "<REMOVED>" means a variable of the contract
+that 22.17 no longer has (it must not be declared in env.sh).
 ACTUAL: "VAR<tab>value" lines printed by sourcing env.sh in an empty
 environment (HOSTNAME=izpbx-test); "<UNSET>" for an undeclared variable.
 Prints one line per mismatch and "checked=N"; exit 1 on any mismatch.
@@ -70,7 +72,10 @@ def expected(var, seen=()):
 norm = lambda s: " ".join(s.split())
 for var in rows:
     want, got = expected(var), actual.get(var, "<UNSET>")
-    if got == "<UNSET>":
+    if want == "<REMOVED>":
+        if got != "<UNSET>":
+            problems.append(f"{var}: removed in 22.17 but still declared in env.sh")
+    elif got == "<UNSET>":
         problems.append(f"{var}: not declared in env.sh")
     elif norm(got) != norm(want):
         problems.append(f"{var}: env.sh '{got}', expected '{want}'")

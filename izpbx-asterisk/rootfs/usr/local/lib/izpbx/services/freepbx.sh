@@ -67,7 +67,7 @@ freepbx_fix_paths() {
   local k want cur
   for k in AMPWEBROOT ASTETCDIR ASTVARLIBDIR ASTAGIDIR ASTSPOOLDIR ASTLOGDIR AMPBIN AMPSBIN AMPCGIBIN AMPPLAYBACK; do
     want=$(freepbx_dir "$k")
-    cur=$(fwconsole setting "$k" 2>/dev/null | awk -F'[][]' '{print $2}')
+    cur=$(fwconsole setting "$k" 2>/dev/null | awk -F'[][]' '{print $2}') || true
     [ "$cur" == "$want" ] && continue
     log_info "freepbx: setting $k=$want (was ${cur:-unset})"
     fwconsole setting "$k" "$want" >/dev/null 2>&1 || log_warn "freepbx: cannot set $k"
@@ -256,7 +256,7 @@ cfg_freepbx_settings() {
     v=${!var}
     [ -n "$v" ] || continue
     cur=
-    izpbx_dry_run || cur=$(fwconsole setting "$k" 2>/dev/null | awk -F'[][{}]' '{print $2}')
+    izpbx_dry_run || cur=$(fwconsole setting "$k" 2>/dev/null | awk -F'[][{}]' '{print $2}') || true
     [ "$cur" == "true" ] && cur=1
     [ "$cur" == "false" ] && cur=0
     [ "$cur" == "$v" ] && continue
@@ -270,7 +270,7 @@ cfg_freepbx_settings() {
     v=${sip[$k]}
     [ -n "$v" ] || continue
     cur=
-    izpbx_dry_run || cur=$(fpbx_sipsetting_get "$k")
+    izpbx_dry_run || cur=$(fpbx_sipsetting_get "$k") || true
     [ "$cur" == "$v" ] && continue
     log_info "freepbx: sip setting $k=$v"
     fpbx_sipsetting "$k" "$v" >/dev/null 2>&1 || log_warn "freepbx: cannot set the sip setting $k"

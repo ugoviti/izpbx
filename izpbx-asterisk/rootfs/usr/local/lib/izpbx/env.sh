@@ -204,10 +204,11 @@ _izpbx_version() { [ -r "$IZPBX_VERSIONS_FILE" ] && sed -n "s/^$1=//p" "$IZPBX_V
 : "${FOP2_AUTOACTIVATION:=false}"
 
 ## 14. Legacy entrypoint (`entrypoint.sh`)
-: "${APP_RUNAS:=false}"
-: "${MULTISERVICE:=false}"
-: "${CMD_OVERRIDE:=}"
-: "${ENTRYPOINT_TINI:=false}"
+# APP_RUNAS, MULTISERVICE, CMD_OVERRIDE and ENTRYPOINT_TINI are gone in 22.17
+# (design D22): init.d/01-legacy.sh warns when one is set. UMASK stays: the
+# umask of izpbx-init and of every service (their run scripts source this
+# file), as 20.16 set it for supervisord and its children.
+if [[ "$UMASK" =~ ^0?[0-7]{3}$ ]]; then umask "$UMASK"; fi
 
 ## defaults derived from other variables (after the variables they use)
 : "${SMTP_MAIL_TO:=${ROOT_MAILTO:-root@localhost.localdomain}}"

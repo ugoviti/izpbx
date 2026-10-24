@@ -1,10 +1,15 @@
 # Intended differences between the defaults of izpbx-asterisk/rootfs/usr/local/lib/izpbx/env.sh
 # and docs/env-contract.md (20.16.22). One line per variable, tab separated:
 #   VARIABLE <tab> 22.17 default <tab> keyword that §13 of the design must mention
-# "versions.env:KEY" means the value of KEY in izpbx-asterisk/versions.env.
+# "versions.env:KEY" means the value of KEY in izpbx-asterisk/versions.env;
+# "<REMOVED>": a contract variable that 22.17 no longer has (D22).
 ASTERISK_VER	versions.env:ASTERISK_VER	ASTERISK_VER
 FREEPBX_VER	versions.env:FREEPBX_VER	FREEPBX_VER
 FOP2_SHA256		FOP2_SHA256
 ZABBIX_REL		ZABBIX_REL
 PMA_CONFIG	/etc/phpmyadmin/config.inc.php	PMA_CONFIG
 FREEPBX_MODULES_EXTRA	soundlang callrecording cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking presencestate printextensions queues cel timeconditions bulkhandler weakpasswords ucp	FREEPBX_MODULES_EXTRA
+APP_RUNAS	<REMOVED>	APP_RUNAS
+MULTISERVICE	<REMOVED>	MULTISERVICE
+CMD_OVERRIDE	<REMOVED>	CMD_OVERRIDE
+ENTRYPOINT_TINI	<REMOVED>	ENTRYPOINT_TINI
