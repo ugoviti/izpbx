@@ -58,6 +58,7 @@ COPY rootfs/usr/local/sbin/izpbx-init /usr/local/sbin/izpbx-init
 COPY rootfs/usr/sbin/safe_asterisk /usr/sbin/safe_asterisk
 COPY rootfs/usr/local/sbin/izpbx-service /usr/local/sbin/izpbx-service
 COPY rootfs/etc/fail2ban/ /etc/fail2ban/
+COPY rootfs/etc/dnsmasq.d/ /etc/dnsmasq.d/
 COPY rootfs/etc/logrotate.d/httpd /etc/logrotate.d/httpd
 COPY rootfs/etc/cron.daily/freepbx-le-renew /etc/cron.daily/freepbx-le-renew
 

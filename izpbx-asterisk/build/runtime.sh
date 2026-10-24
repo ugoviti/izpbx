@@ -43,4 +43,9 @@ a2dissite -q 000-default
 : > /etc/apache2/conf-available/izpbx.conf
 a2ensite -q izpbx
 a2enconf -q izpbx
+# dnsmasq reads /etc/dnsmasq.d/*.conf (local.conf, written at start by
+# services/dnsmasq.sh), as on Rocky in 20.16; Debian enables it only in its
+# init script, unused here
+sed -i 's|^#conf-dir=/etc/dnsmasq.d/,\*\.conf$|conf-dir=/etc/dnsmasq.d/,*.conf|' /etc/dnsmasq.conf
+grep -qx 'conf-dir=/etc/dnsmasq.d/,\*\.conf' /etc/dnsmasq.conf
 build_log "runtime ready"
