@@ -9,7 +9,8 @@
 #   process runs;
 # - with the defaults of the contract only asterisk, php-fpm, httpd, cron and
 #   fail2ban are up; the others are down, not restarting, no process.
-# Negative: FOP2_ENABLED=true without FOP2 installed leaves fop2 down with an
+# Negative: FOP2_ENABLED=true without FOP2 installed (install refused by a
+# wrong sha256 since P3-13) leaves fop2 down with an
 # error; IZPBX_ENABLED=false and ASTERISK_ENABLED=false leave asterisk down,
 # ASTERISK_ENABLED=true alone brings it up.
 # Also: docker stop with every service is clean (< 40 s, exit 0, no Asterisk
@@ -88,7 +89,8 @@ for s in postfix dnsmasq ntp zabbix fop2; do
 done
 
 # --- negative: fop2 without FOP2, asterisk switches
-n=$(t_run nofop2 "$image" -e FOP2_ENABLED=true)
+# since P3-13 FOP2 is installed at start: a wrong sha256 refuses the install
+n=$(t_run nofop2 "$image" -e FOP2_ENABLED=true -e FOP2_SHA256=0000000000000000000000000000000000000000000000000000000000000000)
 t_wait_for 60 -- sh -c "docker logs $n 2>&1 | grep -q 'FOP2 is not installed'"
 assert_contains "$(docker logs "$n" 2>&1)" "fop2: FOP2_ENABLED=true but FOP2 is not installed" "control: FOP2 enabled but missing is reported"
 assert_eq "false false" "$(docker exec "$n" /command/s6-svstat -o up,wantedup /run/service/fop2)" "control: fop2 without FOP2 stays down"

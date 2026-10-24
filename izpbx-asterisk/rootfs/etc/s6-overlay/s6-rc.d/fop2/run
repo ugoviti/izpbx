@@ -1,7 +1,8 @@
 #!/command/with-contenv bash
 # shellcheck shell=bash
-# FOP2 is installed at start into /usr/local/fop2 (P3-13): without it the
-# service stays down with an error instead of restarting in a loop
+# FOP2 is installed at start into /usr/local/fop2 (services/fop2.sh): if the
+# install failed the service stays down with an error instead of restarting
+# in a loop. The licensed interface comes from /etc/default/fop2.
 . /usr/local/lib/izpbx/service.sh
 service_gate fop2
 if [ ! -x /usr/local/fop2/fop2_server ]; then
@@ -10,4 +11,8 @@ if [ ! -x /usr/local/fop2/fop2_server ]; then
 fi
 mkdir -p /usr/local/fop2/temp && rm -rf /usr/local/fop2/temp/par-root
 # nothing to save on stop: a short grace keeps "docker stop" (10 s) clean
-SERVICE_STOP_GRACE=5 service_run fop2 /usr/local/fop2/fop2_server -c /usr/local/fop2
+iface=()
+if [ -r /etc/default/fop2 ]; then
+  read -r -a iface < <(grep -o -- '-i [^ "]*' /etc/default/fop2 || true)
+fi
+SERVICE_STOP_GRACE=5 service_run fop2 /usr/local/fop2/fop2_server -c /usr/local/fop2 "${iface[@]}"
