@@ -20,16 +20,16 @@
 # shellcheck source=../actions.sh
 . /usr/local/lib/izpbx/actions.sh
 
-: "${FREEPBX_SRC:=/usr/src/freepbx}"
-: "${FREEPBX_CONF:=/etc/freepbx.conf}"
-: "${FREEPBX_INSTALL_TRIES:=5}"
-: "${FREEPBX_DB_WAIT:=120}"
+: "${IZPBX_FREEPBX_SRC:=/usr/src/freepbx}"
+: "${IZPBX_FREEPBX_CONF:=/etc/freepbx.conf}"
+: "${IZPBX_FREEPBX_INSTALL_TRIES:=5}"
+: "${IZPBX_FREEPBX_DB_WAIT:=120}"
 : "${FREEPBX_MODULES_PRE:=userman pm2}"
 : "${FREEPBX_MODULES_EXTRA:=soundlang callrecording cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking presencestate printextensions queues cel timeconditions bulkhandler weakpasswords ucp}"
 : "${FREEPBX_MODULES_DISABLED:=}"
 : "${FREEPBX_AUTOUPDATE_MODULES_FIRSTDEPLOY:=false}"
 
-freepbx_installed() { [ -s "$FREEPBX_CONF" ]; }
+freepbx_installed() { [ -s "$IZPBX_FREEPBX_CONF" ]; }
 
 # FreePBX directories, as fpbxDirs of 20.16: under APP_DATA the real paths,
 # not the symlinks of persistence.sh ("fwconsole chown" does not follow a
@@ -93,8 +93,8 @@ _fpbx_dbroot() {
 _fpbx_wait_db() {
   local start=$SECONDS
   until _fpbx_dbroot "SELECT 1" >/dev/null 2>&1; do
-    if [ $((SECONDS - start)) -ge "$FREEPBX_DB_WAIT" ]; then
-      log_error "freepbx: database ${MYSQL_SERVER}:${APP_PORT_MYSQL} not reachable as '${_fpbx_dbuser}' after ${FREEPBX_DB_WAIT}s"
+    if [ $((SECONDS - start)) -ge "$IZPBX_FREEPBX_DB_WAIT" ]; then
+      log_error "freepbx: database ${MYSQL_SERVER}:${APP_PORT_MYSQL} not reachable as '${_fpbx_dbuser}' after ${IZPBX_FREEPBX_DB_WAIT}s"
       return 1
     fi
     log_info "freepbx: waiting for the database ${MYSQL_SERVER}:${APP_PORT_MYSQL}..."
@@ -146,7 +146,7 @@ _fpbx_install_once() {
   log_info "freepbx: running the FreePBX $(_izpbx_version FREEPBX_FRAMEWORK_VER) installer"
   # the password goes only on the installer command line, never in the log
   # NOTE: the 17.0.33 installer exits 1 even when it reports success
-  ( cd "$FREEPBX_SRC" && ./install -n --skip-install --no-ansi --dbhost="$MYSQL_SERVER" --dbport="$APP_PORT_MYSQL" \
+  ( cd "$IZPBX_FREEPBX_SRC" && ./install -n --skip-install --no-ansi --dbhost="$MYSQL_SERVER" --dbport="$APP_PORT_MYSQL" \
       --dbuser="$MYSQL_USER" --dbpass="$MYSQL_PASSWORD" --dbname="$MYSQL_DATABASE" --cdrdbname="$MYSQL_DATABASE_CDR" \
       "${dirs[@]}" ) > "$log" 2>&1 || true
   if ! grep -q 'You have successfully installed FreePBX' "$log"; then
@@ -157,7 +157,7 @@ _fpbx_install_once() {
   # the installer writes freepbx.conf root:root 0660 and "fwconsole chown"
   # does not follow the symlink to /data: asterisk must read it (20.16 did
   # the same in freepbxSettingsFix)
-  for m in "$FREEPBX_CONF" /etc/amportal.conf; do
+  for m in "$IZPBX_FREEPBX_CONF" /etc/amportal.conf; do
     [ -e "$m" ] && chown "$APP_USR:$APP_GRP" "$(readlink -f "$m")"
   done
   freepbx_links
@@ -202,14 +202,57 @@ freepbx_install() {
   [ -n "$MYSQL_ROOT_PASSWORD" ] || { _fpbx_dbuser=$MYSQL_USER; _fpbx_dbpass=$MYSQL_PASSWORD; }
   log_info "freepbx: NEW INSTALLATION: FreePBX not initialized, installing"
   local try=1 rc=1
-  while [ "$try" -le "$FREEPBX_INSTALL_TRIES" ]; do
-    log_info "freepbx: install attempt $try/$FREEPBX_INSTALL_TRIES"
+  while [ "$try" -le "$IZPBX_FREEPBX_INSTALL_TRIES" ]; do
+    log_info "freepbx: install attempt $try/$IZPBX_FREEPBX_INSTALL_TRIES"
     if _fpbx_install_once; then rc=0; break; fi
     try=$((try + 1))
-    [ "$try" -le "$FREEPBX_INSTALL_TRIES" ] && sleep 10
+    [ "$try" -le "$IZPBX_FREEPBX_INSTALL_TRIES" ] && sleep 10
   done
   _fpbx_asterisk_stop
-  [ "$rc" -eq 0 ] || die "freepbx: install failed after $FREEPBX_INSTALL_TRIES attempts"
+  [ "$rc" -eq 0 ] || die "freepbx: install failed after $IZPBX_FREEPBX_INSTALL_TRIES attempts"
   persistence_mark_initialized "$(fwconsole -V 2>/dev/null | awk '{print $NF}')"
   log_info "freepbx: FreePBX $(fwconsole -V 2>/dev/null | awk '{print $NF}') installed"
+}
+
+# Advanced Settings and SIP Settings from the environment, at every start, as
+# 20.16: every non-empty FREEPBX_<KEY> sets the FreePBX setting KEY when it
+# differs (FREEPBX_* used by izPBX itself are skipped, design C20); the SIP
+# Settings rtpstart/rtpend (APP_PORT_RTP_*) and the PJSIP udp/tcp port
+# (APP_PORT_PJSIP). The chan_sip bindport of 20.16 (APP_PORT_SIP) is gone
+# (design C19: APP_PORT_SIP becomes the legacy PJSIP transport, M6).
+freepbx_setting_skipped() { # variable name
+  case "$1" in
+    FREEPBX_MODULES_*|FREEPBX_AUTOUPGRADE_*|FREEPBX_AUTOUPDATE_MODULES_FIRSTDEPLOY|FREEPBX_FIX_PERMISSION*|FREEPBX_VER*) return 0 ;;
+    FREEPBX_FRAMEWORK_VER|FREEPBX_SHA256) return 0 ;;
+  esac
+  return 1
+}
+
+cfg_freepbx_settings() {
+  local var k v cur
+  for var in $(compgen -v FREEPBX_); do
+    freepbx_setting_skipped "$var" && continue
+    k=${var#FREEPBX_}
+    v=${!var}
+    [ -n "$v" ] || continue
+    cur=
+    izpbx_dry_run || cur=$(fwconsole setting "$k" 2>/dev/null | awk -F'[][{}]' '{print $2}')
+    [ "$cur" == "true" ] && cur=1
+    [ "$cur" == "false" ] && cur=0
+    [ "$cur" == "$v" ] && continue
+    log_info "freepbx: advanced setting $k=$v"
+    fpbx_setting "$k" "$v" >/dev/null 2>&1 || true
+  done
+
+  local -A sip=([rtpstart]=$APP_PORT_RTP_START [rtpend]=$APP_PORT_RTP_END
+                [udpport-0.0.0.0]=$APP_PORT_PJSIP [tcpport-0.0.0.0]=$APP_PORT_PJSIP)
+  for k in "${!sip[@]}"; do
+    v=${sip[$k]}
+    [ -n "$v" ] || continue
+    cur=
+    izpbx_dry_run || cur=$(fpbx_sipsetting_get "$k")
+    [ "$cur" == "$v" ] && continue
+    log_info "freepbx: sip setting $k=$v"
+    fpbx_sipsetting "$k" "$v" >/dev/null 2>&1 || log_warn "freepbx: cannot set the sip setting $k"
+  done
 }

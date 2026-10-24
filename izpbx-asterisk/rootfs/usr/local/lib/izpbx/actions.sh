@@ -7,6 +7,7 @@
 #   izpbx_record WORDS...        append one line to IZPBX_DRY_RUN_LOG
 #   izpbx_do CMD...              run CMD, or record it in dry-run
 #   fpbx_setting KEY VALUE       fwconsole setting KEY VALUE, or record it
+#   fpbx_sipsetting KEY VALUE    FreePBX SIP Settings (sipsettings module), or record it
 #   izpbx_sql SQL                write statement on the FreePBX DB, or record it
 #   izpbx_sql_query SQL          read query on the FreePBX DB (runs in dry-run too)
 # shellcheck source=common.sh
@@ -43,3 +44,12 @@ izpbx_sql() {
 }
 
 izpbx_sql_query() { _izpbx_mariadb "$1"; }
+
+# FreePBX SIP Settings through the FreePBX API, as 20.16 (sipsettings->setConfig)
+fpbx_sipsetting() { # KEY VALUE
+  if izpbx_dry_run; then izpbx_record "sipsettings $1 $2"; return 0; fi
+  php -r 'include "/etc/freepbx.conf"; $f = FreePBX::Create(); $f->Sipsettings->setConfig($argv[1], $argv[2]); needreload();' -- "$1" "$2"
+}
+fpbx_sipsetting_get() { # KEY
+  php -r 'include "/etc/freepbx.conf"; echo FreePBX::Create()->Sipsettings->getConfig($argv[1]);' -- "$1" 2>/dev/null
+}

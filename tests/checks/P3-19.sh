@@ -43,7 +43,7 @@ t_wait_healthy "$d1" 120 || die "MariaDB did not start"
 t_wait_healthy "$d2" 120 || die "MariaDB did not start"
 c=$(pbx pbx db1)
 v=$(pbx pbxdis db2 -e FREEPBX_MODULES_DISABLED=weakpasswords)
-bad=$(pbx bad db1 -e MYSQL_ROOT_PASSWORD=wrong -e MYSQL_DATABASE=other -e FREEPBX_INSTALL_TRIES=1 -e FREEPBX_DB_WAIT=10)
+bad=$(pbx bad db1 -e MYSQL_ROOT_PASSWORD=wrong -e MYSQL_DATABASE=other -e IZPBX_FREEPBX_INSTALL_TRIES=1 -e IZPBX_FREEPBX_DB_WAIT=10)
 
 assert_cmd "new install: the container becomes healthy" -- t_wait_healthy "$c" 1500
 docker logs "$c" > "$work/pbx.log" 2>&1

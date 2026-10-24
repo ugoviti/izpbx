@@ -11,9 +11,9 @@ if [ "$IZPBX_ENABLED" != "true" ]; then
 elif freepbx_installed; then
   freepbx_links
   freepbx_fix_paths
-  log_info "freepbx: installed ($FREEPBX_CONF)"
+  log_info "freepbx: installed ($IZPBX_FREEPBX_CONF)"
 elif persistence_initialized; then
-  log_warn "freepbx: ${APP_DATA}/.initialized exists but $FREEPBX_CONF is missing: not installing over existing data"
+  log_warn "freepbx: ${APP_DATA}/.initialized exists but $IZPBX_FREEPBX_CONF is missing: not installing over existing data"
 else
   freepbx_install
 fi

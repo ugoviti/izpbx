@@ -1,0 +1,8 @@
+#!/bin/sh
+# P3-20: stub of php for the 20.16 SIP Settings loop (script on stdin):
+# getConfig answers nothing, setConfig('key',value) is recorded
+s=$(cat)
+case "$s" in
+  *setConfig*) echo "$s" | sed -n "s/.*setConfig('\([^']*\)',\([^)]*\)).*/sipsettings \1 \2/p" >> /tmp/old-calls ;;
+esac
+exit 0

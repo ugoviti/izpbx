@@ -1,0 +1,5 @@
+#!/bin/sh
+# P3-20: stub of fwconsole for the 20.16 settings loop: a query answers no
+# current value, a change is recorded
+[ "$1" = setting ] && [ $# -ge 3 ] && { k=$2; shift 2; echo "fwconsole setting $k $*" >> /tmp/old-calls; }
+exit 0
