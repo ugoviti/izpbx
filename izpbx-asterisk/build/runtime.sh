@@ -48,4 +48,11 @@ a2enconf -q izpbx
 # init script, unused here
 sed -i 's|^#conf-dir=/etc/dnsmasq.d/,\*\.conf$|conf-dir=/etc/dnsmasq.d/,*.conf|' /etc/dnsmasq.conf
 grep -qx 'conf-dir=/etc/dnsmasq.d/,\*\.conf' /etc/dnsmasq.conf
+# phpMyAdmin (Debian package): off until PMA_ENABLED (services/pma.sh); php-fpm
+# runs as asterisk; the cookie secret made at package install would be the
+# same in every image: removed, a new one is written at start
+a2disconf -q phpmyadmin
+chgrp asterisk /etc/phpmyadmin/config-db.php
+chown asterisk:asterisk /var/lib/phpmyadmin/tmp
+rm -f /var/lib/phpmyadmin/blowfish_secret.inc.php
 build_log "runtime ready"
