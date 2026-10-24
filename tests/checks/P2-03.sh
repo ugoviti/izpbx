@@ -50,7 +50,11 @@ running() { docker exec "$1" pgrep -x "$2" >/dev/null; }
 
 # --- every service enabled
 c=$(t_run all "$test_image" "${all_enabled[@]}")
-all_up() { local s; for s in $services; do [[ "$(svstat "$c" "$s")" == up* ]] || return 1; done; }
+# up for 5 s or more: the unpacked FOP2 of the test image exits once on its
+# first start (empty fop2settings.db, its real install is P3-13) and s6
+# restarts it; a restart loop never gets there and fails the checks below
+up_for() { docker exec "$1" /command/s6-svstat -o up,updownfor "/run/service/$2" 2>/dev/null | awk '$1=="true" && $2>=5 {ok=1} END{exit !ok}'; }
+all_up() { local s; for s in $services; do up_for "$c" "$s" || return 1; done; }
 t_wait_for 120 -- all_up || log "$(for s in $services; do echo "$s: $(svstat "$c" "$s")"; done)"
 declare -A first
 for s in $services; do first[$s]=$(pid_of "$c" "$s"); done
