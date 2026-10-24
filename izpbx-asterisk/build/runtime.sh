@@ -23,6 +23,9 @@ rm -f /etc/logrotate.d/apache2
 # /usr/sbin/sendmail is chosen at start (init.d/10-services.sh): msmtp, or
 # Postfix's own, kept aside here (the diversion survives package upgrades)
 dpkg-divert --local --rename --divert /usr/sbin/sendmail.postfix --add /usr/sbin/sendmail
+# Postfix services not chrooted (as on Rocky in 20.16): Debian's chroot needs
+# the copies of resolv.conf and friends made by its init script, unused here
+postconf -F '*/*/chroot = n'
 # Apache (Debian layout): the izPBX vhost and global conf are written at start
 # by services/httpd.sh; Debian's default site is off
 a2enmod -q rewrite ssl
