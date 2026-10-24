@@ -1,0 +1,3 @@
+#!/bin/sh
+# P3-16: stand-in for izpbx-service, logs the call
+echo "izpbx-service $*" >> /tmp/le-calls.log

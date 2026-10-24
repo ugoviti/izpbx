@@ -1,0 +1,10 @@
+#!/bin/sh
+# P3-16: stand-in for fwconsole. "certificates --updateall" replaces the
+# certificate of APP_FQDN only when /tmp/le-renew exists (a renewal);
+# every call is logged.
+echo "fwconsole $*" >> /tmp/le-calls.log
+if [ "$1 $2" = "certificates --updateall" ] && [ -e /tmp/le-renew ]; then
+  openssl req -subj "/CN=$APP_FQDN" -new -newkey rsa:2048 -nodes -x509 -days 90 \
+    -keyout "/etc/asterisk/keys/$APP_FQDN.key" -out "/etc/asterisk/keys/$APP_FQDN.crt" 2>/dev/null
+fi
+exit 0
