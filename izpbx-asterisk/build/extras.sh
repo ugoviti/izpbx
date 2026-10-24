@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stage "runtime": ionCube loader for PHP 8.2 (every SAPI: cli, apache2, fpm),
+# Stage "runtime": ionCube loader for PHP 8.2 (every SAPI: cli, fpm),
 # npm, izsynth, the Asterisk templates for zabbix-agent2. Every download is pinned
 # by sha256 in versions.env.
 set -Eeuo pipefail

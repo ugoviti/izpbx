@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # P1-09: build/extras.sh.
 # - ionCube $IONCUBE_VER for PHP 8.2: "php -v" (cli) and "php-fpm8.2 -v"
-#   report it, conf.d/00-ioncube.ini enabled for cli, fpm and apache2;
+#   report it, conf.d/00-ioncube.ini enabled for cli and fpm (no apache2
+#   SAPI since P3-06: PHP runs through php-fpm, no mod_php);
 # - izsynth installed and executable ("-h" exits 0, version $IZSYNTH_VER),
 #   every command it needs (curl md5sum file iconv soxi sox lame) present;
 # - zabbix-agent2: asterisk.conf + scripts/asterisk.sh in zabbix_agent2.d,
@@ -23,7 +24,7 @@ assert_cmd "image builds" -- docker build -q -t "$image" "$dir"
 # --- ionCube
 assert_contains "$(img 'php -v')" "with the ionCube PHP Loader v$ioncube" "php -v (cli): ionCube $ioncube"
 assert_contains "$(img 'php-fpm8.2 -v')" "with the ionCube PHP Loader v$ioncube" "php-fpm8.2 -v: ionCube $ioncube"
-for sapi in cli fpm apache2; do
+for sapi in cli fpm; do
   assert_cmd "ionCube enabled for $sapi" -- img "grep -qx 'zend_extension=ioncube_loader_lin_8.2.so' /etc/php/8.2/$sapi/conf.d/00-ioncube.ini"
 done
 assert_eq "0" "$(img 'php -n -v | grep -c ionCube || true')" "control: php -n (no ini files) has no ionCube"

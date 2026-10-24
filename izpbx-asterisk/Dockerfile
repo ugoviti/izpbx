@@ -48,6 +48,8 @@ RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/extras.sh
 RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/s6.sh
+# PHP settings and the php-fpm pool, enabled by runtime.sh
+COPY rootfs/etc/php/ /etc/php/
 RUN /usr/src/izpbx/build/runtime.sh
 # izPBX init and services (s6-rc): only the parts already ported to 22.17
 COPY rootfs/etc/s6-overlay/ /etc/s6-overlay/

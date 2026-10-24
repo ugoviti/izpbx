@@ -26,6 +26,15 @@ dpkg-divert --local --rename --divert /usr/sbin/sendmail.postfix --add /usr/sbin
 # Apache (Debian layout): the izPBX vhost and global conf are written at start
 # by services/httpd.sh; Debian's default site is off
 a2enmod -q rewrite ssl
+# PHP through php-fpm (design H1): mpm_event + proxy_fcgi, no mod_php
+a2dismod -q mpm_prefork 2>/dev/null || true
+a2enmod -q mpm_event proxy_fcgi setenvif
+a2enconf -q php8.2-fpm
+# pool "asterisk" (rootfs) instead of Debian's www; master log on stderr (H2)
+rm -f /etc/php/8.2/fpm/pool.d/www.conf
+sed -i 's|^error_log = .*|error_log = /proc/self/fd/2|' /etc/php/8.2/fpm/php-fpm.conf
+phpenmod -s ALL izpbx
+php-fpm8.2 -t
 a2dissite -q 000-default
 : > /etc/apache2/sites-available/izpbx.conf
 : > /etc/apache2/conf-available/izpbx.conf

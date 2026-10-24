@@ -61,8 +61,6 @@ libcodec2-1.0
 liblua5.4-0
 # web + PHP 8.2 (FreePBX 17)
 apache2
-php8.2
-libapache2-mod-php8.2
 php8.2-cli
 php8.2-fpm
 php8.2-common
