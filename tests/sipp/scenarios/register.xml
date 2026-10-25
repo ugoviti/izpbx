@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<!-- REGISTER [field0] with digest auth (-au/-ap); Contact: the
+     UAS at [field1] (host:port), so the PBX sends the calls there -->
+<scenario name="register">
+  <send retrans="500">
+    <![CDATA[
+      REGISTER sip:[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]reg[call_number]
+      To: <sip:[field0]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 1 REGISTER
+      Contact: <sip:[field0]@[field1]>
+      Max-Forwards: 70
+      Expires: 300
+      Content-Length: 0
+    ]]>
+  </send>
+  <recv response="401" auth="true"/>
+  <send retrans="500">
+    <![CDATA[
+      REGISTER sip:[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]reg[call_number]
+      To: <sip:[field0]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 2 REGISTER
+      Contact: <sip:[field0]@[field1]>
+      [authentication]
+      Max-Forwards: 70
+      Expires: 300
+      Content-Length: 0
+    ]]>
+  </send>
+  <recv response="200"/>
+</scenario>

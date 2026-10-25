@@ -11,4 +11,6 @@ service_gate asterisk
 log_info "asterisk: starting under s6"
 # start time for "finish": a failure after a long run is not "in a row"
 date +%s > /run/izpbx-asterisk-started
-service_run asterisk asterisk -f -U asterisk -G asterisk
+# -vvvg as 20.16 (supervisord): verbose 3 in the "full" log and in the
+# container log, core dump on a crash
+service_run asterisk asterisk -f -U asterisk -G asterisk -vvvg
