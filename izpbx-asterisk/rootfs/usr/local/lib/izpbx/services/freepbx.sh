@@ -77,7 +77,8 @@ freepbx_migration_preflight() {
 # "blocked"): without the opt-in IZPBX_MIGRATE_FREEPBX=true, or with a
 # blocking check, maintenance mode (D4, S10): the flag keeps every service
 # down (service_gate) and makes the healthcheck unhealthy; the logged
-# instructions say how to migrate or go back to izPBX 20.16
+# instructions say how to migrate or go back to izPBX 20.16. Returns 1 in
+# maintenance mode, 0 when the migration may start.
 freepbx_migration_gate() { # preflight-result
   local reason
   if [ "$1" != ok ]; then
@@ -85,7 +86,8 @@ freepbx_migration_gate() { # preflight-result
   elif [ "$IZPBX_MIGRATE_FREEPBX" != "true" ]; then
     reason="FreePBX 16 data found and the migration to FreePBX 17 is not enabled (IZPBX_MIGRATE_FREEPBX=true)"
   else
-    reason="the migration to FreePBX 17 is enabled, but this build cannot run it yet"
+    log_info "freepbx: migration to FreePBX 17 enabled (IZPBX_MIGRATE_FREEPBX=true) and nothing blocks it: starting"
+    return 0
   fi
   mkdir -p "$(dirname "$IZPBX_MAINTENANCE_FLAG")"
   echo "$reason" > "$IZPBX_MAINTENANCE_FLAG"
@@ -93,6 +95,7 @@ freepbx_migration_gate() { # preflight-result
   log_warn "freepbx: no service is started and the healthcheck reports unhealthy; /data and the databases are not changed."
   log_warn "freepbx: to migrate: fix what the checks report (if anything), back up /data and the databases, set IZPBX_MIGRATE_FREEPBX=true and recreate the container;"
   log_warn "freepbx: to keep FreePBX 16: go back to the izPBX 20.16.x image that created this data."
+  return 1
 }
 
 # FreePBX directories, as fpbxDirs of 20.16: under APP_DATA the real paths,

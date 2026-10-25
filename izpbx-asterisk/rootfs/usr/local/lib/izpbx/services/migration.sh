@@ -2,24 +2,33 @@
 # FreePBX 16 -> 17 migration (design §7), the phases after the checks M2:
 #   migration_snapshot   M4: verified dumps, directories moved, spool hardlinked
 #   migration_archive    M5.1: FreePBX "legacy" backup archive from the raw data
+#   migration_restore    M5.2-M5.4: config database recreated, FreePBX 17
+#                        installed with the modules of the 16, archive restored
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
 # directories are moved (same filesystem: instant, no extra space) and the
 # spool, possibly many GB, is copied with hardlinks.
-# shellcheck source=../env.sh
-. /usr/local/lib/izpbx/env.sh
+# shellcheck source=freepbx.sh
+. /usr/local/lib/izpbx/services/freepbx.sh
 
 : "${IZPBX_MIGRATION_DIR:=${APP_DATA:-/data}/.izpbx-migration}"
 # moved into the snapshot (M4.2), relative to APP_DATA
 IZPBX_MIGRATION_MOVE=(var/www var/lib/asterisk etc/asterisk home/asterisk usr/local/fop2 var/spool/cron etc/freepbx.conf etc/amportal.conf)
 # copied with hardlinks (M4.3): it stays in place for the restore
 IZPBX_MIGRATION_LINK=(var/spool/asterisk)
+# modules with no FreePBX 17 release the migration leaves out on purpose
+# (D28: phonebook, installed by default by izPBX 20.16; its data: P4-31)
+IZPBX_MIGRATION_REMOVED_MODULES="phonebook"
 
 migration_state() { # KEY -> value ("" if not set)
   [ -f "$IZPBX_MIGRATION_DIR/state" ] || return 0
   sed -n "s/^$1=//p" "$IZPBX_MIGRATION_DIR/state" | tail -n 1
 }
+# a migration started (snapshot) and not restored yet: resumed at the next
+# start whatever the database holds (it may be empty after M5.2)
+migration_in_progress() { [ -n "$(migration_state snapshot_dir)" ] && [ "$(migration_state restore)" != "done" ]; }
+
 migration_state_set() { # KEY VALUE
   mkdir -p "$IZPBX_MIGRATION_DIR"
   printf '%s=%s\n' "$1" "$2" >> "$IZPBX_MIGRATION_DIR/state"
@@ -156,4 +165,77 @@ migration_archive() {
   rm -rf "${work:?}"
   migration_state_set archive_file "$arc"
   migration_state_set archive "done"
+}
+
+# SQL as the migration database user (statement on stdin), on DATABASE or none
+_migration_sql() { # [database] statement
+  local dbarg=()
+  [ $# -lt 2 ] || { dbarg=("$1"); shift; }
+  printf '%s\n' "$1" | MYSQL_PWD="$(_migration_dbpass)" mariadb -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" \
+    -u "$(_migration_dbuser)" --connect-timeout=5 --batch --skip-column-names "${dbarg[@]}"
+}
+
+# M5.2-M5.4, after the persistence step has seeded the directories moved by
+# the snapshot: each part recorded in the state, resumed after a restart.
+# - the enabled modules of the FreePBX 16 recorded, then the config
+#   database dropped and created again (its dump is verified, M4); the CDR
+#   database is not touched;
+# - FreePBX 17 installed as a new installation (freepbx_install), then the
+#   modules of the 16 it does not install by default (local tree first, the
+#   mirror otherwise; a failure is a warning);
+# - the archive restored with "fwconsole backup --restore" as asterisk,
+#   chan_sip extensions and trunks converted to PJSIP (P0-11), Asterisk
+#   running (the astdb is restored through it), TMPDIR under APP_DATA;
+#   output in <snapshot>/restore.log.
+migration_restore() {
+  local snap arc mods m failed=() rc log tmp
+  if [ "$(migration_state restore)" == "done" ]; then
+    log_info "migration: restore already done"
+    return 0
+  fi
+  [ "$(migration_state archive)" == "done" ] || { log_error "migration: no archive, the restore needs it"; return 1; }
+  snap=$(migration_state snapshot_dir) arc=$(migration_state archive_file)
+
+  if [ "$(migration_state dbreset)" != "done" ]; then
+    mods=$(_migration_sql "$MYSQL_DATABASE" "SELECT modulename FROM modules WHERE enabled = 1 ORDER BY modulename" | tr '\n' ' ') ||
+      { log_error "migration: cannot read the modules of '$MYSQL_DATABASE'"; return 1; }
+    migration_state_set modules "${mods% }"
+    _migration_sql "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`" ||
+      { log_error "migration: cannot recreate the database '$MYSQL_DATABASE'"; return 1; }
+    migration_state_set dbreset "done"
+    log_info "migration: database '$MYSQL_DATABASE' recreated (dump in $snap/db), '$MYSQL_DATABASE_CDR' left as it is"
+  fi
+
+  if [ "$(migration_state install)" != "done" ]; then
+    freepbx_install
+    migration_state_set install "done"
+  fi
+
+  if [ "$(migration_state modules_installed)" != "done" ]; then
+    for m in $(migration_state modules); do
+      [[ " $IZPBX_MIGRATION_REMOVED_MODULES " == *" $m "* ]] && continue
+      fwconsole_as_asterisk ma list 2>/dev/null | grep -qE "^\| $m +\| [^ ]+ +\| Enabled" && continue
+      log_info "migration: installing module $m (installed in FreePBX 16)"
+      fwconsole_as_asterisk ma install "$m" > "/tmp/migration-module-$m.log" 2>&1 ||
+        fwconsole_as_asterisk ma downloadinstall "$m" >> "/tmp/migration-module-$m.log" 2>&1 || true
+      fwconsole_as_asterisk ma list 2>/dev/null | grep -qE "^\| $m +\| [^ ]+ +\| Enabled" || failed+=("$m")
+    done
+    [ ${#failed[@]} -eq 0 ] || log_warn "migration: modules of FreePBX 16 not installed, their data is not restored: ${failed[*]}"
+    migration_state_set modules_installed "done"
+  fi
+
+  log="$snap/restore.log" tmp="$IZPBX_MIGRATION_DIR/tmp"
+  mkdir -p "$tmp" && chown "$APP_USR:$APP_GRP" "$tmp"
+  _fpbx_asterisk_start || return 1
+  log_info "migration: restoring $arc (output in $log)"
+  rc=0
+  TMPDIR=$tmp fwconsole_as_asterisk backup --restore="$arc" --convertchansipexts2pjsip --convertchansiptrunks2pjsip -n > "$log" 2>&1 || rc=$?
+  _fpbx_asterisk_stop
+  if [ "$rc" -ne 0 ] || ! grep -q 'Restore completed successfully' "$log"; then
+    log_error "migration: restore failed (exit $rc), last lines of $log:"
+    tail -n 15 "$log" | while IFS= read -r line; do log_error "  $line"; done
+    return 1
+  fi
+  migration_state_set restore "done"
+  log_info "migration: FreePBX 16 configuration restored on FreePBX 17"
 }

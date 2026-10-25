@@ -113,7 +113,7 @@ filecat() { # category dir [find args]
     php -r '$d = new PDO("sqlite:" . $argv[1]); foreach ($d->query("SELECT key, value FROM astdb") as $r) echo "astdb\tkey={$r[0]} value={$r[1]}\n";' \
       -- "${root}var/lib/asterisk/astdb.sqlite3" 2>/dev/null
   fi
-  [ -n "$live" ] && asterisk -rx 'pjsip show endpoints' 2>/dev/null | sed -nE 's|^ *Endpoint: +([^ /]+).*|pjsip_endpoints\tendpoint=\1|p'
+  [ -n "$live" ] && asterisk -rx 'pjsip show endpoints' 2>/dev/null | sed -nE 's|^ *Endpoint: +([^ /<][^ /]*).*|pjsip_endpoints\tendpoint=\1|p'
 
   # custom audio, music on hold, and the files of fax, FOP2 and chan_dongle
   filecat sounds_custom var/lib/asterisk/sounds/custom
