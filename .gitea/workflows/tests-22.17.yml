@@ -11,6 +11,8 @@
 #   databases unchanged (tests/checks/P4-04.sh);
 # - all-done: tests/run.sh all-done (every check of the items done), on pull
 #   requests and by hand with all_done; hours long, not on every push.
+# The image reference is built in each job from registry-login: it holds the
+# registry host, a secret, and a job output holding a secret is dropped.
 # The runner runs the job in a container: the checks run in a Docker-in-Docker
 # container (tests/ci/dind-run.sh), where their bind mounts make sense.
 #
@@ -41,8 +43,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      image: ${{ steps.ref.outputs.image }}
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -55,21 +55,6 @@ jobs:
           registry-host: ${{ secrets.REGISTRY_HOST }}
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
-
-      - name: image of the run
-        id: login
-        uses: ./.gitea/actions/registry-login
-        with:
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
-          registry-token: ${{ secrets.REGISTRY_TOKEN }}
-
-      - name: image reference
-        id: ref
-        shell: bash
-        env:
-          IMAGE: ${{ steps.login.outputs.image }}
-        run: echo "image=${IMAGE}:ci-22.17" >> "$GITHUB_OUTPUT"
 
   tests:
     needs: build
@@ -90,6 +75,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: registry login
+        id: login
         uses: ./.gitea/actions/registry-login
         with:
           registry-host: ${{ secrets.REGISTRY_HOST }}
@@ -99,7 +85,7 @@ jobs:
       - name: ${{ matrix.check }} in Docker-in-Docker
         shell: bash
         env:
-          IMAGE: ${{ needs.build.outputs.image }}
+          IMAGE: ${{ steps.login.outputs.image }}:ci-22.17
           BREAK: ${{ inputs.break_migration }}
           CHECK: ${{ matrix.check }}
         run: |
@@ -128,6 +114,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: registry login
+        id: login
         uses: ./.gitea/actions/registry-login
         with:
           registry-host: ${{ secrets.REGISTRY_HOST }}
@@ -137,7 +124,7 @@ jobs:
       - name: all-done in Docker-in-Docker
         shell: bash
         env:
-          IMAGE: ${{ needs.build.outputs.image }}
+          IMAGE: ${{ steps.login.outputs.image }}:ci-22.17
         run: |
           set -euo pipefail
           docker pull -q "$IMAGE"
