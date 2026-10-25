@@ -42,6 +42,7 @@ else
     migration_astdb || die "freepbx: migration failed (see above): restart the container to resume"
     migration_spool || die "freepbx: migration failed (see above): restart the container to resume"
     migration_crontab || die "freepbx: migration failed (see above): restart the container to resume"
+    migration_fop2 || die "freepbx: migration failed (see above): restart the container to resume"
     izpbx_mode_set normal
     mode=normal
   fi

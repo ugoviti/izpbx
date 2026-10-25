@@ -12,11 +12,15 @@
 #   migration_spool      M6: voicemail and recordings left in place: counted,
 #                        owned by asterisk
 #   migration_crontab    M6: custom crontab lines of 20.16 in the Debian spool
+#   migration_fop2       M6: FOP2 installed from its Debian package, fop2.cfg
+#                        and the license of 20.16 kept
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
 # directories are moved (same filesystem: instant, no extra space) and the
 # spool, possibly many GB, is copied with hardlinks.
+# shellcheck source=../service.sh
+. /usr/local/lib/izpbx/service.sh
 # shellcheck source=freepbx.sh
 . /usr/local/lib/izpbx/services/freepbx.sh
 
@@ -423,4 +427,39 @@ migration_crontab() {
   done
   [ "$n" -gt 0 ] || log_info "migration: no custom crontab line in 20.16 (the FreePBX jobs are written by FreePBX 17)"
   migration_state_set crontab "done"
+}
+
+# M6: FOP2 of 20.16 was the CentOS build, moved to the snapshot. With fop2
+# enabled the Debian package is installed (verified, as on a new
+# installation: services/fop2.sh), then the configuration (*.cfg), the
+# license (fop2.lic) and the settings database (fop2settings.db: user
+# preferences and chat log, tables the new empty one lacks) of 20.16 are
+# put back; the fop2 step reconfigures the
+# AMI keys and the certificates at every start. FOP2 disabled: its files
+# stay in the snapshot. A failed install (download) does not stop the
+# migration: logged, retried at the next start.
+migration_fop2() {
+  local snap src f n=0
+  [ "$(migration_state fop2)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir) src="$snap/fs/usr/local/fop2"
+  if [ ! -f "$src/fop2.cfg" ]; then
+    log_info "migration: no FOP2 in 20.16"
+  elif ! service_is_enabled fop2; then
+    log_info "migration: FOP2 not enabled (FOP2_ENABLED): its configuration stays in $src"
+  else
+    # shellcheck source=fop2.sh
+    . /usr/local/lib/izpbx/services/fop2.sh
+    log_info "migration: installing FOP2 $FOP2_VER from the Debian package (20.16 had the CentOS build)"
+    if ! fop2_install; then
+      log_error "migration: FOP2 install failed: retried at the next start, its configuration is in $src"
+      return 0
+    fi
+    for f in "$src"/*.cfg "$src"/fop2.lic "$src"/fop2settings.db; do
+      [ -f "$f" ] || continue
+      cp -p "$f" "$FOP2_DIR/"
+      n=$((n + 1))
+    done
+    log_info "migration: FOP2 configuration, license and settings of 20.16 kept ($n file(s): $(cd "$src" && ls -- *.cfg fop2.lic fop2settings.db 2>/dev/null | tr '\n' ' '))"
+  fi
+  migration_state_set fop2 "done"
 }
