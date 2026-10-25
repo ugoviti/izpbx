@@ -59,8 +59,10 @@ services:
     - ${APP_PORT_MYSQL}:3306
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
+  ## NOTE: always an explicit tag ('latest' stays on 20.16 for now). From a 20.16 volume (FreePBX 16) the
+  ##       migration to FreePBX 17 is opt-in: see README.md "Upgrade from 20.16 to 22.17"
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:20.16.22
+    image: docker.io/izdock/izpbx-asterisk:22.17.0
     container_name: izpbx
     #entrypoint: /bin/bash -c "/bin/bash -c \"sleep 3600\""
     #hostname: ${APP_FQDN}
@@ -102,6 +104,7 @@ services:
     #- ${APP_PORT_IAX}:${APP_PORT_IAX}/udp
     #- ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
     #- ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}/udp
+    ## APP_PORT_SIP: only for the ex chan_sip trunks of a migrated 20.16
     #- ${APP_PORT_SIP}:${APP_PORT_SIP}/udp
     #- ${APP_PORT_SIP}:${APP_PORT_SIP}
     #- ${APP_PORT_WEBRTC}:${APP_PORT_WEBRTC}
