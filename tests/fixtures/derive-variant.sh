@@ -14,6 +14,9 @@
 #             module needs services a clean 20.16 does not have)
 #
 # Output: OUTDIR/<base name>-VARIANT (default OUTDIR: the parent of BASE_DIR).
+# A variant already derived from the same inputs (this script, the variant,
+# the base fixture and its files) is reused; checks running in parallel may
+# derive the same variant: each one works in its own temporary directory.
 
 set -Eeuo pipefail
 base=$(cd "${1:?usage: $0 BASE_DIR VARIANT [OUTDIR]}" && pwd)
@@ -23,16 +26,19 @@ dest="$outdir/$(basename "$base")-$variant"
 here=$(cd "$(dirname "$0")" && pwd)
 
 [ -s "$base/manifest.txt" ] || { echo "derive-variant: $base is not a fixture" >&2; exit 2; }
-inputs=$( { grep '^inputs=' "$base/manifest.txt"; echo "$variant"; cat "$here/derive-variant.sh"; } | sha256sum | cut -c1-16)
+inputs=$( { grep -E '^inputs=|^[0-9a-f]{64}  ' "$base/manifest.txt"; echo "$variant"; cat "$here/derive-variant.sh"; } | sha256sum | cut -c1-16)
+same_inputs() { [ -s "$dest/manifest.txt" ] && grep -qx "inputs=$inputs" "$dest/manifest.txt"; }
+if same_inputs; then echo "derive-variant: $dest (reused)"; exit 0; fi
 
-rm -rf "$dest.tmp" && mkdir -p "$dest.tmp"
-cp "$base/asteriskcdrdb.sql.gz" "$dest.tmp/"
-[ "$variant" == module17 ] || cp "$base/asterisk.sql.gz" "$dest.tmp/"
+tmp=$(mktemp -d "$dest.tmp.XXXXXX")
+trap '[ ! -d "${tmp:?}" ] || { chmod -R u+w "$tmp"; rm -rf "$tmp"; }' EXIT
+cp "$base/asteriskcdrdb.sql.gz" "$tmp/"
+[ "$variant" == module17 ] || cp "$base/asterisk.sql.gz" "$tmp/"
 extra=()
 
 case "$variant" in
   macro)
-    work="$dest.tmp/data"
+    work="$tmp/data"
     mkdir -p "$work"
     tar -C "$work" -xzf "$base/data.tar.gz" 2>/dev/null
     conf=etc/asterisk/extensions_custom.conf
@@ -44,11 +50,11 @@ case "$variant" in
     } >> "$work/$conf"
     line=$(grep -n 'Macro(' "$work/$conf" | tail -1 | cut -d: -f1)
     extra+=("anomaly=$conf:$line")
-    tar --numeric-owner -C "$work" -czf "$dest.tmp/data.tar.gz" .
+    tar --numeric-owner -C "$work" -czf "$tmp/data.tar.gz" .
     chmod -R u+w "$work" && rm -rf "$work"   # the unpacked tree holds read-only dirs
     ;;
   diskfull)
-    cp "$base/data.tar.gz" "$dest.tmp/"
+    cp "$base/data.tar.gz" "$tmp/"
     # space on a 4 KB block filesystem: every file and directory rounded up to a block
     bytes=$(tar -tvzf "$base/data.tar.gz" | awk '{s += int(($3 + 4095) / 4096) * 4096 + ($1 ~ /^d/ ? 4096 : 0)} END {print s}')
     # room for the data plus 5% and 16 MB of slack: far less than a second copy
@@ -59,8 +65,8 @@ case "$variant" in
     # the dump ends with the tables already created: one more row in "modules"
     { gzip -dc "$base/asterisk.sql.gz"
       echo "INSERT INTO \`modules\` (\`modulename\`, \`version\`, \`enabled\`, \`signature\`) VALUES ('$module','$version',1,NULL);"
-    } | gzip -n > "$dest.tmp/asterisk.sql.gz"
-    work="$dest.tmp/module"
+    } | gzip -n > "$tmp/asterisk.sql.gz"
+    work="$tmp/module"
     dir="./var/www/html/admin/modules/$module"
     mkdir -p "$work/$dir"
     cat > "$work/$dir/module.xml" <<XML
@@ -78,9 +84,9 @@ case "$variant" in
 	</supported>
 </module>
 XML
-    gzip -dc "$base/data.tar.gz" > "$dest.tmp/data.tar"
-    tar --numeric-owner --owner=1000 --group=1000 -C "$work" -rf "$dest.tmp/data.tar" "$dir"
-    gzip -n "$dest.tmp/data.tar"
+    gzip -dc "$base/data.tar.gz" > "$tmp/data.tar"
+    tar --numeric-owner --owner=1000 --group=1000 -C "$work" -rf "$tmp/data.tar" "$dir"
+    gzip -n "$tmp/data.tar"
     rm -rf "${work:?}"
     extra+=("anomaly=module $module $version has no FreePBX 17 release")
     ;;
@@ -95,7 +101,17 @@ esac
   echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "generator=tests/fixtures/derive-variant.sh"
   printf '%s\n' "${extra[@]}"
-  (cd "$dest.tmp" && sha256sum asterisk.sql.gz asteriskcdrdb.sql.gz data.tar.gz)
-} > "$dest.tmp/manifest.txt"
-rm -rf "$dest" && mv "$dest.tmp" "$dest"
+  (cd "$tmp" && sha256sum asterisk.sql.gz asteriskcdrdb.sql.gz data.tar.gz)
+} > "$tmp/manifest.txt"
+# another run may have derived the same variant meanwhile: keep that one
+if same_inputs; then rm -rf "${tmp:?}"; echo "derive-variant: $dest (reused)"; exit 0; fi
+# replace by renames: the old variant set aside, then the new one moved in;
+# if another run moved its own in first, keep that one
+old=$(mktemp -u "$dest.old.XXXXXX")
+[ ! -e "$dest" ] || mv -T "$dest" "$old" 2>/dev/null || true
+if ! mv -T "$tmp" "$dest" 2>/dev/null; then
+  same_inputs || { echo "derive-variant: cannot replace $dest" >&2; exit 1; }
+  echo "derive-variant: $dest (reused)"; exit 0
+fi
+[ ! -d "$old" ] || { chmod -R u+w "$old"; rm -rf "${old:?}"; }
 echo "derive-variant: $dest"

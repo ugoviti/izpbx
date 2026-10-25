@@ -233,3 +233,6 @@ if [[ "$UMASK" =~ ^0?[0-7]{3}$ ]]; then umask "$UMASK"; fi
 : "${IZPBX_MIGRATE_FREEPBX:=false}"
 : "${IZPBX_MIGRATE_IGNORE_MODULES:=}"
 : "${IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN:=false}"
+# maintenance mode (design S10): written by izpbx-init, read by service_gate
+# and izpbx-healthcheck (in /run: it does not survive a restart)
+: "${IZPBX_MAINTENANCE_FLAG:=/run/izpbx/maintenance}"

@@ -38,9 +38,11 @@ fixture_db() { # name fixture -> a MariaDB on the network (alias = name) with th
 fixture_data() { # volume fixture
   docker run --rm --entrypoint "" -v "$1:/data" -v "$fx/$2:/fx:ro" "$image" tar -C /data -xzf /fx/data.tar.gz 2>/dev/null
 }
-datasum() { # volume -> checksum of the files outside .izpbx-migration
-  docker run --rm --entrypoint "" -v "$1:/data:ro" "$image" sh -c \
-    'cd /data && find . -path ./.izpbx-migration -prune -o \( -type f -o -type l \) -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum'
+datasum() { # volume -> checksum of /data outside .izpbx-migration: every entry
+  # (type, mode, owner, symlink target) and the content of the regular files
+  docker run --rm --entrypoint "" -v "$1:/data:ro" "$image" sh -c 'cd /data && {
+    find . -path ./.izpbx-migration -prune -o -printf "%y %m %U:%G %p %l\n" | LC_ALL=C sort
+    find . -path ./.izpbx-migration -prune -o -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum; } | sha256sum'
 }
 dbsum() { docker exec -e MYSQL_PWD=rootpw "$1" sh -c 'for s in asterisk asteriskcdrdb; do
   mariadb -uroot -N -e "SELECT table_name FROM information_schema.tables WHERE table_schema=\"$s\" ORDER BY 1" |

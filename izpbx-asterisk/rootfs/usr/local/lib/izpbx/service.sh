@@ -37,10 +37,16 @@ service_is_enabled() {
 }
 
 # service_gate NAME: in a run script, stay down unless the service is enabled;
-# in dry-run (IZPBX_DRY_RUN=true) every service stays down
+# in dry-run (IZPBX_DRY_RUN=true) and in maintenance mode (flag written by
+# izpbx-init, design S10: FreePBX 16 data that nothing may touch) every
+# service stays down
 service_gate() {
   if [ "${IZPBX_DRY_RUN:-false}" == "true" ]; then
     log_info "$1: dry-run, not started"
+    exec /command/s6-svc -O .
+  fi
+  if [ -e "$IZPBX_MAINTENANCE_FLAG" ]; then
+    log_info "$1: maintenance mode, not started"
     exec /command/s6-svc -O .
   fi
   service_is_enabled "$1" || service_off "$1"

@@ -13,8 +13,6 @@
 # shellcheck source=../lib/izpbx/actions.sh
 . /usr/local/lib/izpbx/actions.sh
 
-: "${IZPBX_MAINTENANCE_FLAG:=/run/izpbx/maintenance}"
-
 unhealthy() { echo "unhealthy: $*"; exit 1; }
 
 [ -e "$IZPBX_MAINTENANCE_FLAG" ] && unhealthy "maintenance mode ($(head -c 200 "$IZPBX_MAINTENANCE_FLAG" 2>/dev/null))"

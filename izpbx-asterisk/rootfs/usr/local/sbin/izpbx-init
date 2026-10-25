@@ -46,5 +46,11 @@ for step in "$IZPBX_INIT_DIR"/*.sh; do
   log_info "izpbx-init: step $(basename "$step")"
   # shellcheck source=/dev/null
   . "$step"
+  # maintenance mode (04-freepbx-detect.sh, 18-freepbx.sh): the next steps would write to
+  # the FreePBX 16 /data, and no service runs anyway
+  if [ -e "${IZPBX_MAINTENANCE_FLAG:-/run/izpbx/maintenance}" ]; then
+    log_warn "izpbx-init: maintenance mode, the remaining steps are skipped"
+    break
+  fi
 done
 log_info "izpbx-init: done in $((SECONDS - start))s"

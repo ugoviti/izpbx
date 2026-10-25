@@ -63,6 +63,38 @@ freepbx_detect() {
   esac
 }
 
+# migration mode: the read only checks M2 (izpbx-preflight), report in the
+# log, result ("ok" or "blocked") in /run/izpbx/preflight, then the gate
+freepbx_migration_preflight() {
+  local report result line
+  report=$(izpbx-preflight) && result=ok || result=blocked
+  while IFS= read -r line; do log_info "preflight: $line"; done <<< "$report"
+  echo "$result" > /run/izpbx/preflight
+  freepbx_migration_gate "$result"
+}
+
+# after the checks M2 of a FreePBX 16 start (preflight result "ok" or
+# "blocked"): without the opt-in IZPBX_MIGRATE_FREEPBX=true, or with a
+# blocking check, maintenance mode (D4, S10): the flag keeps every service
+# down (service_gate) and makes the healthcheck unhealthy; the logged
+# instructions say how to migrate or go back to izPBX 20.16
+freepbx_migration_gate() { # preflight-result
+  local reason
+  if [ "$1" != ok ]; then
+    reason="the migration checks found blocking problems (report above and in ${APP_DATA:-/data}/.izpbx-migration)"
+  elif [ "$IZPBX_MIGRATE_FREEPBX" != "true" ]; then
+    reason="FreePBX 16 data found and the migration to FreePBX 17 is not enabled (IZPBX_MIGRATE_FREEPBX=true)"
+  else
+    reason="the migration to FreePBX 17 is enabled, but this build cannot run it yet"
+  fi
+  mkdir -p "$(dirname "$IZPBX_MAINTENANCE_FLAG")"
+  echo "$reason" > "$IZPBX_MAINTENANCE_FLAG"
+  log_warn "freepbx: MAINTENANCE MODE: $reason"
+  log_warn "freepbx: no service is started and the healthcheck reports unhealthy; /data and the databases are not changed."
+  log_warn "freepbx: to migrate: fix what the checks report (if anything), back up /data and the databases, set IZPBX_MIGRATE_FREEPBX=true and recreate the container;"
+  log_warn "freepbx: to keep FreePBX 16: go back to the izPBX 20.16.x image that created this data."
+}
+
 # FreePBX directories, as fpbxDirs of 20.16: under APP_DATA the real paths,
 # not the symlinks of persistence.sh ("fwconsole chown" does not follow a
 # symlinked /etc/asterisk); the settings of a restored 20.16 backup match
