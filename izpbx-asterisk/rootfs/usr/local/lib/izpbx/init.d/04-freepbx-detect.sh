@@ -14,7 +14,8 @@
 # inventory M3, snapshot M4 (the FreePBX 16 directories moved away) and
 # archive M5.1; the restore, M6 and the verification M7 follow in
 # 18-freepbx.sh. A migration in progress (state in
-# ${APP_DATA}/.izpbx-migration) is resumed whatever the database holds.
+# ${APP_DATA}/.izpbx-migration) is resumed whatever the database holds; after a
+# completed one, every start reports the snapshot still there and its size.
 # shellcheck source=../services/migration.sh
 . /usr/local/lib/izpbx/services/migration.sh
 if [ "$IZPBX_ENABLED" == "true" ] && ! izpbx_dry_run && persistence_initialized; then
@@ -24,6 +25,7 @@ if [ "$IZPBX_ENABLED" == "true" ] && ! izpbx_dry_run && persistence_initialized;
   else
     mode=$(freepbx_detect) || die "freepbx: start refused (see above)"
     izpbx_mode_set "$mode"
+    [ "$mode" != normal ] || migration_snapshot_notice
     if [ "$mode" == migration ]; then freepbx_migration_preflight || true; fi
   fi
   if [ "$(izpbx_mode)" == migration ] && [ ! -e "$IZPBX_MAINTENANCE_FLAG" ]; then

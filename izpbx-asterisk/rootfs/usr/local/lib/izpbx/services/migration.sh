@@ -18,6 +18,8 @@
 #   migration_confs      M6: configuration files FreePBX does not write
 #                        (dongle.conf) from the snapshot
 #   migration_verify     M7: inventory after = before (mapping), or maintenance
+#   migration_complete   M8: .initialized with the FreePBX 17 version, state done
+#   migration_snapshot_notice  at every start: the snapshot is still there, its size
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -578,4 +580,29 @@ migration_verify() {
   log_warn "freepbx: the FreePBX 16 data is in $(migration_state snapshot_dir) (database dumps and files): check the report,"
   log_warn "freepbx: then restart the container to verify again, or go back to izPBX 20.16 with the snapshot."
   return 1
+}
+
+# M8: the migration is completed: .initialized gets the FreePBX 17 version,
+# the state "migration=done" (the next starts are normal starts). The
+# snapshot stays in IZPBX_MIGRATION_DIR until the user removes it.
+migration_complete() {
+  local ver
+  [ "$(migration_state migration)" == "done" ] && return 0
+  ver=$(fwconsole -V 2>/dev/null | awk '{print $NF}')
+  persistence_mark_initialized "${ver:-17}"
+  migration_state_set migration "done"
+  log_info "migration: FreePBX 16 -> ${ver:-17} completed"
+  migration_snapshot_notice
+}
+
+# at every start after a migration: the snapshot is still in IZPBX_MIGRATION_DIR,
+# with the space it takes besides /data (the spool is hardlinked: du counts
+# the files of /data/var/spool/asterisk first, so only the extra space is left)
+migration_snapshot_notice() {
+  local snap kb
+  [ "$(migration_state migration)" == "done" ] || return 0
+  snap=$(migration_state snapshot_dir)
+  [ -d "$snap" ] || return 0
+  kb=$(du -sk "$(freepbx_dir ASTSPOOLDIR)" "$snap" 2>/dev/null | tail -n 1 | cut -f1)
+  log_warn "migration: the snapshot of FreePBX 16 is still in $snap and takes $(( ${kb:-0} / 1024 )) MB: remove it when you no longer need to go back to izPBX 20.16"
 }
