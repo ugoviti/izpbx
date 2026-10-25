@@ -5,6 +5,7 @@
 #   izpbx-migrate archive      M5.1: FreePBX "legacy" backup archive from the raw data
 #   izpbx-migrate restore      M5.2-M5.4: database recreated, FreePBX 17 installed, restore
 #   izpbx-migrate sip-transport  M6: PJSIP transport on APP_PORT_SIP for the ex chan_sip trunks
+#   izpbx-migrate audio        M6: custom prompts, sounds/custom and music on hold from the snapshot
 # State and snapshot in ${APP_DATA}/.izpbx-migration (services/migration.sh).
 # shellcheck source=../lib/izpbx/common.sh
 . /usr/local/lib/izpbx/common.sh
@@ -17,5 +18,6 @@ case "${1:-}" in
   archive) migration_archive ;;
   restore) migration_restore ;;
   sip-transport) migration_sip_transport ;;
-  *) sed -n '4,7p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
+  audio) migration_audio ;;
+  *) sed -n '4,8p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
 esac

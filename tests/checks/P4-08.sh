@@ -6,8 +6,8 @@
 # - izpbx-inventory --diff of the fixture before (DB + files) and of the
 #   running PBX after (--live) is empty with the mapping of this check:
 #   chan_sip -> PJSIP, phonebook removed on purpose (D28); ignored: the
-#   categories of the M6 items still to come (astdb P4-11, moh and
-#   sounds_custom P4-10, voicemail_boxes P4-12, files P4-14 and dongle.conf),
+#   categories of the M6 items still to come (astdb P4-11, voicemail_boxes
+#   P4-12, files P4-14 and dongle.conf),
 #   advanced_settings (P4-19), pjsip_endpoints (only in the --live inventory);
 # - the CDR database: same checksum of every table as before;
 # - control: the same diff with one extension removed from the "after"
@@ -58,7 +58,7 @@ printf '%s\n' \
   "extensions	tech=sip	tech=pjsip" \
   "trunks	tech=sip	tech=pjsip" \
   "modules	^module=phonebook enabled=1$	module=framework enabled=1" \
-  "astdb	ignore" "moh	ignore" "sounds_custom	ignore" "voicemail_boxes	ignore" "files	ignore" \
+  "astdb	ignore" "voicemail_boxes	ignore" "files	ignore" \
   "advanced_settings	ignore" "pjsip_endpoints	ignore" > "$work/map"
 docker cp "$work/before.json" "$c:/tmp/before.json" >/dev/null
 docker cp "$work/after.json" "$c:/tmp/after.json" >/dev/null

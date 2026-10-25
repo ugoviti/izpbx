@@ -6,6 +6,8 @@
 #                        installed with the modules of the 16, archive restored
 #   migration_sip_transport  M6: PJSIP transport on APP_PORT_SIP for the
 #                        trunks that were on chan_sip (D3, C19)
+#   migration_audio      M6: custom prompts, sounds/custom and music on hold
+#                        from the snapshot
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -306,4 +308,24 @@ migration_sip_transport() {
   fi
   fwconsole_as_asterisk reload >/dev/null 2>&1 || log_warn "migration: fwconsole reload failed"
   migration_state_set sip_transport "done"
+}
+
+# M6: the restore does not bring back the audio files (custom prompts are
+# reported lost on the FreePBX forum): sounds/custom, sounds/<language>/custom
+# and the music on hold categories are copied from the snapshot, without
+# overwriting what FreePBX 17 has (cp -n), owned by asterisk.
+migration_audio() {
+  local snap src dst rel n=0
+  [ "$(migration_state audio)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir)
+  src="$snap/fs/var/lib/asterisk" dst=$(freepbx_dir ASTVARLIBDIR)
+  for rel in $(cd "$src" 2>/dev/null && find sounds -mindepth 1 -maxdepth 2 -type d -name custom) moh; do
+    [ -d "$src/$rel" ] || continue
+    mkdir -p "$dst/$rel"
+    n=$((n + $(cd "$src/$rel" && find . -type f | while read -r f; do [ -e "$dst/$rel/$f" ] || echo; done | wc -l)))
+    cp -an "$src/$rel/." "$dst/$rel/"
+    chown -R "$APP_USR:$APP_GRP" "$dst/$rel"
+  done
+  log_info "migration: $n audio file(s) (sounds/custom, music on hold) copied from the snapshot"
+  migration_state_set audio "done"
 }
