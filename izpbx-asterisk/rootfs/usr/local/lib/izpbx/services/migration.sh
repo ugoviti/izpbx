@@ -203,7 +203,9 @@ _migration_sql() { # [database] statement
 # - the archive restored with "fwconsole backup --restore" as asterisk,
 #   chan_sip extensions and trunks converted to PJSIP (P0-11), Asterisk
 #   running (the astdb is restored through it), TMPDIR under APP_DATA;
-#   output in <snapshot>/restore.log.
+#   output in <snapshot>/restore.log; then the FreePBX settings izPBX needs
+#   (freepbx_izpbx_settings: the restore puts back ASTMANAGERHOST=localhost,
+#   and the UCP node server cannot reach AMI with it).
 migration_restore() {
   local snap arc mods m failed=() rc log tmp
   if [ "$(migration_state restore)" == "done" ]; then
@@ -256,6 +258,8 @@ migration_restore() {
     tail -n 15 "$log" | while IFS= read -r line; do log_error "  $line"; done
     return 1
   fi
+  # the restore brought back the settings of the 16: those izPBX needs again
+  freepbx_izpbx_settings
   migration_state_set restore "done"
   log_info "migration: FreePBX 16 configuration restored on FreePBX 17"
 }

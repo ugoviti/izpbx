@@ -227,6 +227,16 @@ _fpbx_asterisk_stop() {
   pkill -9 -x asterisk || true
 }
 
+# FreePBX settings izPBX needs, set by the install and again after the
+# restore of a migration (the restore brings back the settings of the 16):
+# node 18 resolves localhost to ::1 and AMI listens on IPv4 only, so the UCP
+# node server cannot connect with ASTMANAGERHOST=localhost (P0-14); the CDR
+# database name of the environment
+freepbx_izpbx_settings() {
+  fwconsole setting ASTMANAGERHOST 127.0.0.1 >/dev/null 2>&1 || true
+  fwconsole setting CDRDBNAME "$MYSQL_DATABASE_CDR" >/dev/null 2>&1 || true
+}
+
 _fpbx_install_once() {
   local log=/tmp/freepbx-install.log m failed=() dirs
   read -r -a dirs <<< "$(freepbx_dir_options)"
@@ -255,9 +265,7 @@ _fpbx_install_once() {
   freepbx_links
   freepbx_fix_paths
   freepbx_backup_dir
-  # node 18 resolves localhost to ::1, AMI listens on IPv4 only (P0-14)
-  fwconsole setting ASTMANAGERHOST 127.0.0.1 >/dev/null 2>&1 || true
-  fwconsole setting CDRDBNAME "$MYSQL_DATABASE_CDR" >/dev/null 2>&1 || true
+  freepbx_izpbx_settings
   fwconsole chown >/dev/null 2>&1 || true
   fwconsole_as_asterisk ma enablerepo extended >/dev/null 2>&1
   fwconsole_as_asterisk ma enablerepo unsupported >/dev/null 2>&1
