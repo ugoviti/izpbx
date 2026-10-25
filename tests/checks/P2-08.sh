@@ -60,7 +60,8 @@ while [ $((SECONDS - t0)) -lt "$((init_seconds - 30))" ]; do
     running/starting) ;;
     *) bad="state $s after $((SECONDS - t0)) s"; break ;;
   esac
-  if docker exec "$c" pgrep -x asterisk >/dev/null 2>&1; then
+  # the daemon ("asterisk -f ..."), not the "asterisk -rx" of the healthcheck
+  if docker exec "$c" pgrep -f '^asterisk -f' >/dev/null 2>&1; then
     bad="asterisk started before the end of izpbx-init ($((SECONDS - t0)) s)"; break
   fi
   sleep 30
