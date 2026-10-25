@@ -4,6 +4,8 @@
 #   migration_archive    M5.1: FreePBX "legacy" backup archive from the raw data
 #   migration_restore    M5.2-M5.4: config database recreated, FreePBX 17
 #                        installed with the modules of the 16, archive restored
+#   migration_sip_transport  M6: PJSIP transport on APP_PORT_SIP for the
+#                        trunks that were on chan_sip (D3, C19)
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -25,9 +27,10 @@ migration_state() { # KEY -> value ("" if not set)
   [ -f "$IZPBX_MIGRATION_DIR/state" ] || return 0
   sed -n "s/^$1=//p" "$IZPBX_MIGRATION_DIR/state" | tail -n 1
 }
-# a migration started (snapshot) and not restored yet: resumed at the next
-# start whatever the database holds (it may be empty after M5.2)
-migration_in_progress() { [ -n "$(migration_state snapshot_dir)" ] && [ "$(migration_state restore)" != "done" ]; }
+# a migration started (snapshot) and not completed (state "migration=done",
+# M8): resumed at the next start whatever the database holds (it may be
+# empty after M5.2); the phases already done are skipped
+migration_in_progress() { [ -n "$(migration_state snapshot_dir)" ] && [ "$(migration_state migration)" != "done" ]; }
 
 migration_state_set() { # KEY VALUE
   mkdir -p "$IZPBX_MIGRATION_DIR"
@@ -200,6 +203,9 @@ migration_restore() {
     mods=$(_migration_sql "$MYSQL_DATABASE" "SELECT modulename FROM modules WHERE enabled = 1 ORDER BY modulename" | tr '\n' ' ') ||
       { log_error "migration: cannot read the modules of '$MYSQL_DATABASE'"; return 1; }
     migration_state_set modules "${mods% }"
+    # chan_sip extensions and trunks of the 16 (converted by the restore, M6)
+    migration_state_set sip_devices "$(_migration_sql "$MYSQL_DATABASE" "SELECT COUNT(*) FROM devices WHERE tech = 'sip'")"
+    migration_state_set sip_trunks "$(_migration_sql "$MYSQL_DATABASE" "SELECT channelid FROM trunks WHERE tech = 'sip' ORDER BY channelid" | tr '\n' ' ' | sed 's/ $//')"
     _migration_sql "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`" ||
       { log_error "migration: cannot recreate the database '$MYSQL_DATABASE'"; return 1; }
     migration_state_set dbreset "done"
@@ -238,4 +244,66 @@ migration_restore() {
   fi
   migration_state_set restore "done"
   log_info "migration: FreePBX 16 configuration restored on FreePBX 17"
+}
+
+# M6: the chan_sip of izPBX 20.16 listened on APP_PORT_SIP (5160): providers
+# and phones of the trunks and extensions converted to PJSIP still send
+# there. If the 16 had chan_sip extensions or trunks, a PJSIP transport
+# udp (and tcp, when FreePBX has one) on APP_PORT_SIP in
+# pjsip.transports_custom.conf, with the settings of the FreePBX transport
+# 0.0.0.0-<protocol> (external addresses, local networks) at this moment;
+# the converted trunks use it through pjsip.endpoint_custom_post.conf
+# ("[trunk](+)": FreePBX keeps one transport per address and protocol, so it
+# cannot be a SIP Settings bind, and it writes only its own transports in
+# the endpoints). New installations get no such transport (Q8).
+IZPBX_MIGRATION_SIP_TRANSPORT=izpbx-legacy-sip
+migration_sip_transport() {
+  local devices trunks conf custom post proto base t names=()
+  [ "$(migration_state sip_transport)" == "done" ] && return 0
+  devices=$(migration_state sip_devices) trunks=$(migration_state sip_trunks)
+  if [ "${devices:-0}" -eq 0 ] && [ -z "$trunks" ]; then
+    log_info "migration: no chan_sip extension or trunk in FreePBX 16, no transport on port $APP_PORT_SIP"
+    migration_state_set sip_transport "done"
+    return 0
+  fi
+  conf=$(freepbx_dir ASTETCDIR)/pjsip.transports.conf custom=$(freepbx_dir ASTETCDIR)/pjsip.transports_custom.conf
+  post=$(freepbx_dir ASTETCDIR)/pjsip.endpoint_custom_post.conf
+  [ -s "$conf" ] || fwconsole_as_asterisk reload >/dev/null 2>&1 || true
+  {
+    echo "; izPBX migration from 20.16 (M6): the port of chan_sip ($APP_PORT_SIP) for the"
+    echo "; extensions and trunks converted to PJSIP; a copy of the FreePBX transports"
+    echo "; at the migration: change it here if the SIP Settings change"
+    for proto in udp tcp; do
+      base="0.0.0.0-$proto"
+      grep -q "^\[$base\]" "$conf" 2>/dev/null || continue
+      t="$IZPBX_MIGRATION_SIP_TRANSPORT-$proto"
+      names+=("$t")
+      echo
+      echo "[$t]"
+      awk -v s="[$base]" '$0 == s {on = 1; next} /^\[/ {on = 0} on && NF && $1 !~ /^bind/ {print}' "$conf"
+      echo "bind=0.0.0.0:$APP_PORT_SIP"
+    done
+  } > "$custom.izpbx"
+  if [ ${#names[@]} -eq 0 ]; then
+    rm -f "$custom.izpbx"
+    log_error "migration: no FreePBX transport 0.0.0.0-udp/tcp in $conf to copy"
+    return 1
+  fi
+  [ ! -s "$custom" ] || { echo; cat "$custom"; } >> "$custom.izpbx"
+  mv "$custom.izpbx" "$custom"
+  chown "$APP_USR:$APP_GRP" "$custom"
+  log_info "migration: PJSIP transport(s) ${names[*]} on port $APP_PORT_SIP in $custom"
+
+  if [ -n "$trunks" ]; then
+    {
+      [ ! -s "$post" ] || { cat "$post"; echo; }
+      echo "; izPBX migration from 20.16 (M6): trunks on chan_sip in FreePBX 16, on port $APP_PORT_SIP"
+      for t in $trunks; do printf '[%s](+)\ntransport=%s\n' "$t" "${names[0]}"; done
+    } > "$post.izpbx"
+    mv "$post.izpbx" "$post"
+    chown "$APP_USR:$APP_GRP" "$post"
+    log_info "migration: trunks on chan_sip in FreePBX 16 use the transport ${names[0]} ($post): $trunks"
+  fi
+  fwconsole_as_asterisk reload >/dev/null 2>&1 || log_warn "migration: fwconsole reload failed"
+  migration_state_set sip_transport "done"
 }

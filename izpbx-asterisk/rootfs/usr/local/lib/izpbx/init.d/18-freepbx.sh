@@ -37,6 +37,7 @@ else
   fi
   if [ "$mode" == migration ]; then
     migration_restore || die "freepbx: migration failed (see above): restart the container to resume"
+    migration_sip_transport || die "freepbx: migration failed (see above): restart the container to resume"
     izpbx_mode_set normal
     mode=normal
   fi

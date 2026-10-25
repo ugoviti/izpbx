@@ -4,6 +4,7 @@
 #   izpbx-migrate snapshot     M4: verified dumps, directories moved, spool hardlinked
 #   izpbx-migrate archive      M5.1: FreePBX "legacy" backup archive from the raw data
 #   izpbx-migrate restore      M5.2-M5.4: database recreated, FreePBX 17 installed, restore
+#   izpbx-migrate sip-transport  M6: PJSIP transport on APP_PORT_SIP for the ex chan_sip trunks
 # State and snapshot in ${APP_DATA}/.izpbx-migration (services/migration.sh).
 # shellcheck source=../lib/izpbx/common.sh
 . /usr/local/lib/izpbx/common.sh
@@ -15,5 +16,6 @@ case "${1:-}" in
   snapshot) migration_snapshot ;;
   archive) migration_archive ;;
   restore) migration_restore ;;
-  *) sed -n '4,6p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
+  sip-transport) migration_sip_transport ;;
+  *) sed -n '4,7p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
 esac
