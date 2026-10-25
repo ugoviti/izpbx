@@ -1,6 +1,7 @@
 # shellcheck shell=bash
 # FreePBX 16 -> 17 migration (design §7), the phases after the checks M2:
 #   migration_snapshot   M4: verified dumps, directories moved, spool hardlinked
+#   migration_archive    M5.1: FreePBX "legacy" backup archive from the raw data
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -24,14 +25,18 @@ migration_state_set() { # KEY VALUE
   printf '%s=%s\n' "$1" "$2" >> "$IZPBX_MIGRATION_DIR/state"
 }
 
+# database credentials for the migration: root when MYSQL_ROOT_PASSWORD is
+# set, else MYSQL_USER
+_migration_dbuser() { if [ -n "$MYSQL_ROOT_PASSWORD" ]; then echo "$MYSQL_ROOT_USER"; else echo "$MYSQL_USER"; fi; }
+_migration_dbpass() { if [ -n "$MYSQL_ROOT_PASSWORD" ]; then echo "$MYSQL_ROOT_PASSWORD"; else echo "$MYSQL_PASSWORD"; fi; }
+
 # mariadb-dump of one database, gzip, verified: exit status of the dump and
 # of gzip, the whole file read back (gzip -t and the "Dump completed" last
 # line), sha256 in SHA256SUMS. Root when MYSQL_ROOT_PASSWORD is set, else
 # MYSQL_USER (secrets in the environment, not on the command line).
 _migration_dump() { # database file
-  local user=$MYSQL_USER pass=$MYSQL_PASSWORD tmp="$2.part" st
-  if [ -n "$MYSQL_ROOT_PASSWORD" ]; then user=$MYSQL_ROOT_USER pass=$MYSQL_ROOT_PASSWORD; fi
-  MYSQL_PWD="$pass" mariadb-dump -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$user" \
+  local tmp="$2.part" st
+  MYSQL_PWD="$(_migration_dbpass)" mariadb-dump -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$(_migration_dbuser)" \
     --single-transaction --routines --triggers --events --databases "$1" | gzip > "$tmp"
   st="${PIPESTATUS[0]}${PIPESTATUS[1]}"
   [ "$st" == 00 ] || { rm -f "$tmp"; log_error "migration: dump of '$1' failed"; return 1; }
@@ -92,4 +97,63 @@ migration_snapshot() {
 
   migration_state_set snapshot "done"
   log_info "migration: snapshot done"
+}
+
+# M5.1: the archive the FreePBX 17 Backup module restores as a "legacy"
+# backup (format validated by the prototype P0-10, Handlers/Restore/Legacy.php):
+#   manifest      JSON: pbx_version, fpbx_db, fpbx_cdrdb, file_list
+#   astdb         JSON: family -> key -> value (astdb.sqlite3 of the snapshot)
+#   mysql-2.sql   config database, one INSERT per line (the restore parses it
+#                 line by line into SQLite), no CREATE DATABASE
+#   etc/asterisk/*_custom*.conf   of the snapshot
+# The CDR database is not in the archive: the migration does not touch it.
+# Output: <snapshot>/backup/izpbx-migration.tar.gz (+ .sha256).
+migration_archive() {
+  local snap work arc version st
+  if [ "$(migration_state archive)" == "done" ]; then
+    log_info "migration: archive already built ($(migration_state archive_file))"
+    return 0
+  fi
+  [ "$(migration_state snapshot)" == "done" ] || { log_error "migration: no snapshot, the archive needs it"; return 1; }
+  snap=$(migration_state snapshot_dir)
+  arc="$snap/backup/izpbx-migration.tar.gz" work="$snap/backup/legacy"
+  [ ! -e "$work" ] || rm -rf "${work:?}"
+  mkdir -p "$work/etc/asterisk"
+
+  st=0
+  MYSQL_PWD="$(_migration_dbpass)" mariadb-dump -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$(_migration_dbuser)" \
+    --skip-extended-insert --skip-dump-date --skip-comments --no-create-db --single-transaction \
+    "$MYSQL_DATABASE" > "$work/mysql-2.sql" || st=$?
+  [ "$st" -eq 0 ] && grep -q '^CREATE TABLE `admin`' "$work/mysql-2.sql" || { log_error "migration: legacy dump of '$MYSQL_DATABASE' failed"; return 1; }
+  version=$(printf "SELECT value FROM admin WHERE variable = 'version'\n" | MYSQL_PWD="$(_migration_dbpass)" mariadb -h "$MYSQL_SERVER" \
+    -P "$APP_PORT_MYSQL" -u "$(_migration_dbuser)" --batch --skip-column-names "$MYSQL_DATABASE")
+  [ -n "$version" ] || { log_error "migration: no FreePBX version (admin.version) in '$MYSQL_DATABASE'"; return 1; }
+
+  # astdb and manifest as JSON (PHP: pdo_sqlite is in the image)
+  php -r '
+    [$astdbfile, $out, $version, $db, $cdrdb] = array_slice($argv, 1);
+    $astdb = [];
+    if (is_file($astdbfile)) {
+      foreach ((new PDO("sqlite:" . $astdbfile))->query("SELECT key, value FROM astdb") as $r) {
+        $p = explode("/", trim($r[0], "/"), 2);
+        if (count($p) == 2) $astdb[$p[0]][$p[1]] = $r[1];
+      }
+    }
+    file_put_contents("$out/astdb", json_encode($astdb ?: new stdClass));
+    file_put_contents("$out/manifest", json_encode([
+      "pbx_version" => $version, "fpbx_db" => $db, "fpbx_cdrdb" => $cdrdb,
+      "name" => "izpbx-migration", "hostname" => gethostname(), "emailaddr" => "", "ctime" => time(),
+      "mysql_count" => 1, "astdb_count" => count($astdb), "file_count" => 0,
+      "file_list" => ["etc" => ["asterisk" => new stdClass]],
+    ]));
+  ' -- "$snap/fs/var/lib/asterisk/astdb.sqlite3" "$work" "$version" "$MYSQL_DATABASE" "$MYSQL_DATABASE_CDR" ||
+    { log_error "migration: cannot write astdb and manifest"; return 1; }
+  find "$snap/fs/etc/asterisk" -maxdepth 1 -name '*_custom*.conf' -exec cp -p {} "$work/etc/asterisk/" \; 2>/dev/null || true
+
+  tar -C "$work" -czf "$arc.part" . && mv "$arc.part" "$arc" || { log_error "migration: cannot write $arc"; return 1; }
+  (cd "$(dirname "$arc")" && sha256sum "$(basename "$arc")" > "$(basename "$arc").sha256")
+  log_info "migration: archive $arc (FreePBX $version, $(wc -l < "$work/mysql-2.sql") SQL lines, $(find "$work/etc/asterisk" -type f | wc -l) custom files)"
+  rm -rf "${work:?}"
+  migration_state_set archive_file "$arc"
+  migration_state_set archive "done"
 }

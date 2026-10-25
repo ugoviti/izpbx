@@ -2,6 +2,7 @@
 # izpbx-migrate: one phase of the FreePBX 16 -> 17 migration (design §7),
 # as izpbx-init runs it; for tests and for a manual resume.
 #   izpbx-migrate snapshot     M4: verified dumps, directories moved, spool hardlinked
+#   izpbx-migrate archive      M5.1: FreePBX "legacy" backup archive from the raw data
 # State and snapshot in ${APP_DATA}/.izpbx-migration (services/migration.sh).
 # shellcheck source=../lib/izpbx/common.sh
 . /usr/local/lib/izpbx/common.sh
@@ -11,5 +12,6 @@ izpbx_strict
 
 case "${1:-}" in
   snapshot) migration_snapshot ;;
-  *) sed -n '4p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
+  archive) migration_archive ;;
+  *) sed -n '4,5p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
 esac
