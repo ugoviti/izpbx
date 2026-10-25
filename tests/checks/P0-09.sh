@@ -52,7 +52,8 @@ sed -i '/^# serial$/d' "$work/checks/S1.sh"
 runner "$work/ln" -j 4 T1 S1 T2 >/dev/null 2>&1 || true
 assert_cmd "control: without '# serial' it runs with the others" -- overlap "$work/ln" S1
 
-out=$(runner "$work/li" -j 2 I1 I2 2>&1) || true
+# without the TEST_IMAGE of an outer run (all-done runs this check too): the build path
+out=$(TEST_IMAGE='' runner "$work/li" -j 2 I1 I2 2>&1) || true
 assert_contains "$out" "built once" "the image is built once for the run"
 i1=$(grep -o 'image=.*' "$work/li/I1.log"); i2=$(grep -o 'image=.*' "$work/li/I2.log")
 assert_ne "image=" "$i1" "the checks get the image of the run (TEST_IMAGE)"
