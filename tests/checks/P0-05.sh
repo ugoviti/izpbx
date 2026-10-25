@@ -27,11 +27,25 @@ for v in 20.16.18 20.16.21; do
   assert_ne "" "$fw" "fixture $v records its framework version"
 done
 
-# module with no FreePBX 17 release
-assert_cmd "module17 variant generates" -- make -v 20.16.22 --variant module17
+# module with no FreePBX 17 release: simulated (irc 16.0.1 in "modules" and
+# its admin/modules directory), derived from the 20.16.22 fixture
+assert_cmd "module17 variant derives" -- derive module17
 m=20.16.22-module17
-assert_contains "$(gzip -dc "$out/$m/asterisk.sql.gz" | grep -oE "'irc','16\.0\.1',1")" "irc" \
-  "module17 variant has irc 16.0.1 enabled"
+modsql() { # fixture -> "modulename version enabled" of irc, from the restored dump
+  local db
+  db=$(t_run "db-${1//./}" docker.io/mariadb:10.11.19 -e MARIADB_ROOT_PASSWORD=rootpw -e MARIADB_DATABASE=asterisk \
+    --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 2s --health-retries 60)
+  t_wait_healthy "$db" 120 || return 1
+  gzip -dc "$out/$1/asterisk.sql.gz" | docker exec -i -e MYSQL_PWD=rootpw "$db" mariadb -uroot asterisk || return 1
+  echo "SELECT modulename, version, enabled FROM modules WHERE modulename = 'irc'" |
+    docker exec -i -e MYSQL_PWD=rootpw "$db" mariadb -uroot -N asterisk | tr '\t' ' '
+}
+assert_eq "irc 16.0.1 1" "$(modsql "$m")" "module17 variant: the dump restores with irc 16.0.1 enabled"
+assert_eq "" "$(modsql 20.16.22)" "control: the base 20.16.22 fixture has no irc module"
+xml=$(tar -xzOf "$out/$m/data.tar.gz" ./var/www/html/admin/modules/irc/module.xml 2>/dev/null || true)
+assert_contains "$xml" "<rawname>irc</rawname>" "module17 variant has admin/modules/irc/module.xml"
+assert_contains "$xml" "<version>16.0.1</version>" "module.xml declares version 16.0.1"
+assert_eq "module irc 16.0.1 has no FreePBX 17 release" "$(mf "$m" anomaly)" "module17 manifest records the anomaly"
 mirror17=$(curl -fsS --max-time 60 -X POST -d phpver=8.2 https://mirror.freepbx.org/all-17.0.xml || true)
 assert_contains "$mirror17" "<rawname>core</rawname>" "FreePBX 17 mirror list downloaded"
 if [[ "$mirror17" == *"<rawname>irc</rawname>"* ]]; then
