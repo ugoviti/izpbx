@@ -8,6 +8,7 @@
 #   izpbx-migrate audio        M6: custom prompts, sounds/custom and music on hold from the snapshot
 #   izpbx-migrate astdb        M6: astdb keys the restore did not bring back (Asterisk stopped)
 #   izpbx-migrate spool        M6: voicemail and recordings in place: counted, owned by asterisk
+#   izpbx-migrate crontab      M6: custom crontab lines of 20.16 in the Debian spool
 # State and snapshot in ${APP_DATA}/.izpbx-migration (services/migration.sh).
 # shellcheck source=../lib/izpbx/common.sh
 . /usr/local/lib/izpbx/common.sh
@@ -23,5 +24,6 @@ case "${1:-}" in
   audio) migration_audio ;;
   astdb) migration_astdb ;;
   spool) migration_spool ;;
-  *) sed -n '4,10p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
+  crontab) migration_crontab ;;
+  *) sed -n '4,11p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
 esac

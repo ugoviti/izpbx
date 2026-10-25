@@ -11,6 +11,7 @@
 #   migration_astdb      M6: astdb keys the restore did not bring back
 #   migration_spool      M6: voicemail and recordings left in place: counted,
 #                        owned by asterisk
+#   migration_crontab    M6: custom crontab lines of 20.16 in the Debian spool
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -390,4 +391,36 @@ migration_spool() {
   fi
   log_info "migration: spool in place: $msgs voicemail message(s), $recs recording(s); $fixed file(s) given to $APP_USR"
   migration_state_set spool "done"
+}
+
+# M6, C4: 20.16 kept the crontabs in /var/spool/cron/<user> (CentOS), Debian
+# reads /var/spool/cron/crontabs/<user>. The FreePBX jobs (fwconsole) are
+# written again by FreePBX 17 with its own paths: copying the old ones would
+# run them twice. The other lines of each user of the snapshot (custom jobs,
+# variables) are added to the Debian crontab of that user, under a comment,
+# unless already there; owner <user>:crontab 0600 (the cron step fixes it at
+# every start too).
+migration_crontab() {
+  local snap src spool f user lines n=0
+  [ "$(migration_state crontab)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir)
+  src="$snap/fs/var/spool/cron" spool=${CRON_SPOOL:-/var/spool/cron/crontabs}
+  for f in "$src"/*; do
+    [ -f "$f" ] || continue
+    user=${f##*/}
+    id -u "$user" >/dev/null 2>&1 || { log_warn "migration: crontab of $user (20.16) skipped: no such user"; continue; }
+    lines=$(grep -vE '^[[:space:]]*(#|$)' "$f" | grep -v 'fwconsole' || true)
+    [ -n "$lines" ] || continue
+    mkdir -p "$spool"
+    touch "$spool/$user"
+    lines=$(while IFS= read -r l; do grep -qxF -- "$l" "$spool/$user" || printf '%s\n' "$l"; done <<< "$lines")
+    [ -n "$lines" ] || continue
+    { echo "# izPBX migration from 20.16 (M6): custom lines of /var/spool/cron/$user"; printf '%s\n' "$lines"; } >> "$spool/$user"
+    chown "$user:crontab" "$spool/$user"
+    chmod 0600 "$spool/$user"
+    n=$((n + $(wc -l <<< "$lines")))
+    log_info "migration: $(wc -l <<< "$lines") custom crontab line(s) of $user moved to $spool/$user"
+  done
+  [ "$n" -gt 0 ] || log_info "migration: no custom crontab line in 20.16 (the FreePBX jobs are written by FreePBX 17)"
+  migration_state_set crontab "done"
 }
