@@ -1,0 +1,183 @@
+#!/bin/bash
+# izpbx-preflight: checks before the FreePBX 16 -> 17 migration (design M2).
+# Read only: it reads the databases (MYSQL_* as the rest of izPBX) and the
+# files under ${APP_DATA}, changes nothing; the report goes to stdout and to
+# ${APP_DATA}/.izpbx-migration/preflight-<ts>.txt.
+#   izpbx-preflight          exit 0 nothing blocks, 1 something blocks
+# Report lines: "<RESULT> <check>: <message>", RESULT one of
+#   OK       the check passed
+#   BLOCK    the migration cannot start (override variable in the message)
+#   INFO     what the migration will do (chan_sip conversion, commercial
+#            modules to reactivate, MeetMe/SLA in use)
+#   REMOVED  module with no FreePBX 17 release the migration leaves out on
+#            purpose (known exceptions below, D28)
+# shellcheck source=../lib/izpbx/env.sh
+. /usr/local/lib/izpbx/env.sh
+
+# modules with no FreePBX 17 release that do not block (D28): the
+# migration leaves them out (phonebook: installed by default by izPBX 20.16,
+# its data is handled by the migration, P4-31)
+IZPBX_PREFLIGHT_REMOVED_MODULES="phonebook"
+# oldest FreePBX 16 framework the migration accepts: the one of izPBX 20.16.0
+IZPBX_PREFLIGHT_MIN_FRAMEWORK=16.0.26
+# FreePBX 17 module list (as "fwconsole ma" asks it) and the modules of the image
+: "${IZPBX_FREEPBX_MIRROR_LIST:=https://mirror.freepbx.org/all-17.0.xml}"
+: "${IZPBX_FREEPBX_SRC:=/usr/src/freepbx}"
+# apps the custom dialplan may not use: removed from Asterisk 22 (Macro,
+# Monitor, ImportVar, SetAMAFlags, NoCDR)
+IZPBX_PREFLIGHT_DIALPLAN_APPS="Macro|Monitor|ImportVar|SetAMAFlags|NoCDR"
+
+root=${APP_DATA}
+dir=${APP_DATA:-/data}/.izpbx-migration
+blocks=0
+lines=()
+say() { lines+=("$1 $2: $3"); [ "$1" != BLOCK ] || blocks=$((blocks + 1)); }
+
+# SQL as MYSQL_USER (statement on stdin: no secret on the command line)
+sql() { # [database] statement
+  local db=$MYSQL_DATABASE
+  [ $# -lt 2 ] || { db=$1; shift; }
+  printf '%s\n' "$1" | MYSQL_PWD="$MYSQL_PASSWORD" mariadb -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" \
+    -u "$MYSQL_USER" --connect-timeout=5 --batch --skip-column-names "$db"
+}
+
+# --- database: reachable, and the config database can be recreated (M5)
+if ! sql "SELECT 1" >/dev/null 2>&1; then
+  say BLOCK database "${MYSQL_SERVER}:${APP_PORT_MYSQL} not reachable as '${MYSQL_USER}' (database '${MYSQL_DATABASE}')"
+  db_ok=
+else
+  db_ok=1
+  if [ -n "$MYSQL_ROOT_PASSWORD" ] && printf 'SELECT 1\n' | MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb -h "$MYSQL_SERVER" \
+       -P "$APP_PORT_MYSQL" -u "$MYSQL_ROOT_USER" --connect-timeout=5 --batch >/dev/null 2>&1; then
+    say OK database "reachable as '${MYSQL_USER}', '${MYSQL_ROOT_USER}' available to recreate '${MYSQL_DATABASE}'"
+  else
+    # DROP and CREATE of the config database: grants on *.* or on the database
+    # (SHOW GRANTS escapes "_" in database names: "asterisk\_db")
+    grants=$(sql "SHOW GRANTS" 2>/dev/null | while IFS= read -r g; do
+      on=${g#* ON }; on=${on%% TO *}; on=${on//\\/}; on=${on//\`/}
+      [ "$on" == "*.*" ] || [ "$on" == "${MYSQL_DATABASE}.*" ] && printf '%s\n' "$g"
+    done)
+    if grep -q 'ALL PRIVILEGES' <<< "$grants" || { grep -qE '[ ,]CREATE[ ,]' <<< "$grants" && grep -qE '[ ,]DROP[ ,]' <<< "$grants"; }; then
+      say OK database "reachable as '${MYSQL_USER}', with DROP and CREATE on '${MYSQL_DATABASE}'"
+    else
+      say BLOCK database "'${MYSQL_USER}' cannot DROP and CREATE '${MYSQL_DATABASE}' and MYSQL_ROOT_PASSWORD does not work: set MYSQL_ROOT_PASSWORD or grant ALL on \`${MYSQL_DATABASE}\`.* to '${MYSQL_USER}'"
+    fi
+  fi
+fi
+
+# --- free space in ${APP_DATA}: (databases + www + lib + spool) x 1.2 (D7)
+need_kb=0
+for d in var/www var/lib/asterisk var/spool/asterisk; do
+  [ -d "$root/$d" ] && need_kb=$((need_kb + $(du -sk "$root/$d" 2>/dev/null | cut -f1)))
+done
+if [ -n "$db_ok" ]; then
+  db_kb=$(sql "SELECT COALESCE(CEIL(SUM(data_length + index_length) / 1024), 0) FROM information_schema.tables
+               WHERE table_schema IN ('${MYSQL_DATABASE}', '${MYSQL_DATABASE_CDR}')" 2>/dev/null || echo 0)
+  need_kb=$((need_kb + ${db_kb:-0}))
+fi
+need_kb=$((need_kb * 12 / 10))
+free_kb=$(df -Pk "${root:-/}" 2>/dev/null | awk 'NR == 2 {print $4}')
+if [ -z "$free_kb" ]; then
+  say BLOCK space "cannot read the free space of '${root:-/}'"
+elif [ "$free_kb" -ge "$need_kb" ]; then
+  say OK space "$((free_kb / 1024)) MB free in '${root:-/}', $((need_kb / 1024)) MB needed"
+else
+  say BLOCK space "$((free_kb / 1024)) MB free in '${root:-/}', $((need_kb / 1024)) MB needed (databases + var/www + var/lib/asterisk + var/spool/asterisk, x 1.2): make room or move /data to a larger disk"
+fi
+
+# --- FreePBX modules
+if [ -n "$db_ok" ]; then
+  # framework version
+  fw=$(sql "SELECT version FROM modules WHERE modulename = 'framework'" 2>/dev/null | head -1)
+  if [ -n "$fw" ] && [ "$(printf '%s\n' "$IZPBX_PREFLIGHT_MIN_FRAMEWORK" "$fw" | sort -V | head -1)" == "$IZPBX_PREFLIGHT_MIN_FRAMEWORK" ]; then
+    say OK framework "FreePBX framework $fw >= $IZPBX_PREFLIGHT_MIN_FRAMEWORK"
+  else
+    say BLOCK framework "FreePBX framework '${fw:-unknown}' older than $IZPBX_PREFLIGHT_MIN_FRAMEWORK: upgrade the modules with izPBX 20.16.22 first (fwconsole ma upgradeall)"
+  fi
+
+  # modules with no FreePBX 17 release: the image tree, then the mirror list
+  installed=$(sql "SELECT modulename FROM modules ORDER BY modulename" 2>/dev/null)
+  known=$(ls "$IZPBX_FREEPBX_SRC/amp_conf/htdocs/admin/modules" 2>/dev/null)
+  missing=() removed=() unverified=() commercial=()
+  mirror='' mirror_read=''
+  for m in $installed; do
+    if grep -qx "$m" <<< "$known"; then :
+    else
+      if [ -z "$mirror_read" ]; then
+        mirror=$(curl -fsS --max-time 60 -X POST -d phpver=8.2 "$IZPBX_FREEPBX_MIRROR_LIST" 2>/dev/null | grep -oE '<rawname>[^<]+</rawname>' | sed 's/<[^>]*>//g')
+        mirror_read=1
+      fi
+      if grep -qx "$m" <<< "$mirror"; then :
+      elif [[ " $IZPBX_PREFLIGHT_REMOVED_MODULES " == *" $m "* ]]; then removed+=("$m")
+      elif [ -z "$mirror" ]; then unverified+=("$m")
+      else missing+=("$m"); fi
+    fi
+    xml="$root/var/www/html/admin/modules/$m/module.xml"
+    [ -f "$xml" ] && grep -qiE '<license>[^<]*commercial|<commercial>' "$xml" && commercial+=("$m")
+  done
+  ignore=" ${IZPBX_MIGRATE_IGNORE_MODULES//,/ } "
+  blocking=() ignored=()
+  for m in "${missing[@]}" "${unverified[@]}"; do
+    if [[ "$ignore" == *" $m "* ]]; then ignored+=("$m"); else blocking+=("$m"); fi
+  done
+  for m in "${removed[@]}"; do say REMOVED modules "$m has no FreePBX 17 release: left out by the migration"; done
+  [ ${#ignored[@]} -eq 0 ] || say INFO modules "no FreePBX 17 release, ignored (IZPBX_MIGRATE_IGNORE_MODULES): ${ignored[*]}"
+  if [ ${#blocking[@]} -gt 0 ]; then
+    if [ ${#unverified[@]} -gt 0 ]; then
+      say BLOCK modules "FreePBX 17 module list not readable ($IZPBX_FREEPBX_MIRROR_LIST), cannot check: ${blocking[*]}; retry with Internet access or set IZPBX_MIGRATE_IGNORE_MODULES"
+    else
+      say BLOCK modules "no FreePBX 17 release: ${blocking[*]}; remove them in izPBX 20.16 (fwconsole ma remove) or set IZPBX_MIGRATE_IGNORE_MODULES=\"${blocking[*]}\" to migrate without them"
+    fi
+  else
+    say OK modules "every installed module has a FreePBX 17 release$([ ${#removed[@]} -eq 0 ] || echo " (except the known exceptions above)")"
+  fi
+  [ ${#commercial[@]} -eq 0 ] || say INFO commercial "commercial modules migrated, to reactivate with their license after the migration: ${commercial[*]}"
+
+  # chan_sip endpoints and trunks: converted to PJSIP (D3)
+  sip_dev=$(sql "SELECT COUNT(*) FROM devices WHERE tech = 'sip'" 2>/dev/null || echo 0)
+  sip_trk=$(sql "SELECT COUNT(*) FROM trunks WHERE tech = 'sip'" 2>/dev/null || echo 0)
+  if [ "${sip_dev:-0}" -gt 0 ] || [ "${sip_trk:-0}" -gt 0 ]; then
+    say INFO chan_sip "${sip_dev:-0} extension(s) and ${sip_trk:-0} trunk(s) on chan_sip will be converted to PJSIP"
+  else
+    say OK chan_sip "no chan_sip extension or trunk"
+  fi
+
+  # MeetMe conferences and SLA: informative
+  meetme=$(sql "SELECT COUNT(*) FROM meetme" 2>/dev/null || echo 0)
+  [ "${meetme:-0}" -eq 0 ] || say INFO meetme "${meetme} conference(s) of the conferences module: Asterisk 22 has no app_meetme, FreePBX 17 uses ConfBridge"
+fi
+sla="$root/etc/asterisk/sla.conf"
+if [ -f "$sla" ] && grep -vE '^[[:space:]]*(;|$)' "$sla" | grep -vE '^\[general\]' | grep -q '^\['; then
+  say INFO sla "sla.conf defines stations or trunks: SLA runs with app_sla (no MeetMe)"
+fi
+
+# --- custom dialplan: apps removed from Asterisk 22, with file and line
+hits=$(for f in "$root"/etc/asterisk/*_custom.conf; do
+  [ -f "$f" ] || continue
+  grep -nHiE "(^|[^A-Za-z0-9_])(${IZPBX_PREFLIGHT_DIALPLAN_APPS})\(" "$f" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*;' | cut -d: -f1,2 | sed "s|^$root/||"
+done)
+if [ -z "$hits" ]; then
+  say OK dialplan "no ${IZPBX_PREFLIGHT_DIALPLAN_APPS//|/, } in etc/asterisk/*_custom.conf"
+elif [ "$IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN" == "true" ]; then
+  say INFO dialplan "apps removed from Asterisk 22, accepted (IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true): ${hits//$'\n'/ }"
+else
+  say BLOCK dialplan "apps removed from Asterisk 22 (${IZPBX_PREFLIGHT_DIALPLAN_APPS//|/, }) at ${hits//$'\n'/ }: fix them or set IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true"
+fi
+
+# --- report
+ts=$(date -u +%Y%m%dT%H%M%SZ)
+tmp=$(mktemp)
+{
+  echo "izPBX preflight of the FreePBX 16 -> 17 migration, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  printf '%s\n' "${lines[@]}"
+  if [ "$blocks" -eq 0 ]; then echo "RESULT: nothing blocks the migration"
+  else echo "RESULT: $blocks blocking check(s): the migration cannot start"; fi
+} > "$tmp"
+cat "$tmp"
+if mkdir -p "$dir" 2>/dev/null && cp "$tmp" "$dir/preflight-$ts.txt" 2>/dev/null; then
+  echo "report: $dir/preflight-$ts.txt"
+else
+  log_warn "preflight: cannot write the report in $dir"
+fi
+rm -f "$tmp"
+[ "$blocks" -eq 0 ]

@@ -7,6 +7,9 @@
 # - otherwise the version in the database: 17 normal start, 16 migration
 #   (no write to its data here), other versions: error with instructions.
 # The mode is written for the next steps (izpbx_mode).
+# In migration mode the read only checks M2 (izpbx-preflight) always run:
+# report in the log and in ${APP_DATA}/.izpbx-migration, result ("ok" or
+# "blocked") in /run/izpbx/preflight.
 # shellcheck source=../service.sh
 . /usr/local/lib/izpbx/service.sh
 # shellcheck source=../services/freepbx.sh
@@ -29,5 +32,9 @@ else
     freepbx_fix_paths
     freepbx_backup_dir
     log_info "freepbx: installed ($IZPBX_FREEPBX_CONF)"
+  elif [ "$mode" == migration ]; then
+    report=$(izpbx-preflight) && result=ok || result=blocked
+    while IFS= read -r line; do log_info "preflight: $line"; done <<< "$report"
+    echo "$result" > /run/izpbx/preflight
   fi
 fi
