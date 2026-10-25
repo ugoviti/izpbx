@@ -9,6 +9,8 @@
 #   migration_audio      M6: custom prompts, sounds/custom and music on hold
 #                        from the snapshot
 #   migration_astdb      M6: astdb keys the restore did not bring back
+#   migration_spool      M6: voicemail and recordings left in place: counted,
+#                        owned by asterisk
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -121,6 +123,9 @@ migration_snapshot() {
 #   mysql-2.sql   config database, one INSERT per line (the restore parses it
 #                 line by line into SQLite), no CREATE DATABASE
 #   etc/asterisk/*_custom*.conf   of the snapshot
+#   etc/asterisk/voicemail.conf   the mailboxes: the voicemail module restores
+#                 it from a legacy archive (not the spool, which would be
+#                 deleted and copied again: it stays in place)
 # The CDR database is not in the archive: the migration does not touch it.
 # Output: <snapshot>/backup/izpbx-migration.tar.gz (+ .sha256).
 migration_archive() {
@@ -163,7 +168,8 @@ migration_archive() {
     ]));
   ' -- "$snap/fs/var/lib/asterisk/astdb.sqlite3" "$work" "$version" "$MYSQL_DATABASE" "$MYSQL_DATABASE_CDR" ||
     { log_error "migration: cannot write astdb and manifest"; return 1; }
-  find "$snap/fs/etc/asterisk" -maxdepth 1 -name '*_custom*.conf' -exec cp -p {} "$work/etc/asterisk/" \; 2>/dev/null || true
+  find "$snap/fs/etc/asterisk" -maxdepth 1 \( -name '*_custom*.conf' -o -name voicemail.conf \) \
+    -exec cp -p {} "$work/etc/asterisk/" \; 2>/dev/null || true
 
   tar -C "$work" -czf "$arc.part" . && mv "$arc.part" "$arc" || { log_error "migration: cannot write $arc"; return 1; }
   (cd "$(dirname "$arc")" && sha256sum "$(basename "$arc")" > "$(basename "$arc").sha256")
@@ -307,7 +313,7 @@ migration_sip_transport() {
     chown "$APP_USR:$APP_GRP" "$post"
     log_info "migration: trunks on chan_sip in FreePBX 16 use the transport ${names[0]} ($post): $trunks"
   fi
-  fwconsole_as_asterisk reload >/dev/null 2>&1 || log_warn "migration: fwconsole reload failed"
+  # no reload: Asterisk is stopped during izpbx-init and reads the files when it starts
   migration_state_set sip_transport "done"
 }
 
@@ -367,4 +373,21 @@ migration_astdb() {
     log_info "migration: $n astdb key(s) of FreePBX 16 added (missing after the restore)"
   fi
   migration_state_set astdb "done"
+}
+
+# M6: voicemail messages and call recordings stay in var/spool/asterisk (the
+# snapshot holds hardlinks): counted in the log, and the files not owned by
+# asterisk (written as root in 20.16) given to asterisk, as FreePBX needs.
+migration_spool() {
+  local spool msgs recs fixed
+  [ "$(migration_state spool)" == "done" ] && return 0
+  spool=$(freepbx_dir ASTSPOOLDIR)
+  msgs=$(find "$spool/voicemail" -name 'msg*.txt' 2>/dev/null | wc -l)
+  recs=$(find "$spool/monitor" -type f 2>/dev/null | wc -l)
+  fixed=$(find "$spool/voicemail" "$spool/monitor" \( ! -user "$APP_USR" -o ! -group "$APP_GRP" \) -print 2>/dev/null | wc -l)
+  if [ "$fixed" -gt 0 ]; then
+    find "$spool/voicemail" "$spool/monitor" \( ! -user "$APP_USR" -o ! -group "$APP_GRP" \) -exec chown -h "$APP_USR:$APP_GRP" {} + 2>/dev/null || true
+  fi
+  log_info "migration: spool in place: $msgs voicemail message(s), $recs recording(s); $fixed file(s) given to $APP_USR"
+  migration_state_set spool "done"
 }
