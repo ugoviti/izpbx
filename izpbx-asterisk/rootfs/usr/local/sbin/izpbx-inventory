@@ -1,0 +1,127 @@
+#!/bin/bash
+# izpbx-inventory: what the PBX holds, to compare before and after a
+# migration (design §9).
+#   izpbx-inventory [--root DIR] [--live]          JSON inventory on stdout
+#   izpbx-inventory --diff BEFORE AFTER [--mapping FILE]
+#                                                   differences, exit 1 if any
+# The inventory reads the FreePBX database (MYSQL_* as the rest of izPBX) and
+# the files under DIR (default ${APP_DATA}/, the layout of /data): before a
+# migration the DB and the files; with --live also Asterisk ("asterisk -rx":
+# astdb from "database show" instead of astdb.sqlite3, PJSIP endpoints).
+# Every category is a sorted list of records "field=value ..." (the tables of
+# a module that is not installed give no category).
+#
+# Mapping file of --diff: one rule per line, "CATEGORY<TAB>REGEX<TAB>REPLACEMENT"
+# (jq regex, applied to the records of BEFORE: the expected changes such as
+# tech=sip -> tech=pjsip) or "CATEGORY<TAB>ignore" (not compared); # comments.
+# shellcheck source=../lib/izpbx/env.sh
+. /usr/local/lib/izpbx/env.sh
+
+usage() { sed -n '4,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+
+# --- diff
+if [ "${1:-}" == "--diff" ]; then
+  [ $# -ge 3 ] || usage
+  before=$2 after=$3 mapping=/dev/null
+  [ "${4:-}" == "--mapping" ] && mapping=${5:?--mapping FILE}
+  rules=$(grep -vE '^[[:space:]]*(#|$)' "$mapping" | jq -R -s 'split("\n") | map(select(length > 0) | split("\t"))')
+  out=$(jq -r -n --slurpfile b "$before" --slurpfile a "$after" --argjson rules "$rules" '
+    def mapped($cat; $recs):
+      reduce ($rules[] | select(.[0] == $cat and .[1] != "ignore")) as $r ($recs; map(gsub($r[1]; $r[2])));
+    ($rules | map(select(.[1] == "ignore") | .[0])) as $ignored
+    | ($b[0].categories) as $B | ($a[0].categories) as $A
+    | ([$B, $A | keys[]] | unique) as $cats
+    | [ $cats[] | select(. as $c | $ignored | index($c) | not) | . as $c
+        | (mapped($c; $B[$c] // []) | sort) as $bb | (($A[$c] // []) | sort) as $aa
+        | (if ($B | has($c)) and ($A | has($c) | not) then "\($c): category missing after" else empty end),
+          (if ($A | has($c)) and ($B | has($c) | not) then "\($c): category new after" else empty end),
+          (($bb - $aa)[] | "\($c): - \(.)"),
+          (($aa - $bb)[] | "\($c): + \(.)") ]
+    | if length == 0 then "no differences" else (.[]), "\(length) difference(s)" end') || exit 2
+  printf '%s\n' "$out"
+  [ "$out" == "no differences" ]
+  exit $?
+fi
+
+root="${APP_DATA}/" live=
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --root) root=${2:?--root DIR}/; shift 2 ;;
+    --live) live=1; shift ;;
+    *) usage ;;
+  esac
+done
+root=${root//\/\//\/}
+
+# one category from SQL: records "col=value ..." (the column names of the
+# query); a missing table (module not installed) gives no category
+sqlcat() { # category sql
+  local out
+  out=$(printf '%s\n' "$2" | MYSQL_PWD="$MYSQL_PASSWORD" mariadb -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$MYSQL_USER" \
+        --connect-timeout=5 --batch "$MYSQL_DATABASE" 2>/dev/null) || return 0
+  awk -F'\t' -v cat="$1" 'NR == 1 {n = split($0, h, "\t"); next}
+    {r = ""; for (i = 1; i <= n; i++) r = r (i > 1 ? " " : "") h[i] "=" $i; print cat "\t" r}' <<< "$out"
+  [ -n "$out" ] || printf '%s\t\n' "$1"
+}
+# files under ROOT/DIR: "path=<relative> sha256=<16 hex>"
+filecat() { # category dir [find args]
+  local cat=$1 dir=$root$2; shift 2
+  [ -d "$dir" ] || return 0
+  find "$dir" -type f "$@" -print0 2>/dev/null | LC_ALL=C sort -z | while IFS= read -r -d '' f; do
+    printf '%s\tpath=%s sha256=%s\n' "$cat" "${f#"$dir"/}" "$(sha256sum < "$f" | cut -c1-16)"
+  done
+}
+
+{
+  sqlcat extensions "SELECT d.id AS extension, d.description AS name, d.tech, u.voicemail FROM devices d LEFT JOIN users u ON u.extension = d.id"
+  sqlcat trunks "SELECT t.name, t.tech, t.channelid AS channel, t.disabled FROM trunks t"
+  sqlcat inbound_routes "SELECT extension AS did, cidnum, destination FROM incoming"
+  sqlcat outbound_routes "SELECT r.name, GROUP_CONCAT(DISTINCT CONCAT(p.prepend_digits,'|',p.match_pattern_prefix,'|',p.match_pattern_pass,'|',p.match_cid) ORDER BY p.match_pattern_pass SEPARATOR ',') AS patterns, (SELECT GROUP_CONCAT(t.name ORDER BY rt.seq SEPARATOR ',') FROM outbound_route_trunks rt JOIN trunks t ON t.trunkid = rt.trunk_id WHERE rt.route_id = r.route_id) AS trunks FROM outbound_routes r LEFT JOIN outbound_route_patterns p ON p.route_id = r.route_id GROUP BY r.route_id, r.name"
+  sqlcat ringgroups "SELECT grpnum, description, grplist, strategy FROM ringgroups"
+  sqlcat queues "SELECT q.extension, q.descr, (SELECT GROUP_CONCAT(d.data ORDER BY d.data SEPARATOR ',') FROM queues_details d WHERE d.id = q.extension AND d.keyword = 'member') AS members FROM queues_config q"
+  sqlcat ivrs "SELECT d.name, (SELECT GROUP_CONCAT(CONCAT(e.selection,'>',e.dest) ORDER BY e.selection SEPARATOR ',') FROM ivr_entries e WHERE e.ivr_id = d.id) AS entries FROM ivr_details d"
+  sqlcat timeconditions "SELECT displayname, truegoto, falsegoto FROM timeconditions"
+  sqlcat announcements "SELECT description, post_dest FROM announcement"
+  sqlcat recordings "SELECT displayname, filename FROM recordings"
+  sqlcat conferences "SELECT exten, description FROM meetme"
+  sqlcat parking "SELECT name, parkext, numslots FROM parkplus"
+  sqlcat miscdests "SELECT description, destdial FROM miscdests"
+  sqlcat customdests "SELECT description, target FROM custom_destinations"
+  sqlcat users_ucp "SELECT username FROM userman_users"
+  sqlcat user_groups "SELECT groupname FROM userman_groups"
+  sqlcat contact_groups "SELECT name, type FROM contactmanager_groups"
+  sqlcat fax "SELECT user, faxenabled FROM fax_users"
+  sqlcat modules "SELECT modulename AS module, enabled FROM modules"
+  sqlcat advanced_settings "SELECT keyword, value FROM freepbx_settings WHERE value <> defaultval"
+
+  # voicemail boxes (voicemail.conf) and messages per box
+  if [ -f "${root}etc/asterisk/voicemail.conf" ]; then
+    # "1001=pin,name,..." (FreePBX) or "1001 => pin,name,..."
+    awk '/^\[/ {ctx = substr($0, 2, index($0, "]") - 2)} /^[0-9]+ *=>?/ {split($0, a, " *=>? *"); print "voicemail_boxes\tcontext=" ctx " box=" a[1]}' \
+      "${root}etc/asterisk/voicemail.conf"
+  fi
+  if [ -d "${root}var/spool/asterisk/voicemail" ]; then
+    find "${root}var/spool/asterisk/voicemail" -name 'msg*.txt' 2>/dev/null |
+      sed -E "s|^${root}var/spool/asterisk/voicemail/([^/]+)/([^/]+)/([^/]+)/.*|context=\1 box=\2 folder=\3|" |
+      LC_ALL=C sort | uniq -c | awk '{c = $1; sub(/^ *[0-9]+ /, ""); print "voicemail_messages\t" $0 " count=" c}'
+  fi
+
+  # astdb: astdb.sqlite3 before, the running Asterisk with --live
+  if [ -n "$live" ]; then
+    asterisk -rx 'database show' 2>/dev/null | sed -nE 's|^(/[^ ]+) *: (.*)$|astdb\tkey=\1 value=\2|p' | sed 's/ *$//'
+  elif [ -f "${root}var/lib/asterisk/astdb.sqlite3" ]; then
+    php -r '$d = new PDO("sqlite:" . $argv[1]); foreach ($d->query("SELECT key, value FROM astdb") as $r) echo "astdb\tkey={$r[0]} value={$r[1]}\n";' \
+      -- "${root}var/lib/asterisk/astdb.sqlite3" 2>/dev/null
+  fi
+  [ -n "$live" ] && asterisk -rx 'pjsip show endpoints' 2>/dev/null | sed -nE 's|^ *Endpoint: +([^ /]+).*|pjsip_endpoints\tendpoint=\1|p'
+
+  # custom audio, music on hold, and the files of fax, FOP2 and chan_dongle
+  filecat sounds_custom var/lib/asterisk/sounds/custom
+  filecat moh var/lib/asterisk/moh
+  for f in usr/local/fop2/fop2.cfg usr/local/fop2/fop2.lic etc/asterisk/dongle.conf; do
+    [ -f "$root$f" ] && printf 'files\tpath=%s sha256=%s\n' "$f" "$(sha256sum < "$root$f" | cut -c1-16)"
+  done
+} | jq -R -s --arg root "$root" --arg mode "${live:+live}" '
+    split("\n") | map(select(length > 0) | split("\t") | {c: .[0], r: (.[1:] | join("\t"))})
+    | {meta: {format: 1, root: $root, mode: (if $mode == "" then "db+files" else "db+files+asterisk" end)},
+       categories: (group_by(.c) | map({key: .[0].c, value: (map(.r) | map(select(length > 0)) | sort)}) | from_entries)}'
