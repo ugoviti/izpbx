@@ -2,6 +2,7 @@
 # and the one of FreePBX 17 after it (M7, izpbx-inventory --diff --mapping).
 # "CATEGORY<TAB>REGEX<TAB>REPLACEMENT": REGEX replaced in the records before;
 # "CATEGORY<TAB>REGEX<TAB>" (empty replacement): records left out on both sides;
+# "CATEGORY<TAB>additions": records only after are no difference;
 # "CATEGORY<TAB>ignore": category not compared. Any other difference stops the
 # migration (maintenance mode with the report).
 
@@ -15,6 +16,12 @@ astdb	^key=/(dundi|pbx)/
 astdb	^key=/CustomDevstate/	
 # phonebook has no FreePBX 17 release: left out on purpose (D28)
 modules	^module=phonebook 	
+# the new installation adds its default modules (FREEPBX_MODULES_EXTRA) that an
+# older 20.16 did not have (20.16.0: infoservices, music); a module of the 16
+# missing or with another state is still a difference
+modules	additions
+# the reserved empty file of the music on hold, written by the music module
+moh	^path=\.nomusic_reserved/	
 # Advanced Settings: AMI credentials, versions and the settings izPBX sets differ
 advanced_settings	ignore
 # fop2.cfg: the AMI keys are written at every start (migration_fop2 keeps the rest)

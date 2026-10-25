@@ -38,8 +38,11 @@ for ver in $versions; do pbx[$ver]=$(migrate "$ver") || die "cannot start the mi
 
 for ver in $versions; do
   c=${pbx[$ver]}
-  ok=0; t_wait_healthy "$c" 2400 && ok=1
-  docker logs "$c" 2>&1 | grep -E 'framework|preflight: (BLOCK|RESULT)|VERIFICATION|verification passed|completed' | sed 's/^/    | /' >&2
+  # healthy, or stopped in maintenance mode by the verification
+  ok=0
+  t_wait_for 2400 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED)' >/dev/null"
+  t_wait_healthy "$c" 300 && ok=1
+  docker logs "$c" 2>&1 | grep -E 'framework|preflight: (BLOCK|RESULT)|VERIFICATION|error:   |verification passed|completed' | sed 's/^/    | /' >&2
   assert_eq 1 "$ok" "$ver: migrated, healthy"
   assert_cmd "$ver: nothing blocks in the checks M2" -- \
     sh -c "docker logs '$c' 2>&1 | grep 'preflight: RESULT: nothing blocks the migration' >/dev/null"
