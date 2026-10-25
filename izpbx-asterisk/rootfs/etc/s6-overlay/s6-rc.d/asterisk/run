@@ -11,6 +11,10 @@ service_gate asterisk
 log_info "asterisk: starting under s6"
 # start time for "finish": a failure after a long run is not "in a row"
 date +%s > /run/izpbx-asterisk-started
-# -vvvg as 20.16 (supervisord): verbose 3 in the "full" log and in the
-# container log, core dump on a crash
+# -vvvg as 20.16: verbose 3 in the "full" log, core dump on a crash. Its
+# console output (stdout) is not the container log: 20.16 started Asterisk in
+# the background (fwconsole start), and the verbose console prints secrets
+# ("Setting global variable 'AMPDBPASS'", P3-21); the izpbx messages are on
+# stderr
+exec >/dev/null
 service_run asterisk asterisk -f -U asterisk -G asterisk -vvvg

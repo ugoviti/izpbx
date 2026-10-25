@@ -46,6 +46,8 @@ assert_eq 0 "$hits" "no password in the command line of any process during the i
 [ "$hits" -eq 0 ] || docker exec "$c" sort -u /tmp/sampler.hits | cut -c1-200 >&2
 docker logs "$c" > "$sec/logs" 2>&1
 assert_eq 0 "$(grep -c -F -f "$sec/patterns" "$sec/logs" || true)" "no password in docker logs"
+grep -F -f "$sec/patterns" "$sec/logs" | sed -e "s|$(printf '%s' "$pw" | sed 's/[|&\\/]/\\&/g')|<pw>|g" \
+  -e "s|$(printf '%s' "$rootpw" | sed 's/[|&\\/]/\\&/g')|<rootpw>|g" | head -5 | sed 's/^/    leak: /' >&2 || true
 php_pw=$(docker exec "$c" php -r 'include "/etc/freepbx.conf"; echo $amp_conf["AMPDBPASS"];' 2>/dev/null | head -1)
 [ "$php_pw" == "$pw" ] && pass "freepbx.conf gives the password back unchanged" || fail "freepbx.conf password differs"
 assert_cmd "fwconsole reload with that password" -- docker exec -u asterisk "$c" fwconsole reload

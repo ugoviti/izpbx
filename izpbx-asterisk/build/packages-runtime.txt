@@ -41,6 +41,8 @@ libogg0
 libgsm1
 libical3
 libtiff6
+# tiff2pdf and tiffinfo for the FreePBX fax module (fax to email as PDF), as 20.16
+libtiff-tools
 libjpeg62-turbo
 unixodbc
 odbc-mariadb
