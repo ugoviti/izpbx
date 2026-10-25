@@ -2,7 +2,8 @@
 # P2-07 (T18): orderly stop within the docker stop timeout.
 # - docker stop (with asterisk, httpd, php-fpm, cron, fail2ban, postfix,
 #   dnsmasq, ntp, zabbix running) ends within 30 s with exit 0; the logs show
-#   Asterisk stopping cleanly and every service stopped, no "unable to stop";
+#   Asterisk stopping cleanly (its full log) and every service stopped, no
+#   "unable to stop";
 # - no orphan processes: after "s6-rc -da change" (the service stop of
 #   docker stop) only the s6 tree is left running.
 # Negative: a process left behind on purpose is reported as an orphan.
@@ -31,13 +32,17 @@ orphans() {
 }
 
 # --- docker stop
-c=$(t_run stop "$image" "${on[@]}")
+c=$(t_run stop "$image" "${on[@]}" -v "$TESTS_DIR/fixtures/asterisk-logger/logger.conf:/etc/asterisk/logger.conf:ro")
 t_wait_for 120 -- ready "$c" || die "services did not start"
 t0=$SECONDS; docker stop -t 30 "$c" >/dev/null; dt=$((SECONDS - t0))
 assert_cmd "docker stop ends within 30 s ($dt s)" -- test "$dt" -le 30
 assert_eq 0 "$(docker inspect -f '{{.State.ExitCode}}' "$c")" "docker stop: exit 0"
 logs=$(docker logs "$c" 2>&1)
-assert_contains "$logs" "Asterisk cleanly ending (0)" "the logs show Asterisk stopping cleanly"
+# the Asterisk console is not in the container log (secrets, P3-21): its
+# "full" log (tests/fixtures/asterisk-logger: plain Asterisk has none), read
+# from the stopped container
+astlog=$(docker cp "$c:/var/log/asterisk/full" - 2>/dev/null | tar -xO 2>/dev/null || true)
+assert_contains "$astlog" "Asterisk cleanly ending (0)" "the Asterisk log shows Asterisk stopping cleanly"
 for s in $services; do
   assert_contains "$logs" "service $s successfully stopped" "the logs show $s stopped"
 done
