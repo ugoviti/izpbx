@@ -1,7 +1,9 @@
 # izPBX release build (Gitea Actions)
 # Triggered by pushing a tag (eg. 20.16.22). Pushes ONLY to the Gitea registry.
 # To publish on Docker Hub run the izpbx-promote workflow manually.
-# Tag scheme: .gitea/actions/image-tags (X.Y.Z, X.Y, X, X.Y.Z-<run_number>, latest)
+# Tag scheme: .gitea/actions/image-tags (X.Y.Z, X.Y, X, X.Y.Z-<run_number>, latest);
+# latest decided by the branch of the version (V2/V3): 20.16.x tags come from
+# release/20.16 and keep latest, the others (main, 22.17) do not until Q1
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
@@ -24,11 +26,23 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
+      - name: branch of the version
+        id: branch
+        shell: bash
+        env:
+          VERSION: ${{ gitea.ref_name }}
+        run: |
+          case "$VERSION" in
+            20.16.*) echo "branch=release/20.16" >> "$GITHUB_OUTPUT" ;;
+            *) echo "branch=main" >> "$GITHUB_OUTPUT" ;;
+          esac
+
       - name: build and push
         uses: ./.gitea/actions/build-push
         with:
           version: ${{ gitea.ref_name }}
-          latest: 'true'
+          latest: branch
+          branch: ${{ steps.branch.outputs.branch }}
           build-number: ${{ gitea.run_number }}
           cache-tag: buildcache
           registry-host: ${{ secrets.REGISTRY_HOST }}

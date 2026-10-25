@@ -6,8 +6,11 @@ inputs:
     description: Version, used as APP_VER and for the image tags (see .gitea/actions/image-tags)
     required: true
   latest:
-    description: "'true' to also tag latest (stable X.Y.Z only)"
+    description: "'true', 'false' or 'branch' (see .gitea/actions/image-tags; stable X.Y.Z only)"
     default: 'false'
+  branch:
+    description: Branch of the version, for latest 'branch'
+    default: ''
   build-number:
     description: Optional build number tag suffix
     default: ''
@@ -45,6 +48,7 @@ runs:
         images: ${{ steps.login.outputs.image }}
         version: ${{ inputs.version }}
         latest: ${{ inputs.latest }}
+        branch: ${{ inputs.branch }}
         build-number: ${{ inputs.build-number }}
 
     - name: build metadata
