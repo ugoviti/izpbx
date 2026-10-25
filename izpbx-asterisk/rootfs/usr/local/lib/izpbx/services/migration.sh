@@ -290,7 +290,7 @@ migration_restore() {
   if [ "$(migration_state modules_installed)" != "done" ]; then
     [ -z "$(migration_state commercial)" ] || fwconsole_as_asterisk ma enablerepo commercial >/dev/null 2>&1 || true
     for m in $(migration_state modules); do
-      [[ " $IZPBX_MIGRATION_REMOVED_MODULES " == *" $m "* ]] && continue
+      [[ " $IZPBX_MIGRATION_REMOVED_MODULES ${IZPBX_MIGRATE_IGNORE_MODULES//,/ } " == *" $m "* ]] && continue
       fwconsole_as_asterisk ma list 2>/dev/null | grep -qE "^\| $m +\| [^ ]+ +\| Enabled" && continue
       log_info "migration: installing module $m (installed in FreePBX 16)"
       fwconsole_as_asterisk ma install "$m" > "/tmp/migration-module-$m.log" 2>&1 ||
@@ -575,7 +575,11 @@ migration_verify() {
   else
     # commercial modules: their state depends on the license, left out (D24)
     { cat "$IZPBX_MIGRATION_MAPPING"
-      for m in $(migration_state commercial); do printf 'modules\t^module=%s \t\n' "$m"; done
+      # and the modules with no FreePBX 17 release left out on purpose or
+      # by the user (IZPBX_MIGRATE_IGNORE_MODULES, checks M2)
+      for m in $(migration_state commercial) $IZPBX_MIGRATION_REMOVED_MODULES ${IZPBX_MIGRATE_IGNORE_MODULES//,/ }; do
+        printf 'modules\t^module=%s \t\n' "$m"
+      done
     } > "$IZPBX_MIGRATION_DIR/mapping.tsv"
     izpbx-inventory --diff "$before" "$after" --mapping "$IZPBX_MIGRATION_DIR/mapping.tsv" > "$report" 2>&1 || rc=$?
   fi
@@ -685,6 +689,8 @@ migration_report() { # FreePBX 17 version
     echo "snapshot of FreePBX 16: $(migration_state snapshot_dir) (izpbx-rollback goes back to it)"
     echo "verification: $(ls -t "$IZPBX_MIGRATION_DIR"/verify-*.txt 2>/dev/null | head -n 1)"
     echo "modules left out (no FreePBX 17 release): $IZPBX_MIGRATION_REMOVED_MODULES"
+    [ -z "$IZPBX_MIGRATE_IGNORE_MODULES" ] ||
+      echo "modules left out by IZPBX_MIGRATE_IGNORE_MODULES (no FreePBX 17 release, their data not migrated): ${IZPBX_MIGRATE_IGNORE_MODULES//,/ }"
     if [ -n "$commercial" ]; then
       echo "commercial modules to reactivate with their license: $commercial"
     else
@@ -692,4 +698,6 @@ migration_report() { # FreePBX 17 version
     fi
   } > "$report"
   [ -z "$commercial" ] || log_warn "migration: commercial modules migrated, reactivate them with their license: $commercial (report $report)"
+  [ -z "$IZPBX_MIGRATE_IGNORE_MODULES" ] ||
+    log_warn "migration: modules left out (IZPBX_MIGRATE_IGNORE_MODULES), their data is not migrated: ${IZPBX_MIGRATE_IGNORE_MODULES//,/ } (report $report)"
 }
