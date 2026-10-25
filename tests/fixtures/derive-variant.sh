@@ -8,6 +8,9 @@
 #   macro     Macro( in extensions_custom.conf (T9); the manifest records file:line
 #   diskfull  same content, plus volume_size_mb: a /data volume of that size is
 #             almost full and cannot hold a second copy of the data (T8)
+#   commercial  a commercial module installed (queuestats 16.0.3, no license),
+#             simulated as module17: its row in "modules" and its module.xml
+#             (license Commercial, repo commercial) in admin/modules
 #   module17  a FreePBX 16 module with no FreePBX 17 release, simulated: irc
 #             16.0.1 enabled in the "modules" table and its directory in
 #             admin/modules with a minimal module.xml (installing the real
@@ -33,7 +36,7 @@ if same_inputs; then echo "derive-variant: $dest (reused)"; exit 0; fi
 tmp=$(mktemp -d "$dest.tmp.XXXXXX")
 trap '[ ! -d "${tmp:?}" ] || { chmod -R u+w "$tmp"; rm -rf "$tmp"; }' EXIT
 cp "$base/asteriskcdrdb.sql.gz" "$tmp/"
-[ "$variant" == module17 ] || cp "$base/asterisk.sql.gz" "$tmp/"
+case "$variant" in module17|commercial) ;; *) cp "$base/asterisk.sql.gz" "$tmp/" ;; esac
 extra=()
 
 case "$variant" in
@@ -60,8 +63,12 @@ case "$variant" in
     # room for the data plus 5% and 16 MB of slack: far less than a second copy
     extra+=("volume_size_mb=$(( bytes * 105 / 100 / 1048576 + 16 ))" "data_size_mb=$(( bytes / 1048576 ))")
     ;;
-  module17)
-    module=irc version=16.0.1
+  module17|commercial)
+    if [ "$variant" == commercial ]; then
+      module=queuestats version=16.0.3 repo=commercial license=Commercial name="Queue Stats"
+    else
+      module=irc version=16.0.1 repo=unsupported license=GPLv3+ name=IRC
+    fi
     # the dump ends with the tables already created: one more row in "modules"
     { gzip -dc "$base/asterisk.sql.gz"
       echo "INSERT INTO \`modules\` (\`modulename\`, \`version\`, \`enabled\`, \`signature\`) VALUES ('$module','$version',1,NULL);"
@@ -72,13 +79,13 @@ case "$variant" in
     cat > "$work/$dir/module.xml" <<XML
 <module>
 	<rawname>$module</rawname>
-	<repo>unsupported</repo>
-	<name>IRC</name>
+	<repo>$repo</repo>
+	<name>$name</name>
 	<version>$version</version>
 	<publisher>Sangoma Technologies Corporation</publisher>
-	<license>GPLv3+</license>
+	<license>$license</license>
 	<category>Support</category>
-	<description>fixture: FreePBX 16 module with no FreePBX 17 release</description>
+	<description>fixture variant $variant</description>
 	<supported>
 		<version>16.0</version>
 	</supported>
@@ -88,7 +95,8 @@ XML
     tar --numeric-owner --owner=1000 --group=1000 -C "$work" -rf "$tmp/data.tar" "$dir"
     gzip -n "$tmp/data.tar"
     rm -rf "${work:?}"
-    extra+=("anomaly=module $module $version has no FreePBX 17 release")
+    if [ "$variant" == commercial ]; then extra+=("anomaly=commercial module $module $version, no license")
+    else extra+=("anomaly=module $module $version has no FreePBX 17 release"); fi
     ;;
   *) echo "derive-variant: unknown variant '$variant'" >&2; exit 2 ;;
 esac

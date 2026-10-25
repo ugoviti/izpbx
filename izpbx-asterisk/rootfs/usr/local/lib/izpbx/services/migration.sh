@@ -262,6 +262,10 @@ migration_restore() {
       migration_state_set sip_devices "$(_migration_sql "$MYSQL_DATABASE" "SELECT COUNT(*) FROM devices WHERE tech = 'sip'")"
       migration_state_set sip_trunks "$(_migration_sql "$MYSQL_DATABASE" "SELECT channelid FROM trunks WHERE tech = 'sip' ORDER BY channelid" | tr '\n' ' ' | sed 's/ $//')"
       migration_state_set modules "${mods% }"
+      # commercial modules (D24): migrated, to reactivate with their license
+      migration_state_set commercial "$(for m in $mods; do
+        grep -qiE '<license>[^<]*commercial|<repo>commercial</repo>' "$snap/fs/var/www/html/admin/modules/$m/module.xml" 2>/dev/null && printf '%s ' "$m"
+      done | sed 's/ $//')"
     fi
     _migration_sql "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`" ||
       { log_error "migration: cannot drop the database '$MYSQL_DATABASE'"; return 1; }
@@ -284,6 +288,7 @@ migration_restore() {
   fi
 
   if [ "$(migration_state modules_installed)" != "done" ]; then
+    [ -z "$(migration_state commercial)" ] || fwconsole_as_asterisk ma enablerepo commercial >/dev/null 2>&1 || true
     for m in $(migration_state modules); do
       [[ " $IZPBX_MIGRATION_REMOVED_MODULES " == *" $m "* ]] && continue
       fwconsole_as_asterisk ma list 2>/dev/null | grep -qE "^\| $m +\| [^ ]+ +\| Enabled" && continue
@@ -568,7 +573,11 @@ migration_verify() {
   elif ! izpbx-inventory > "$after"; then
     echo "inventory after the migration failed" > "$report"; rc=2
   else
-    izpbx-inventory --diff "$before" "$after" --mapping "$IZPBX_MIGRATION_MAPPING" > "$report" 2>&1 || rc=$?
+    # commercial modules: their state depends on the license, left out (D24)
+    { cat "$IZPBX_MIGRATION_MAPPING"
+      for m in $(migration_state commercial); do printf 'modules\t^module=%s \t\n' "$m"; done
+    } > "$IZPBX_MIGRATION_DIR/mapping.tsv"
+    izpbx-inventory --diff "$before" "$after" --mapping "$IZPBX_MIGRATION_DIR/mapping.tsv" > "$report" 2>&1 || rc=$?
   fi
   if [ "$rc" -eq 0 ]; then
     log_info "migration: verification passed: the inventory of FreePBX 17 matches the one of FreePBX 16 ($report)"
@@ -595,6 +604,7 @@ migration_complete() {
   persistence_mark_initialized "${ver:-17}"
   migration_state_set migration "done"
   log_info "migration: FreePBX 16 -> ${ver:-17} completed"
+  migration_report "${ver:-17}"
   migration_snapshot_notice
 }
 
@@ -663,4 +673,23 @@ migration_rollback() { # [snapshot directory]
   [ ! -f "$IZPBX_MIGRATION_DIR/state" ] || mv "$IZPBX_MIGRATION_DIR/state" "$aside/state"
   log_info "rollback: done. Start the izPBX 20.16.x image of before on this volume and database."
   log_info "rollback: the dumps of FreePBX 16 stay in $snap/db, the FreePBX 17 data in $aside: remove them when no longer needed."
+}
+
+# final report of a completed migration: ${IZPBX_MIGRATION_DIR}/report.txt and
+# the log; the commercial modules to reactivate with their license (D24)
+migration_report() { # FreePBX 17 version
+  local commercial report="$IZPBX_MIGRATION_DIR/report.txt"
+  commercial=$(migration_state commercial)
+  {
+    echo "izPBX migration FreePBX 16 -> $1, completed $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "snapshot of FreePBX 16: $(migration_state snapshot_dir) (izpbx-rollback goes back to it)"
+    echo "verification: $(ls -t "$IZPBX_MIGRATION_DIR"/verify-*.txt 2>/dev/null | head -n 1)"
+    echo "modules left out (no FreePBX 17 release): $IZPBX_MIGRATION_REMOVED_MODULES"
+    if [ -n "$commercial" ]; then
+      echo "commercial modules to reactivate with their license: $commercial"
+    else
+      echo "commercial modules: none"
+    fi
+  } > "$report"
+  [ -z "$commercial" ] || log_warn "migration: commercial modules migrated, reactivate them with their license: $commercial (report $report)"
 }
