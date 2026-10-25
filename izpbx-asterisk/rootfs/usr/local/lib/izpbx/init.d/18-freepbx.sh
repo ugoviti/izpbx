@@ -27,6 +27,7 @@ else
     freepbx_conf_update
     freepbx_links
     freepbx_fix_paths
+    freepbx_backup_dir
     log_info "freepbx: installed ($IZPBX_FREEPBX_CONF)"
   fi
 fi

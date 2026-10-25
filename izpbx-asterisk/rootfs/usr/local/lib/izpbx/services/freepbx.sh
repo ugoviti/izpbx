@@ -120,6 +120,13 @@ freepbx_conf_update() {
   done
 }
 
+# the backup spool: the backup module of FreePBX 17 creates backup/uploads
+# with a non recursive mkdir, so uploading a backup to restore (the first
+# thing on a new 22.17 for a 20.16 user) fails until a backup has run
+freepbx_backup_dir() {
+  install -d -o "$APP_USR" -g "$APP_GRP" "$(freepbx_dir ASTSPOOLDIR)/backup"
+}
+
 # fwconsole and amportal in /usr/sbin (not persisted: at every start, 20.16)
 freepbx_links() {
   local f
@@ -212,6 +219,7 @@ _fpbx_install_once() {
   done
   freepbx_links
   freepbx_fix_paths
+  freepbx_backup_dir
   # node 18 resolves localhost to ::1, AMI listens on IPv4 only (P0-14)
   fwconsole setting ASTMANAGERHOST 127.0.0.1 >/dev/null 2>&1 || true
   fwconsole setting CDRDBNAME "$MYSQL_DATABASE_CDR" >/dev/null 2>&1 || true
