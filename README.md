@@ -145,6 +145,8 @@ If you want to test izPBX without using docker compose command, you can use the 
 
 # Upgrade izPBX
 
+> From izPBX 20.16.x (FreePBX 16) to 22.17.x (FreePBX 17) see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217): it is not a plain image update.
+
 1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
 ```
 cd /opt/izpbx
@@ -181,7 +183,7 @@ If you want to upgrade FreePBX Framework/Core to a major release (example from 1
 ### method 1: Automatic upgrade using izPBX container release (suggested)
 * Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
 * Make sure you made a full backup of `data` dir (IMPORTANT!)
-* Make sure you enabled `FREEPBX_AUTOUPGRADE_CORE=true` in the `.env` file
+* Make sure you enabled `FREEPBX_AUTOUPGRADE_CORE=true` in the `.env` file (not for FreePBX 16 to 17: see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217))
 * Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
 * izPBX should detect the old FreePBX version installed and start the upgrade process
 * From the **FreePBX / Modules Admin** page, check if all modules have been updated and enable again the disabled modules
@@ -195,6 +197,147 @@ If you want to upgrade FreePBX Framework/Core to a major release (example from 1
 * Open FreePBX Menu: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
 * Follow these instructions: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
 * From the **FreePBX / Modules Admin** page, check if all modules have been updated and enable again the disabled modules
+
+# Upgrade from 20.16 to 22.17
+
+izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 / Asterisk 22 on Debian 12** (PHP 8.2 with php-fpm, services supervised by s6-overlay, amd64 and arm64 images). A volume created by izPBX 20.16 is migrated by the container itself, but only when you ask for it: it is not a plain image update.
+
+The short version:
+
+1. update to izPBX **20.16.22** and upgrade all FreePBX modules;
+2. switch the image to 22.17 and run the **checks** (`izpbx-preflight`): fix what they report;
+3. **back up** `data/` and the databases;
+4. set `IZPBX_MIGRATE_FREEPBX=true` and start the container: it migrates, verifies the result and starts;
+5. keep the **snapshot** in `data/izpbx/.izpbx-migration/` until you are sure: `izpbx-rollback` goes back to 20.16 from it.
+
+### The migration is opt-in
+
+izPBX 22.17 started on a volume of FreePBX 16 **without** `IZPBX_MIGRATE_FREEPBX=true` goes in **maintenance mode**: no service is started, the healthcheck reports unhealthy, `/data` and the databases are not changed, and the log says what to do. To keep running FreePBX 16 go back to the izPBX 20.16.x image that created the data. The same happens when a check blocks the migration.
+
+`FREEPBX_AUTOUPGRADE_CORE` does not start the migration from FreePBX 16 to 17: only `IZPBX_MIGRATE_FREEPBX=true` does.
+
+Variables of the migration (in `.env`):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `IZPBX_MIGRATE_FREEPBX` | `false` | `true` migrates a FreePBX 16 volume to FreePBX 17 at the next start |
+| `IZPBX_MIGRATE_IGNORE_MODULES` | empty | modules with no FreePBX 17 release to leave out (space separated): their data is **not** migrated |
+| `IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN` | `false` | `true` migrates even if the custom dialplan uses applications Asterisk 22 no longer has |
+
+### Before the migration
+
+- **izPBX 20.16.22 with every module upgraded**: the migration needs a FreePBX 16 framework 16.0.26 or later (`fwconsole ma upgradeall` on 20.16.22). An installation whose first start never completed is refused: complete it on 20.16 first.
+- **Custom dialplan**: Asterisk 22 has no `Macro()`, `Monitor()`, `ImportVar()`, `SetAMAFlags()`, `NoCDR()`. Rewrite them in your `*_custom.conf` files **before** the migration (`GoSub()` instead of `Macro()`, `MixMonitor()` instead of `Monitor()`). The checks list file and line of every use.
+- **chan_sip**: Asterisk 22 has no chan_sip. Extensions and trunks on chan_sip are converted to PJSIP during the migration. izPBX 20.16 ran chan_sip on `APP_PORT_SIP` (5160): when the 16 had chan_sip extensions or trunks, the migration adds a PJSIP transport on that port and the converted trunks use it, so providers and phones that send to 5160 keep working. New 22.17 installations have no such transport.
+- **Modules with no FreePBX 17 release** block the migration: remove them on 20.16 (`fwconsole ma remove <module>`) or list them in `IZPBX_MIGRATE_IGNORE_MODULES`. Known exceptions that do not block: `phonebook` (installed by default by izPBX 20.16) and `speeddial` (installations born on FreePBX 15): their entries and system speed dials go to Contact Manager (see below).
+- **Commercial modules** are migrated: reactivate them with their license after the migration (the report lists them).
+- **FOP2** is reinstalled from its Debian package at the first start (it needs Internet access); its configuration, license and settings database are kept.
+- **Free space**: about 1.2 times the size of the databases, `var/www`, `var/lib/asterisk` and `var/spool/asterisk` (the recordings are hardlinked, they take no extra space). The checks compute it.
+- **Database privileges**: the migration drops and recreates the FreePBX database. Keep `MYSQL_ROOT_PASSWORD` in `.env`, or give `MYSQL_USER` all privileges on it (the checks print the exact `GRANT`). The CDR database is not touched.
+
+### 1. Switch the image and run the checks
+
+Set the 22.17 image in `compose.yml` (always an explicit tag: `latest` stays on 20.16 for now) and pull it:
+
+<!-- test:run -->
+```sh
+sed -i 's|izpbx-asterisk:20\.16\.[0-9]*|izpbx-asterisk:22.17.0|' compose.yml
+```
+
+```sh
+docker compose pull izpbx
+```
+
+The checks only read the databases and the files: they can run while izPBX 20.16 is still up.
+
+<!-- test:run -->
+```sh
+docker compose run --rm --no-deps --entrypoint izpbx-preflight izpbx
+```
+
+Every line is `<RESULT> <check>: <message>`. `OK` passed; `INFO` is what the migration will do (chan_sip conversion, commercial modules, MeetMe conferences moved to ConfBridge); `REMOVED` is a known exception left out on purpose; `BLOCK` stops the migration, and the message says how to fix it or which variable accepts it. The exit status is 0 when nothing blocks. The report is also saved in `data/izpbx/.izpbx-migration/preflight-<time>.txt`.
+
+### 2. Back up
+
+Stop izPBX and save the databases and `data/izpbx`:
+
+<!-- test:run -->
+```sh
+docker compose stop izpbx
+docker compose exec -T db sh -c 'mariadb-dump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --events --databases "$MYSQL_DATABASE" "$MYSQL_DATABASE_CDR"' | gzip > izpbx-20.16-db.sql.gz
+tar -czf izpbx-20.16-data.tar.gz data/izpbx
+```
+
+### 3. Migrate
+
+Enable the migration and start izPBX 22.17:
+
+<!-- test:run -->
+```sh
+echo "IZPBX_MIGRATE_FREEPBX=true" >> .env
+docker compose up -d izpbx
+```
+
+Follow it with `docker compose logs -f izpbx` (lines `migration: ...`), or wait until the container is healthy:
+
+<!-- test:run -->
+```sh
+until docker compose ps --format '{{.Health}}' izpbx | grep -qx healthy; do sleep 10; done
+```
+
+What the container does, each phase recorded in `data/izpbx/.izpbx-migration/state`:
+
+1. the checks again (a blocking problem: maintenance mode, nothing changed);
+2. an inventory of FreePBX 16 (extensions, trunks, routes, queues, voicemail, recordings, astdb, ...);
+3. the **snapshot** in `data/izpbx/.izpbx-migration/<time>/`: verified dumps of the databases, the FreePBX 16 directories moved there, the spool hardlinked;
+4. FreePBX 17 installed with the modules of the 16, and a FreePBX backup of the 16 restored into it (chan_sip converted to PJSIP);
+5. what the restore does not bring back: custom prompts and music on hold, astdb keys, the transport on `APP_PORT_SIP`, custom crontab lines, FOP2, `dongle.conf`, the phonebook;
+6. the inventory again, compared with the one before: any unexpected difference stops the start in maintenance mode, with the differences in the log and in `data/izpbx/.izpbx-migration/verify-<time>.txt`.
+
+A migration interrupted at any point (container killed, host restarted) resumes at the next start from the last completed phase. The migration of a large PBX (thousands of recordings, millions of CDR rows) takes minutes, not hours: nothing is copied but the databases.
+
+### After the migration
+
+The final report:
+
+<!-- test:run -->
+```sh
+docker compose exec izpbx cat /data/.izpbx-migration/report.txt
+```
+
+- **Commercial modules**: reactivate the ones the report lists with their license.
+- **Phonebook and speed dials**: the entries of the `phonebook` module of FreePBX 16 are in the Contact Manager group **"Phonebook (izPBX 20.16)"**; a system speed dial keeps its code and is dialed with the Contact Manager speed dial code: `*10<code>` (eg. `*1011`). Everything is also exported to `phonebook.csv` in the snapshot. The personal speed dials of the `speeddial` module have no FreePBX 17 equivalent: they are listed in `speeddials-users.csv` in the snapshot.
+- **Phones and providers** on chan_sip keep sending to `APP_PORT_SIP` (5160): nothing to change on their side.
+- `IZPBX_MIGRATE_FREEPBX=true` can stay in `.env`: once completed, the next starts are normal starts.
+- **The snapshot** stays in `data/izpbx/.izpbx-migration/` and every start logs its size. Remove it when you no longer need to go back to 20.16 (eg. `rm -rf data/izpbx/.izpbx-migration/<time>`).
+
+### Rollback to 20.16
+
+As long as the snapshot is there, `izpbx-rollback` puts FreePBX 16 back: the database dump of the 16 is imported again and its directories go back in place (the FreePBX 17 database and directories are kept in `data/izpbx/.izpbx-migration/rollback-<time>/`). Stop izPBX and run it in a one-off container of the 22.17 image:
+
+<!-- test:run -->
+```sh
+docker compose stop izpbx
+docker compose run --rm --no-deps --entrypoint izpbx-rollback izpbx
+```
+
+Then remove `IZPBX_MIGRATE_FREEPBX=true` from `.env`, set the 20.16 image back and start it:
+
+```sh
+sed -i '/^IZPBX_MIGRATE_FREEPBX=/d' .env
+sed -i 's|izpbx-asterisk:22\.17\.0|izpbx-asterisk:20.16.22|' compose.yml
+docker compose up -d izpbx
+```
+
+Calls recorded and voicemail left while on 22.17 stay in the spool.
+
+### Other changes in 22.17
+
+- `ASTERISK_VER`, `FREEPBX_VER`, `FOP2_VER`, `ZABBIX_VER` are no longer build arguments: the versions come from `izpbx-asterisk/versions.env` (in the image: `/usr/src/izpbx/versions.env`). `FOP2_SHA256` and `ZABBIX_REL` no longer exist: the build verifies a sha256 per architecture.
+- The 20.16 entrypoint variables `APP_RUNAS`, `MULTISERVICE`, `CMD_OVERRIDE`, `ENTRYPOINT_TINI` are ignored, with a warning at start if set (s6 starts the services). `UMASK` still applies, to the initialization and to every service.
+- `FREEPBX_MODULES_EXTRA` no longer contains `phonebook` (no FreePBX 17 release).
+- Debian paths for Apache, cron, PHP and phpMyAdmin: relevant only for custom scripts in `APP_CUSTOM_SCRIPTS`. `PMA_CONFIG` defaults to `/etc/phpmyadmin/config.inc.php`.
+- Image tags: `22.17.0`, `22.17`, `22`; `latest` stays on 20.16 for now. arm64 images are available.
 
 # Advanced Production Configuration Examples
 
