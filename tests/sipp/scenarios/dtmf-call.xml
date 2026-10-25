@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+<!-- call from [field0] to [service] with digest auth (-au/-ap), offering
+     PCMA; after the answer G.711 audio and, 3 s later, the digit 2 as SIP
+     INFO (application/dtmf-relay: the caller extension has dtmfmode info);
+     the call stays 8 s and hangs up. The RFC 2833 digit replayed from a
+     pcap by sipp reached the IVR only intermittently in these tests (P5-07
+     log), so the deterministic INFO is used. "Allow: UPDATE": the PBX updates the
+     connected line with UPDATE, answered by sipp -aa (a re-INVITE would
+     abort the scenario) -->
+<scenario name="dtmf-call">
+  <send retrans="500">
+    <![CDATA[
+      INVITE sip:[service]@[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]dtmf[call_number]
+      To: <sip:[service]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 1 INVITE
+      Contact: <sip:[field0]@[local_ip]:[local_port]>
+      Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, UPDATE
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=user1 53655765 2353687637 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[media_ip_type] [media_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 8 101
+      a=rtpmap:8 PCMA/8000
+      a=rtpmap:101 telephone-event/8000
+      a=fmtp:101 0-15
+    ]]>
+  </send>
+  <recv response="401" auth="true"/>
+  <send>
+    <![CDATA[
+      ACK sip:[service]@[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]dtmf[call_number]
+      To: <sip:[service]@[remote_ip]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 1 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+    ]]>
+  </send>
+  <send retrans="500">
+    <![CDATA[
+      INVITE sip:[service]@[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]dtmf[call_number]
+      To: <sip:[service]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 2 INVITE
+      Contact: <sip:[field0]@[local_ip]:[local_port]>
+      [authentication]
+      Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, UPDATE
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=user1 53655765 2353687637 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[media_ip_type] [media_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 8 101
+      a=rtpmap:8 PCMA/8000
+      a=rtpmap:101 telephone-event/8000
+      a=fmtp:101 0-15
+    ]]>
+  </send>
+  <recv response="100" optional="true"/>
+  <recv response="180" optional="true"/>
+  <recv response="183" optional="true"/>
+  <recv response="200" rtd="true"/>
+  <send>
+    <![CDATA[
+      ACK sip:[service]@[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]dtmf[call_number]
+      To: <sip:[service]@[remote_ip]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 2 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+    ]]>
+  </send>
+  <nop><action><exec play_pcap_audio="/usr/share/sip-tester/g711a.pcap"/></action></nop>
+  <pause milliseconds="3000"/>
+  <send retrans="500">
+    <![CDATA[
+      INFO sip:[service]@[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]dtmf[call_number]
+      To: <sip:[service]@[remote_ip]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 3 INFO
+      Contact: <sip:[field0]@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Type: application/dtmf-relay
+      Content-Length: [len]
+
+      Signal=2
+      Duration=250
+    ]]>
+  </send>
+  <recv response="200"/>
+  <pause milliseconds="8000"/>
+  <send retrans="500">
+    <![CDATA[
+      BYE sip:[service]@[remote_ip] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[field0]@[remote_ip]>;tag=[pid]dtmf[call_number]
+      To: <sip:[service]@[remote_ip]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 4 BYE
+      Max-Forwards: 70
+      Content-Length: 0
+    ]]>
+  </send>
+  <recv response="200" crlf="true"/>
+</scenario>
