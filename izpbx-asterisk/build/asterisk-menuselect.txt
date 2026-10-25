@@ -49,6 +49,10 @@ disable app_jack
 disable app_saycounted
 disable app_skel
 disable app_voicemail_imap
+# the ODBC storage variant registers the same applications: with both built,
+# its failed load at a reload removes VoiceMail() of app_voicemail (20.16 did
+# not build it)
+disable app_voicemail_odbc
 disable cdr_pgsql
 disable cel_pgsql
 disable cdr_sqlite3_custom

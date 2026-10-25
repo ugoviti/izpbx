@@ -69,7 +69,6 @@ app_transfer.so
 app_userevent.so
 app_verbose.so
 app_voicemail.so
-app_voicemail_odbc.so
 app_waitforcond.so
 app_waitforring.so
 app_waitforsilence.so
