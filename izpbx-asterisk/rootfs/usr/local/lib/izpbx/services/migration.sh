@@ -131,6 +131,9 @@ migration_snapshot() {
 #   etc/asterisk/voicemail.conf   the mailboxes: the voicemail module restores
 #                 it from a legacy archive (not the spool, which would be
 #                 deleted and copied again: it stays in place)
+#   etc/asterisk/keys/            the certificates: certman restores them from a
+#                 legacy archive, its tables point to them (default certificate,
+#                 used by the HTTPS vhost too)
 # The CDR database is not in the archive: the migration does not touch it.
 # Output: <snapshot>/backup/izpbx-migration.tar.gz (+ .sha256).
 migration_archive() {
@@ -175,10 +178,11 @@ migration_archive() {
     { log_error "migration: cannot write astdb and manifest"; return 1; }
   find "$snap/fs/etc/asterisk" -maxdepth 1 \( -name '*_custom*.conf' -o -name voicemail.conf \) \
     -exec cp -p {} "$work/etc/asterisk/" \; 2>/dev/null || true
+  [ ! -d "$snap/fs/etc/asterisk/keys" ] || cp -a "$snap/fs/etc/asterisk/keys" "$work/etc/asterisk/"
 
   tar -C "$work" -czf "$arc.part" . && mv "$arc.part" "$arc" || { log_error "migration: cannot write $arc"; return 1; }
   (cd "$(dirname "$arc")" && sha256sum "$(basename "$arc")" > "$(basename "$arc").sha256")
-  log_info "migration: archive $arc (FreePBX $version, $(wc -l < "$work/mysql-2.sql") SQL lines, $(find "$work/etc/asterisk" -type f | wc -l) custom files)"
+  log_info "migration: archive $arc (FreePBX $version, $(wc -l < "$work/mysql-2.sql") SQL lines, $(find "$work/etc/asterisk" -type f | wc -l) files of etc/asterisk)"
   rm -rf "${work:?}"
   migration_state_set archive_file "$arc"
   migration_state_set archive "done"
