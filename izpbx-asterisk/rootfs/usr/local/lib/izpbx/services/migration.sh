@@ -686,10 +686,15 @@ migration_rollback() { # [snapshot directory]
 }
 
 # final report of a completed migration: ${IZPBX_MIGRATION_DIR}/report.txt and
-# the log; the commercial modules to reactivate with their license (D24)
+# the log; the commercial modules to reactivate with their license (D24);
+# ENABLE_ARI on in FreePBX 16 and back to the default after the restore, not
+# set again by the migration (D35)
 migration_report() { # FreePBX 17 version
-  local commercial report="$IZPBX_MIGRATION_DIR/report.txt"
+  local commercial ari_before ari_after report="$IZPBX_MIGRATION_DIR/report.txt"
   commercial=$(migration_state commercial)
+  ari_before=$(jq -r '.categories.advanced_settings[]? | select(startswith("keyword=ENABLE_ARI ")) | sub("^.* value="; "")' \
+    "$IZPBX_MIGRATION_DIR/inventory-before.json" 2>/dev/null | head -n 1)
+  ari_after=$(_migration_sql "$MYSQL_DATABASE" "SELECT value FROM freepbx_settings WHERE keyword = 'ENABLE_ARI'" 2>/dev/null || true)
   {
     echo "izPBX migration FreePBX 16 -> $1, completed $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     echo "snapshot of FreePBX 16: $(migration_state snapshot_dir) (izpbx-rollback goes back to it)"
@@ -702,6 +707,8 @@ migration_report() { # FreePBX 17 version
       [ "$(migration_state phonebook_user_speeddials)" -eq 0 ] 2>/dev/null ||
         echo "personal speed dials (D30, speeddial module, no FreePBX 17 equivalent): $(migration_state phonebook_user_speeddials) in $(migration_state snapshot_dir)/speeddials-users.csv"
     fi
+    [ "$ari_before" != 1 ] || [ "$ari_after" == 1 ] ||
+      echo "ENABLE_ARI (D35): enabled in FreePBX 16, '${ari_after:-unset}' (the FreePBX 17 default) after the restore: if you use ARI enable it again (Advanced Settings, or fwconsole setting ENABLE_ARI 1)"
     if [ -n "$commercial" ]; then
       echo "commercial modules to reactivate with their license: $commercial"
     else
@@ -709,6 +716,8 @@ migration_report() { # FreePBX 17 version
     fi
   } > "$report"
   [ -z "$commercial" ] || log_warn "migration: commercial modules migrated, reactivate them with their license: $commercial (report $report)"
+  [ "$ari_before" != 1 ] || [ "$ari_after" == 1 ] ||
+    log_warn "migration: ENABLE_ARI was enabled in FreePBX 16 and is '${ari_after:-unset}' now: enable it again if you use ARI (report $report)"
   [ -z "$IZPBX_MIGRATE_IGNORE_MODULES" ] ||
     log_warn "migration: modules left out (IZPBX_MIGRATE_IGNORE_MODULES), their data is not migrated: ${IZPBX_MIGRATE_IGNORE_MODULES//,/ } (report $report)"
 }
