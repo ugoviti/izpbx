@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# serial
+# (runs alone: its T17/T18 timings fail under the load of parallel checks,
+# seen at the end of phase P3)
 # P0-15: how the izpbx service starts Asterisk under s6. Both prototypes
 # (tests/proto/s6, VARIANT=fwconsole and VARIANT=direct) go through:
 #   restart  "fwconsole restart": one Asterisk, new pid, service up, no extra safe_asterisk

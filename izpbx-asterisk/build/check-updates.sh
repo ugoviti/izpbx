@@ -40,11 +40,12 @@ lookup() { # component current latest source
 # every upstream request retries transient failures (timeouts, 5xx, 429,
 # refused connections), not permanent ones such as a 403 rate limit
 # curl messages are shown only when the request fails for good, not for the
-# attempts that a retry recovers
+# attempts that a retry recovers; a transfer stalled below 1 KB/s for 60 s is
+# abandoned (a slow mirror that still moves is waited for)
 fetch() {
   local err rc=0
   err=$(mktemp)
-  curl -fsSL --connect-timeout 30 --retry 3 --retry-delay 2 --retry-connrefused "$@" 2>"$err" || rc=$?
+  curl -fsSL --connect-timeout 30 --speed-limit 1024 --speed-time 60 --retry 3 --retry-delay 2 --retry-connrefused "$@" 2>"$err" || rc=$?
   [ "$rc" -eq 0 ] || tail -n 1 "$err" >&2
   rm -f "$err"
   return "$rc"
@@ -104,6 +105,8 @@ if fetch -o "$tmp" "$fpbx"; then
   row FREEPBX_VER "$FREEPBX_VER" "$FREEPBX_VER" "ok"
   report FREEPBX_FRAMEWORK_VER "$FREEPBX_FRAMEWORK_VER" "$new" || propose "FREEPBX_FRAMEWORK_VER=$new" "FREEPBX_SHA256=$(sha256sum "$tmp" | cut -d' ' -f1)"
 else
+  # every component has its row, also when the mirror does not answer
+  lookup FREEPBX_VER "$FREEPBX_VER" "" mirror.freepbx.org
   lookup FREEPBX_FRAMEWORK_VER "$FREEPBX_FRAMEWORK_VER" "" mirror.freepbx.org
 fi
 

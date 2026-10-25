@@ -37,7 +37,8 @@ git -C "$clone" config core.hooksPath .githooks
 git -C "$clone" config user.email test@example.invalid
 git -C "$clone" config user.name test
 git -C "$clone" add -A
-assert_cmd "hook lets a clean commit through" -- git -C "$clone" commit -q -m clean
+# --allow-empty: the working tree may hold no change to copy (a clean checkout)
+assert_cmd "hook lets a clean commit through" -- git -C "$clone" commit -q --allow-empty -m clean
 cp "$work/badsh/tests/bad.sh" "$clone/tests/bad.sh"
 git -C "$clone" add tests/bad.sh
 out=$(git -C "$clone" commit -q -m bad 2>&1) && rc=0 || rc=$?

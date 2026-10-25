@@ -21,7 +21,9 @@ assert_cmd_fails "control: the x86_64 binary is not aarch64" -- grep -q aarch64 
 docker rmi izpbx-asterisk:p1-11-amd64 >/dev/null 2>&1 || true
 
 for c in P1-06 P1-07 P1-09; do
-  out=$(DOCKER_DEFAULT_PLATFORM=linux/arm64 "$TESTS_DIR/checks/$c.sh" 2>&1) && rc=0 || rc=$?
+  # without TEST_IMAGE: the image of the run is the x86_64 one, each check
+  # must build its own (arm64, from the build cache)
+  out=$(env -u TEST_IMAGE DOCKER_DEFAULT_PLATFORM=linux/arm64 "$TESTS_DIR/checks/$c.sh" 2>&1) && rc=0 || rc=$?
   [ "$rc" -eq 0 ] || log "$c on arm64:"$'\n'"$(grep -E '\] (FAIL|ERROR)' <<< "$out" | head -20)"
   assert_eq 0 "$rc" "$c passes on arm64 ($(grep -c '\] PASS: ' <<< "$out") assertions)"
 done
