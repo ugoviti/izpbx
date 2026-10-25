@@ -1,5 +1,6 @@
 # shellcheck shell=bash
 # FreePBX 16 -> 17 migration (design §7), the phases after the checks M2:
+#   migration_inventory_before  M3: inventory of FreePBX 16 (DB + files)
 #   migration_snapshot   M4: verified dumps, directories moved, spool hardlinked
 #   migration_archive    M5.1: FreePBX "legacy" backup archive from the raw data
 #   migration_restore    M5.2-M5.4: config database recreated, FreePBX 17
@@ -14,6 +15,9 @@
 #   migration_crontab    M6: custom crontab lines of 20.16 in the Debian spool
 #   migration_fop2       M6: FOP2 installed from its Debian package, fop2.cfg
 #                        and the license of 20.16 kept
+#   migration_confs      M6: configuration files FreePBX does not write
+#                        (dongle.conf) from the snapshot
+#   migration_verify     M7: inventory after = before (mapping), or maintenance
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -42,6 +46,9 @@ migration_state() { # KEY -> value ("" if not set)
 # empty after M5.2); the phases already done are skipped
 migration_in_progress() { [ -n "$(migration_state snapshot_dir)" ] && [ "$(migration_state migration)" != "done" ]; }
 
+# expected differences of the inventories before and after (M7)
+: "${IZPBX_MIGRATION_MAPPING:=/usr/local/share/izpbx/migration-mapping.tsv}"
+
 # test hook (P4-06, design T7): IZPBX_TEST_KILL_AT=<point> kills izpbx-init
 # (kill -9) once at that point of the migration, as a crash or a container
 # killed there; the restart must resume and complete it. Points: snapshot
@@ -49,6 +56,11 @@ migration_in_progress() { [ -n "$(migration_state snapshot_dir)" ] && [ "$(migra
 # (after the DROP of the config database), install (after FreePBX 17 is
 # installed), restore (after the restore), audio (in M6, after the copy).
 : "${IZPBX_TEST_KILL_AT:=}"
+# test hook (P4-19): IZPBX_TEST_AFTER_RESTORE_SQL, a statement run on the
+# config database right before the verification M7 (a discrepancy injected
+# after the restore)
+: "${IZPBX_TEST_AFTER_RESTORE_SQL:=}"
+
 migration_kill_point() { # point
   [ -n "$IZPBX_TEST_KILL_AT" ] && [ "$IZPBX_TEST_KILL_AT" == "$1" ] || return 0
   [ ! -e "$IZPBX_MIGRATION_DIR/test-killed-$1" ] || return 0
@@ -501,4 +513,69 @@ migration_fop2() {
     log_info "migration: FOP2 configuration, license and settings of 20.16 kept ($n file(s): $(cd "$src" && ls -- *.cfg fop2.lic fop2settings.db 2>/dev/null | tr '\n' ' '))"
   fi
   migration_state_set fop2 "done"
+}
+
+# M3: inventory of the FreePBX 16 database and files (izpbx-inventory),
+# taken once before the snapshot moves the files away
+migration_inventory_before() {
+  local inv="$IZPBX_MIGRATION_DIR/inventory-before.json"
+  [ -s "$inv" ] && return 0
+  mkdir -p "$IZPBX_MIGRATION_DIR"
+  izpbx-inventory > "$inv.part" || { rm -f "$inv.part"; log_error "migration: inventory of FreePBX 16 failed"; return 1; }
+  mv "$inv.part" "$inv"
+  log_info "migration: inventory of FreePBX 16 in $inv ($(jq '[.categories[] | length] | add' "$inv") records)"
+}
+
+# M6: configuration files of etc/asterisk FreePBX neither writes nor
+# restores, and the inventory checks: copied from the snapshot when FreePBX 17
+# has none (chan_dongle: dongle.conf)
+IZPBX_MIGRATION_CONFS="dongle.conf"
+migration_confs() {
+  local snap etc f
+  [ "$(migration_state confs)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir) etc=$(freepbx_dir ASTETCDIR)
+  for f in $IZPBX_MIGRATION_CONFS; do
+    [ -f "$snap/fs/etc/asterisk/$f" ] && [ ! -e "$etc/$f" ] || continue
+    cp -p "$snap/fs/etc/asterisk/$f" "$etc/$f"
+    chown "$APP_USR:$APP_GRP" "$etc/$f"
+    log_info "migration: $f of 20.16 copied to $etc"
+  done
+  migration_state_set confs "done"
+}
+
+# M7: the inventory after the migration (DB + files, Asterisk is stopped:
+# the astdb from astdb.sqlite3) compared with the one before; the expected
+# differences are in IZPBX_MIGRATION_MAPPING. Any other difference: the
+# migration is not completed, maintenance mode (no service, unhealthy), the
+# report in the log and in verify-<ts>.txt; a restart checks again.
+# Returns 1 in maintenance mode.
+migration_verify() {
+  local before="$IZPBX_MIGRATION_DIR/inventory-before.json" after="$IZPBX_MIGRATION_DIR/inventory-after.json"
+  local report rc=0 line
+  [ "$(migration_state verify)" == "done" ] && return 0
+  if [ -n "$IZPBX_TEST_AFTER_RESTORE_SQL" ]; then
+    log_warn "migration: test statement on '$MYSQL_DATABASE' before the verification (IZPBX_TEST_AFTER_RESTORE_SQL)"
+    _migration_sql "$MYSQL_DATABASE" "$IZPBX_TEST_AFTER_RESTORE_SQL" || true
+  fi
+  report="$IZPBX_MIGRATION_DIR/verify-$(date -u +%Y%m%dT%H%M%SZ).txt"
+  if [ ! -s "$before" ]; then
+    echo "no inventory of FreePBX 16 ($before)" > "$report"; rc=2
+  elif ! izpbx-inventory > "$after"; then
+    echo "inventory after the migration failed" > "$report"; rc=2
+  else
+    izpbx-inventory --diff "$before" "$after" --mapping "$IZPBX_MIGRATION_MAPPING" > "$report" 2>&1 || rc=$?
+  fi
+  if [ "$rc" -eq 0 ]; then
+    log_info "migration: verification passed: the inventory of FreePBX 17 matches the one of FreePBX 16 ($report)"
+    migration_state_set verify "done"
+    return 0
+  fi
+  log_error "migration: VERIFICATION FAILED: the inventory after the migration differs from the one before ($report):"
+  while IFS= read -r line; do log_error "  $line"; done < <(head -n 50 "$report")
+  mkdir -p "$(dirname "$IZPBX_MAINTENANCE_FLAG")"
+  echo "the migration verification found differences (report in $report)" > "$IZPBX_MAINTENANCE_FLAG"
+  log_warn "freepbx: MAINTENANCE MODE: the migration is not completed, no service is started and the healthcheck reports unhealthy."
+  log_warn "freepbx: the FreePBX 16 data is in $(migration_state snapshot_dir) (database dumps and files): check the report,"
+  log_warn "freepbx: then restart the container to verify again, or go back to izPBX 20.16 with the snapshot."
+  return 1
 }

@@ -11,8 +11,9 @@
 # maintenance mode (D4, S10): izpbx-init stops after this step, no service
 # starts, the healthcheck is unhealthy, /data and the databases stay as
 # they are. Otherwise the migration starts here, before the persistence step:
-# snapshot M4 (the FreePBX 16 directories moved away) and archive M5.1; the
-# restore follows in 18-freepbx.sh. A migration in progress (state in
+# inventory M3, snapshot M4 (the FreePBX 16 directories moved away) and
+# archive M5.1; the restore, M6 and the verification M7 follow in
+# 18-freepbx.sh. A migration in progress (state in
 # ${APP_DATA}/.izpbx-migration) is resumed whatever the database holds.
 # shellcheck source=../services/migration.sh
 . /usr/local/lib/izpbx/services/migration.sh
@@ -26,6 +27,7 @@ if [ "$IZPBX_ENABLED" == "true" ] && ! izpbx_dry_run && persistence_initialized;
     if [ "$mode" == migration ]; then freepbx_migration_preflight || true; fi
   fi
   if [ "$(izpbx_mode)" == migration ] && [ ! -e "$IZPBX_MAINTENANCE_FLAG" ]; then
+    migration_inventory_before || die "freepbx: migration inventory failed (see above): restart the container to resume"
     migration_snapshot || die "freepbx: migration snapshot failed (see above): restart the container to resume"
     migration_archive || die "freepbx: migration archive failed (see above): restart the container to resume"
   fi

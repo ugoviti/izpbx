@@ -9,6 +9,7 @@
 #   with instructions;
 # - migration mode (04 made the snapshot and the archive): database
 #   recreated, FreePBX 17 installed, archive restored (migration_restore),
+#   the izPBX fixes M6, the verification M7 (differences: maintenance mode),
 #   then the normal start; a failure stops the container, a restart resumes.
 # The mode is written for the next steps (izpbx_mode).
 # shellcheck source=../service.sh
@@ -43,6 +44,9 @@ else
     migration_spool || die "freepbx: migration failed (see above): restart the container to resume"
     migration_crontab || die "freepbx: migration failed (see above): restart the container to resume"
     migration_fop2 || die "freepbx: migration failed (see above): restart the container to resume"
+    migration_confs || die "freepbx: migration failed (see above): restart the container to resume"
+    # M7: differences -> maintenance mode, izpbx-init stops after this step
+    migration_verify || return 0
     izpbx_mode_set normal
     mode=normal
   fi
