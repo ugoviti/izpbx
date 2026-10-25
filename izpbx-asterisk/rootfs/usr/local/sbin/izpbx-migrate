@@ -1,0 +1,15 @@
+#!/bin/bash
+# izpbx-migrate: one phase of the FreePBX 16 -> 17 migration (design §7),
+# as izpbx-init runs it; for tests and for a manual resume.
+#   izpbx-migrate snapshot     M4: verified dumps, directories moved, spool hardlinked
+# State and snapshot in ${APP_DATA}/.izpbx-migration (services/migration.sh).
+# shellcheck source=../lib/izpbx/common.sh
+. /usr/local/lib/izpbx/common.sh
+izpbx_strict
+# shellcheck source=../lib/izpbx/services/migration.sh
+. /usr/local/lib/izpbx/services/migration.sh
+
+case "${1:-}" in
+  snapshot) migration_snapshot ;;
+  *) sed -n '4p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
+esac
