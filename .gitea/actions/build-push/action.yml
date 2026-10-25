@@ -76,42 +76,21 @@ runs:
         cache-from: type=registry,ref=${{ steps.login.outputs.image }}:${{ inputs.cache-tag }}
         cache-to: type=registry,ref=${{ steps.login.outputs.image }}:${{ inputs.cache-tag }},mode=max,image-manifest=true,oci-mediatypes=true
 
-    # post-build security checks on the image just pushed (build-push-action with push:true
-    # doesn't load it in the local docker daemon, so pull it back: the registry login above is reused)
+    # post-build checks on the image just pushed (design E1, verify-image.sh runs
+    # inside the image): build-push-action with push:true doesn't load it in
+    # the local docker daemon, so pull it back (the registry login above is reused)
     - name: verify image
       shell: bash
       env:
         TAGS: ${{ steps.tags.outputs.tags }}
         BUILD_ARGS: ${{ inputs.build-args }}
-        # minimum php-common VERSION-RELEASE: fixes CVE-2026-109618 / CVE-2026-109619 (RHSA-2026:87080)
-        PHP_MIN: 7.4.33-8
+        SCRIPT: ${{ github.action_path }}/verify-image.sh
       run: |
         set -euo pipefail
         IMAGE=$(printf '%s\n' "$TAGS" | sed '/^$/d' | head -1)
-        # expected Asterisk version: build-arg override (eg. dev workflow) or the Dockerfile ARG default
+        # expected Asterisk version: build-arg override (eg. dev workflow) or versions.env
         ASTERISK_VER=$(printf '%s\n' "$BUILD_ARGS" | sed -n 's/^ *ASTERISK_VER=//p' | tail -1 | tr -d ' ')
-        [ -n "$ASTERISK_VER" ] || ASTERISK_VER=$(sed -n 's/^ARG ASTERISK_VER=//p' izpbx-asterisk/Dockerfile | head -1)
+        [ -n "$ASTERISK_VER" ] || ASTERISK_VER=$(sed -n 's/^ASTERISK_VER=//p' izpbx-asterisk/versions.env | head -1)
         [ -n "$ASTERISK_VER" ] || { echo "::error::cannot determine the expected ASTERISK_VER"; exit 1; }
         docker pull -q "$IMAGE"
-        docker run --rm --entrypoint "" -e PHP_MIN="$PHP_MIN" -e ASTERISK_VER="$ASTERISK_VER" "$IMAGE" bash -c '
-          set -u
-          FAIL=0
-          PHP_REL=$(rpm -q --qf "%{VERSION}-%{RELEASE}" php-common) || PHP_REL=missing
-          if [ "$(printf "%s\n" "$PHP_MIN" "$PHP_REL" | sort -V | head -1)" = "$PHP_MIN" ] && [ "$PHP_REL" != missing ]; then
-            echo "OK   php-common $PHP_REL >= $PHP_MIN"
-          else
-            echo "FAIL php-common $PHP_REL < $PHP_MIN (CVE-2026-109618/109619)"; FAIL=1
-          fi
-          AST=$(asterisk -V 2>&1 || true)
-          if printf "%s" "$AST" | grep -qF "Asterisk ${ASTERISK_VER}"; then
-            echo "OK   $AST"
-          else
-            echo "FAIL asterisk -V: \"$AST\", expected ${ASTERISK_VER}"; FAIL=1
-          fi
-          URL_INCLUDE=$(php -r "echo ini_get(\"allow_url_include\");" 2>/dev/null) || URL_INCLUDE=error
-          case "$(printf "%s" "$URL_INCLUDE" | tr "[:upper:]" "[:lower:]")" in
-            ""|0|off|false|no) echo "OK   allow_url_include=\"$URL_INCLUDE\"" ;;
-            *) echo "FAIL allow_url_include=\"$URL_INCLUDE\" (must be Off)"; FAIL=1 ;;
-          esac
-          exit $FAIL
-        '
+        docker run -i --rm --entrypoint "" -e ASTERISK_VER="$ASTERISK_VER" "$IMAGE" bash -s < "$SCRIPT"
