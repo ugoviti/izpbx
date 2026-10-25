@@ -18,3 +18,8 @@ P0-13
 P0-14
 P0-15
 P1-03
+
+# Decision of the user (2026-10-25): the kill and resume of the migration at
+# every point (~19 min) runs at the end of a phase and before the release
+# only; the quick checks of the migration (P4-08, P4-19, P4-21) stay in all-done.
+P4-06

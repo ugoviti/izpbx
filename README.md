@@ -7,7 +7,7 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 # Supported tags
 
 ## Production Branch:
-* `22.17`, `22.17.X`, `22.17.X-BUILD`, `22` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64 and arm64)
+* `22.17`, `22.17.X`, `22.17.X-BUILD`, `22` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64)
 
 ## Maintenance Branch (security fixes only, until 2027-01-01):
 * `20.16`, `20.16.X`, `20.16.X-BUILD`, `20`, `latest` (Asterisk 20 LTS + FreePBX 16): `latest` stays here for now, use an explicit tag. To move from 20.16 to 22.17 see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217)
@@ -203,7 +203,7 @@ If you want to upgrade FreePBX Framework/Core to a major release (example from 1
 
 # Upgrade from 20.16 to 22.17
 
-izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 / Asterisk 22 on Debian 12** (PHP 8.2 with php-fpm, services supervised by s6-overlay, amd64 and arm64 images). A volume created by izPBX 20.16 is migrated by the container itself, but only when you ask for it: it is not a plain image update.
+izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 / Asterisk 22 on Debian 12** (PHP 8.2 with php-fpm, services supervised by s6-overlay, amd64 images). A volume created by izPBX 20.16 is migrated by the container itself, but only when you ask for it: it is not a plain image update.
 
 The short version:
 
@@ -311,6 +311,7 @@ docker compose exec izpbx cat /data/.izpbx-migration/report.txt
 - **Commercial modules**: reactivate the ones the report lists with their license.
 - **Phonebook and speed dials**: the entries of the `phonebook` module of FreePBX 16 are in the Contact Manager group **"Phonebook (izPBX 20.16)"**; a system speed dial keeps its code and is dialed with the Contact Manager speed dial code: `*10<code>` (eg. `*1011`). Everything is also exported to `phonebook.csv` in the snapshot. The personal speed dials of the `speeddial` module have no FreePBX 17 equivalent: they are listed in `speeddials-users.csv` in the snapshot.
 - **Phones and providers** on chan_sip keep sending to `APP_PORT_SIP` (5160): nothing to change on their side.
+- **ARI**: the restore puts `ENABLE_ARI` back to the FreePBX 17 default; the report says so when it was enabled on 20.16: enable it again in Advanced Settings if you use ARI.
 - `IZPBX_MIGRATE_FREEPBX=true` can stay in `.env`: once completed, the next starts are normal starts.
 - **The snapshot** stays in `data/izpbx/.izpbx-migration/` and every start logs its size. Remove it when you no longer need to go back to 20.16 (eg. `rm -rf data/izpbx/.izpbx-migration/<time>`).
 
@@ -340,7 +341,7 @@ Calls recorded and voicemail left while on 22.17 stay in the spool.
 - The 20.16 entrypoint variables `APP_RUNAS`, `MULTISERVICE`, `CMD_OVERRIDE`, `ENTRYPOINT_TINI` are ignored, with a warning at start if set (s6 starts the services). `UMASK` still applies, to the initialization and to every service.
 - `FREEPBX_MODULES_EXTRA` no longer contains `phonebook` (no FreePBX 17 release).
 - Debian paths for Apache, cron, PHP and phpMyAdmin: relevant only for custom scripts in `APP_CUSTOM_SCRIPTS`. `PMA_CONFIG` defaults to `/etc/phpmyadmin/config.inc.php`.
-- Image tags: `22.17.0`, `22.17`, `22`; `latest` stays on 20.16 for now. arm64 images are available.
+- Image tags: `22.17.0`, `22.17`, `22`; `latest` stays on 20.16 for now. Images for amd64 only: arm64 comes in a later release.
 
 # Advanced Production Configuration Examples
 

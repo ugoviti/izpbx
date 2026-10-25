@@ -21,7 +21,7 @@ on:
         description: Version to publish (must exist in the Gitea registry, eg. 20.16.22)
         required: true
       latest:
-        description: Also move the "latest" Docker tag (stable X.Y.Z versions only)
+        description: Also move the "latest" Docker tag (only 20.16.x until the decision Q1, refused otherwise)
         type: boolean
         default: true
       github:
@@ -43,6 +43,8 @@ concurrency:
 env:
   PUBLIC_REPO_URL: https://github.com/ugoviti/izpbx.git
   DOCKERHUB_IMAGE: izdock/izpbx-asterisk
+  # the only versions that may move "latest" (V3): the 20.16 line until the decision Q1
+  LATEST_VERSIONS: '^20\.16\.[0-9]+$'
 
 jobs:
   promote:
@@ -52,6 +54,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: check latest
+        env:
+          VERSION: ${{ inputs.version }}
+          LATEST: ${{ inputs.latest }}
+        run: |
+          set -eu
+          if [ "$LATEST" == true ] && ! [[ "$VERSION" =~ $LATEST_VERSIONS ]]; then
+            echo "::error::'latest' stays on the 20.16 line until the decision Q1: run again with latest unchecked for ${VERSION}"
+            exit 1
+          fi
 
       - name: gitleaks
         uses: ./.gitea/actions/gitleaks
