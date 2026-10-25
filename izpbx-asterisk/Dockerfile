@@ -48,6 +48,8 @@ RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/extras.sh
 RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/s6.sh
+RUN --mount=type=cache,target=/usr/src/download-cache \
+    /usr/src/izpbx/build/node-modules.sh
 # PHP settings and the php-fpm pool, enabled by runtime.sh
 COPY rootfs/etc/php/ /etc/php/
 RUN /usr/src/izpbx/build/runtime.sh

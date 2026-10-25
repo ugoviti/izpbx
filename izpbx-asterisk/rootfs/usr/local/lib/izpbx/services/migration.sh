@@ -386,22 +386,25 @@ migration_sip_transport() {
 }
 
 # M6: the restore does not bring back the audio files (custom prompts are
-# reported lost on the FreePBX forum): sounds/custom, sounds/<language>/custom
-# and the music on hold categories are copied from the snapshot, without
-# overwriting what FreePBX 17 has (cp -n), owned by asterisk.
+# reported lost on the FreePBX forum): sounds/custom, every sounds/<language>
+# (the system prompts and its custom/) and the music on hold categories are
+# copied from the snapshot, without overwriting what FreePBX 17 has (cp -n),
+# owned by asterisk. Online the soundlang module of FreePBX 17 has already
+# downloaded its prompts and they are kept; without Internet access it could
+# not, and the prompts of the 16 are the only ones (P4-33, D36).
 migration_audio() {
   local snap src dst rel n=0
   [ "$(migration_state audio)" == "done" ] && return 0
   snap=$(migration_state snapshot_dir)
   src="$snap/fs/var/lib/asterisk" dst=$(freepbx_dir ASTVARLIBDIR)
-  for rel in $(cd "$src" 2>/dev/null && find sounds -mindepth 1 -maxdepth 2 -type d -name custom) moh; do
+  for rel in $(cd "$src" 2>/dev/null && find sounds -mindepth 1 -maxdepth 1 -type d ! -name tmp) moh; do
     [ -d "$src/$rel" ] || continue
     mkdir -p "$dst/$rel"
     n=$((n + $(cd "$src/$rel" && find . -type f | while read -r f; do [ -e "$dst/$rel/$f" ] || echo; done | wc -l)))
     cp -an "$src/$rel/." "$dst/$rel/"
     chown -R "$APP_USR:$APP_GRP" "$dst/$rel"
   done
-  log_info "migration: $n audio file(s) (sounds/custom, music on hold) copied from the snapshot"
+  log_info "migration: $n audio file(s) (prompts of every language, sounds/custom, music on hold) copied from the snapshot, the ones of FreePBX 17 kept"
   migration_kill_point audio
   migration_state_set audio "done"
 }
