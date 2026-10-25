@@ -6,6 +6,7 @@
 #   tests/run.sh [-j N] all-done   run the checks of the items already done (tests/done.list),
 #                                  except the slow ones of tests/deferred.list (arm64 under
 #                                  emulation): TEST_INCLUDE_DEFERRED=1 runs them too
+#   tests/run.sh golden [all|CASE...]  golden matrix: 22.17 files vs 20.16.22 (tests/golden)
 #   tests/run.sh selftest          test the harness itself
 #
 # -j N runs N checks at a time (default: CPUs / 2, at most 4); a check with a
@@ -30,7 +31,7 @@ if [ -z "${TEST_LOGS_DIR:-}" ] && [ -n "${TEST_ID:-}" ]; then
   trap 'rm -rf "$LOGS_DIR"' EXIT
 fi
 
-usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+usage() { sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 
 is_serial() { head -n 20 "$CHECKS_DIR/$1.sh" 2>/dev/null | grep -qx '# serial'; }
 
@@ -127,6 +128,12 @@ fi
 case "$1" in
   -h|--help) usage ;;
   selftest)  TEST_ID=selftest exec bash "$TESTS_DIR/selftest.sh" ;;
+  golden)    # golden matrix (P3-25): tests/run.sh golden [all|CASE...]
+             shift; [ "${1:-all}" != all ] || set --
+             mkdir -p "$LOGS_DIR"
+             docker build -q -t izpbx-asterisk:golden "$REPO_DIR/izpbx-asterisk" > "$LOGS_DIR/image-build.log" 2>&1 ||
+               { echo "image build failed (${LOGS_DIR#"$REPO_DIR"/}/image-build.log)"; exit 1; }
+             exec "$TESTS_DIR/golden/compare.sh" izpbx-asterisk:golden "$LOGS_DIR/golden" "$@" ;;
   all)       mapfile -t ids < <(find "$CHECKS_DIR" -name '*.sh' -printf '%f\n' | sed 's/\.sh$//' | sort -V)
              run_many "${ids[@]}" ;;
   all-done)  # regression run: reuse fixtures whose inputs did not change
