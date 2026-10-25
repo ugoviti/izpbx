@@ -22,6 +22,14 @@ IZPBX_PREFLIGHT_MIN_FRAMEWORK=16.0.26
 # FreePBX 17 module list (as "fwconsole ma" asks it) and the modules of the image
 : "${IZPBX_FREEPBX_MIRROR_LIST:=https://mirror.freepbx.org/all-17.0.xml}"
 : "${IZPBX_FREEPBX_SRC:=/usr/src/freepbx}"
+# the modules the first install of izPBX 20.16 installs, in its order
+# (FREEPBX_MODULES_CORE, _PRE, _EXTRA of the 20.16 entrypoint): an install
+# interrupted on the way lacks the last ones (ucp is the last)
+IZPBX_PREFLIGHT_INSTALL_MODULES="framework core dashboard sipsettings voicemail userman pm2 soundlang callrecording
+  cdr conferences customappsreg featurecodeadmin infoservices logfiles music manager arimanager filestore recordings
+  announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager
+  donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking phonebook presencestate printextensions
+  queues cel timeconditions bulkhandler weakpasswords ucp"
 # apps the custom dialplan may not use: removed from Asterisk 22 (Macro,
 # Monitor, ImportVar, SetAMAFlags, NoCDR)
 IZPBX_PREFLIGHT_DIALPLAN_APPS="Macro|Monitor|ImportVar|SetAMAFlags|NoCDR"
@@ -99,6 +107,18 @@ if [ -n "$db_ok" ]; then
 
   # modules with no FreePBX 17 release: the image tree, then the mirror list
   installed=$(sql "SELECT modulename FROM modules ORDER BY modulename" 2>/dev/null)
+
+  # an interrupted first install of 20.16: many default modules missing,
+  # the last one (ucp) among them (a few removed on purpose do not block)
+  notinst=$(for m in $IZPBX_PREFLIGHT_INSTALL_MODULES; do grep -qx "$m" <<< "$installed" || printf '%s ' "$m"; done)
+  notinst=${notinst% }
+  if [ "$(wc -w <<< "$notinst")" -ge 5 ] && [[ " $notinst " == *" ucp "* ]]; then
+    say BLOCK install "the first installation of FreePBX 16 did not complete: $(wc -w <<< "$notinst") of the modules izPBX 20.16 installs are missing ($notinst). Complete it with izPBX 20.16.x: fwconsole ma downloadinstall $notinst && fwconsole reload; or start again from an empty /data and empty databases"
+  elif [ -n "$notinst" ]; then
+    say INFO install "modules izPBX 20.16 installs by default not installed (removed?): $notinst"
+  else
+    say OK install "the first installation of FreePBX 16 is complete"
+  fi
   known=$(ls "$IZPBX_FREEPBX_SRC/amp_conf/htdocs/admin/modules" 2>/dev/null)
   missing=() removed=() unverified=() commercial=()
   mirror='' mirror_read=''
