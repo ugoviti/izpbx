@@ -31,6 +31,38 @@
 
 freepbx_installed() { [ -s "$IZPBX_FREEPBX_CONF" ]; }
 
+# mode of this start, for the steps after the detection (M1):
+#   install    new installation (empty /data)
+#   normal     FreePBX 17 found
+#   migration  FreePBX 16 found: nothing may write to its data (M2 checks)
+#   none       FreePBX not used (IZPBX_ENABLED=false)
+: "${IZPBX_MODE_FILE:=/run/izpbx/mode}"
+izpbx_mode() { cat "$IZPBX_MODE_FILE" 2>/dev/null || echo none; }
+izpbx_mode_set() { mkdir -p "$(dirname "$IZPBX_MODE_FILE")"; echo "$1" > "$IZPBX_MODE_FILE"; }
+
+# FreePBX version in the database (admin.version), empty if not readable
+freepbx_db_version() { izpbx_sql_query "SELECT value FROM admin WHERE variable = 'version'" 2>/dev/null | head -n 1 || true; }
+
+# M1: an initialized /data (or a freepbx.conf): the FreePBX version of the
+# database says what this start does; prints the mode, dies on a version
+# izPBX 22.17 cannot run nor migrate
+freepbx_detect() {
+  local v major
+  _fpbx_dbuser=$MYSQL_USER _fpbx_dbpass=$MYSQL_PASSWORD
+  _fpbx_wait_db || die "freepbx: cannot read the FreePBX version: database ${MYSQL_SERVER}:${APP_PORT_MYSQL} not reachable as '${MYSQL_USER}'"
+  v=$(freepbx_db_version)
+  major=${v%%.*}
+  case "$major" in
+    17) log_info "freepbx: FreePBX $v found: normal start" >&2; echo normal ;;
+    16) log_info "freepbx: FreePBX $v found (izPBX 20.16): migration to FreePBX 17 (M1)" >&2; echo migration ;;
+    *)  log_error "freepbx: FreePBX ${v:-<no version>} found in the database '${MYSQL_DATABASE}' on ${MYSQL_SERVER}"
+        log_error "freepbx: izPBX 22.17 runs FreePBX 17 and migrates only FreePBX 16 (izPBX 20.16.x)."
+        log_error "freepbx: FreePBX 15 or older: upgrade first with izPBX 20.16.x (it upgrades FreePBX to 16), then start 22.17;"
+        log_error "freepbx: otherwise check MYSQL_SERVER/MYSQL_DATABASE, or go back to the izPBX image that created this data."
+        die "freepbx: unsupported FreePBX version '${v:-unknown}': start refused, nothing changed" ;;
+  esac
+}
+
 # FreePBX directories, as fpbxDirs of 20.16: under APP_DATA the real paths,
 # not the symlinks of persistence.sh ("fwconsole chown" does not follow a
 # symlinked /etc/asterisk); the settings of a restored 20.16 backup match

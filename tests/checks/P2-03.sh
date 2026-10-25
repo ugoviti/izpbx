@@ -15,9 +15,10 @@
 # ASTERISK_ENABLED=true alone brings it up.
 # Also: docker stop with every service is clean (< 40 s, exit 0, no Asterisk
 # failure counted) and a one-off command does not hang on the services.
-# FreePBX is treated as installed (tests/fixtures/freepbx-installed) where
+# FreePBX 17 is seen as installed (t_freepbx17 in lib.sh) where
 # IZPBX_ENABLED=true: with an empty /data izpbx-init would install it (P3-19).
 source "$(dirname "$0")/../lib.sh"
+t_freepbx17
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 dir="$REPO_DIR/izpbx-asterisk"
@@ -28,7 +29,7 @@ test_image=izpbx-s6services:p2-03
 declare -A proc=([asterisk]=asterisk [php-fpm]=php-fpm8.2 [httpd]=apache2 [cron]=cron [fail2ban]=fail2ban-server
   [postfix]=master [dnsmasq]=dnsmasq [ntp]=chronyd [zabbix]=zabbix_agent2 [fop2]=fop2_server)
 services="asterisk php-fpm httpd cron fail2ban postfix dnsmasq ntp zabbix fop2"
-all_enabled=(-v "$TESTS_DIR/fixtures/freepbx-installed/freepbx.conf:/etc/freepbx.conf:ro" -e IZPBX_ENABLED=true -e HTTPD_ENABLED=true -e CRON_ENABLED=true -e FAIL2BAN_ENABLED=true -e POSTFIX_ENABLED=true
+all_enabled=("${T_FREEPBX17[@]}" -e IZPBX_ENABLED=true -e HTTPD_ENABLED=true -e CRON_ENABLED=true -e FAIL2BAN_ENABLED=true -e POSTFIX_ENABLED=true
   -e DNSMASQ_ENABLED=true -e NTP_ENABLED=true -e ZABBIX_ENABLED=true -e FOP2_ENABLED=true)
 
 # --- static
@@ -75,11 +76,11 @@ assert_cmd "docker stop with every service: within 15 s ($((SECONDS - t0)) s)" -
 assert_eq 0 "$(docker inspect -f '{{.State.ExitCode}}' "$c")" "docker stop with every service: exit 0"
 assert_eq 0 "$(docker logs "$c" 2>&1 | grep -c 'asterisk failed' || true)" "a requested stop is not counted as an Asterisk failure"
 # a one-off command starts and stops the default services: it must not hang
-rc=0; t0=$SECONDS; timeout 90 docker run --rm -v "$TESTS_DIR/fixtures/freepbx-installed/freepbx.conf:/etc/freepbx.conf:ro" "$image" true >/dev/null 2>&1 || rc=$?
+rc=0; t0=$SECONDS; timeout 90 docker run --rm "${T_FREEPBX17[@]}" "$image" true >/dev/null 2>&1 || rc=$?
 assert_eq 0 "$rc" "one-off 'docker run image true' with the default services ends with 0 ($((SECONDS - t0)) s, limit 90 s)"
 
 # --- defaults of the contract
-d=$(t_run defaults "$test_image" -v "$TESTS_DIR/fixtures/freepbx-installed/freepbx.conf:/etc/freepbx.conf:ro")
+d=$(t_run defaults "$test_image" "${T_FREEPBX17[@]}")
 t_wait_for 60 -- sh -c "docker exec $d /command/s6-svstat /run/service/fail2ban | grep -q '^up'"
 sleep 5
 for s in asterisk php-fpm httpd cron fail2ban; do
@@ -92,7 +93,7 @@ done
 
 # --- negative: fop2 without FOP2, asterisk switches
 # since P3-13 FOP2 is installed at start: a wrong sha256 refuses the install
-n=$(t_run nofop2 "$image" -v "$TESTS_DIR/fixtures/freepbx-installed/freepbx.conf:/etc/freepbx.conf:ro" -e FOP2_ENABLED=true -e FOP2_SHA256=0000000000000000000000000000000000000000000000000000000000000000)
+n=$(t_run nofop2 "$image" "${T_FREEPBX17[@]}" -e FOP2_ENABLED=true -e FOP2_SHA256=0000000000000000000000000000000000000000000000000000000000000000)
 t_wait_for 60 -- sh -c "docker logs $n 2>&1 | grep -q 'FOP2 is not installed'"
 assert_contains "$(docker logs "$n" 2>&1)" "fop2: FOP2_ENABLED=true but FOP2 is not installed" "control: FOP2 enabled but missing is reported"
 assert_eq "false false" "$(docker exec "$n" /command/s6-svstat -o up,wantedup /run/service/fop2)" "control: fop2 without FOP2 stays down"

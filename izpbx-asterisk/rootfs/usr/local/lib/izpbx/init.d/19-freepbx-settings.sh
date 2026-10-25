@@ -4,6 +4,7 @@
 # dry-run they are recorded even before the install)
 # shellcheck source=../services/freepbx.sh
 . /usr/local/lib/izpbx/services/freepbx.sh
-if [ "$IZPBX_ENABLED" == "true" ] && { freepbx_installed || izpbx_dry_run; }; then
+# in migration mode the FreePBX 16 data is not touched (M2)
+if [ "$IZPBX_ENABLED" == "true" ] && [ "$(izpbx_mode)" != migration ] && { freepbx_installed || izpbx_dry_run; }; then
   cfg_freepbx_settings
 fi

@@ -10,16 +10,17 @@
 # - DHCP_ENABLED or TFTP_ENABLED alone start dnsmasq;
 # - every s6 service is in SERVICE_VARS (service.sh).
 # Negative: a service missing from SERVICE_VARS is reported and stays down.
-# FreePBX is treated as installed (tests/fixtures/freepbx-installed): with
+# FreePBX 17 is seen as installed (t_freepbx17 in lib.sh): with
 # IZPBX_ENABLED=true and an empty /data izpbx-init would install it (P3-19).
 source "$(dirname "$0")/../lib.sh"
+t_freepbx17
 dir="$REPO_DIR/izpbx-asterisk"
 rc_dir="$dir/rootfs/etc/s6-overlay/s6-rc.d"
 image=izpbx-asterisk:p2-04
 services="asterisk php-fpm httpd cron fail2ban postfix dnsmasq ntp zabbix fop2"
 declare -A proc=([asterisk]=asterisk [php-fpm]=php-fpm8.2 [httpd]=apache2 [cron]=cron [fail2ban]=fail2ban-server
   [postfix]=master [dnsmasq]=dnsmasq [ntp]=chronyd [zabbix]=zabbix_agent2 [fop2]=fop2_server)
-off=(-v "$TESTS_DIR/fixtures/freepbx-installed/freepbx.conf:/etc/freepbx.conf:ro" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=false -e HTTPD_ENABLED=false -e CRON_ENABLED=false -e FAIL2BAN_ENABLED=false
+off=("${T_FREEPBX17[@]}" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=false -e HTTPD_ENABLED=false -e CRON_ENABLED=false -e FAIL2BAN_ENABLED=false
   -e POSTFIX_ENABLED=false -e MSMTP_ENABLED=false -e DNSMASQ_ENABLED=false -e DHCP_ENABLED=false -e TFTP_ENABLED=false
   -e NTP_ENABLED=false -e ZABBIX_ENABLED=false -e FOP2_ENABLED=false)
 declare -A var=([asterisk]=IZPBX_ENABLED [httpd]=HTTPD_ENABLED [cron]=CRON_ENABLED [fail2ban]=FAIL2BAN_ENABLED

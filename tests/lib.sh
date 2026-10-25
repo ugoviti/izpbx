@@ -104,6 +104,25 @@ t_build_image() { # tag
   fi
 }
 
+# FreePBX 17 seen as installed, for checks that need IZPBX_ENABLED=true but
+# not FreePBX itself (service switches): tests/fixtures/freepbx-installed
+# as /etc/freepbx.conf and a MariaDB whose admin.version is 17.0.33 (what
+# izpbx-init reads to choose the normal start, M1). Sets T_FREEPBX17 with the
+# docker run options of the containers.
+t_freepbx17() {
+  local net="$TEST_PROJECT-fpbx17" db
+  docker network create --label "izpbx.test=$TEST_PROJECT" "$net" >/dev/null
+  db=$(t_run fpbx17db docker.io/mariadb:10.11.19 --network "$net" --network-alias fpbx17db \
+    -e MARIADB_ROOT_PASSWORD=rootpw -e MARIADB_DATABASE=asterisk -e MARIADB_USER=asterisk -e MARIADB_PASSWORD=astpw \
+    --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 2s --health-retries 60)
+  t_wait_healthy "$db" 120 || die "MariaDB of t_freepbx17 did not start"
+  docker exec "$db" mariadb -uroot -prootpw asterisk -e \
+    "CREATE TABLE admin (variable VARCHAR(20) PRIMARY KEY, value VARCHAR(80)); INSERT INTO admin VALUES ('version', '17.0.33')"
+  # shellcheck disable=SC2034 # used by the checks that call t_freepbx17
+  T_FREEPBX17=(--network "$net" -e MYSQL_SERVER=fpbx17db -e MYSQL_PASSWORD=astpw
+               -v "$TESTS_DIR/fixtures/freepbx-installed/freepbx.conf:/etc/freepbx.conf:ro")
+}
+
 t_volume() { # name -> prints volume name
   local name="$TEST_PROJECT-$1"
   docker volume create --label "izpbx.test=$TEST_PROJECT" "$name" >/dev/null
