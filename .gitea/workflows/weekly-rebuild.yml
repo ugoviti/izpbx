@@ -1,15 +1,17 @@
 # izPBX weekly rebuild (Gitea Actions)
-# Rebuilds the latest stable release tag (X.Y.Z) every week to pick up the Rocky Linux / AppStream
-# security updates (eg. PHP), even when no new izPBX release is tagged.
-# OS_UPDATE_STAMP=<ISO week> busts the cached STEP 1 (dnf upgrade) layer of izpbx-asterisk/Dockerfile.
+# Rebuilds the latest stable release tag (X.Y.Z) of each maintained branch every week to pick up the
+# OS security updates (eg. PHP), even when no new izPBX release is tagged (V4). Matrix:
+#   - release/20.16: the 20.16.x tags (Rocky Linux), security only until 2027-01-01;
+#   - main:          the other tags (22.17.x and later, Debian); nothing to do until the first one.
+# OS_UPDATE_STAMP=<ISO week> busts the cached OS upgrade layer of izpbx-asterisk/Dockerfile.
 #
 # Pushes ONLY to the Gitea registry and NEVER moves the release tags (X.Y.Z, X.Y, X, latest), so
 # izpbx-promote keeps copying exactly the release digest that was tested. Tags produced (see .gitea/actions/image-tags):
 #   <X.Y.Z>-<YYYY>-W<WW>  and  <X.Y.Z>-<YYYY>-W<WW>-<run_number>      (eg. 20.16.22-2026-W43, 20.16.22-2026-W43-57)
 # To publish a weekly image on Docker Hub run izpbx-promote manually with that version (never automatic).
 #
-# The CI tooling (.gitea/actions) comes from the default branch, the build context (izpbx-asterisk/) from the tag:
-# older tags may predate the Gitea Actions migration or the post-build checks.
+# The CI tooling (.gitea/actions) comes from the branch of the matrix entry (release/20.16 keeps the
+# Rocky checks), the build context (izpbx-asterisk/) from the tag.
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
@@ -29,38 +31,63 @@ concurrency:
 jobs:
   rebuild:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # tags: the X.Y.Z tags of the branch (extended regex); exclude: tags of the other branch
+          - branch: release/20.16
+            line: '20.16'
+            tags: '^20\.16\.[0-9]+$'
+            exclude: '^$'
+          - branch: main
+            line: main
+            tags: '^[0-9]+\.[0-9]+\.[0-9]+$'
+            exclude: '^20\.16\.'
+    name: rebuild ${{ matrix.branch }}
     steps:
       - name: checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ matrix.branch }}
           fetch-depth: 0
           fetch-tags: true
 
       - name: resolve latest release
         id: ver
+        env:
+          TAGS: ${{ matrix.tags }}
+          EXCLUDE: ${{ matrix.exclude }}
+          BRANCH: ${{ matrix.branch }}
         run: |
           set -euo pipefail
           git fetch --force --tags origin
-          # latest stable X.Y.Z tag (version sort, prereleases and dev tags excluded)
-          TAG=$(git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
-          [ -n "$TAG" ] || { echo "::error::no X.Y.Z release tag found"; exit 1; }
-          # build context from the tag, CI tooling from the default branch
+          # latest stable X.Y.Z tag of the branch (version sort, prereleases and dev tags excluded)
+          TAG=$(git tag --list | grep -E "$TAGS" | grep -vE "$EXCLUDE" | sort -V | tail -1 || true)
+          if [ -z "$TAG" ]; then
+            echo "::notice::${BRANCH}: no X.Y.Z release tag yet, nothing to rebuild"
+            exit 0
+          fi
+          # build context from the tag, CI tooling from the branch
           rm -rf izpbx-asterisk
           git checkout "refs/tags/${TAG}" -- izpbx-asterisk
           STAMP=$(date -u +%G-W%V)
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "stamp=${STAMP}" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG}-${STAMP}" >> "$GITHUB_OUTPUT"
-          echo "commit=$(git rev-parse --short=7 "refs/tags/${TAG}^{commit}")" >> "$GITHUB_OUTPUT"
-          echo "Rebuilding ${TAG} with OS_UPDATE_STAMP=${STAMP} -> ${TAG}-${STAMP}"
+          {
+            echo "tag=${TAG}"
+            echo "stamp=${STAMP}"
+            echo "version=${TAG}-${STAMP}"
+            echo "commit=$(git rev-parse --short=7 "refs/tags/${TAG}^{commit}")"
+          } >> "$GITHUB_OUTPUT"
+          echo "${BRANCH}: rebuilding ${TAG} with OS_UPDATE_STAMP=${STAMP} -> ${TAG}-${STAMP}"
 
       - name: build and push
+        if: steps.ver.outputs.tag != ''
         uses: ./.gitea/actions/build-push
         with:
           version: ${{ steps.ver.outputs.version }}
           latest: 'false'
           build-number: ${{ gitea.run_number }}
-          cache-tag: buildcache-weekly
+          cache-tag: buildcache-weekly-${{ matrix.line }}
           build-args: |
             OS_UPDATE_STAMP=${{ steps.ver.outputs.stamp }}
             APP_BUILD_COMMIT=${{ steps.ver.outputs.commit }}
@@ -73,7 +100,7 @@ jobs:
         uses: ./.gitea/actions/matrix-notify
         with:
           status: ${{ job.status }}
-          label: weekly rebuild tag:${{ steps.ver.outputs.tag }} -> ${{ steps.ver.outputs.version }}
+          label: weekly rebuild ${{ matrix.branch }} tag:${{ steps.ver.outputs.tag || 'none' }} -> ${{ steps.ver.outputs.version || 'nothing to rebuild' }}
           password: ${{ secrets.MATRIX_PASSWORD }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
