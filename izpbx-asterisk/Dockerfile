@@ -61,6 +61,7 @@ COPY rootfs/usr/local/bin/izpbx-healthcheck /usr/local/bin/izpbx-healthcheck
 COPY rootfs/usr/local/sbin/izpbx-inventory /usr/local/sbin/izpbx-inventory
 COPY rootfs/usr/local/sbin/izpbx-preflight /usr/local/sbin/izpbx-preflight
 COPY rootfs/usr/local/sbin/izpbx-migrate /usr/local/sbin/izpbx-migrate
+COPY rootfs/usr/local/sbin/izpbx-rollback /usr/local/sbin/izpbx-rollback
 COPY rootfs/etc/fail2ban/ /etc/fail2ban/
 COPY rootfs/etc/dnsmasq.d/ /etc/dnsmasq.d/
 COPY rootfs/usr/local/share/phonebook/ /usr/local/share/phonebook/

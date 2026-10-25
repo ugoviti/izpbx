@@ -20,6 +20,7 @@
 #   migration_verify     M7: inventory after = before (mapping), or maintenance
 #   migration_complete   M8: .initialized with the FreePBX 17 version, state done
 #   migration_snapshot_notice  at every start: the snapshot is still there, its size
+#   migration_rollback   M9: back to FreePBX 16 from the snapshot (izpbx-rollback)
 # State in ${APP_DATA}/.izpbx-migration/state ("KEY=value" lines): the
 # snapshot directory and the phases completed; every phase is idempotent and
 # a restart resumes from the last completed one. Nothing is deleted: the
@@ -116,6 +117,8 @@ migration_snapshot() {
   fi
   mkdir -p "$snap/db" "$snap/fs"
   log_info "migration: snapshot in $snap"
+  # .initialized of 20.16 (M8 writes the FreePBX 17 version in it): for the rollback
+  [ -e "$snap/fs/.initialized" ] || [ ! -e "$APP_DATA/.initialized" ] || cp -p "$APP_DATA/.initialized" "$snap/fs/.initialized"
 
   # 1. databases: before anything is moved
   for db in "$MYSQL_DATABASE" "$MYSQL_DATABASE_CDR"; do
@@ -605,4 +608,59 @@ migration_snapshot_notice() {
   [ -d "$snap" ] || return 0
   kb=$(du -sk "$(freepbx_dir ASTSPOOLDIR)" "$snap" 2>/dev/null | tail -n 1 | cut -f1)
   log_warn "migration: the snapshot of FreePBX 16 is still in $snap and takes $(( ${kb:-0} / 1024 )) MB: remove it when you no longer need to go back to izPBX 20.16"
+}
+
+# M9: back to izPBX 20.16 from a snapshot, with the izPBX container stopped
+# (izpbx-rollback, run in a one-off container on the same volume and
+# database). Nothing is deleted: the FreePBX 17 database (dump) and
+# directories go to IZPBX_MIGRATION_DIR/rollback-<ts>; the verified dump of
+# the FreePBX 16 config database is imported again, the directories of the
+# snapshot and .initialized go back in place (the spool never moved, the CDR
+# database was never touched); the state is marked rolled-back and archived
+# with the FreePBX 17 data, so a new 22.17 start begins with the checks.
+migration_rollback() { # [snapshot directory]
+  local snap=${1:-$(migration_state snapshot_dir)} aside rel dump
+  [ -n "$snap" ] && [ -d "$snap/fs" ] || { log_error "rollback: no snapshot (${snap:-none}): nothing to roll back"; return 1; }
+  dump="$snap/db/$MYSQL_DATABASE.sql.gz"
+  _migration_dump_ok "$dump" || { log_error "rollback: the dump $dump is missing or does not match its SHA256SUMS"; return 1; }
+  if pgrep -f '^asterisk -f' >/dev/null 2>&1; then
+    log_error "rollback: Asterisk is running: stop the izPBX container and run izpbx-rollback in a one-off container"
+    return 1
+  fi
+  aside="$IZPBX_MIGRATION_DIR/rollback-$(date -u +%Y%m%dT%H%M%SZ)"
+  mkdir -p "$aside/db" "$aside/fs"
+  log_info "rollback: from $snap; the FreePBX 17 data goes to $aside"
+
+  # database: the FreePBX 17 one dumped aside, then the FreePBX 16 dump imported
+  if _migration_sql "SELECT 1 FROM information_schema.schemata WHERE schema_name = '$MYSQL_DATABASE'" | grep -q 1; then
+    _migration_dump "$MYSQL_DATABASE" "$aside/db/$MYSQL_DATABASE.sql.gz" || return 1
+  fi
+  _migration_sql "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`" || { log_error "rollback: cannot drop '$MYSQL_DATABASE'"; return 1; }
+  if ! gzip -dc "$dump" | MYSQL_PWD="$(_migration_dbpass)" mariadb -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$(_migration_dbuser)"; then
+    log_error "rollback: import of $dump failed: the database '$MYSQL_DATABASE' is missing, import that dump by hand"
+    return 1
+  fi
+  log_info "rollback: database '$MYSQL_DATABASE' of FreePBX 16 imported ($dump), '$MYSQL_DATABASE_CDR' left as it is"
+
+  # directories and files moved by the snapshot
+  for rel in "${IZPBX_MIGRATION_MOVE[@]}"; do
+    [ -e "$snap/fs/$rel" ] || [ -L "$snap/fs/$rel" ] || continue
+    if [ -e "$APP_DATA/$rel" ] || [ -L "$APP_DATA/$rel" ]; then
+      mkdir -p "$(dirname "$aside/fs/$rel")"
+      mv "$APP_DATA/$rel" "$aside/fs/$rel"
+    fi
+    mkdir -p "$(dirname "$APP_DATA/$rel")"
+    mv "$snap/fs/$rel" "$APP_DATA/$rel"
+    log_info "rollback: $rel back in place"
+  done
+  if [ -e "$snap/fs/.initialized" ]; then
+    [ ! -e "$APP_DATA/.initialized" ] || cp -p "$APP_DATA/.initialized" "$aside/fs/.initialized"
+    cp -p "$snap/fs/.initialized" "$APP_DATA/.initialized"
+  fi
+
+  migration_state_set rollback "done"
+  migration_state_set migration "rolled-back"
+  [ ! -f "$IZPBX_MIGRATION_DIR/state" ] || mv "$IZPBX_MIGRATION_DIR/state" "$aside/state"
+  log_info "rollback: done. Start the izPBX 20.16.x image of before on this volume and database."
+  log_info "rollback: the dumps of FreePBX 16 stay in $snap/db, the FreePBX 17 data in $aside: remove them when no longer needed."
 }

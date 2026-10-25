@@ -1,0 +1,18 @@
+#!/bin/bash
+# izpbx-rollback: back to izPBX 20.16 after a migration to FreePBX 17 (design
+# M9), from the snapshot in ${APP_DATA}/.izpbx-migration. Stop the izPBX
+# container first, then run it in a one-off container with the same volume
+# and database settings, e.g.:
+#   docker compose run --rm --no-deps --entrypoint izpbx-rollback izpbx
+#   izpbx-rollback [SNAPSHOT_DIR]     default: the snapshot of the state
+# Then start the izPBX 20.16.x image of before.
+# shellcheck source=../lib/izpbx/common.sh
+. /usr/local/lib/izpbx/common.sh
+izpbx_strict
+# shellcheck source=../lib/izpbx/services/migration.sh
+. /usr/local/lib/izpbx/services/migration.sh
+
+case "${1:-}" in
+  -h|--help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+migration_rollback "${1:-}"
