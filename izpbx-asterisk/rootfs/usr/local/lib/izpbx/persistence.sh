@@ -8,6 +8,7 @@
 # (no <dir>.dist/.dist nesting).
 #
 #   persistence_setup            apply PERSIST_DIRS and PERSIST_FILES
+#   persistence_sync_dist        PERSIST_SYNC_DIRS equal to the image again
 #   persist_dir DIR              one directory
 #   persist_file FILE            one file
 #   persistence_initialized      ${APP_DATA}/.initialized exists (install done)
@@ -29,6 +30,11 @@ PERSIST_DIRS=(
   /usr/local/fop2 /root /etc/dnsmasq.d /var/lib/dnsmasq /var/lib/tftpboot
 )
 PERSIST_FILES=(/etc/freepbx.conf /etc/amportal.conf)
+# persisted directories that belong to the image, not to the user: equal to
+# the image at every start (an image update, a migrated volume). Asterisk
+# documentation (codec_opus does not load without its XML documentation),
+# ARI specifications, static HTTP pages; 20.16 synced the documentation only.
+PERSIST_SYNC_DIRS=(/var/lib/asterisk/documentation /var/lib/asterisk/rest-api /var/lib/asterisk/static-http)
 
 _persist_stamp() { date +"%Y-%m-%dT%H:%M:%S%:z"; }
 _dir_empty() { [ -z "$(ls -A "$1")" ]; }
@@ -85,6 +91,23 @@ persistence_setup() {
   esac
   for d in "${PERSIST_DIRS[@]}"; do persist_dir "$d"; done
   for f in "${PERSIST_FILES[@]}"; do persist_file "$f"; done
+}
+
+# persistence_sync_dist: each PERSIST_SYNC_DIRS under APP_DATA replaced by
+# the copy of the image (<parent>.dist/<dir>, left by persist_dir) when they
+# differ (content, missing or extra files, links: diff, as the rsync dry run
+# of 20.16; rsync is not in the image)
+persistence_sync_dist() {
+  local d dist data
+  [ -n "$APP_DATA" ] || return 0
+  for d in "${PERSIST_SYNC_DIRS[@]}"; do
+    dist="$IZPBX_ROOT$(dirname "$d").dist/$(basename "$d")" data="$IZPBX_ROOT$APP_DATA$d"
+    [ -d "$dist" ] || continue
+    [ -d "$data" ] && diff -rq --no-dereference "$dist" "$data" >/dev/null 2>&1 && continue
+    rm -rf "${data:?}"
+    cp -a "$dist" "$data"
+    log_info "persistence: $APP_DATA$d updated from the image"
+  done
 }
 
 persistence_initialized() { [ -n "$APP_DATA" ] && [ -e "$IZPBX_ROOT$APP_DATA/.initialized" ]; }
