@@ -11,14 +11,14 @@ for more info: https://github.com/ugoviti/izdock-izpbx
 run docker build from inside `izpbx-asterisk` directory
 
 
-Asterisk 20 + FreePBX 16: (using Dockerfile variables)
+Asterisk 22 + FreePBX 17 (component versions and checksums from `versions.env`):
 ```
-docker build --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-20.16 -t izpbx-asterisk:dev-20.16 .
+docker build --pull --rm --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-22.17 -t izpbx-asterisk:dev-22.17 .
 ```
 
 ### Multi Arch Build
 ```
-docker buildx build --platform linux/amd64,linux/arm64 --pull --rm --build-arg APP_DEBUG=1 --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-20.16 -t izpbx-asterisk:dev-20.16 .
+docker buildx build --platform linux/amd64,linux/arm64 --pull --rm --build-arg APP_VER_BUILD=1 --build-arg APP_BUILD_COMMIT=0000000 --build-arg APP_BUILD_DATE=$(date +%s) --build-arg APP_VER=dev-22.17 -t izpbx-asterisk:dev-22.17 .
 ```
 
 ## RUN
@@ -31,7 +31,7 @@ docker run --rm -ti -p 3306:3306 -v ${PWD}/data/db:/var/lib/mysql -e MYSQL_DATAB
 
 Start izPBX:  
 ```
-docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ${PWD}/data/izpbx:/data -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e APP_DATA=/data --name izpbx izpbx-asterisk:dev-20.16
+docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ${PWD}/data/izpbx:/data -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e APP_DATA=/data --name izpbx izpbx-asterisk:dev-22.17
 ```
 
 
@@ -39,9 +39,9 @@ docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ${PWD}/da
 
 from izpbx directory root, exec:
 
-Asterisk 20 + FreePBX 16:  
+Asterisk 22 + FreePBX 17:  
 ```
-docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-20.16.yml up
+docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-22.17.yml up
 ```
 
 ### entering into container:

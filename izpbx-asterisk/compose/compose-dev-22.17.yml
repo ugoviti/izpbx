@@ -1,0 +1,6 @@
+# use this compose file for testing development versions of izPBX (from the repository root):
+# docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-22.17.yml up
+
+services:
+  izpbx:
+    image: izpbx-asterisk:dev-22.17

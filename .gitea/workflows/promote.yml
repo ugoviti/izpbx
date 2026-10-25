@@ -6,7 +6,7 @@
 #   3. copies the image already built in the Gitea registry to Docker Hub, without rebuilding
 #      (same digest you tested). Tag scheme: .gitea/actions/image-tags
 #        20.16.22    -> 20.16.22, 20.16, 20 [, latest]
-#        dev-20.16   -> dev-20.16 (not a git tag: GitHub push is skipped, never latest)
+#        dev-22.17   -> dev-22.17 (not a git tag: GitHub push is skipped, never latest)
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, DOCKER_USERNAME,
 #                     DOCKER_PASSWORD, GH_PUSH_TOKEN, GITLEAKS_CONFIG, MATRIX_PASSWORD
