@@ -42,6 +42,21 @@ migration_state() { # KEY -> value ("" if not set)
 # empty after M5.2); the phases already done are skipped
 migration_in_progress() { [ -n "$(migration_state snapshot_dir)" ] && [ "$(migration_state migration)" != "done" ]; }
 
+# test hook (P4-06, design T7): IZPBX_TEST_KILL_AT=<point> kills izpbx-init
+# (kill -9) once at that point of the migration, as a crash or a container
+# killed there; the restart must resume and complete it. Points: snapshot
+# (after the first directory moved), archive (before the tar), dbreset
+# (after the DROP of the config database), install (after FreePBX 17 is
+# installed), restore (after the restore), audio (in M6, after the copy).
+: "${IZPBX_TEST_KILL_AT:=}"
+migration_kill_point() { # point
+  [ -n "$IZPBX_TEST_KILL_AT" ] && [ "$IZPBX_TEST_KILL_AT" == "$1" ] || return 0
+  [ ! -e "$IZPBX_MIGRATION_DIR/test-killed-$1" ] || return 0
+  mkdir -p "$IZPBX_MIGRATION_DIR" && touch "$IZPBX_MIGRATION_DIR/test-killed-$1"
+  log_warn "migration: test kill at '$1' (IZPBX_TEST_KILL_AT)"
+  kill -KILL $$
+}
+
 migration_state_set() { # KEY VALUE
   mkdir -p "$IZPBX_MIGRATION_DIR"
   printf '%s=%s\n' "$1" "$2" >> "$IZPBX_MIGRATION_DIR/state"
@@ -102,6 +117,7 @@ migration_snapshot() {
       mkdir -p "$(dirname "$dst")"
       mv "$src" "$dst"
       log_info "migration: $rel moved to the snapshot"
+      migration_kill_point snapshot
     elif [ ! -e "$dst" ]; then
       log_info "migration: $rel not present, nothing to move"
     fi
@@ -180,6 +196,7 @@ migration_archive() {
     -exec cp -p {} "$work/etc/asterisk/" \; 2>/dev/null || true
   [ ! -d "$snap/fs/etc/asterisk/keys" ] || cp -a "$snap/fs/etc/asterisk/keys" "$work/etc/asterisk/"
 
+  migration_kill_point archive
   tar -C "$work" -czf "$arc.part" . && mv "$arc.part" "$arc" || { log_error "migration: cannot write $arc"; return 1; }
   (cd "$(dirname "$arc")" && sha256sum "$(basename "$arc")" > "$(basename "$arc").sha256")
   log_info "migration: archive $arc (FreePBX $version, $(wc -l < "$work/mysql-2.sql") SQL lines, $(find "$work/etc/asterisk" -type f | wc -l) files of etc/asterisk)"
@@ -220,20 +237,32 @@ migration_restore() {
   snap=$(migration_state snapshot_dir) arc=$(migration_state archive_file)
 
   if [ "$(migration_state dbreset)" != "done" ]; then
-    mods=$(_migration_sql "$MYSQL_DATABASE" "SELECT modulename FROM modules WHERE enabled = 1 ORDER BY modulename" | tr '\n' ' ') ||
-      { log_error "migration: cannot read the modules of '$MYSQL_DATABASE'"; return 1; }
-    migration_state_set modules "${mods% }"
-    # chan_sip extensions and trunks of the 16 (converted by the restore, M6)
-    migration_state_set sip_devices "$(_migration_sql "$MYSQL_DATABASE" "SELECT COUNT(*) FROM devices WHERE tech = 'sip'")"
-    migration_state_set sip_trunks "$(_migration_sql "$MYSQL_DATABASE" "SELECT channelid FROM trunks WHERE tech = 'sip' ORDER BY channelid" | tr '\n' ' ' | sed 's/ $//')"
-    _migration_sql "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`; CREATE DATABASE \`$MYSQL_DATABASE\`" ||
-      { log_error "migration: cannot recreate the database '$MYSQL_DATABASE'"; return 1; }
+    # what the 16 had, read once (a resumed run may find the database dropped)
+    if [ -z "$(migration_state modules)" ]; then
+      mods=$(_migration_sql "$MYSQL_DATABASE" "SELECT modulename FROM modules WHERE enabled = 1 ORDER BY modulename" | tr '\n' ' ') ||
+        { log_error "migration: cannot read the modules of '$MYSQL_DATABASE'"; return 1; }
+      # chan_sip extensions and trunks of the 16 (converted by the restore, M6)
+      migration_state_set sip_devices "$(_migration_sql "$MYSQL_DATABASE" "SELECT COUNT(*) FROM devices WHERE tech = 'sip'")"
+      migration_state_set sip_trunks "$(_migration_sql "$MYSQL_DATABASE" "SELECT channelid FROM trunks WHERE tech = 'sip' ORDER BY channelid" | tr '\n' ' ' | sed 's/ $//')"
+      migration_state_set modules "${mods% }"
+    fi
+    _migration_sql "DROP DATABASE IF EXISTS \`$MYSQL_DATABASE\`" ||
+      { log_error "migration: cannot drop the database '$MYSQL_DATABASE'"; return 1; }
+    migration_kill_point dbreset
+    _migration_sql "CREATE DATABASE \`$MYSQL_DATABASE\`" ||
+      { log_error "migration: cannot create the database '$MYSQL_DATABASE'"; return 1; }
     migration_state_set dbreset "done"
     log_info "migration: database '$MYSQL_DATABASE' recreated (dump in $snap/db), '$MYSQL_DATABASE_CDR' left as it is"
   fi
 
   if [ "$(migration_state install)" != "done" ]; then
-    freepbx_install
+    # a resumed run may find FreePBX 17 installed already (killed after it)
+    if freepbx_installed && [ "$(freepbx_db_version | cut -d. -f1)" == 17 ]; then
+      log_info "migration: FreePBX $(freepbx_db_version) already installed"
+    else
+      freepbx_install
+    fi
+    migration_kill_point install
     migration_state_set install "done"
   fi
 
@@ -264,6 +293,7 @@ migration_restore() {
   fi
   # the restore brought back the settings of the 16: those izPBX needs again
   freepbx_izpbx_settings
+  migration_kill_point restore
   migration_state_set restore "done"
   log_info "migration: FreePBX 16 configuration restored on FreePBX 17"
 }
@@ -347,6 +377,7 @@ migration_audio() {
     chown -R "$APP_USR:$APP_GRP" "$dst/$rel"
   done
   log_info "migration: $n audio file(s) (sounds/custom, music on hold) copied from the snapshot"
+  migration_kill_point audio
   migration_state_set audio "done"
 }
 
