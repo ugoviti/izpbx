@@ -1,2 +1,3 @@
 # migration durations of the large volume test (P4-29): date, fixture, seconds, host CPUs
 2026-10-25	20.16.22-large (500 ext, 2M CDR, 5 GB recordings)	276s	16 cpu
+2026-10-25	20.16.22-large (500 ext, 2M CDR, 5 GB recordings)	387s	16 cpu

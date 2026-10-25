@@ -57,6 +57,12 @@ build_image() { # ids...
   local id need=
   for id in "$@"; do grep -q 't_build_image' "$CHECKS_DIR/$id.sh" 2>/dev/null && need=1; done
   [ -n "$need" ] || return 0
+  # an image given by the caller (CI: the image of the run, from the registry)
+  if [ -n "${TEST_IMAGE:-}" ] && docker image inspect "$TEST_IMAGE" >/dev/null 2>&1; then
+    export TEST_IMAGE
+    echo "image from TEST_IMAGE: $TEST_IMAGE" | cut -c1-80
+    return 0
+  fi
   if TEST_IMAGE=$(docker build -q -t "izpbx-asterisk:test-run" "$REPO_DIR/izpbx-asterisk" 2>"$LOGS_DIR/image-build.log"); then
     export TEST_IMAGE
     echo "image izpbx-asterisk:test-run built once (${TEST_IMAGE#sha256:})" | cut -c1-80

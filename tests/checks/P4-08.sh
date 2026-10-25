@@ -12,6 +12,9 @@
 # - the CDR database: same checksum of every table as before;
 # - control: the same diff with one extension removed from the "after"
 #   inventory reports it (exit 1).
+# P4_08_AFTER_RESTORE_SQL (CI, P6-03): passed to the migration as
+# IZPBX_TEST_AFTER_RESTORE_SQL, a discrepancy after the restore: the check
+# must then fail.
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p4-08
 fx="$TESTS_DIR/fixtures/out/20.16.22"
@@ -42,7 +45,9 @@ env=(-e APP_DATA=/data -e MYSQL_SERVER=db -e MYSQL_PASSWORD=fixture-pw -e MYSQL_
 docker run --rm --entrypoint "" --network "$net" -v "$v:/data:ro" "${env[@]}" "$image" izpbx-inventory > "$work/before.json"
 assert_cmd "inventory before" -- jq -e '.categories.extensions | length > 0' "$work/before.json"
 
-c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}" -e IZPBX_MIGRATE_FREEPBX=true)
+inject=()
+[ -z "${P4_08_AFTER_RESTORE_SQL:-}" ] || inject=(-e IZPBX_TEST_AFTER_RESTORE_SQL="$P4_08_AFTER_RESTORE_SQL")
+c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}" -e IZPBX_MIGRATE_FREEPBX=true "${inject[@]}")
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 2400
 docker logs "$c" 2>&1 | grep -E 'migration:|preflight: (BLOCK|RESULT)|freepbx: (migration|FreePBX)' | sed 's/^/    | /' | tail -n 40 >&2
 state=$(docker exec "$c" cat /data/.izpbx-migration/state 2>/dev/null)

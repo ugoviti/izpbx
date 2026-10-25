@@ -1,0 +1,112 @@
+# izPBX 22.17 tests in CI (Gitea Actions): design E3-E5.
+# On every push to feature/22.17, or by hand (Repository > Actions >
+# izpbx-tests-22.17 > Run workflow).
+# - build: the image of the run, pushed to the Gitea registry as ci-22.17
+#   (build-push: buildx cache, verify image E1); never latest, never Docker Hub;
+# - e3-migration: the 20.16.22 fixture migrated with the opt-in, inventory
+#   diff empty (tests/checks/P4-08.sh); with break_migration an extension is
+#   removed after the restore and the job must fail;
+# - e4-new-install: empty /data -> healthy (tests/checks/P3-19.sh);
+# - e5-maintenance: the fixture without the opt-in -> unhealthy, /data and the
+#   databases unchanged (tests/checks/P4-04.sh).
+# The runner runs the job in a container: the checks run in a Docker-in-Docker
+# container (tests/ci/dind-run.sh), where their bind mounts make sense.
+#
+# Required secrets: REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN
+
+name: izpbx-tests-22.17
+
+on:
+  push:
+    branches:
+      - feature/22.17
+  workflow_dispatch:
+    inputs:
+      break_migration:
+        description: "'true': an extension removed after the restore, e3-migration must fail"
+        default: 'false'
+        required: false
+
+concurrency:
+  group: izpbx-tests-22.17
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build and push
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ci-22.17
+          cache-tag: buildcache-ci
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: image of the run
+        id: login
+        uses: ./.gitea/actions/registry-login
+        with:
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: image reference
+        id: ref
+        shell: bash
+        env:
+          IMAGE: ${{ steps.login.outputs.image }}
+        run: echo "image=${IMAGE}:ci-22.17" >> "$GITHUB_OUTPUT"
+
+  tests:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job: e3-migration
+            check: P4-08
+          - job: e4-new-install
+            check: P3-19
+          - job: e5-maintenance
+            check: P4-04
+    name: ${{ matrix.job }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: registry login
+        uses: ./.gitea/actions/registry-login
+        with:
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: ${{ matrix.check }} in Docker-in-Docker
+        shell: bash
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          BREAK: ${{ inputs.break_migration }}
+          CHECK: ${{ matrix.check }}
+        run: |
+          set -euo pipefail
+          docker pull -q "$IMAGE"
+          # the discrepancy of break_migration: extension 1003 removed after the restore
+          if [ "$CHECK" == P4-08 ] && [ "${BREAK:-false}" == "true" ]; then
+            export P4_08_AFTER_RESTORE_SQL="DELETE FROM devices WHERE id = '1003'; DELETE FROM users WHERE extension = '1003'"
+          fi
+          tests/ci/dind-run.sh "$IMAGE" "$CHECK"
+
+      - name: log of the check
+        if: always()
+        shell: bash
+        env:
+          CHECK: ${{ matrix.check }}
+        run: tail -n 80 "tests/.logs/$CHECK.log" 2>/dev/null || echo "no log"
