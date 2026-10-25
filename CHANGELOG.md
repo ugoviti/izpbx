@@ -4,6 +4,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [22.17.0] - Unreleased
+New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volumes of izPBX 20.16 (FreePBX 16) are migrated by the container, opt-in: read [Upgrade from 20.16 to 22.17](README.md#upgrade-from-2016-to-2217) before switching image.
+### Security
+- FreePBX 16 reaches end of life on 2027-01-01: FreePBX `17` (framework `17.0.33`) on PHP `8.2` (PHP 7.4 is end of life)
+- Base image `debian:bookworm-slim` pinned by digest; every downloaded source and binary (Asterisk, s6-overlay, FreePBX, ionCube, FOP2, npm, addons) is fetched over HTTPS only and verified with the sha256 of `izpbx-asterisk/versions.env`, per architecture where it differs
+- Third-party repositories (Zabbix) trusted only by the pinned key fingerprint
+- The runtime image has no compiler toolchain
+- PHP hardening applied to both php-fpm and the CLI: `allow_url_include=Off`, `display_errors=Off`, `display_startup_errors=Off`, `session.upload_progress.enabled=0`
+- Removed the `SECLEVEL=1` OpenSSL workaround and `gpg --refresh-keys`
+- `MYSQL_PASSWORD` and `MYSQL_ROOT_PASSWORD` can be read from files (`IZPBX_MYSQL_PASSWORD_FILE`, `IZPBX_MYSQL_ROOT_PASSWORD_FILE`, docker secrets); no password in the logs or in the process list
+- The security fixes of 20.16.22 (XML phonebook `/pb`, `zabbix` sudoers, SMTP password files, FOP2 license in the logs) are kept
+### Changed
+- Base OS **Debian 12** instead of Rocky Linux 8: the internal paths of Apache, cron, PHP and phpMyAdmin are different (relevant only for custom scripts in `APP_CUSTOM_SCRIPTS`); `PMA_CONFIG` defaults to `/etc/phpmyadmin/config.inc.php`
+- PBX engine Asterisk `22.11.0` LTS (pjproject `2.17`), FreePBX `17`, PHP `8.2` through **php-fpm** (Apache `mpm_event` + `proxy_fcgi`)
+- Services supervised by **s6-overlay** `3.2.3.2` instead of supervisord: a oneshot `izpbx-init` prepares the container, then every service starts; `izpbx-service restart <name>` restarts one; ordered shutdown (`fwconsole stop`) within the `docker stop` timeout
+- New `HEALTHCHECK` (`izpbx-healthcheck`)
+- `ASTERISK_VER`, `FREEPBX_VER`, `FOP2_VER`, `ZABBIX_VER` are no longer build arguments: every version comes from `izpbx-asterisk/versions.env` (in the image: `/usr/src/izpbx/versions.env`); `build/check-updates.sh` reports newer upstream releases
+- `FREEPBX_MODULES_EXTRA` default without `phonebook` (no FreePBX 17 release)
+- `FREEPBX_AUTOUPGRADE_CORE` does not migrate FreePBX 16 to 17: use `IZPBX_MIGRATE_FREEPBX`
+- `APP_PORT_SIP` (5160, chan_sip in 20.16) is a PJSIP transport, created only by the migration when the 20.16 had chan_sip extensions or trunks; new installations have no transport on 5160
+- Updated FOP2 `2.31.53` (Debian package), ionCube loader `15.5.1` for PHP 8.2, Zabbix agent 2 `7.0`, npm `10.9.9` on the Node.js 18 of Debian 12, sngrep `1.9.0`, bcg729 `1.1.2`; MariaDB `10.11.19` LTS unchanged
+- Multi-arch image: **arm64** available besides amd64
+- Image tags `22.17.0`, `22.17`, `22`; **`latest` stays on 20.16** for now: use an explicit tag. `compose.yml` uses `22.17.0`; `default.env` lists every configurable variable
+- SLA runs with `app_sla` (MeetMe stays disabled); conferences use ConfBridge
+- CI: lint (shellcheck, hadolint) on every push and pull request, migration, new installation and maintenance tests in Docker-in-Docker, weekly rebuild of both `release/20.16` and `main`, dev builds tagged `dev-22.17`
+### Removed
+- **chan_sip**: extensions and trunks are PJSIP (converted by the migration)
+- `Macro()`, `Monitor()`, `ImportVar()`, `SetAMAFlags()`, `NoCDR()` no longer exist in Asterisk 22: custom dialplan must use `GoSub()` and `MixMonitor()`, rewritten **before** the migration
+- Variables of the 20.16 entrypoint `APP_RUNAS`, `MULTISERVICE`, `CMD_OVERRIDE`, `ENTRYPOINT_TINI`: ignored, with a warning at start if set (s6 starts the services); `UMASK` stays and applies to the initialization and to every service
+- `FOP2_SHA256` and `ZABBIX_REL`: the build verifies a sha256 per architecture from `versions.env`
+- The FreePBX `phonebook` module (no FreePBX 17 release): its entries are migrated to Contact Manager
+- Workarounds of older releases: `php74.patch`, the RHEL/microdnf and Asterisk 18 branches, `chan_local`
+- `compose-dev-20.16.yml` (the 22.17 one is `compose-dev-22.17.yml`)
+### Migration
+- izPBX 22.17 on a volume of izPBX 20.16 (FreePBX 16) without `IZPBX_MIGRATE_FREEPBX=true` starts in **maintenance mode**: no service, healthcheck unhealthy, `/data` and the databases untouched. The same happens when a check blocks the migration
+- New variables: `IZPBX_MIGRATE_FREEPBX` (opt-in), `IZPBX_MIGRATE_IGNORE_MODULES` (modules with no FreePBX 17 release to leave out), `IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN` (accept custom dialplan with applications Asterisk 22 no longer has)
+- `izpbx-preflight` runs the read-only checks before migrating (framework 16.0.26 or later, modules with a FreePBX 17 release, custom dialplan, free space, database privileges, complete first install): `docker compose run --rm --no-deps --entrypoint izpbx-preflight izpbx`
+- The migration: inventory of FreePBX 16, snapshot (verified database dumps, directories moved, spool hardlinked), FreePBX 17 installed and a FreePBX backup of the 16 restored, chan_sip converted to PJSIP, then custom prompts and music on hold, astdb keys, voicemail and recordings, custom crontab lines, FOP2 with its license, certificates, `dongle.conf`; the inventory after is compared with the one before and any unexpected difference stops in maintenance mode. Each phase is resumed after an interruption; the CDR database is not touched
+- Commercial modules are migrated and listed in the final report (`/data/.izpbx-migration/report.txt`), to reactivate with their license
+- `phonebook` and `speeddial` (installations born on FreePBX 15) have no FreePBX 17 release: their entries and system speed dials go to the Contact Manager group "Phonebook (izPBX 20.16)" (dialed with `*10<code>`), also exported to CSV
+- The snapshot stays in `/data/.izpbx-migration/` until you remove it (its size is logged at every start); `izpbx-rollback` goes back to izPBX 20.16 from it
+
 ## [20.16.22] - 2026-10-22
 ### Security
 - **PHP CVE-2026-109618 and CVE-2026-109619 ("PHP2Shell", unauthenticated RCE)**: rebuilt on Rocky Linux 8 AppStream `php-7.4.33-8` (RHSA-2026:87080). All previous izPBX images are affected: upgrade as soon as possible
