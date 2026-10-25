@@ -11,6 +11,11 @@
 #   commercial  a commercial module installed (queuestats 16.0.3, no license),
 #             simulated as module17: its row in "modules" and its module.xml
 #             (license Commercial, repo commercial) in admin/modules
+#   phonebook three entries of the FreePBX 16 phonebook module (astdb cidname)
+#             and a system speed dial (astdb sysspeeddials 11 -> 1003)
+#   speeddial speed dials of the speeddial module (meant for the fp15 fixture,
+#             where it is installed): system 12 -> 1002 (sysspeeddials) and a
+#             personal one of 1001, 5 -> 0612349999 (AMPUSER/1001/speeddials)
 #   module17  a FreePBX 16 module with no FreePBX 17 release, simulated: irc
 #             16.0.1 enabled in the "modules" table and its directory in
 #             admin/modules with a minimal module.xml (installing the real
@@ -97,6 +102,31 @@ XML
     rm -rf "${work:?}"
     if [ "$variant" == commercial ]; then extra+=("anomaly=commercial module $module $version, no license")
     else extra+=("anomaly=module $module $version has no FreePBX 17 release"); fi
+    ;;
+  phonebook|speeddial)
+    work="$tmp/pb" db=./var/lib/asterisk/astdb.sqlite3
+    mkdir -p "$work"
+    gzip -dc "$base/data.tar.gz" > "$tmp/data.tar"
+    tar -C "$work" -xf "$tmp/data.tar" "$db"
+    python3 -I - "$work/$db" "$variant" <<'PY'
+import sqlite3, sys
+keys = {'phonebook': [('/cidname/0612340001', 'Rossi Mario'), ('/cidname/0612340002', 'Bianchi Anna'),
+                      ('/cidname/1003', 'Fixture Three (phonebook)'), ('/sysspeeddials/11', '1003')],
+        'speeddial': [('/sysspeeddials/12', '1002'), ('/AMPUSER/1001/speeddials/5', '0612349999')]}
+db = sqlite3.connect(sys.argv[1])
+for key, value in keys[sys.argv[2]]:
+    db.execute('INSERT OR REPLACE INTO astdb (key, value) VALUES (?, ?)', (key, value))
+db.commit()
+PY
+    tar --delete -f "$tmp/data.tar" "$db"
+    tar --numeric-owner --owner=1000 --group=1000 -C "$work" -rf "$tmp/data.tar" "$db"
+    gzip -n "$tmp/data.tar"
+    chmod -R u+w "$work" && rm -rf "${work:?}"
+    if [ "$variant" == phonebook ]; then
+      extra+=("anomaly=phonebook: 3 entries (cidname), speed dial 11 -> 1003 (sysspeeddials)" "phonebook_entries=3")
+    else
+      extra+=("anomaly=speeddial: system 12 -> 1002, personal 1001/5 -> 0612349999" "speeddials_system=1" "speeddials_personal=1")
+    fi
     ;;
   *) echo "derive-variant: unknown variant '$variant'" >&2; exit 2 ;;
 esac

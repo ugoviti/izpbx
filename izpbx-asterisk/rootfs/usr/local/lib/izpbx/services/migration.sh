@@ -18,6 +18,8 @@
 #   migration_confs      M6: configuration files FreePBX does not write
 #                        (dongle.conf) from the snapshot
 #   migration_verify     M7: inventory after = before (mapping), or maintenance
+#   migration_phonebook  phonebook of FreePBX 16 (no 17 release) into a Contact
+#                        Manager group with its speed dials, and a CSV (D28)
 #   migration_complete   M8: .initialized with the FreePBX 17 version, state done
 #   migration_snapshot_notice  at every start: the snapshot is still there, its size
 #   migration_rollback   M9: back to FreePBX 16 from the snapshot (izpbx-rollback)
@@ -36,9 +38,10 @@
 IZPBX_MIGRATION_MOVE=(var/www var/lib/asterisk etc/asterisk home/asterisk usr/local/fop2 var/spool/cron etc/freepbx.conf etc/amportal.conf)
 # copied with hardlinks (M4.3): it stays in place for the restore
 IZPBX_MIGRATION_LINK=(var/spool/asterisk)
-# modules with no FreePBX 17 release the migration leaves out on purpose
-# (D28: phonebook, installed by default by izPBX 20.16; its data: P4-31)
-IZPBX_MIGRATION_REMOVED_MODULES="phonebook"
+# modules with no FreePBX 17 release the migration leaves out on purpose,
+# their data migrated by migration_phonebook: phonebook (D28, installed by
+# default by izPBX 20.16) and speeddial (D30, installs born on FreePBX 15)
+IZPBX_MIGRATION_REMOVED_MODULES="phonebook speeddial"
 
 migration_state() { # KEY -> value ("" if not set)
   [ -f "$IZPBX_MIGRATION_DIR/state" ] || return 0
@@ -691,6 +694,11 @@ migration_report() { # FreePBX 17 version
     echo "modules left out (no FreePBX 17 release): $IZPBX_MIGRATION_REMOVED_MODULES"
     [ -z "$IZPBX_MIGRATE_IGNORE_MODULES" ] ||
       echo "modules left out by IZPBX_MIGRATE_IGNORE_MODULES (no FreePBX 17 release, their data not migrated): ${IZPBX_MIGRATE_IGNORE_MODULES//,/ }"
+    if [ -n "$(migration_state phonebook_entries)" ]; then
+      echo "phonebook (D28): $(migration_state phonebook_entries) entries in the Contact Manager group '$IZPBX_MIGRATION_PHONEBOOK_GROUP', $(migration_state phonebook_speeddials) speed dials dialed with the Contact Manager speed dial code (default *10) and the old code; also in $(migration_state snapshot_dir)/phonebook.csv"
+      [ "$(migration_state phonebook_user_speeddials)" -eq 0 ] 2>/dev/null ||
+        echo "personal speed dials (D30, speeddial module, no FreePBX 17 equivalent): $(migration_state phonebook_user_speeddials) in $(migration_state snapshot_dir)/speeddials-users.csv"
+    fi
     if [ -n "$commercial" ]; then
       echo "commercial modules to reactivate with their license: $commercial"
     else
@@ -700,4 +708,52 @@ migration_report() { # FreePBX 17 version
   [ -z "$commercial" ] || log_warn "migration: commercial modules migrated, reactivate them with their license: $commercial (report $report)"
   [ -z "$IZPBX_MIGRATE_IGNORE_MODULES" ] ||
     log_warn "migration: modules left out (IZPBX_MIGRATE_IGNORE_MODULES), their data is not migrated: ${IZPBX_MIGRATE_IGNORE_MODULES//,/ } (report $report)"
+}
+
+# D28, D30: the phonebook and speeddial modules of FreePBX 16 have no
+# FreePBX 17 release; their data lives in the astdb: cidname/<number> = name,
+# sysspeeddials/<code> = number (system speed dials of both), and
+# AMPUSER/<ext>/speeddials/<code> = number (personal speed dials of speeddial).
+# FreePBX 17 has the equivalent in Contact Manager (external groups, speed
+# dials dialed with its feature code, default *10): every number becomes an
+# entry of the group "Phonebook (izPBX 20.16)", a system speed dial keeps its
+# code (*10<code>). Contact Manager speed dials are global: the personal ones
+# go to <snapshot>/speeddials-users.csv (and stay in the astdb), named in the
+# report. Always also exported to <snapshot>/phonebook.csv. Asterisk runs for
+# the time of it (the Contact Manager API and the reload need it).
+IZPBX_MIGRATION_PHONEBOOK_GROUP="Phonebook (izPBX 20.16)"
+migration_phonebook() {
+  local snap old out n sds users csv ucsv rc=0
+  [ "$(migration_state phonebook)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir) old="$snap/fs/var/lib/asterisk/astdb.sqlite3"
+  n=$( [ -s "$old" ] && php -r '$n = 0; foreach ((new PDO("sqlite:" . $argv[1]))->query("SELECT key FROM astdb WHERE key LIKE \"/cidname/%\" OR key LIKE \"/sysspeeddials/%\" OR key LIKE \"/AMPUSER/%/speeddials/%\"") as $r) $n++; echo $n;' -- "$old" || echo 0)
+  if [ "${n:-0}" -eq 0 ]; then
+    log_info "migration: no phonebook entry in FreePBX 16"
+    migration_state_set phonebook "done"
+    return 0
+  fi
+  # the CSVs written by asterisk, then moved into the snapshot (owned by root)
+  csv=$(mktemp) && chown "$APP_USR" "$csv"
+  ucsv=$(mktemp) && chown "$APP_USR" "$ucsv"
+  _fpbx_asterisk_start || return 1
+  out=$(su -s /bin/sh "$APP_USR" -c 'php "$0" "$@"' /usr/local/share/izpbx/migration-phonebook.php \
+    "$old" "$csv" "$IZPBX_MIGRATION_PHONEBOOK_GROUP" "$ucsv" 2>&1) || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    mv "$csv" "$snap/phonebook.csv"
+    mv "$ucsv" "$snap/speeddials-users.csv"
+    fwconsole_as_asterisk reload > "$snap/phonebook-reload.log" 2>&1 || log_warn "migration: fwconsole reload after the phonebook failed ($snap/phonebook-reload.log)"
+  fi
+  rm -f "$csv" "$ucsv"
+  _fpbx_asterisk_stop
+  if [ "$rc" -ne 0 ]; then
+    log_error "migration: phonebook to Contact Manager failed: ${out##*$'\n'}"
+    return 1
+  fi
+  read -r n sds users <<< "$(tail -n 1 <<< "$out")"
+  migration_state_set phonebook_entries "$n"
+  migration_state_set phonebook_speeddials "$sds"
+  migration_state_set phonebook_user_speeddials "${users:-0}"
+  migration_state_set phonebook "done"
+  log_info "migration: phonebook of FreePBX 16: $n entries ($sds speed dials) in the Contact Manager group '$IZPBX_MIGRATION_PHONEBOOK_GROUP', also in $snap/phonebook.csv"
+  [ "${users:-0}" -eq 0 ] || log_warn "migration: ${users} personal speed dial(s) of FreePBX 16 (speeddial module) have no FreePBX 17 equivalent: listed in $snap/speeddials-users.csv"
 }
