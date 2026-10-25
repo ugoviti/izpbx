@@ -59,7 +59,10 @@ else
     if grep -q 'ALL PRIVILEGES' <<< "$grants" || { grep -qE '[ ,]CREATE[ ,]' <<< "$grants" && grep -qE '[ ,]DROP[ ,]' <<< "$grants"; }; then
       say OK database "reachable as '${MYSQL_USER}', with DROP and CREATE on '${MYSQL_DATABASE}'"
     else
-      say BLOCK database "'${MYSQL_USER}' cannot DROP and CREATE '${MYSQL_DATABASE}' and MYSQL_ROOT_PASSWORD does not work: set MYSQL_ROOT_PASSWORD or grant ALL on \`${MYSQL_DATABASE}\`.* to '${MYSQL_USER}'"
+      # the exact statement for the account of the connection (user@host)
+      account=$(sql "SELECT CURRENT_USER()" 2>/dev/null | head -n 1)
+      account="'${account%@*}'@'${account##*@}'"
+      say BLOCK database "'${MYSQL_USER}' cannot DROP and CREATE '${MYSQL_DATABASE}' and MYSQL_ROOT_PASSWORD does not work: set MYSQL_ROOT_PASSWORD, or run as a database administrator: GRANT ALL PRIVILEGES ON \`${MYSQL_DATABASE}\`.* TO ${account};"
     fi
   fi
 fi
