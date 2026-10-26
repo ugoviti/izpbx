@@ -1,32 +1,100 @@
 # shellcheck shell=bash
-# izPBX interactive shell, as 20.16 (cfgBashEnv): banner, version line, prompt
-# and aliases. /root/.bashrc only sources this file and is written again at
-# every start (services/shell.sh, P3-29): put your own lines in /root/.bashrc.local.
+# izPBX interactive shell (P3-29, P3-33): the banner when entering the
+# container (logo, versions, live state of the PBX) and a two-line prompt with
+# the health of the PBX and the calls in progress. /root/.bashrc only sources
+# this file and is written again at every start (services/shell.sh): put your
+# own lines in /root/.bashrc.local. Colors only on a terminal that has them,
+# never with NO_COLOR set.
 case $- in *i*) ;; *) return ;; esac
 
 . /etc/os-release
-APP="izPBX"
-# the domain part of the hostname, shown dimmed after it (none without a dot)
-DOMAIN="$(hostname | cut -s -d'.' -f2)"
-[ -z "$DOMAIN" ] || DOMAIN=".${DOMAIN}"
+_iz_maint=/run/izpbx/maintenance
 
-PS1="(${APP})\[\e[1;34m\][\[\e[1;33m\]\u@\[\e[1;32m\]\h\[\e[2m\]${DOMAIN}\[\e[0m\]: \[\e[1;37m\]\w\[\e[1;34m\]]\[\e[1;36m\]\\$ \[\e[0m\]"
+# --- colors (empty without a color terminal)
+if [ -z "${NO_COLOR:-}" ] && [ -t 1 ] && [ "$(tput colors 2>/dev/null || echo 0)" -ge 256 ]; then
+  _iz_c() { printf '\e[38;5;%sm' "$1"; }
+  _iz_b=$'\e[1m' _iz_d=$'\e[2m' _iz_r=$'\e[0m'
+  _iz_ok=$(_iz_c 42) _iz_ko=$(_iz_c 203) _iz_warn=$(_iz_c 214) _iz_dim=$(_iz_c 245) _iz_acc=$(_iz_c 45)
+else
+  _iz_c() { :; }
+  _iz_b='' _iz_d='' _iz_r='' _iz_ok='' _iz_ko='' _iz_warn='' _iz_dim='' _iz_acc=''
+fi
 
-# aliases
+_iz_ver() { sed -n "s/^$1=//p" /usr/src/izpbx/versions.env 2>/dev/null; }
+_iz_asterisk_up() { asterisk -rx 'core show uptime' >/dev/null 2>&1; }
+_iz_calls() { asterisk -rx 'core show channels count' 2>/dev/null | awk '/active call/ {print $1; exit}'; }
+
+# --- the banner
+_iz_motd() {
+  local logo i colors fpbx health hcolor calls ep_on ep_all reg_ok reg_all build
+  logo=(
+    '▀  ▀▀█ █▀▀▄ █▀▀▄ ▀▄ ▄▀'
+    '█  ▄▀  █▄▄▀ █▀▀▄  ▄▀▄ '
+    '▀  ▀▀▀ ▀    ▀▀▀  ▀   ▀'
+  )
+  colors=(51 45 39)   # a cyan to blue gradient, one color per row
+  echo
+  for i in 0 1 2; do
+    printf '   %s%s%s%s' "$_iz_b" "$(_iz_c "${colors[$i]}")" "${logo[$i]}" "$_iz_r"
+    [ "$i" -ne 1 ] || printf '   %sCloud Native Telephony%s' "$_iz_dim" "$_iz_r"
+    echo
+  done
+  echo
+  fpbx=$(cat /data/.initialized 2>/dev/null || true); [[ "$fpbx" =~ ^[0-9.]+$ ]] || fpbx=$(_iz_ver FREEPBX_VER)
+  build=''
+  [ -z "${APP_VER_BUILD:-}" ] || build+=" · build $APP_VER_BUILD"
+  [ -z "${APP_BUILD_COMMIT:-}" ] || build+=" · ${APP_BUILD_COMMIT}"
+  printf '   %s%s%s%s%s · Asterisk %s · FreePBX %s · %s %s\n' "$_iz_b" "$_iz_acc" "${APP_VER:-unknown}" "$_iz_r" \
+    "$_iz_dim$build$_iz_r" "$(_iz_ver ASTERISK_VER)" "${fpbx:-unknown}" "${NAME:-Linux}" "${VERSION_ID:-}"
+  # live state
+  if [ -e "$_iz_maint" ]; then
+    printf '   %s● maintenance%s  %s\n' "$_iz_warn" "$_iz_r" "$(head -c 160 "$_iz_maint")"
+  else
+    health=$(timeout 3 izpbx-healthcheck 2>/dev/null) || true
+    case $health in healthy) hcolor=$_iz_ok ;; "") health="state unknown" hcolor=$_iz_dim ;; *) hcolor=$_iz_ko ;; esac
+    printf '   %s● %s%s' "$hcolor" "${health#unhealthy: }" "$_iz_r"
+    [ "$health" == healthy ] || [ -z "$health" ] || [ "$hcolor" != "$_iz_ko" ] || printf ' %s(unhealthy)%s' "$_iz_ko" "$_iz_r"
+    if _iz_asterisk_up; then
+      calls=$(_iz_calls)
+      read -r ep_on ep_all < <(asterisk -rx 'pjsip show endpoints' 2>/dev/null |
+        awk '/^ *Endpoint: / && !/</ {all++; if ($0 !~ /Unavailable/) on++} END {print on + 0, all + 0}')
+      read -r reg_ok reg_all < <(asterisk -rx 'pjsip show registrations' 2>/dev/null |
+        awk '/ (Registered|Unregistered|Rejected|Stopped|Failed)/ && !/</ {all++; if (/ Registered/) ok++} END {print ok + 0, all + 0}')
+      printf '   %s calls   %s/%s endpoints   ' "${calls:-0}" "$ep_on" "$ep_all"
+      if [ "$reg_all" -gt 0 ]; then printf '%s/%s trunks registered' "$reg_ok" "$reg_all"; else printf 'no trunk registration'; fi
+    fi
+    echo
+  fi
+  printf '   %stools: izpbx-<Tab> (-h for help) · logs: docker logs izpbx%s\n\n' "$_iz_dim" "$_iz_r"
+}
+
+# --- the prompt: ╭─ izpbx  user@host.domain  dir  ● N calls
+#                 ╰─❯            (❯ red when the last command failed)
+_iz_domain=$(hostname -f 2>/dev/null | cut -s -d. -f2-); [ -z "$_iz_domain" ] || _iz_domain=".$_iz_domain"
+_iz_state_ts=0 _iz_state=''
+_iz_refresh_state() { # at most every 10 seconds: the health dot and the calls
+  local now calls
+  now=$(date +%s)
+  [ $((now - _iz_state_ts)) -ge 10 ] || return 0
+  _iz_state_ts=$now
+  if [ -e "$_iz_maint" ]; then _iz_state="\[$_iz_warn\]● maintenance\[$_iz_r\]"
+  elif _iz_asterisk_up; then calls=$(_iz_calls); _iz_state="\[$_iz_ok\]●\[$_iz_r\] ${calls:-0} calls"
+  else _iz_state="\[$_iz_ko\]● asterisk down\[$_iz_r\]"; fi
+}
+_iz_prompt() {
+  local rc=$? arrow=$_iz_acc
+  [ "$rc" -eq 0 ] || arrow=$_iz_ko
+  _iz_refresh_state
+  PS1="\[$_iz_dim\]╭─\[$_iz_r\] \[$_iz_b$_iz_acc\]izpbx\[$_iz_r\]  \[$_iz_b\]\u@\h\[$_iz_r\]\[$_iz_dim\]${_iz_domain}\[$_iz_r\]  \[$_iz_acc\]\w\[$_iz_r\]  ${_iz_state}\n\[$_iz_dim\]╰─\[$_iz_r\]\[$arrow\]❯\[$_iz_r\] "
+}
+PROMPT_COMMAND="_iz_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+
+# aliases, as 20.16
 alias d="ls -lAsh --color"
 alias cp="cp -ip"
 alias rm="rm -i"
 alias mv="mv -i"
 
-_izpbx_ver() { sed -n "s/^$1=//p" /usr/src/izpbx/versions.env 2>/dev/null; }
-_izpbx_build_date=${APP_BUILD_DATE:-}
-[[ "$_izpbx_build_date" =~ ^[0-9]+$ ]] && _izpbx_build_date=$(date -d "@$_izpbx_build_date" +%Y-%m-%d)
-printf '\e[1;34m'
-figlet -w 120 "$APP" 2>/dev/null || echo "$APP"
-printf '\e[1;36m%s \e[1;32m%s\e[1;36m (build: \e[1;32m%s\e[1;36m commit: \e[1;32m%s\e[1;36m date: \e[1;32m%s\e[1;36m), Asterisk \e[1;32m%s\e[1;36m, FreePBX \e[1;32m%s\e[1;36m, %s \e[1;32m%s\e[1;36m, Kernel \e[1;32m%s\e[0m\n\n' \
-  "$APP" "${APP_VER:-unknown}" "${APP_VER_BUILD:-unknown}" "${APP_BUILD_COMMIT:-unknown}" "${_izpbx_build_date:-unknown}" \
-  "$(_izpbx_ver ASTERISK_VER)" "$(_izpbx_ver FREEPBX_VER)" "${NAME:-unknown}" "${VERSION_ID:-unknown}" "$(uname -r)"
-unset _izpbx_build_date
-unset -f _izpbx_ver
+_iz_motd
 
 [ ! -r /root/.bashrc.local ] || . /root/.bashrc.local

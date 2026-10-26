@@ -16,7 +16,6 @@ bzip2
 unzip
 sox
 file          # izsynth
-figlet        # the izPBX banner of the root shell (P3-29, as 20.16)
 lame
 mpg123
 ffmpeg

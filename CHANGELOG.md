@@ -20,6 +20,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - PBX engine Asterisk `22.11.0` LTS (pjproject `2.17`), FreePBX `17`, PHP `8.2` through **php-fpm** (Apache `mpm_event` + `proxy_fcgi`)
 - Services supervised by **s6-overlay** `3.2.3.2` instead of supervisord: a oneshot `izpbx-init` prepares the container, then every service starts; `izpbx-service restart <name>` restarts one; ordered shutdown (`fwconsole stop`) within the `docker stop` timeout
 - New `HEALTHCHECK` (`izpbx-healthcheck`)
+- New shell banner and prompt (`docker exec -it izpbx bash`): the izPBX logo, the versions and the live state of the PBX (health, calls, endpoints, trunk registrations), a two-line prompt with the health and the calls; own lines in `/root/.bashrc.local`; `NO_COLOR` honored
 - Apache TLS ciphers: the Debian `HIGH:!aNULL` instead of the RHEL crypto policy (`PROFILE=SYSTEM`); Apache logs in `${APACHE_LOG_DIR}`
 - `ASTERISK_VER`, `FREEPBX_VER`, `FOP2_VER`, `ZABBIX_VER` are no longer build arguments: every version comes from `izpbx-asterisk/versions.env` (in the image: `/usr/src/izpbx/versions.env`); `build/check-updates.sh` reports newer upstream releases
 - `FREEPBX_MODULES_EXTRA` default without `phonebook` (no FreePBX 17 release)
