@@ -26,8 +26,8 @@ services:
     # previous LTS (Long Term Support) release
     #image: docker.io/mariadb:10.6.14
     container_name: izpbx-db
-    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
-    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
+    ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
+    ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: unless-stopped
     env_file:

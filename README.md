@@ -38,27 +38,27 @@ Look into project [Tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags) pa
 Cloud and On-Premise, Fast, Automatic and Repeatable deploy of VoIP PBX systems
 
 # Features
-- Fast initial bootstrap to deploy a full-featured PBX system (60 secs install time from zero to a running turnkey PBX system)
-- Built-in PBX Engine based on Asterisk® project (compiled from scratch)
-- Built-in WEB Management GUI based on FreePBX® project (with default predownloaded modules for quicker initial deploy)
+- Fast initial bootstrap of a full-featured PBX system: a few minutes from zero to a running turnkey PBX (the healthcheck reports `healthy` when it is ready)
+- Built-in PBX Engine based on Asterisk® 22 LTS (compiled from source, every download verified by sha256)
+- Built-in WEB Management GUI based on FreePBX® 17 (default modules predownloaded in the image: the first install needs no module download)
 - No vendor lock-in, you can migrate to and away from izPBX simply by importing/exporting FreePBX Backups
-- Based on Rocky Linux 8 64bit OS (RHEL derivative with long term support)
-- Small container image footprint (~450 MB vs 2300 MB of official FreePBX ISO distro file)
+- Automatic migration of an izPBX 20.16 volume (FreePBX 16) to FreePBX 17, opt-in, verified and reversible (see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217))
+- Based on Debian 12 (bookworm) 64bit, amd64 image (arm64 planned after 22.17.0)
 - Multi-Tenant PBX System Support (look into **Advanced Production Configuration Examples** section)
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and non-volatile data
 - Fail2ban as security monitor to block SIP and HTTP brute force attacks
 - FOP2 Operator Panel
-- Integrated Asterisk Zabbix agent for services health monitoring
-- Misc `izpbx-*` tools scripts (like `izpbx-callstats`)
+- Integrated Asterisk Zabbix agent 2 for services health monitoring
+- `izpbx-*` tools for the PBX (call stats, stuck calls, trunk rotation, BLF of trunk lines, LDAP address book, ...): see [izPBX tools](#izpbx-tools)
 - `izsynth` utility - TTS/Text To Speech synthesizer, background music overlay assembler and audio file converter for PBX and Home Automation Systems
 - `tcpdump` and `sngrep` utility to debug VoIP calls
-- supervisord as services management with monitoring and automatic restart when services fail
-- postfix MTA daemon for sending mails (notifications, voicemails and FAXes)
+- s6-overlay as services supervisor, with automatic restart of the failed services and a container `HEALTHCHECK`
+- msmtp (default) or postfix MTA for sending mails (notifications, voicemails and FAXes)
 - Integrated cron daemon for running scheduled tasks
 - Integrated TFTP and DHCP server powered by DNSMasq for autoprovisioning VoIP Phones
 - Integrated NTP Server
-- Apache 2.4 and PHP 7.4 (mpm_prefork+mod_php configuration mode)
+- Apache 2.4 and PHP 8.2 (mpm_event + php-fpm), ionCube loader for the commercial FreePBX modules
 - Automatic Let's Encrypt HTTPS certificate management for exposed PBXs to Internet
 - Custom commercial SSL Certificates support
 - Logrotating of service logs
@@ -110,10 +110,10 @@ sudo systemctl enable --now docker
 - Deploy and start izpbx using `docker compose` command:
   - `docker compose up -d`
 
-- Wait for the pull to finish (~60 seconds with fast internet connections), then point your web browser to the IP address of your docker host and follow the initial setup guide
+- Wait for the first start to install FreePBX (a few minutes; `docker compose ps` shows `healthy` when it is done), then point your web browser to the IP address of your docker host and follow the initial setup guide
 
 **Security:** by default the web interface (FreePBX, UCP and the `/pb` phonebook) accepts connections from any address (`HTTPD_ALLOW_FROM` not defined). If izPBX is reachable from the Internet, restrict `HTTPD_ALLOW_FROM` to trusted networks or put the web interface behind a VPN, and always use the latest izPBX release: it includes the latest PHP and Asterisk security fixes (ex. 20.16.22 fixes PHP CVE-2026-109618 and CVE-2026-109619).
-Note that `MYSQL_PASSWORD` can't contain single quotes (`'`) or backslashes (`\`): they are not supported by the FreePBX installer.
+Note that `MYSQL_PASSWORD` can't contain a single quote (`'`), two backslashes in a row or a final backslash (`\`): the FreePBX installer does not support them (izPBX refuses to start with such a password).
 
 **Note:** by default, to correctly handle SIP NAT and SIP-RTP UDP traffic, the izpbx container will use the `network_mode: host`, so the izpbx container will be exposed directly to the outside network without using docker internal network range (**network_mode: host** will prevent multiple izpbx containers from running inside the same host).  
 Modify compose.yml and comment `#network_mode: host` if you want to run multiple izpbx containers in the same host (not production tested. There will be problems with RTP traffic).
@@ -132,7 +132,7 @@ services:
   db:
     image: docker.io/mariadb:10.11.19
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:20.16.22
+    image: docker.io/izdock/izpbx-asterisk:22.17.0
 ```
 
 and start the deploy with the same command `docker compose up -d`
@@ -144,7 +144,7 @@ If you want to test izPBX without using docker compose command, you can use the 
 `docker run --rm -ti -v ./data/db:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.11.19`
 
 2. Start izPBX:  
-`docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ./data/izpbx:/data -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e APP_DATA=/data --name izpbx izpbx-asterisk:latest`
+`docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ./data/izpbx:/data -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e APP_DATA=/data --name izpbx docker.io/izdock/izpbx-asterisk:22.17.0`
 
 # Upgrade izPBX
 
@@ -167,39 +167,16 @@ docker compose up -d
 ```
 
 3. If the mariadb database version was changed, remember to update the tables schema with the command  
-  `source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD`
+  `source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
 4. Open FreePBX Web URL and verify if any module updates exist from FreePBX Menu: **Admin --> Modules Admin --> Check Online --> Upgrade all --> Process**
 
 That's all
 
-### Upgrade path to a major FreePBX release
-FreePBX will be installed into persistent data dir on initial deploy only (when no installations already exist).
+### Major FreePBX upgrades of older releases
+FreePBX is installed into the persistent data dir on the first deploy only; later image updates of the same release update Asterisk and the image, not the FreePBX framework.
 
-Successive container updates on the same release (example from 18.15.1 to 18.15.2) will not upgrade the FreePBX Framework (only Asterisk engine will be updated).  
-
-If you want to upgrade FreePBX Framework/Core to a major release (example from 15 to 16), you have 2 options:  
-  
-1. Automatic upgrade using izPBX container release (example, switching from 18.15.x to 18.16.x release)
-2. Manual upgrade using **FreePBX Upgrader** tool
-
-### method 1: Automatic upgrade using izPBX container release (suggested)
-* Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
-* Make sure you made a full backup of `data` dir (IMPORTANT!)
-* Make sure you enabled `FREEPBX_AUTOUPGRADE_CORE=true` in the `.env` file (not for FreePBX 16 to 17: see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217))
-* Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
-* izPBX should detect the old FreePBX version installed and start the upgrade process
-* From the **FreePBX / Modules Admin** page, check if all modules have been updated and enable again the disabled modules
-
-### method 2: Manual upgrade using FreePBX Upgrader tool
-* Make sure before switching izPBX to a new major release, all FreePBX modules are updated to the latest release
-* Make sure you made a full backup of `data` dir (IMPORTANT!)
-* Make sure you disabled `FREEPBX_AUTOUPGRADE_CORE=false` in the `.env` file
-* Deploy the latest version of izPBX (ex. 18.15.x for FreePBX 15, 18.16.x for FreePBX 16, etc...)
-* izPBX should start with the old FreePBX release but with all dependencies installed and ready to complete the upgrade
-* Open FreePBX Menu: **Admin --> Modules Admin --> Check Online** select **FreePBX Upgrader --> Process**
-* Follow these instructions: https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16
-* From the **FreePBX / Modules Admin** page, check if all modules have been updated and enable again the disabled modules
+Up to izPBX 20.16 a major FreePBX upgrade (eg. FreePBX 15 to 16, from 18.15.x to 18.16.x) was done by the container with `FREEPBX_AUTOUPGRADE_CORE=true` or by hand with the FreePBX Upgrader module ([FreePBX 16 instructions](https://wiki.freepbx.org/display/FOP/Non+Distro+-+Upgrade+to+FreePBX+16)). From FreePBX 16 to 17 (izPBX 20.16 to 22.17) use the migration below: `FREEPBX_AUTOUPGRADE_CORE` does not do it.
 
 # Upgrade from 20.16 to 22.17
 
@@ -295,8 +272,9 @@ What the container does, each phase recorded in `data/izpbx/.izpbx-migration/sta
 2. an inventory of FreePBX 16 (extensions, trunks, routes, queues, voicemail, recordings, astdb, ...);
 3. the **snapshot** in `data/izpbx/.izpbx-migration/<time>/`: verified dumps of the databases, the FreePBX 16 directories moved there, the spool hardlinked;
 4. FreePBX 17 installed with the modules of the 16, and a FreePBX backup of the 16 restored into it (chan_sip converted to PJSIP);
-5. what the restore does not bring back: custom prompts and music on hold, astdb keys, the transport on `APP_PORT_SIP`, custom crontab lines, FOP2, `dongle.conf`, the phonebook;
+5. what the restore does not bring back: the system and custom prompts and the music on hold, astdb keys (hints and dial strings of the ex chan_sip extensions on PJSIP), the transport on `APP_PORT_SIP`, custom crontab lines, FOP2, `dongle.conf`, the phonebook;
 6. the inventory again, compared with the one before: any unexpected difference stops the start in maintenance mode, with the differences in the log and in `data/izpbx/.izpbx-migration/verify-<time>.txt`.
+7. FreePBX 17 reloads the migrated configuration (`fwconsole reload`, which also writes the dialplan and the hints): a file it refuses stops the start in maintenance mode too, with the error in the log.
 
 A migration interrupted at any point (container killed, host restarted) resumes at the next start from the last completed phase. The migration of a large PBX (thousands of recordings, millions of CDR rows) takes minutes, not hours: nothing is copied but the databases.
 
@@ -388,8 +366,8 @@ networks:
 services:
   db:
     image: mariadb:10.11.19
-    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
-    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
+    ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
+    ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: unless-stopped
     env_file:
@@ -407,7 +385,7 @@ services:
 
   izpbx:
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:20.16.22
+    image: docker.io/izdock/izpbx-asterisk:22.17.0
     restart: unless-stopped
     depends_on:
     - db
@@ -479,8 +457,8 @@ networks:
 services:
   db:
     image: mariadb:10.11.19
-    ## WARNING: if you upgrade image tag enter the container and run mysql_upgrade:
-    ## source .env ; docker exec -it izpbx-db mysql_upgrade -u root -p$MYSQL_ROOT_PASSWORD
+    ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
+    ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
     restart: unless-stopped
     env_file:
@@ -498,7 +476,7 @@ services:
 
   izpbx1:
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:20.16.22
+    image: docker.io/izdock/izpbx-asterisk:22.17.0
     restart: unless-stopped
     depends_on:
     - db
@@ -516,7 +494,7 @@ services:
 
   izpbx2:
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:20.16.22
+    image: docker.io/izdock/izpbx-asterisk:22.17.0
     restart: unless-stopped
     depends_on:
     - db
@@ -534,7 +512,7 @@ services:
 
   izpbx3:
     #hostname: ${APP_FQDN}
-    image: izdock/izpbx-asterisk:20.16.22
+    image: docker.io/izdock/izpbx-asterisk:22.17.0
     restart: unless-stopped
     depends_on:
     - db
@@ -567,25 +545,44 @@ Enter the directory containing configuration files and run:
 `docker restart izpbx-db`
 
 ### If you want to restart single services inside `izpbx` container
-Enter the container:  
-`docker exec -it izpbx bash`
+The services are supervised by s6-overlay; `izpbx-service` controls them and waits until they are up (or down):
 
-Restart izpbx service (Asterisk Engine):  
-`supervisorctl restart izpbx`
+```
+docker exec -it izpbx izpbx-service restart asterisk
+docker exec -it izpbx izpbx-service status httpd
+```
 
-To restart other available services use `supervisorctl restart SERVICE`
-
-Available services:  
-  - `asterisk`
+Actions: `start`, `stop`, `restart`, `status`. Available services (the enabled ones run):
+  - `asterisk` (Asterisk Engine and FreePBX)
+  - `httpd` and `php-fpm` (web interface, UCP, `/pb` phonebook)
   - `cron`
   - `fail2ban`
   - `fop2`
-  - `httpd`
-  - `izpbx`
   - `dnsmasq` (DHCP and TFTP)
   - `ntp`
   - `postfix`
-  - `zabbix-agent`
+  - `zabbix` (Zabbix agent 2)
+
+# izPBX tools
+Commands of the izPBX image, to run inside the container (`docker exec -it izpbx <command>`); every one prints its usage with `-h`.
+
+| Command | What it does |
+|---|---|
+| `izpbx-preflight` | Read-only checks before a migration from izPBX 20.16 (see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217)) |
+| `izpbx-rollback` | Back to izPBX 20.16 from the migration snapshot |
+| `izpbx-inventory` | Inventory of the PBX (extensions, trunks, routes, files, ...) as JSON, `--diff` of two inventories |
+| `izpbx-service` | `start`/`stop`/`restart`/`status` of a service |
+| `izpbx-healthcheck` | The container healthcheck: prints `healthy` or why not |
+| `izpbx-callstats` | The calls in progress: caller, called number, state, duration (`-b` brief, `-d` debug) |
+| `izpbx-hangup-stucked-calls` | Hangs up the calls older than N seconds (default 5400; `-n` only lists them), eg. from cron |
+| `izpbx-check-iax2` | Reloads `chan_iax2` when too many IAX2 peers are unreachable |
+| `izpbx-trunkrotate` | Rotates the trunks of an outbound route at every run (eg. the SIMs of a GSM gateway): `izpbx-trunkrotate ROUTE TRUNK TRUNK...` |
+| `izpbx-blfmonitor` | BLF of the lines of a trunk on `Custom:linea1..N` device states: `izpbx-blfmonitor -t TRUNK -l LINES start` |
+| `izpbx-freepbx2ldap` | Exports the extensions to an LDAP address book (settings in `/etc/izpbx/freepbx2ldap.conf`: `LDAP_URI`, `LDAP_BIND_DN`, `LDAP_PASSWORD_FILE`, `LDAP_BASE_DN`, `LDAP_OU`) |
+| `izpbx-enumrewrite` | Adds an ENUM domain at the head of the FreePBX ENUM lookups: `izpbx-enumrewrite e164.example.net` |
+| `izpbx-reboot-device` | Reboots VoIP gateways and DECT bases through their web interface: `IZPBX_DEVICE_PASSWORD=... izpbx-reboot-device {portech\|grandstream-gxw\|kirk} HOST...` |
+| `izpbx-mtrstats` | `mtr` reports to a host in a loop, to a log file (packet loss and latency of a trunk) |
+| `izsynth` | Text to speech, background music and audio conversion for prompts |
 
 # Tested systems and host compatibility
 Tested Docker Runtime:
@@ -669,23 +666,7 @@ Consult official repository page for installation and configuration of Asterisk 
 For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_ADDRESS/pb/yealink/menu**
 
 # FAQ / Troubleshooting
-- FOP2 specific version upgrade/downgrade (get latest release number from https://www.fop2.com/download.php):
-  automatic upgrade:
-  ```
-  FOP2_VER=2.31.53
-  FOP2_SHA256=63b6a0ec011a41eaf7f70fda63282df501f27a67ac6ad8eec76e978f7025ace3 # sha256 of the downloaded release
-  curl -fSL --connect-timeout 30 -o /tmp/fop2.tgz https://download2.fop2.com/fop2-$FOP2_VER-centos-x86_64.tgz
-  echo "$FOP2_SHA256  /tmp/fop2.tgz" | sha256sum -c - && tar xzf /tmp/fop2.tgz -C /usr/src
-  cd /usr/src/fop2
-  make install
-  supervisorctl restart fop2
-  ```
-
-  for manual downgrade just copy the fop2_server binary:
-  ```
-  cp /usr/src/fop2/server/fop2_server /usr/local/fop2/fop2_server
-  supervisorctl restart fop2
-  ```
+- FOP2 version: FOP2 is installed from its Debian package at the first start (`FOP2_ENABLED=true`), the version of the image (`FOP2_VER` in `izpbx-asterisk/versions.env`). With `FOP2_AUTOUPGRADE=true` (it needs a valid FOP2 upgrade subscription) an older installed FOP2 is upgraded to that version at start. Restart it with `docker exec -it izpbx izpbx-service restart fop2`.
 
 - FOP2 useful commands:
     NB. define interface name to associate the license, for example: `eth0`
@@ -700,9 +681,7 @@ For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_
     to work around that problem, normally it is required to **reactivate** the license, but sometimes it doesn't work, so the only solution is to contact the FOP2 support team
 
 - FreePBX is slow to reload (https://issues.freepbx.org/browse/FREEPBX-20559)
-  - As temporary WORKAROUND enter into izpbx container shell and run:  
-    `docker exec -it izpbx bash`  
-    `fwconsole setting SIGNATURECHECK 0`
+  - As WORKAROUND disable the module signature check: `FREEPBX_SIGNATURECHECK=0` in `.env` (applied at every start), or once with `docker exec -it izpbx fwconsole setting SIGNATURECHECK 0`
 
 - Factory Reset izPBX (WARNING! your persistent storage will be wiped!):
   - `docker compose down`
@@ -710,7 +689,7 @@ For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_
   - `docker compose up -d`
     
 # TODO / Future Development
-- Add ARM version compatible with Raspberry PI 
+- arm64 image (Raspberry PI and ARM servers): planned after 22.17.0, the build scripts already support it
 - Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possible using FreePBX FAX Module)
 - macOS host support? (edit `compose.yml` and comment localtime volume?)
@@ -731,10 +710,10 @@ for best security, fine-tune the ports range based on your needs by not using st
 - Unpredictable network interface order when running in Multi-Tenant mode. As workaround, network interfaces must be named in lexical order. refs:
   - https://gist.github.com/jfellus/cfee9efc1e8e1baf9d15314f16a46eca
   - https://github.com/moby/moby/issues/20179
-- By default FreePBX uses Signature Checking for module packages, but this causes very long delays when reloading FreePBX, so by default it has been disabled. refs:
+- By default FreePBX uses Signature Checking for module packages, which can cause long delays when reloading FreePBX: it can be disabled with `FREEPBX_SIGNATURECHECK=0`. refs:
   - https://issues.freepbx.org/browse/FREEPBX-20559
-- No commercial FreePBX modules can be installed
-  - sysadmin rpm module is missing. Looking for a solution
+- Commercial FreePBX modules run (ionCube loader included) with their license; the parts of `sysadmin` that manage the operating system of the FreePBX Distro (rpm, network, updates) have no effect in a container
+- The FreePBX 17 system prompts are downloaded by FreePBX at the first install: a new installation without Internet access starts without them (a migration from 20.16 takes them from the snapshot)
 - Missing good EndPoint Manager for automatic phone provisioning
   - Looking for a valid solution
   
