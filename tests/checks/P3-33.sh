@@ -5,7 +5,7 @@
 # - the banner: the logo, "Cloud Native Telephony", the version line, the live
 #   state (health of izpbx-healthcheck, calls, endpoints, trunk
 #   registrations) and the tools line; with a call up: "1 calls";
-# - the prompt: "╭─ izpbx  user@host  dir  ● N calls" / "╰─❯ ", the arrow in
+# - the prompt: "╭─  izpbx  user@host  dir  ● N calls" / "╰─❯ ", the arrow in
 #   the accent color (45) after a command that worked, red (203) after one
 #   that failed;
 # - maintenance mode (/run/izpbx/maintenance): banner "● maintenance <why>",
@@ -27,14 +27,15 @@ docker exec "$c" asterisk -rx 'channel originate Local/s@izpbxtest application W
 t_wait_for 20 -- sh -c "docker exec '$c' asterisk -rx 'core show channels count' | grep -q '^1 active call'"
 banner=$(shell 'true' | plain)
 log "$(tr '\n' '|' <<< "$banner")"
-assert_cmd "logo" -- grep -qF '█  ▄▀  █▄▄▀ █▀▀▄  ▄▀▄    Cloud Native Telephony' <<< "$banner"
+assert_cmd "logo" -- grep -qF '╚═╝╚══════╝╚═╝     ╚═════╝ ╚═╝  ╚═╝' <<< "$banner"
+assert_cmd "tagline" -- grep -qx '  Cloud Native Telephony' <<< "$banner"
 assert_cmd "version line" -- grep -qE '^ +[^ ]+.* · Asterisk [0-9.]+ · FreePBX [0-9.]+ · Debian GNU/Linux 12$' <<< "$banner"
 assert_cmd "live state: health, 1 calls, endpoints, trunks" -- \
   grep -qE '^ +● .*   1 calls   [0-9]+/[0-9]+ endpoints   (no trunk registration|[0-9]+/[0-9]+ trunks registered)$' <<< "$banner"
 assert_cmd "health from izpbx-healthcheck (here: no s6, unhealthy)" -- grep -qF '● s6 supervisor not running (unhealthy)' <<< "$banner"
 assert_cmd "tools line" -- grep -qF 'tools: izpbx-<Tab> (-h for help)' <<< "$banner"
 p=$(shell "$prompt" | plain | tail -n 2)
-assert_cmd "prompt line 1: ╭─ izpbx  root@pbx01  /  ● 1 calls" -- grep -qx '╭─ izpbx  root@pbx01  /  ● 1 calls' <<< "$p"
+assert_cmd "prompt line 1: ╭─  izpbx  root@pbx01  /  ● 1 calls" -- grep -qx '╭─  izpbx  root@pbx01  /  ● 1 calls' <<< "$p"
 assert_cmd "prompt line 2: ╰─❯" -- grep -qx '╰─❯ ' <<< "$p"
 nomark() { tr -d '\001\002'; }   # \[ \] of PS1 expand to \x01 \x02
 # _iz_prompt first, as PROMPT_COMMAND runs it: it reads the exit status of the last command

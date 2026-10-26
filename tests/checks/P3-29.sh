@@ -6,7 +6,7 @@
 # persistence step, own lines in /root/.bashrc.local.
 # - bash -i in the image: the logo, the line with Asterisk and FreePBX of
 #   versions.env and Debian GNU/Linux 12; the two-line prompt
-#   "╭─ izpbx  user@host.domain  dir  ...", "╰─❯ "; alias d;
+#   "╭─  izpbx  user@host.domain  dir  ...", "╰─❯ "; alias d;
 # - a hostname with a domain shows it in the prompt, one without does not;
 # - a volume with the .bashrc of 20.16 (figlet and the versions of then):
 #   replaced at start; /root/.bashrc.local stays and is loaded;
@@ -21,14 +21,14 @@ ishell() { docker run --rm --entrypoint "" "$@" "$image" bash -ic '_iz_prompt; p
 
 out=$(ishell --hostname pbx01)
 log "$(head -n 8 <<< "$out" | tr '\n' '|')"
-assert_cmd "the izPBX logo" -- grep -qF '▀  ▀▀█ █▀▀▄ █▀▀▄ ▀▄ ▄▀' <<< "$out"
+assert_cmd "the izPBX logo" -- grep -qF '██╗███████╗██████╗ ██████╗ ██╗  ██╗' <<< "$out"
 line=$(grep -E '^ +[^ ]+ .*Asterisk ' <<< "$out" | head -n 1 || true)
 assert_contains "$line" "Asterisk $ast · FreePBX $fpbx · Debian GNU/Linux 12" "version line: Asterisk, FreePBX, OS"
-assert_cmd "prompt: ╭─ izpbx  user@host" -- grep -qE '^PS1=╭─ izpbx  root@pbx01  ' <<< "$out"
+assert_cmd "prompt: ╭─  izpbx  user@host" -- grep -qE '^PS1=╭─  izpbx  root@pbx01  ' <<< "$out"
 assert_cmd "prompt: second line ╰─❯" -- grep -qx '╰─❯ ' <<< "$out"
-assert_cmd_fails "hostname without a domain: no domain in the prompt" -- grep -qE '^PS1=╭─ izpbx  root@pbx01\.' <<< "$out"
+assert_cmd_fails "hostname without a domain: no domain in the prompt" -- grep -qE '^PS1=╭─  izpbx  root@pbx01\.' <<< "$out"
 assert_cmd "alias d" -- grep -qF "alias d='ls -lAsh --color'" <<< "$out"
-assert_cmd "hostname pbx01.quantico: .quantico in the prompt" -- grep -qE '^PS1=╭─ izpbx  root@pbx01\.quantico  ' <<< "$(ishell --hostname pbx01.quantico)"
+assert_cmd "hostname pbx01.quantico: .quantico in the prompt" -- grep -qE '^PS1=╭─  izpbx  root@pbx01\.quantico  ' <<< "$(ishell --hostname pbx01.quantico)"
 quiet=$(docker run --rm --entrypoint "" "$image" bash -c '. /root/.bashrc; echo done' 2>&1 | plain)
 assert_eq "done" "$quiet" "control: a shell that is not interactive prints no banner"
 

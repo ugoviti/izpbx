@@ -15,9 +15,14 @@ if [ -z "${NO_COLOR:-}" ] && [ -t 1 ] && [ "$(tput colors 2>/dev/null || echo 0)
   _iz_c() { printf '\e[38;5;%sm' "$1"; }
   _iz_b=$'\e[1m' _iz_d=$'\e[2m' _iz_r=$'\e[0m'
   _iz_ok=$(_iz_c 42) _iz_ko=$(_iz_c 203) _iz_warn=$(_iz_c 214) _iz_dim=$(_iz_c 245) _iz_acc=$(_iz_c 45)
+  # prompt: the izpbx pill (white on blue), user (red for root, green
+  # otherwise), host (yellow), directory (light blue), frame (grey)
+  _iz_pill=$'\e[1;38;5;15;48;5;25m' _iz_host=$(_iz_c 221) _iz_dir=$'\e[1;38;5;117m' _iz_frame=$(_iz_c 240)
+  if [ "$(id -u)" -eq 0 ]; then _iz_user=$'\e[1;38;5;203m'; else _iz_user=$'\e[1;38;5;42m'; fi
 else
   _iz_c() { :; }
   _iz_b='' _iz_d='' _iz_r='' _iz_ok='' _iz_ko='' _iz_warn='' _iz_dim='' _iz_acc=''
+  _iz_pill='' _iz_host='' _iz_dir='' _iz_frame='' _iz_user=''
 fi
 
 _iz_ver() { sed -n "s/^$1=//p" /usr/src/izpbx/versions.env 2>/dev/null; }
@@ -34,36 +39,39 @@ _iz_calls() { asterisk -rx 'core show channels count' 2>/dev/null | awk '/active
 # --- the banner
 _iz_motd() {
   local logo i colors fpbx health hcolor calls ep_on ep_all reg_ok reg_all build ast
+  # "ANSI Shadow" letters, a vertical gradient from cyan to indigo
   logo=(
-    '▀  ▀▀█ █▀▀▄ █▀▀▄ ▀▄ ▄▀'
-    '█  ▄▀  █▄▄▀ █▀▀▄  ▄▀▄ '
-    '▀  ▀▀▀ ▀    ▀▀▀  ▀   ▀'
+    '██╗███████╗██████╗ ██████╗ ██╗  ██╗'
+    '██║╚══███╔╝██╔══██╗██╔══██╗╚██╗██╔╝'
+    '██║  ███╔╝ ██████╔╝██████╔╝ ╚███╔╝ '
+    '██║ ███╔╝  ██╔═══╝ ██╔══██╗ ██╔██╗ '
+    '██║███████╗██║     ██████╔╝██╔╝ ██╗'
+    '╚═╝╚══════╝╚═╝     ╚═════╝ ╚═╝  ╚═╝'
   )
-  colors=(51 45 39)   # a cyan to blue gradient, one color per row
+  colors=(87 81 75 69 63 57)
   echo
-  for i in 0 1 2; do
-    printf '   %s%s%s%s' "$_iz_b" "$(_iz_c "${colors[$i]}")" "${logo[$i]}" "$_iz_r"
-    [ "$i" -ne 1 ] || printf '   %sCloud Native Telephony%s' "$_iz_dim" "$_iz_r"
-    echo
+  for i in "${!logo[@]}"; do
+    printf '  %s%s%s%s\n' "$_iz_b" "$(_iz_c "${colors[$i]}")" "${logo[$i]}" "$_iz_r"
   done
+  printf '  %sCloud Native Telephony%s\n' "$_iz_dim" "$_iz_r"
   echo
   fpbx=$(cat /data/.initialized 2>/dev/null || true); [[ "$fpbx" =~ ^[0-9.]+$ ]] || fpbx=$(_iz_ver FREEPBX_VER)
   build=''
   [ -z "${APP_VER_BUILD:-}" ] || build+=" · build $APP_VER_BUILD"
   [ -z "${APP_BUILD_COMMIT:-}" ] || build+=" · ${APP_BUILD_COMMIT}"
-  printf '   %s%s%s%s%s · Asterisk %s · FreePBX %s · %s %s\n' "$_iz_b" "$_iz_acc" "${APP_VER:-unknown}" "$_iz_r" \
+  printf '  %s%s%s%s%s · Asterisk %s · FreePBX %s · %s %s\n' "$_iz_b" "$_iz_acc" "${APP_VER:-unknown}" "$_iz_r" \
     "$_iz_dim$build$_iz_r" "$(_iz_ver ASTERISK_VER)" "${fpbx:-unknown}" "${NAME:-Linux}" "${VERSION_ID:-}"
   # live state
   if [ -e "$_iz_maint" ]; then
-    printf '   %s● maintenance%s  %s\n' "$_iz_warn" "$_iz_r" "$(head -c 160 "$_iz_maint")"
+    printf '  %s● maintenance%s  %s\n' "$_iz_warn" "$_iz_r" "$(head -c 160 "$_iz_maint")"
   else
     ast=$(_iz_asterisk_state)
     health=$(timeout 3 izpbx-healthcheck 2>/dev/null) || true
     case $health in healthy) hcolor=$_iz_ok ;; "") health="state unknown" hcolor=$_iz_dim ;; *) hcolor=$_iz_ko ;; esac
     if [ "$ast" == starting ]; then
-      printf '   %s● Asterisk is starting%s (not answering yet: log in again in a few seconds)' "$_iz_warn" "$_iz_r"
+      printf '  %s● Asterisk is starting%s (not answering yet: log in again in a few seconds)' "$_iz_warn" "$_iz_r"
     else
-      printf '   %s● %s%s' "$hcolor" "${health#unhealthy: }" "$_iz_r"
+      printf '  %s● %s%s' "$hcolor" "${health#unhealthy: }" "$_iz_r"
       [ "$health" == healthy ] || [ -z "$health" ] || [ "$hcolor" != "$_iz_ko" ] || printf ' %s(unhealthy)%s' "$_iz_ko" "$_iz_r"
     fi
     if [ "$ast" == up ]; then
@@ -77,7 +85,7 @@ _iz_motd() {
     fi
     echo
   fi
-  printf '   %stools: izpbx-<Tab> (-h for help) · logs: docker logs izpbx%s\n\n' "$_iz_dim" "$_iz_r"
+  printf '  %stools: izpbx-<Tab> (-h for help) · logs: docker logs izpbx%s\n\n' "$_iz_dim" "$_iz_r"
 }
 
 # --- the prompt: ╭─ izpbx  user@host.domain  dir  ● N calls
@@ -105,7 +113,7 @@ _iz_prompt() {
   local rc=$? arrow=$_iz_acc
   [ "$rc" -eq 0 ] || arrow=$_iz_ko
   _iz_refresh_state
-  PS1="\[$_iz_dim\]╭─\[$_iz_r\] \[$_iz_b$_iz_acc\]izpbx\[$_iz_r\]  \[$_iz_b\]\u@\h\[$_iz_r\]\[$_iz_dim\]${_iz_domain}\[$_iz_r\]  \[$_iz_acc\]\w\[$_iz_r\]  ${_iz_state}\n\[$_iz_dim\]╰─\[$_iz_r\]\[$arrow\]❯\[$_iz_r\] "
+  PS1="\[$_iz_frame\]╭─\[$_iz_r\] \[$_iz_pill\] izpbx \[$_iz_r\] \[$_iz_user\]\u\[$_iz_r\]\[$_iz_host\]@\h\[$_iz_r\]\[$_iz_dim\]${_iz_domain}\[$_iz_r\]  \[$_iz_dir\]\w\[$_iz_r\]  ${_iz_state}\n\[$_iz_frame\]╰─\[$_iz_r\]\[$arrow\]❯\[$_iz_r\] "
 }
 PROMPT_COMMAND="_iz_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 
