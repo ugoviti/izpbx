@@ -44,6 +44,8 @@ if grep -qE 'migration: FreePBX 16 -> .* completed' <<< "$logs" && t_wait_health
   record ok "$(grep -oE 'FreePBX 16 -> [0-9.]+' <<< "$logs" | head -n 1)"
 elif grep -q 'preflight: BLOCK' <<< "$logs" && grep -q 'MAINTENANCE MODE' <<< "$logs"; then
   record blocked "$(grep -m1 -oE 'preflight: BLOCK .*' <<< "$logs" | cut -c 18-200)"
+elif grep -q 'cannot reload the migrated configuration' <<< "$logs"; then
+  record failed "reload of FreePBX 17: $(grep -A4 'cannot reload the migrated configuration' <<< "$logs" | sed -E 's/^izpbx: error: +//' | grep -m1 -iE 'error|understand|exception' | cut -c 1-150)"
 elif grep -q 'VERIFICATION FAILED' <<< "$logs"; then
   # the first difference of the report, after "VERIFICATION FAILED" (lines "izpbx: error:   <category>: - <record>")
   record failed "verification M7: $(grep -A8 'VERIFICATION FAILED' <<< "$logs" | sed -E 's/^izpbx: (error|warning|info): +//' |

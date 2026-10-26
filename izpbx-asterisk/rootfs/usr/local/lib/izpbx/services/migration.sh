@@ -438,11 +438,23 @@ migration_astdb() {
         $ins->execute([$r[0], $r[1]]);
         $n += $ins->rowCount();
       }
+      // chan_sip is gone (Asterisk 22): the hints and dial strings of the
+      // extensions converted to PJSIP that still name it, whether the restore
+      // left them or they were added just above (seen on 20.16.15: the hint of
+      // the ex chan_sip extension still SIP/1001&..., its BLF broken), as the
+      // mapping of the verification M7 expects (P4-35)
+      $up = $db->prepare("UPDATE astdb SET value = ? WHERE key = ?");
+      $c = 0;
+      foreach ($db->query("SELECT key, value FROM astdb WHERE key LIKE \"/AMPUSER/%/hint\" OR key LIKE \"/DEVICE/%/dial\" OR key LIKE \"/DEVICE/%/tech\"") as $r) {
+        $v = preg_match("#^/DEVICE/[^/]+/tech$#", $r[0]) ? (strtolower($r[1]) === "sip" ? "pjsip" : $r[1])
+                                                        : preg_replace("#(^|&)SIP/#", "\\1PJSIP/", $r[1]);
+        if ($v !== $r[1]) { $up->execute([$v, $r[0]]); $c++; }
+      }
       $db->commit();
-      echo $n;
+      echo "$n $c";
     ' -- "$old" "$new" "$IZPBX_MIGRATION_ASTDB_SKIP") || { log_error "migration: cannot import the astdb of the snapshot"; return 1; }
     chown "$APP_USR:$APP_GRP" "$new"
-    log_info "migration: $n astdb key(s) of FreePBX 16 added (missing after the restore)"
+    log_info "migration: ${n% *} astdb key(s) of FreePBX 16 added (missing after the restore), ${n#* } chan_sip hint/dial/tech value(s) converted to PJSIP"
   fi
   migration_state_set astdb "done"
 }
@@ -556,6 +568,15 @@ migration_confs() {
     chown "$APP_USR:$APP_GRP" "$etc/$f"
     log_info "migration: $f of 20.16 copied to $etc"
   done
+  # voicemail.conf of 20.16 (restored): some Asterisk samples of 20.16.x have
+  # a comment line starting with ":" (": Storage database:", 20.16.15) that
+  # FreePBX 16 read but the configuration parser of FreePBX 17 refuses, and
+  # every fwconsole reload fails (P4-35): made a comment again
+  f="$etc/voicemail.conf"
+  if [ -f "$f" ] && grep -qE '^:[[:space:]]' "$f"; then
+    sed -i -E 's/^:([[:space:]])/;\1/' "$(readlink -f "$f")"
+    log_info "migration: voicemail.conf: comment lines starting with ':' made ';' (refused by FreePBX 17)"
+  fi
   migration_state_set confs "done"
 }
 
@@ -601,6 +622,35 @@ migration_verify() {
   log_warn "freepbx: MAINTENANCE MODE: the migration is not completed, no service is started and the healthcheck reports unhealthy."
   log_warn "freepbx: the FreePBX 16 data is in $(migration_state snapshot_dir) (database dumps and files): check the report,"
   log_warn "freepbx: then restart the container to verify again, or go back to izPBX 20.16 with the snapshot."
+  return 1
+}
+
+# M7, after the verification: FreePBX 17 must reload the migrated
+# configuration (P4-35): fwconsole reload with Asterisk running, which also
+# writes the dialplan (hints of the converted extensions) from it. A file the
+# parser of FreePBX 17 refuses (a 20.16 voicemail.conf with a ":" line made
+# every reload fail, the hints were never written) is maintenance mode, with
+# the error, as a failed verification; a restart tries again.
+# Returns 1 in maintenance mode.
+migration_reload() {
+  local snap log
+  [ "$(migration_state reload)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir) log="$(migration_state snapshot_dir)/reload.log"
+  _fpbx_asterisk_start || return 1
+  if fwconsole_as_asterisk reload > "$log" 2>&1; then
+    _fpbx_asterisk_stop
+    log_info "migration: FreePBX 17 reloads the migrated configuration ($log)"
+    migration_state_set reload "done"
+    return 0
+  fi
+  _fpbx_asterisk_stop
+  log_error "migration: VERIFICATION FAILED: FreePBX 17 cannot reload the migrated configuration ($log):"
+  while IFS= read -r line; do log_error "  $line"; done < <(grep -vE '^[[:space:]]*$' "$log" | head -n 15)
+  mkdir -p "$(dirname "$IZPBX_MAINTENANCE_FLAG")"
+  echo "fwconsole reload fails on the migrated configuration ($log)" > "$IZPBX_MAINTENANCE_FLAG"
+  log_warn "freepbx: MAINTENANCE MODE: the migration is not completed, no service is started and the healthcheck reports unhealthy."
+  log_warn "freepbx: fix the file the error names (under ${APP_DATA:-/data}/etc/asterisk), then restart the container to try again,"
+  log_warn "freepbx: or go back to izPBX 20.16 with the snapshot in $snap."
   return 1
 }
 
