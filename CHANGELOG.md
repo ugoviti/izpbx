@@ -30,6 +30,11 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - Image for **amd64** only: arm64 comes in a later release (the build scripts already support it)
 - Image tags `22.17.0`, `22.17`, `22`; **`latest` stays on 20.16** for now: use an explicit tag. `compose.yml` uses `22.17.0`; `default.env` lists every configurable variable
 - SLA runs with `app_sla` (MeetMe stays disabled); conferences use ConfBridge
+- The Asterisk built-in HTTP server (ARI, WebSocket, WebRTC) listens on `127.0.0.1` only, the FreePBX 17 default: `FREEPBX_HTTPBINDADDRESS` / `FREEPBX_HTTPTLSBINDADDRESS=0.0.0.0` open it to the network
+- `FREEPBX_*` and SIP settings changed in the `.env` are applied at start with a `fwconsole reload` once Asterisk is up (20.16 wrote them in the database and waited for the next "Apply Config")
+- `APP_PORT_UCP_HTTP` / `APP_PORT_UCP_HTTPS` now set the ports of the UCP node server (in 20.16 they were only published, FreePBX kept 8001/8003); with `network_mode: host` they must be free on the host, the log says so when they are taken
+- With msmtp (the default MTA) `mailq` answers "Mail queue is empty" (msmtp has no queue): the FreePBX dashboard showed "Unknown output from mailq"
+- The FreePBX notices that do not apply to izPBX ("Sangoma Debian Repository GPG Key", the bind address "updated" on a new installation) are removed at start
 - `APP_PORT_UCP_HTTP` / `APP_PORT_UCP_HTTPS` now set the ports of the UCP node server (in 20.16 they were only published, FreePBX kept 8001/8003); with `network_mode: host` they must be free on the host, the log says so when they are taken
 - With msmtp (the default MTA) `mailq` answers "Mail queue is empty" (msmtp has no queue): the FreePBX dashboard showed "Unknown output from mailq"
 - With msmtp (the default MTA) `mailq` answers "Mail queue is empty" (msmtp has no queue): the FreePBX dashboard showed "Unknown output from mailq"

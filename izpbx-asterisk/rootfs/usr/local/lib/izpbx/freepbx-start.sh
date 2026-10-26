@@ -56,4 +56,14 @@ if [ "${state%% *}" == errored ]; then
   done
   log_warn "freepbx-start: the UCP node server does not start (pm2: errored):${busy:- see /home/asterisk/.pm2/logs and fwconsole pm2 --list}"
 fi
+# settings changed by izpbx-init (cfg_freepbx_settings): write the files of
+# FreePBX again and reload Asterisk, as "Apply Config" (P3-37)
+if [ -e "$IZPBX_FREEPBX_RELOAD_FLAG" ]; then
+  rm -f "$IZPBX_FREEPBX_RELOAD_FLAG"
+  if fwconsole_as_asterisk reload >/tmp/freepbx-reload.log 2>&1; then
+    log_info "freepbx-start: FreePBX settings changed at start, applied (fwconsole reload)"
+  else
+    log_warn "freepbx-start: fwconsole reload after the settings changed at start failed, see /tmp/freepbx-reload.log"
+  fi
+fi
 exit 0

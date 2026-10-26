@@ -386,6 +386,13 @@ freepbx_setting_skipped() { # variable name
   return 1
 }
 
+# A setting changed here reaches the files FreePBX writes (http_additional.conf,
+# rtp.conf, pjsip.transports.conf...) only with a "fwconsole reload": 20.16
+# left it to the next "Apply Config" of the user. The flag asks freepbx-start
+# to reload once Asterisk is up (P3-37).
+: "${IZPBX_FREEPBX_RELOAD_FLAG:=/run/izpbx/freepbx-reload}"
+_fpbx_reload_needed() { izpbx_dry_run || { mkdir -p "$(dirname "$IZPBX_FREEPBX_RELOAD_FLAG")" && touch "$IZPBX_FREEPBX_RELOAD_FLAG"; }; }
+
 cfg_freepbx_settings() {
   local var k v cur
   for var in $(compgen -v FREEPBX_); do
@@ -400,6 +407,7 @@ cfg_freepbx_settings() {
     [ "$cur" == "$v" ] && continue
     log_info "freepbx: advanced setting $k=$v"
     fpbx_setting "$k" "$v" >/dev/null 2>&1 || true
+    _fpbx_reload_needed
   done
 
   local -A sip=([rtpstart]=$APP_PORT_RTP_START [rtpend]=$APP_PORT_RTP_END
@@ -412,5 +420,25 @@ cfg_freepbx_settings() {
     [ "$cur" == "$v" ] && continue
     log_info "freepbx: sip setting $k=$v"
     fpbx_sipsetting "$k" "$v" >/dev/null 2>&1 || log_warn "freepbx: cannot set the sip setting $k"
+    _fpbx_reload_needed
+  done
+}
+
+# FreePBX notices that do not apply to izPBX (P3-37), removed at every start:
+# - framework GPG_KEY_EXPIRY: at every install or upgrade of framework
+#   FreePBX checks the key of the Sangoma Debian repository and tries to
+#   write it in /etc/apt/trusted.gpg.d; izPBX installs nothing from that
+#   repository (no apt source for it), so the notice "Sangoma Debian
+#   Repository GPG Key Expiring Soon" (in 0 days, on unknown) is noise;
+# - core core_bindaddress_changed, on a new installation only: core moves the
+#   Asterisk HTTP bind address from its default "::" to 127.0.0.1 and says it
+#   "updated" it, while nothing was configured before. 127.0.0.1 stays (the
+#   FreePBX 17 default): FREEPBX_HTTPBINDADDRESS / FREEPBX_HTTPTLSBINDADDRESS
+#   open it to the network (WebRTC, ARI from outside).
+freepbx_notices_cleanup() {
+  local ids=(framework:GPG_KEY_EXPIRY) id
+  [ "$(izpbx_mode)" != install ] || ids+=(core:core_bindaddress_changed)
+  for id in "${ids[@]}"; do
+    izpbx_do fwconsole notifications --delete "${id%%:*}" "${id#*:}" >/dev/null 2>&1 || true
   done
 }
