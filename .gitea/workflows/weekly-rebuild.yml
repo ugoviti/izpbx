@@ -35,15 +35,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # tags: the X.Y.Z tags of the branch (extended regex); exclude: tags of the other branch
+          # tags: the X.Y.Z tags of the branch (extended regex); skip_tags: tags of the other branch (not "exclude": a reserved key of the matrix)
           - branch: release/20.16
             line: '20.16'
             tags: '^20\.16\.[0-9]+$'
-            exclude: '^$'
+            skip_tags: '^$'
           - branch: main
             line: main
             tags: '^[0-9]+\.[0-9]+\.[0-9]+$'
-            exclude: '^20\.16\.'
+            skip_tags: '^20\.16\.'
     name: rebuild ${{ matrix.branch }}
     steps:
       - name: checkout
@@ -57,13 +57,13 @@ jobs:
         id: ver
         env:
           TAGS: ${{ matrix.tags }}
-          EXCLUDE: ${{ matrix.exclude }}
+          SKIP_TAGS: ${{ matrix.skip_tags }}
           BRANCH: ${{ matrix.branch }}
         run: |
           set -euo pipefail
           git fetch --force --tags origin
           # latest stable X.Y.Z tag of the branch (version sort, prereleases and dev tags excluded)
-          TAG=$(git tag --list | grep -E "$TAGS" | grep -vE "$EXCLUDE" | sort -V | tail -1 || true)
+          TAG=$(git tag --list | grep -E "$TAGS" | grep -vE "$SKIP_TAGS" | sort -V | tail -1 || true)
           if [ -z "$TAG" ]; then
             echo "::notice::${BRANCH}: no X.Y.Z release tag yet, nothing to rebuild"
             exit 0

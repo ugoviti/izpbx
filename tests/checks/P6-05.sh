@@ -6,7 +6,9 @@
 # there, in a scratch git repository with the tags of both lines:
 # - release/20.16 -> 20.16.22 (not the prerelease 20.16.23-rc1), main -> 22.17.1;
 # - main with no 22.x tag yet: nothing to rebuild, no tag (build skipped);
-# - negative check: main without its exclude would rebuild a 20.16 tag;
+# - negative check: main without its skip_tags would rebuild a 20.16 tag;
+# - no matrix entry uses "exclude", a reserved key of the matrix (the runner
+#   refused the whole matrix: "Matrix exclude entry ... is not a map");
 # - the build is skipped without a tag, the cache is per branch.
 # The manual run producing the images of both branches is checked in the
 # Gitea UI (release/20.16 created from the tag 20.16.22 and pushed by the user).
@@ -21,6 +23,7 @@ assert_cmd "each entry checks out its branch" -- grep -qF 'ref: ${{ matrix.branc
 assert_cmd "the build is skipped without a tag" -- grep -qF "if: steps.ver.outputs.tag != ''" "$wf"
 assert_cmd "build cache per branch" -- grep -qF 'cache-tag: buildcache-weekly-${{ matrix.line }}' "$wf"
 assert_cmd "never latest" -- grep -qE "^ +latest: 'false'$" "$wf"
+assert_cmd_fails "no matrix entry named exclude (reserved key)" -- grep -qE '^ {12}exclude:' "$wf"
 
 # the step script and the matrix values, as in the workflow
 awk '/- name: resolve latest release/ {s = 1} s && /- name: build and push/ {exit} s && r {print substr($0, 11)} s && /run: \|/ {r = 1}' "$wf" > "$work/resolve.sh"
@@ -36,9 +39,9 @@ repo() { # tags... -> a repository with izpbx-asterisk/ and those tags, origin i
   for t in "$@"; do "${g[@]}" tag "$t"; done
   "${g[@]}" remote add origin "$work/repo"
 }
-resolve() { # branch [exclude] -> the step outputs (tag=...), or nothing
+resolve() { # branch [skip_tags] -> the step outputs (tag=...), or nothing
   local out="$work/out"; : > "$out"
-  (cd "$work/repo" && TAGS=$(mval "$1" tags) EXCLUDE=${2-$(mval "$1" exclude)} BRANCH=$1 GITHUB_OUTPUT=$out \
+  (cd "$work/repo" && TAGS=$(mval "$1" tags) SKIP_TAGS=${2-$(mval "$1" skip_tags)} BRANCH=$1 GITHUB_OUTPUT=$out \
     bash "$work/resolve.sh" >/dev/null 2>&1)
   sed -n 's/^tag=//p' "$out"
 }
@@ -48,5 +51,5 @@ assert_eq "22.17.1" "$(resolve main)" "main rebuilds 22.17.1"
 repo 20.16.21 20.16.22 dev-22.17
 assert_eq "" "$(resolve main)" "main with no 22.x tag: nothing to rebuild"
 assert_eq "20.16.22" "$(resolve release/20.16)" "release/20.16 unaffected"
-assert_eq "20.16.22" "$(resolve main '^$')" "negative: main without its exclude would rebuild a 20.16 tag"
+assert_eq "20.16.22" "$(resolve main '^$')" "negative: main without its skip_tags would rebuild a 20.16 tag"
 finish
