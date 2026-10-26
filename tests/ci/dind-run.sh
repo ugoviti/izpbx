@@ -7,7 +7,8 @@
 #   tests/ci/dind-run.sh --lint         tests/lint.sh (its tools bind mount the repository too)
 # IMAGE (the izpbx-asterisk image of the run, already in the local docker)
 # is loaded in the DinD daemon and given to tests/run.sh as TEST_IMAGE.
-# Environment passed through: TEST_REUSE_FIXTURES, P4_08_AFTER_RESTORE_SQL;
+# Environment passed through: TEST_REUSE_FIXTURES, P4_08_AFTER_RESTORE_SQL,
+# TEST_CHECKS_DIR, MIGRATE_VERSION and MIGRATE_BREAK (tests/ci/checks/MIGRATE.sh);
 # TEST_KEEP is passed through too, and also keeps the DinD container (debug:
 # docker exec -it <name> docker ps -a).
 # Logs copied back to tests/.logs; exit status of tests/run.sh.
@@ -40,6 +41,7 @@ if [ "$image" == --lint ]; then
   exit "$rc"
 fi
 docker exec -e TEST_IMAGE="$image" -e TEST_REUSE_FIXTURES="${TEST_REUSE_FIXTURES:-}" -e TEST_KEEP="${TEST_KEEP:-}" \
+  -e TEST_CHECKS_DIR="${TEST_CHECKS_DIR:-}" -e MIGRATE_VERSION="${MIGRATE_VERSION:-}" -e MIGRATE_BREAK="${MIGRATE_BREAK:-}" \
   -e P4_08_AFTER_RESTORE_SQL="${P4_08_AFTER_RESTORE_SQL:-}" -w /repo "$name" bash tests/run.sh "$@" || rc=$?
 mkdir -p "$repo/tests/.logs"
 docker exec "$name" tar -C /repo/tests/.logs -cf - . 2>/dev/null | tar -C "$repo/tests/.logs" -xf - || true

@@ -8,6 +8,9 @@ inputs:
   label:
     description: Extra label shown in the message (eg. tag:20.16.22)
     default: ''
+  details:
+    description: Optional text appended to the message (eg. a table), shown preformatted
+    default: ''
   password:
     description: Matrix bot password
     required: true
@@ -29,6 +32,7 @@ runs:
       env:
         STATUS: ${{ inputs.status }}
         LABEL: ${{ inputs.label }}
+        DETAILS: ${{ inputs.details }}
         MATRIX_PASSWORD: ${{ inputs.password }}
         MATRIX_HOMESERVER: ${{ inputs.homeserver }}
         MATRIX_ROOM_ID: ${{ inputs.room-id }}
@@ -38,6 +42,10 @@ runs:
         RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_NUMBER}"
         BODY="${GITHUB_REPOSITORY} build:#${GITHUB_RUN_NUMBER} ${LABEL} status:${STATUS}"
         HTML="<a href=\"${RUN_URL}\"><code>${GITHUB_REPOSITORY}</code></a> build:[<code>#${GITHUB_RUN_NUMBER}</code>] [<code>${LABEL}</code>] status:[<strong>${STATUS}</strong>]"
+        if [ -n "$DETAILS" ]; then
+          BODY+=$'\n'"$DETAILS"
+          HTML+="<pre>$(printf '%s' "$DETAILS" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')</pre>"
+        fi
 
         TOKEN=$(jq -n --arg u "$MATRIX_USER" --arg p "$MATRIX_PASSWORD" \
             '{type:"m.login.password", identifier:{type:"m.id.user", user:$u}, password:$p}' \

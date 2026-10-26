@@ -1,0 +1,163 @@
+# izPBX weekly "migration from every 20.16.x" (Gitea Actions, P6-08).
+# Every Tuesday, and by hand (Repository > Actions > izpbx-migration-matrix > Run workflow):
+# - versions: the 20.16.x release tags of the repository, computed at run time (one job each);
+# - build: the image of the run in the Gitea registry as ci-migration (never latest, never Docker Hub);
+# - migrate: for each version the fixture of that version (tests/fixtures/make-fixture.sh)
+#   migrated to 22.17 in Docker-in-Docker (tests/ci/checks/MIGRATE.sh): ok, blocked by the
+#   checks M2 with their instructions, or failed; break_version breaks one version on purpose
+#   (an extension removed after the restore) and its job must fail;
+# - report: the table version -> result (tests/ci/migration-report.sh) in the Matrix
+#   notification; red when a version failed or has no result.
+#
+# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+
+name: izpbx-migration-matrix
+
+on:
+  schedule:
+    # every Tuesday at 04:00 UTC (the weekly rebuild runs on Monday)
+    - cron: '0 4 * * 2'
+  workflow_dispatch:
+    inputs:
+      break_version:
+        description: "A version to break on purpose (eg. 20.16.10): its job must fail"
+        default: ''
+        required: false
+
+concurrency:
+  group: izpbx-migration-matrix
+  cancel-in-progress: false
+
+jobs:
+  versions:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.tags.outputs.list }}
+      count: ${{ steps.tags.outputs.count }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: 20.16.x release tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          tags=$(git tag --list | grep -E '^20\.16\.[0-9]+$' | sort -V)
+          [ -n "$tags" ] || { echo "::error::no 20.16.x tag"; exit 1; }
+          {
+            echo "list=$(jq -Rnc '[inputs]' <<< "$tags")"
+            echo "count=$(wc -l <<< "$tags")"
+          } >> "$GITHUB_OUTPUT"
+          echo "$(wc -l <<< "$tags") version(s): $(tr '\n' ' ' <<< "$tags")"
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build and push
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ci-migration
+          cache-tag: buildcache-ci
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+  migrate:
+    needs: [versions, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        version: ${{ fromJSON(needs.versions.outputs.list) }}
+    name: migrate ${{ matrix.version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: registry login
+        id: login
+        uses: ./.gitea/actions/registry-login
+        with:
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: migration in Docker-in-Docker
+        shell: bash
+        env:
+          IMAGE: ${{ steps.login.outputs.image }}:ci-migration
+          MIGRATE_VERSION: ${{ matrix.version }}
+          BREAK: ${{ inputs.break_version }}
+        run: |
+          set -euo pipefail
+          docker pull -q "$IMAGE"
+          if [ "${BREAK:-}" == "$MIGRATE_VERSION" ]; then export MIGRATE_BREAK=1; fi
+          TEST_CHECKS_DIR=tests/ci/checks tests/ci/dind-run.sh "$IMAGE" MIGRATE
+
+      - name: result
+        if: always()
+        shell: bash
+        env:
+          MIGRATE_VERSION: ${{ matrix.version }}
+        run: |
+          mkdir -p result
+          f="tests/.logs/migrate-$MIGRATE_VERSION.txt"
+          if [ -s "$f" ]; then cp "$f" result/; else printf '%s\tfailed\tno result line\n' "$MIGRATE_VERSION" > "result/migrate-$MIGRATE_VERSION.txt"; fi
+          cat result/*.txt
+
+      - name: upload the result
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: migrate-${{ matrix.version }}
+          path: result/
+
+  report:
+    needs: [versions, migrate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: download the results
+        uses: actions/download-artifact@v3
+        with:
+          path: results
+
+      - name: table
+        id: table
+        shell: bash
+        env:
+          VERSIONS: ${{ needs.versions.outputs.list }}
+        run: |
+          set -uo pipefail
+          mapfile -t expected < <(jq -r '.[]' <<< "${VERSIONS:-[]}")
+          rc=0
+          table=$(tests/ci/migration-report.sh results "${expected[@]}") || rc=$?
+          printf '%s\n' "$table"
+          { echo "table<<IZPBX_TABLE"; printf '%s\n' "$table"; echo "IZPBX_TABLE"; } >> "$GITHUB_OUTPUT"
+          exit "$rc"
+
+      - name: matrix notify
+        if: always()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: migration from every 20.16.x (${{ needs.versions.outputs.count }} versions)
+          details: ${{ steps.table.outputs.table }}
+          password: ${{ secrets.MATRIX_PASSWORD }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+          user: ${{ vars.MATRIX_USER }}
