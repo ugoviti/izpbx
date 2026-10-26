@@ -12,7 +12,9 @@
 #   prompt "● maintenance"; Asterisk running but not answering yet (the first
 #   seconds of a container): banner and prompt "starting"; no Asterisk
 #   daemon: prompt "● asterisk down";
-# - NO_COLOR: no escape sequence at all.
+# - colors with the TERM=xterm of docker exec -it (256 colors, although its
+#   terminfo says 8), the 8 basic ones with TERM=linux, none with TERM=dumb
+#   or NO_COLOR.
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p3-33
 assert_cmd "image builds" -- t_build_image "$image"
@@ -58,4 +60,9 @@ assert_contains "$(docker run --rm -t -e TERM=xterm-256color --entrypoint "" "$i
   "no Asterisk daemon: prompt 'asterisk down'"
 assert_eq "" "$(docker exec -t -e TERM=xterm-256color -e NO_COLOR=1 "$c" bash -ic "$prompt" 2>/dev/null | grep -c $'\e\[' | grep -v '^0$' || true)" \
   "NO_COLOR: no escape sequence"
+# the TERM that docker exec -it sets (xterm: terminfo says 8 colors): 256 colors
+# anyway (the regression seen by the user: no color at all)
+assert_contains "$(docker exec -t "$c" bash -ic true 2>/dev/null)" $'\e[38;5;87m' "docker exec -t (TERM=xterm): the 256-color logo"
+assert_contains "$(docker exec -t -e TERM=linux "$c" bash -ic true 2>/dev/null)" $'\e[36m' "TERM=linux: the 8 basic colors"
+assert_eq 0 "$(docker exec -t -e TERM=dumb "$c" bash -ic true 2>/dev/null | grep -c $'\e\[' || true)" "TERM=dumb: no color"
 finish

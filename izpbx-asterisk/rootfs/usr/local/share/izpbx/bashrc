@@ -10,15 +10,35 @@ case $- in *i*) ;; *) return ;; esac
 . /etc/os-release
 _iz_maint=/run/izpbx/maintenance
 
-# --- colors (empty without a color terminal)
-if [ -z "${NO_COLOR:-}" ] && [ -t 1 ] && [ "$(tput colors 2>/dev/null || echo 0)" -ge 256 ]; then
+# --- colors: 256 on the xterm-like terminals (docker exec -it sets TERM=xterm,
+# whose terminfo says 8 colors, while the real terminal has 256), the 8 basic
+# ones on the others (linux console), none without a terminal, with
+# TERM=dumb or with NO_COLOR
+_iz_ncolors=0
+if [ -z "${NO_COLOR:-}" ] && [ -t 1 ] && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
+  case $TERM in
+    xterm*|screen*|tmux*|rxvt*|*-256color|alacritty|foot*|kitty*|wezterm|vte*|gnome*|konsole*) _iz_ncolors=256 ;;
+    *) [ "$(tput colors 2>/dev/null || echo 0)" -ge 256 ] && _iz_ncolors=256 || { [ "$(tput colors 2>/dev/null || echo 0)" -ge 8 ] && _iz_ncolors=8; } ;;
+  esac
+fi
+if [ "$_iz_ncolors" -eq 256 ]; then
   _iz_c() { printf '\e[38;5;%sm' "$1"; }
+  _iz_pill=$'\e[1;38;5;15;48;5;25m' _iz_dir=$'\e[1;38;5;117m'
+elif [ "$_iz_ncolors" -eq 8 ]; then
+  _iz_c() { # the nearest of the 8 basic colors to the 256-color index used here
+    case $1 in 87|81|75|45) printf '\e[36m' ;; 69|63|117) printf '\e[34m' ;; 57) printf '\e[35m' ;;
+      42) printf '\e[32m' ;; 203) printf '\e[31m' ;; 214|221) printf '\e[33m' ;; *) printf '\e[37m' ;; esac
+  }
+  _iz_pill=$'\e[1;37;44m' _iz_dir=$'\e[1;34m'
+fi
+if [ "$_iz_ncolors" -gt 0 ]; then
   _iz_b=$'\e[1m' _iz_d=$'\e[2m' _iz_r=$'\e[0m'
-  _iz_ok=$(_iz_c 42) _iz_ko=$(_iz_c 203) _iz_warn=$(_iz_c 214) _iz_dim=$(_iz_c 245) _iz_acc=$(_iz_c 45)
+  _iz_ok=$(_iz_c 42) _iz_ko=$(_iz_c 203) _iz_warn=$(_iz_c 214) _iz_acc=$(_iz_c 45) _iz_host=$(_iz_c 221)
+  # grey: 245 / 240 with 256 colors, dim white with 8
+  if [ "$_iz_ncolors" -eq 256 ]; then _iz_dim=$(_iz_c 245) _iz_frame=$(_iz_c 240); else _iz_dim=$'\e[2;37m' _iz_frame=$'\e[2;37m'; fi
   # prompt: the izpbx pill (white on blue), user (red for root, green
   # otherwise), host (yellow), directory (light blue), frame (grey)
-  _iz_pill=$'\e[1;38;5;15;48;5;25m' _iz_host=$(_iz_c 221) _iz_dir=$'\e[1;38;5;117m' _iz_frame=$(_iz_c 240)
-  if [ "$(id -u)" -eq 0 ]; then _iz_user=$'\e[1;38;5;203m'; else _iz_user=$'\e[1;38;5;42m'; fi
+  if [ "$(id -u)" -eq 0 ]; then _iz_user="$_iz_b$_iz_ko"; else _iz_user="$_iz_b$_iz_ok"; fi
 else
   _iz_c() { :; }
   _iz_b='' _iz_d='' _iz_r='' _iz_ok='' _iz_ko='' _iz_warn='' _iz_dim='' _iz_acc=''
