@@ -185,7 +185,7 @@ izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 /
 The short version:
 
 1. update to izPBX **20.16.22** and upgrade all FreePBX modules;
-2. switch the image to 22.17 and run the **checks** (`izpbx-preflight`): fix what they report;
+2. switch the image to 22.17 and run the **checks** from the host, in the directory of `compose.yml` (`docker compose run --rm --no-deps --entrypoint izpbx-preflight izpbx`): fix what they report. The container runs the same checks by itself at every start on a 20.16 volume; running them first lets you read the report while 20.16 is still up;
 3. **back up** `data/` and the databases;
 4. set `IZPBX_MIGRATE_FREEPBX=true` and start the container: it migrates, verifies the result and starts;
 5. keep the **snapshot** in `data/izpbx/.izpbx-migration/` until you are sure: `izpbx-rollback` goes back to 20.16 from it.
@@ -229,7 +229,7 @@ sed -i 's|izpbx-asterisk:20\.16\.[0-9]*|izpbx-asterisk:22.17.0|' compose.yml
 docker compose pull izpbx
 ```
 
-The checks only read the databases and the files: they can run while izPBX 20.16 is still up.
+Then run the checks **on the host, in the directory of `compose.yml`** (eg. `/opt/izpbx`): `docker compose run` starts a one-off container of the 22.17 image (`--rm`: removed when it ends) with the same `.env`, volume and database as the `izpbx` service, and runs `izpbx-preflight` in it instead of the PBX (`--entrypoint`; `--no-deps`: the database container is not touched). The checks only read the databases and the files: they can run while izPBX 20.16 is still up.
 
 <!-- test:run -->
 ```sh
@@ -237,6 +237,8 @@ docker compose run --rm --no-deps --entrypoint izpbx-preflight izpbx
 ```
 
 Every line is `<RESULT> <check>: <message>`. `OK` passed; `INFO` is what the migration will do (chan_sip conversion, commercial modules, MeetMe conferences moved to ConfBridge); `REMOVED` is a known exception left out on purpose; `BLOCK` stops the migration, and the message says how to fix it or which variable accepts it. The exit status is 0 when nothing blocks. The report is also saved in `data/izpbx/.izpbx-migration/preflight-<time>.txt`.
+
+You do not have to run them by hand: izPBX 22.17 runs the same checks by itself at every start on a 20.16 volume, before changing anything. Without `IZPBX_MIGRATE_FREEPBX=true`, or when a check blocks, the container stays in maintenance mode and the report is in `docker compose logs izpbx` and in the same `preflight-<time>.txt`; with the opt-in and nothing blocking, the migration starts. Running them by hand first only lets you read the report before stopping 20.16.
 
 ### 2. Back up
 
