@@ -48,7 +48,11 @@ assert_cmd "inventory before" -- jq -e '.categories.extensions | length > 0' "$w
 inject=()
 [ -z "${P4_08_AFTER_RESTORE_SQL:-}" ] || inject=(-e IZPBX_TEST_AFTER_RESTORE_SQL="$P4_08_AFTER_RESTORE_SQL")
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}" -e IZPBX_MIGRATE_FREEPBX=true "${inject[@]}")
-assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 2400
+# the end of the migration first: a failed verification (break_migration in CI)
+# is known at once, not after the timeout of healthy
+t_wait_for 2400 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED)|MAINTENANCE MODE|rc.init: fatal' >/dev/null"
+migrated() { docker logs "$c" 2>&1 | grep -E 'migration: FreePBX 16 -> .* completed' >/dev/null && t_wait_healthy "$c" 300; }
+assert_cmd "migrated: healthy" -- migrated
 docker logs "$c" 2>&1 | grep -E 'migration:|preflight: (BLOCK|RESULT)|freepbx: (migration|FreePBX)' | sed 's/^/    | /' | tail -n 40 >&2
 state=$(docker exec "$c" cat /data/.izpbx-migration/state 2>/dev/null)
 assert_contains "$state" "restore=done" "state: restore=done"
