@@ -3,9 +3,9 @@
 # - first release of a series: "## [22.17.0] - Unreleased" becomes
 #   "## [22.17.0] - <date>", an empty "## [Unreleased]" stays on top, tag 22.17.0;
 # - patch: 22.17.1 with the hand written Unreleased entries plus one line per
-#   component changed in versions.env and freepbx-modules.txt, compose.yml and
-#   README.md moved from izpbx-asterisk:22.17.0 to 22.17.1 (the 20.16 examples
-#   of the README untouched);
+#   component changed in versions.env and freepbx-modules.txt, compose.yml
+#   (${IZPBX_VERSION:-...}), default.env (IZPBX_VERSION=) and README.md moved
+#   from 22.17.0 to 22.17.1 (the 20.16 examples of the README untouched, P7-10);
 # - empty Unreleased: draft from the commit subjects, or from --ai (a fake
 #   claude in PATH);
 # - no option (or --dry-run) is a dry run that writes nothing and prints how to
@@ -20,7 +20,7 @@ r="$work/repo"
 today=$(date +%F)
 
 mkdir -p "$r/izpbx-asterisk/build" "$r/izpbx-asterisk/tools"
-cp "$REPO_DIR/CHANGELOG.md" "$REPO_DIR/compose.yml" "$REPO_DIR/README.md" "$r/"
+cp "$REPO_DIR/CHANGELOG.md" "$REPO_DIR/compose.yml" "$REPO_DIR/default.env" "$REPO_DIR/README.md" "$r/"
 cp "$REPO_DIR/izpbx-asterisk/versions.env" "$r/izpbx-asterisk/"
 cp "$REPO_DIR/izpbx-asterisk/build/freepbx-modules.txt" "$r/izpbx-asterisk/build/"
 cp "$rel" "$r/izpbx-asterisk/tools/"
@@ -51,7 +51,7 @@ assert_cmd "no '- Unreleased' heading left" -- bash -c "! grep -q '22.17.0\] - U
 assert_eq "## [Unreleased]" "$(grep -m1 '^## \[' "$r/CHANGELOG.md")" "empty Unreleased on top"
 assert_cmd "the 22.17.0 sections are kept" -- grep -q '^### Migration' "$r/CHANGELOG.md"
 assert_cmd "older entries kept" -- grep -qF '## [20.16.22] - 2026-10-22' "$r/CHANGELOG.md"
-assert_cmd "compose.yml still on 22.17.0" -- grep -qF 'izpbx-asterisk:22.17.0' "$r/compose.yml"
+assert_cmd "compose.yml still on 22.17.0" -- grep -qF 'IZPBX_VERSION:-22.17.0}' "$r/compose.yml"
 
 # --- patch release with hand written entries and component updates
 sed -i 's/^ASTERISK_VER=.*/ASTERISK_VER=22.12.0/' "$r/izpbx-asterisk/versions.env"
@@ -74,9 +74,13 @@ assert_cmd "Asterisk component line added" -- grep -qF 'Updated PBX engine to As
 # shellcheck disable=SC2016  # literal backticks
 assert_cmd "FreePBX modules line added" -- grep -qE 'Updated FreePBX modules: `core` [0-9.]+ → 17\.0\.99\.1' "$work/e1"
 assert_cmd "component lines under ### Changed" -- bash -c "grep -A3 '^### Changed' '$work/e1' | grep -q 'Asterisk'"
-assert_cmd "compose.yml moved to 22.17.1" -- grep -qF 'izdock/izpbx-asterisk:22.17.1' "$r/compose.yml"
+assert_cmd "compose.yml moved to 22.17.1" -- grep -qF 'izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.1}' "$r/compose.yml"
+assert_cmd "default.env moved to 22.17.1" -- grep -qx 'IZPBX_VERSION=22.17.1' "$r/default.env"
+assert_cmd "README upgrade steps moved to 22.17.1" -- grep -qF "echo 'IZPBX_VERSION=22.17.1' >> .env" "$r/README.md"
+assert_cmd "release commit has default.env" -- sh -c "git -C '$r' show --name-only --format= HEAD | grep -qx default.env"
 assert_cmd "README image references moved to 22.17.1" -- grep -qF 'izpbx-asterisk:22.17.1' "$r/README.md"
-assert_eq "0" "$(cat "$r/README.md" "$r/compose.yml" | grep -cF 'izpbx-asterisk:22.17.0' || true)" "no 22.17.0 image reference left"
+assert_eq "0" "$(cat "$r/README.md" "$r/compose.yml" "$r/default.env" | grep -cE 'izpbx-asterisk:22\.17\.0|IZPBX_VERSION(:-|=)22\.17\.0' || true)" "no 22.17.0 image reference left"
+assert_cmd "MARIADB_VERSION untouched" -- grep -qx 'MARIADB_VERSION=10.11.19' "$r/default.env"
 assert_cmd "20.16 examples of the README untouched" -- grep -qF 'izpbx-asterisk:20\.16\.[0-9]*' "$r/README.md"
 
 # negative: existing tag, empty entry, wrong branch

@@ -5,9 +5,12 @@
 #   is named in the README; negative check: a README without one is reported;
 # - the code blocks marked "<!-- test:run -->" are run, in order, as written,
 #   in a docker CLI container (sh, docker compose) on a deploy made of the
-#   compose.yml and default.env of the repository, with the 20.16.22 fixture
-#   in data/: image switched, checks green, backup files written, migration
-#   started and healthy, final report shown, rollback back to FreePBX 16;
+#   compose.yml and default.env of the repository as a 20.16 deploy has them
+#   (image tag written in compose.yml, no IZPBX_VERSION in .env), with the
+#   20.16.22 fixture in data/: image switched (compose.yml in the 22.17 form
+#   ${IZPBX_VERSION:-...}, IZPBX_VERSION=22.17.0 in .env), checks green, backup
+#   files written, migration started and healthy, final report shown,
+#   rollback back to FreePBX 16;
 #   negative check: a failing block makes the runner fail.
 # The deploy differs from the repository files only where a test must:
 # compose.test.yml gives the containers names and labels of the test, the
@@ -50,9 +53,11 @@ assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "20.16.22 fixture available" -- "$TESTS_DIR/fixtures/make-fixture.sh" -v 20.16.22 ${TEST_REUSE_FIXTURES:+--reuse}
 
 # --- the deploy: compose.yml and default.env of the repository
-cp "$REPO_DIR/compose.yml" "$work/compose.yml"
+# as a 20.16 deploy: the image tag in compose.yml, no IZPBX_VERSION in .env
+sed 's|izpbx-asterisk:\${IZPBX_VERSION:-[0-9.]*}$|izpbx-asterisk:20.16.22|' "$REPO_DIR/compose.yml" > "$work/compose.yml"
+assert_cmd "deploy as 20.16: tag in compose.yml" -- grep -q 'image: docker.io/izdock/izpbx-asterisk:20.16.22$' "$work/compose.yml"
 sed -e 's/^MYSQL_SERVER=.*/MYSQL_SERVER=db/' -e 's/^MYSQL_PASSWORD=.*/MYSQL_PASSWORD=fixture-pw/' \
-  -e 's/^MYSQL_ROOT_PASSWORD=.*/MYSQL_ROOT_PASSWORD=rootpw/' "$REPO_DIR/default.env" > "$work/.env"
+  -e 's/^MYSQL_ROOT_PASSWORD=.*/MYSQL_ROOT_PASSWORD=rootpw/' -e '/^IZPBX_VERSION=/d' "$REPO_DIR/default.env" > "$work/.env"
 cat > "$work/compose.test.yml" <<EOF
 services:
   db:
@@ -80,7 +85,7 @@ t_on_cleanup "echo 'docker compose down -v --timeout 10 >/dev/null 2>&1; rm -rf 
 t_on_cleanup "t_rmtree '$work'"
 
 echo 'docker compose up -d db' | runner >/dev/null 2>&1
-db_ping() { echo 'docker compose exec -T db mariadb-admin ping -uroot -prootpw' | runner 30 >/dev/null 2>&1; }
+db_ping() { echo 'docker compose exec -T db mariadb -uroot -prootpw -N -e "SELECT 1"' | runner 30 2>/dev/null | grep -qx 1; } # a query: ping answers during the init of MariaDB, before the root password works
 t_wait_for 120 -- db_ping
 dbsql() { echo "docker compose exec -T db mariadb -uroot -prootpw -N $*" | runner; }
 for f in asterisk asteriskcdrdb; do
@@ -96,7 +101,10 @@ run_block() { # n timeout -> output of the block in $work/out-n
   runner "$2" < "$work/block-$1.sh" > "$work/out-$1" 2>&1
 }
 assert_cmd "block 1 (image switch) runs" -- run_block 1 60
-assert_cmd "compose.yml: image 22.17.0" -- grep -q 'image: docker.io/izdock/izpbx-asterisk:22.17.0' "$work/compose.yml"
+assert_cmd "compose.yml: image in the 22.17 form" -- grep -qF 'image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.0}' "$work/compose.yml"
+assert_eq "IZPBX_VERSION=22.17.0" "$(grep '^IZPBX_VERSION=' "$work/.env")" ".env: IZPBX_VERSION=22.17.0, once"
+images() { docker run --rm -v "$work:$work" -w "$work" "$cli" docker compose -f compose.yml config --images 2>/dev/null; }
+assert_cmd "the image resolves to 22.17.0 (compose.yml alone, without the test override)" -- grep -qx 'docker.io/izdock/izpbx-asterisk:22.17.0' <<< "$(images)"
 assert_cmd "block 2 (checks) runs: nothing blocks" -- run_block 2 600
 grep -E '^(BLOCK|RESULT)' "$work/out-2" | sed 's/^/    | /' >&2
 assert_cmd "checks: OK framework" -- grep -q '^OK framework' "$work/out-2"

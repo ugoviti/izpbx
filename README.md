@@ -121,6 +121,8 @@ Another available option is to disable `network_mode: host` and use **macvlan** 
 
 ## Customizing compose.yml
 
+The versions of the images are in `.env`: `IZPBX_VERSION` (izPBX) and `MARIADB_VERSION` (MariaDB), always explicit versions, never `latest`. `compose.yml` reads them (`izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`), so a new release only changes `.env`.
+
 If you need to customize the default `compose.yml`, don't edit it, but create an **override** file:
 
 - `compose.override.yml`
@@ -150,7 +152,7 @@ If you want to test izPBX without using docker compose command, you can use the 
 
 > From izPBX 20.16.x (FreePBX 16) to 22.17.x (FreePBX 17) see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217): it is not a plain image update.
 
-1. Upgrade the version of izpbx by downloading a new tgz release, or changing image tag into **compose.yml** file (from git releases page, verify if upstream docker compose was updated), or if you cloned directly from GIT, use the following commands as quick method:
+1. Upgrade the version of izpbx by setting the new version in `IZPBX_VERSION` of your `.env` (eg. `IZPBX_VERSION=22.17.1`, see the git releases page), or by downloading a new tgz release, or if you cloned directly from GIT, use the following commands as quick method:
 ```
 cd /opt/izpbx
 git checkout main
@@ -166,7 +168,7 @@ docker compose pull
 docker compose up -d
 ```
 
-3. If the mariadb database version was changed, remember to update the tables schema with the command  
+3. If the mariadb database version was changed (`MARIADB_VERSION`), remember to update the tables schema with the command  
   `source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD`
 
 4. Open FreePBX Web URL and verify if any module updates exist from FreePBX Menu: **Admin --> Modules Admin --> Check Online --> Upgrade all --> Process**
@@ -218,11 +220,12 @@ Variables of the migration (in `.env`):
 
 ### 1. Switch the image and run the checks
 
-Set the 22.17 image in `compose.yml` (always an explicit tag: `latest` stays on 20.16 for now) and pull it:
+Set the 22.17 image (always an explicit version: `latest` stays on 20.16 for now) and pull it. In 22.17 the version is `IZPBX_VERSION` of `.env`: the first line turns the image line of a 20.16 `compose.yml`, which has the tag written in it, into the 22.17 form (`izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`; nothing to do with the `compose.yml` of 22.17), the second sets the version in `.env`:
 
 <!-- test:run -->
 ```sh
-sed -i 's|izpbx-asterisk:20\.16\.[0-9]*|izpbx-asterisk:22.17.0|' compose.yml
+sed -i 's|izpbx-asterisk:20\.16\.[0-9]*$|izpbx-asterisk:${IZPBX_VERSION:-22.17.0}|' compose.yml
+sed -i '/^IZPBX_VERSION=/d' .env && echo 'IZPBX_VERSION=22.17.0' >> .env
 ```
 
 ```sh
@@ -310,7 +313,7 @@ Then remove `IZPBX_MIGRATE_FREEPBX=true` from `.env`, set the 20.16 image back a
 
 ```sh
 sed -i '/^IZPBX_MIGRATE_FREEPBX=/d' .env
-sed -i 's|izpbx-asterisk:22\.17\.0|izpbx-asterisk:20.16.22|' compose.yml
+sed -i 's|^IZPBX_VERSION=.*|IZPBX_VERSION=20.16.22|' .env
 docker compose up -d izpbx
 ```
 
@@ -322,6 +325,9 @@ Calls recorded and voicemail left while on 22.17 stay in the spool.
 - The 20.16 entrypoint variables `APP_RUNAS`, `MULTISERVICE`, `CMD_OVERRIDE`, `ENTRYPOINT_TINI` are ignored, with a warning at start if set (s6 starts the services). `UMASK` still applies, to the initialization and to every service.
 - `FREEPBX_MODULES_EXTRA` no longer contains `phonebook` (no FreePBX 17 release).
 - Debian paths for Apache, cron, PHP and phpMyAdmin: relevant only for custom scripts in `APP_CUSTOM_SCRIPTS`. `PMA_CONFIG` defaults to `/etc/phpmyadmin/config.inc.php`.
+- The Asterisk built-in HTTP server (ARI, WebSocket, WebRTC) listens on `127.0.0.1` only, the FreePBX 17 default: set `FREEPBX_HTTPBINDADDRESS=0.0.0.0` (and `FREEPBX_HTTPTLSBINDADDRESS=0.0.0.0`) to reach it from the network, behind a firewall.
+- `APP_PORT_UCP_HTTP` / `APP_PORT_UCP_HTTPS` set the ports of the UCP node server (FreePBX `NODEJSBINDPORT` / `NODEJSHTTPSBINDPORT`); with `network_mode: host` they must be free on the host.
+- The image versions are in `.env` (`IZPBX_VERSION`, `MARIADB_VERSION`), read by `compose.yml`.
 - Image tags: `22.17.0`, `22.17`, `22`; `latest` stays on 20.16 for now. Images for amd64 only: arm64 comes in a later release.
 
 # Advanced Production Configuration Examples

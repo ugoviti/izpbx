@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # P7-02: default.env and compose.yml of 22.17.
 # - docker compose config is valid (compose.yml with default.env as .env);
-# - the izpbx image is 22.17.0, an explicit tag;
+# - the izpbx image is 22.17.0, an explicit tag (IZPBX_VERSION, P7-10);
 # - every variable of the contract (izpbx-asterisk/docs/env-contract.md) is in default.env,
 #   even commented, except the internal ones: sections 1 (image and build
 #   metadata), 14 (legacy entrypoint, removed in 22.17) and 15 (internal
@@ -22,7 +22,8 @@ compose_config() { # dir with compose.yml and .env
 }
 cp "$REPO_DIR/compose.yml" "$work/compose.yml"; cp "$REPO_DIR/default.env" "$work/.env"
 assert_cmd "docker compose config valid" -- compose_config "$work"
-assert_cmd "izpbx image 22.17.0" -- grep -qE '^    image: docker.io/izdock/izpbx-asterisk:22\.17\.0$' "$REPO_DIR/compose.yml"
+assert_cmd "izpbx image 22.17.0 (IZPBX_VERSION, P7-10)" -- grep -qE '^    image: docker.io/izdock/izpbx-asterisk:\$\{IZPBX_VERSION:-22\.17\.0\}$' "$REPO_DIR/compose.yml"
+assert_cmd "IZPBX_VERSION=22.17.0 in default.env" -- grep -qx 'IZPBX_VERSION=22.17.0' "$REPO_DIR/default.env"
 
 # the configurable variables of the contract
 awk '/^## / {sec = $2} /^\| `[A-Z]/ {split($0, a, "`"); print sec "\t" a[2] "\t" $0}' "$contract" |

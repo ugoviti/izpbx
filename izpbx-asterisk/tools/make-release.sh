@@ -20,7 +20,7 @@
 #   else   the commit subjects are used as a draft.
 # The entry is opened in $EDITOR for review (skipped with --yes).
 #
-# --commit: compose.yml and README.md move from izpbx-asterisk:<previous X.Y.N> to
+# --commit: compose.yml, default.env and README.md move from <previous X.Y.N> to
 # the new version, one commit "X.Y.Z release", annotated tag X.Y.Z. --push: the
 # branch and the tag go to origin, the tag starts the izpbx-release workflow
 # (Gitea registry only; Docker Hub needs izpbx-promote).
@@ -241,24 +241,31 @@ fi
 # (with an Unreleased block above other entries, head stops before it: start == first)
 [ "$start" -eq "$first" ] || [ "$start" -gt "$end" ] || die "the Unreleased block of $cl is not the first entry"
 
-# --- image references of the same series: izpbx-asterisk:<last> -> :<version>
+# --- image references of the same series, <last> -> <version>: the
+# explicit tags izpbx-asterisk:<last> (README examples), the default of
+# compose.yml ${IZPBX_VERSION:-<last>} and IZPBX_VERSION=<last> (default.env,
+# README upgrade steps)
 files=()
 if [ -n "$last" ]; then
-  for f in compose.yml README.md; do
-    [ -f "$f" ] && grep -qF "izpbx-asterisk:$last" "$f" && files+=("$f")
+  for f in compose.yml default.env README.md; do
+    [ -f "$f" ] && grep -qE "izpbx-asterisk:${last//./\\.}\b|IZPBX_VERSION(:-|=)${last//./\\.}\b" "$f" && files+=("$f")
   done
 fi
+lq=${last//./\\.}
+moves=(-e "s|izpbx-asterisk:${lq}\\b|izpbx-asterisk:$version|g"
+       -e "s|IZPBX_VERSION:-${lq}}|IZPBX_VERSION:-$version}|g"
+       -e "s|IZPBX_VERSION=${lq}\\b|IZPBX_VERSION=$version|g")
 
 if [ -n "$dry" ]; then
   diff -u "$cl" "$work/CHANGELOG.md" | head -40 || true
-  for f in "${files[@]}"; do sed "s|izpbx-asterisk:${last//./\\.}\\b|izpbx-asterisk:$version|g" "$f" | diff -u "$f" - || true; done
+  for f in "${files[@]}"; do sed "${moves[@]}" "$f" | diff -u "$f" - || true; done
   log "dry run: nothing written. To release $version from $branch:"
   log "  izpbx-asterisk/tools/make-release.sh --commit   # commit and tag here, push later"
   log "  izpbx-asterisk/tools/make-release.sh --push     # commit, tag and push (starts izpbx-release)"
   exit 0
 fi
 cp "$work/CHANGELOG.md" "$cl"
-for f in "${files[@]}"; do sed -i "s|izpbx-asterisk:${last//./\\.}\\b|izpbx-asterisk:$version|g" "$f"; done
+for f in "${files[@]}"; do sed -i "${moves[@]}" "$f"; done
 git add "$cl" "${files[@]}"
 git commit -q -m "$version release"
 git tag -a "$version" -m "izPBX $version"
