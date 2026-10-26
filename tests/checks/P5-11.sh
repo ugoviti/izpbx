@@ -37,6 +37,7 @@ pbxsh 'curl -s -c /tmp/aj -b /tmp/aj -o /dev/null http://localhost/admin/config.
 page=$(pbxsh 'curl -s -b /tmp/aj "http://localhost/admin/config.php?display=backup"')
 assert_contains "$page" "Restore" "admin login: the backup page is shown"
 assert_cmd_fails "admin login: no login form" -- grep -q loginform <<< "$page"
+assert_cmd_fails "the backup page is not an error page (Whoops)" -- grep -qiE 'Whoops|ErrorException' <<< "$page"
 ucp=$(pbxsh 'tok=$(curl -s -c /tmp/uj -b /tmp/uj http://localhost/ucp/ | grep -oE "name=\"token\" value=\"[^\"]*\"" | sed "s/.*value=\"//; s/\"$//")
   curl -s -c /tmp/uj -b /tmp/uj -d "username=ucpuser&password=UcpPass1&token=$tok&module=User&command=login" \
     -H "X-Requested-With: XMLHttpRequest" -H "Referer: http://localhost/ucp/" "http://localhost/ucp/ajax.php?module=User&command=login"')

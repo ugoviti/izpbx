@@ -19,6 +19,12 @@ file          # izsynth
 lame
 mpg123
 ffmpeg
+# tools the FreePBX 17 modules run (P3-28): the backup module makes the ECDSA key
+# of asterisk with ssh-keygen when its page opens, and stores on SSH with
+# ssh/scp/sftp; rsync and ipset as 20.16 (the firewall module uses ipset)
+openssh-client
+rsync
+ipset
 # Asterisk runtime libraries (the -dev packages stay in the builder)
 libssl3
 libncurses6
