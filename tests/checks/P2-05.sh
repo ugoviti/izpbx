@@ -26,7 +26,10 @@ kill_asterisk() { # container: kill -9 Asterisk, wait for a new one (unless the 
 
 # --- httpd and php-fpm restart
 c=$(t_run svc "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
-t_wait_for 90 -- sh -c "docker exec $c curl -fsS -o /dev/null http://localhost/" || log "httpd not answering"
+# httpd answers: any HTTP status (FreePBX is only simulated here, / has no page
+# since the Debian default page is gone, P3-27)
+http_up() { docker exec "$c" sh -c '[ "$(curl -s -o /dev/null -w "%{http_code}" http://localhost/)" != 000 ]'; }
+t_wait_for 90 -- http_up || log "httpd not answering"
 for s in httpd php-fpm; do
   p=$(svc_pid "$c" "$s")
   assert_ne "" "$p" "$s is up before the kill"
@@ -34,7 +37,7 @@ for s in httpd php-fpm; do
   t_wait_for 10 -- new_pid "$c" "$s" "$p" && rc=0 || rc=$?
   assert_eq 0 "$rc" "kill -9 $s: up again with a new pid within 10 s ($((SECONDS - t0)) s)"
 done
-assert_cmd "httpd answers after the restarts" -- t_wait_for 15 -- docker exec "$c" curl -fsS -o /dev/null http://localhost/
+assert_cmd "httpd answers after the restarts" -- t_wait_for 15 -- http_up
 assert_cmd "php-fpm socket is back" -- t_wait_for 15 -- docker exec "$c" test -S /run/php/php8.2-fpm.sock
 
 # --- Asterisk: 3 failures in a row stop the container
