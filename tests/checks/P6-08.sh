@@ -62,5 +62,5 @@ assert_cmd "MIGRATE 20.16.22 passes" -- migrate
 assert_cmd "MIGRATE 20.16.22: result ok" -- grep -qP '^20\.16\.22\tok\tFreePBX 16 -> 17' "$work/m.txt"
 assert_cmd_fails "negative: MIGRATE 20.16.22 broken on purpose fails" -- migrate 1
 log "broken: $(cat "$work/m.txt")"
-assert_cmd "negative: result failed with the difference of the verification M7" -- grep -qP '^20\.16\.22\tfailed\tverification M7: extensions: - extension=1003' "$work/m.txt"
+assert_cmd "negative: result failed with the difference of the verification M7" -- grep -qP '^20\.16\.22\tfailed\tbroken on purpose \(break_version\): verification M7: extensions: - extension=1003' "$work/m.txt"
 finish

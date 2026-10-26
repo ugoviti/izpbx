@@ -19,7 +19,13 @@ result_file=${MIGRATE_RESULT:-$TESTS_DIR/.logs/migrate-$ver.txt}
 image=izpbx-asterisk:migrate
 fx="$TESTS_DIR/fixtures/out/$ver"
 mkdir -p "$(dirname "$result_file")"
-record() { printf '%s\t%s\t%s\n' "$ver" "$1" "$2" > "$result_file"; log "result: $ver $1 $2"; }
+# a version broken on purpose (break_version of the job) says so in its detail:
+# still "failed" (the job must turn red), not mistaken for a real failure
+record() {
+  local detail=$2
+  [ "${MIGRATE_BREAK:-}" != 1 ] || [ "$1" != failed ] || detail="broken on purpose (break_version): $detail"
+  printf '%s\t%s\t%s\n' "$ver" "$1" "$detail" > "$result_file"; log "result: $ver $1 $detail"
+}
 record failed "did not run to the end"
 
 assert_cmd "image builds" -- t_build_image "$image"
