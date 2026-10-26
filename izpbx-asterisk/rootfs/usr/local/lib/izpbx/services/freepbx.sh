@@ -442,3 +442,14 @@ freepbx_notices_cleanup() {
     izpbx_do fwconsole notifications --delete "${id%%:*}" "${id#*:}" >/dev/null 2>&1 || true
   done
 }
+
+# HEP (Homer capture), as 20.16 (P3-39): "enabled" of hep.conf from
+# HEP_ENABLED (true: yes, anything else: no), only when the variable is set
+# and the file exists; hep.conf is not touched otherwise
+cfg_asterisk_hep() {
+  local f=/etc/asterisk/hep.conf v=no
+  [ -n "$HEP_ENABLED" ] && [ -e "$f" ] || return 0
+  [ "$HEP_ENABLED" == true ] && v=yes
+  sed --follow-symlinks "s/^enabled =.*/enabled = $v/" -i "$f"
+  log_info "asterisk: HEP capture enabled = $v (HEP_ENABLED)"
+}
