@@ -27,9 +27,21 @@ cleanup() {
 trap cleanup EXIT
 
 # the daemon on its unix socket only (no TCP API, docker exec reaches it)
+# DinD containers left behind by a job that was killed (out of memory, timeout,
+# cancelled: the EXIT trap never ran) keep their whole Docker data on the host
+# and fill its disk ("No space left on device" in CI): every start removes the
+# ones older than 4 hours (a CI job lasts 90 minutes at most)
+now=$(date +%s)
+for old in $(docker ps -aq --filter label=izpbx.ci.dind=1); do
+  created=$(date -d "$(docker inspect -f '{{.Created}}' "$old" 2>/dev/null)" +%s 2>/dev/null) || continue
+  if [ $((now - created)) -gt 14400 ]; then
+    echo "dind-run: removing $(docker inspect -f '{{.Name}}' "$old") (left behind, created $(( (now - created) / 3600 )) h ago)" >&2
+    docker rm -fv "$old" >/dev/null 2>&1 || true
+  fi
+done
 # "dockerd" given explicitly: with arguments that start with "-" the entrypoint
 # of docker:dind adds --host=tcp://0.0.0.0:2375 (no TLS) by itself
-docker run -d --privileged --name "$name" -e DOCKER_TLS_CERTDIR= "$dind" dockerd --host=unix:///var/run/docker.sock >/dev/null
+docker run -d --privileged --name "$name" --label izpbx.ci.dind=1 -e DOCKER_TLS_CERTDIR= "$dind" dockerd --host=unix:///var/run/docker.sock >/dev/null
 for _ in $(seq 1 60); do docker exec "$name" docker info >/dev/null 2>&1 && break; sleep 2; done
 docker exec "$name" docker info >/dev/null
 docker exec "$name" apk add --no-cache -q bash coreutils findutils grep sed gawk tar gzip jq curl python3 git util-linux >/dev/null
