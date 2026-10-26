@@ -6,7 +6,7 @@
 # /usr/src/izpbx/versions.env only (read at runtime).
 
 ## base: Debian + runtime packages + asterisk user
-# DEBIAN_IMAGE must match versions.env (checked by tests/checks/P1-04.sh)
+# DEBIAN_IMAGE must match versions.env (checked by izpbx-asterisk/tests/checks/P1-04.sh)
 FROM docker.io/library/debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG OS_UPDATE_STAMP=""

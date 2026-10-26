@@ -4,17 +4,17 @@
 # - build: the image of the run, pushed to the Gitea registry as ci-22.17
 #   (build-push: buildx cache, verify image E1); never latest, never Docker Hub;
 # - e3-migration: the 20.16.22 fixture migrated with the opt-in, inventory
-#   diff empty (tests/checks/P4-08.sh); with break_migration an extension is
+#   diff empty (izpbx-asterisk/tests/checks/P4-08.sh); with break_migration an extension is
 #   removed after the restore and the job must fail;
-# - e4-new-install: empty /data -> healthy (tests/checks/P3-19.sh);
+# - e4-new-install: empty /data -> healthy (izpbx-asterisk/tests/checks/P3-19.sh);
 # - e5-maintenance: the fixture without the opt-in -> unhealthy, /data and the
-#   databases unchanged (tests/checks/P4-04.sh);
-# - all-done: tests/run.sh all-done (every check of the items done), on pull
+#   databases unchanged (izpbx-asterisk/tests/checks/P4-04.sh);
+# - all-done: izpbx-asterisk/tests/run.sh all-done (every check of the items done), on pull
 #   requests and by hand with all_done; hours long, not on every push.
 # The image reference is built in each job from registry-login: it holds the
 # registry host, a secret, and a job output holding a secret is dropped.
 # The runner runs the job in a container: the checks run in a Docker-in-Docker
-# container (tests/ci/dind-run.sh), where their bind mounts make sense.
+# container (izpbx-asterisk/tests/ci/dind-run.sh), where their bind mounts make sense.
 #
 # Required secrets: REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN
 
@@ -28,7 +28,7 @@ on:
   workflow_dispatch:
     inputs:
       all_done:
-        description: "'true': also run tests/run.sh all-done"
+        description: "'true': also run izpbx-asterisk/tests/run.sh all-done"
         default: 'false'
         required: false
       break_migration:
@@ -95,14 +95,14 @@ jobs:
           if [ "$CHECK" == P4-08 ] && [ "${BREAK:-false}" == "true" ]; then
             export P4_08_AFTER_RESTORE_SQL="DELETE FROM devices WHERE id = '1003'; DELETE FROM users WHERE extension = '1003'"
           fi
-          tests/ci/dind-run.sh "$IMAGE" "$CHECK"
+          izpbx-asterisk/tests/ci/dind-run.sh "$IMAGE" "$CHECK"
 
       - name: log of the check
         if: always()
         shell: bash
         env:
           CHECK: ${{ matrix.check }}
-        run: tail -n 80 "tests/.logs/$CHECK.log" 2>/dev/null || echo "no log"
+        run: tail -n 80 "izpbx-asterisk/tests/.logs/$CHECK.log" 2>/dev/null || echo "no log"
 
   all-done:
     needs: build
@@ -128,5 +128,5 @@ jobs:
         run: |
           set -euo pipefail
           docker pull -q "$IMAGE"
-          # the summary and the log of every failed check are in the output of tests/run.sh
-          tests/ci/dind-run.sh "$IMAGE" -j 4 all-done
+          # the summary and the log of every failed check are in the output of izpbx-asterisk/tests/run.sh
+          izpbx-asterisk/tests/ci/dind-run.sh "$IMAGE" -j 4 all-done

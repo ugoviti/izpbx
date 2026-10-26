@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# Persistent storage under APP_DATA (docs/env-contract.md, APP_DATA), same
+# Persistent storage under APP_DATA (izpbx-asterisk/docs/env-contract.md, APP_DATA), same
 # layout as 20.16: each directory of PERSIST_DIRS is moved to <dir>.dist and
 # replaced by a symlink to ${APP_DATA}<dir>; an empty target is seeded from
 # <dir>.dist and gets a ".initialized" timestamp; the files of PERSIST_FILES

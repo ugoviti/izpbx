@@ -1,0 +1,9 @@
+# Not part of the image build context: the Dockerfile copies only versions.env,
+# build/ and rootfs/ (tests/ alone holds gigabytes of fixtures)
+tests/
+tools/
+docs/
+compose/
+screenshots/
+README.md
+.dockerignore

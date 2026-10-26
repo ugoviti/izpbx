@@ -15,7 +15,7 @@
 # --apply writes the proposed lines into versions.env (only KEY=value lines
 # already present; every value checked, nothing written if one is missing or
 # invalid) and refreshes build/freepbx-modules.txt. Then: rebuild the image
-# and run the tests (tests/run.sh all-done) before committing.
+# and run the tests (izpbx-asterisk/tests/run.sh all-done) before committing.
 #
 # Exit code: 0 all current (or, with --apply, updates applied), 10 updates
 # available, 2 incomplete (lookups unavailable), 1 error. GITHUB_TOKEN
@@ -287,6 +287,6 @@ if [ ${#modline[@]} -gt 0 ]; then
   mv -f "$out" "$mlist"
   echo "applied ${#modline[@]} module(s) to $mlist"
 fi
-echo "next: rebuild the image and run tests/run.sh all-done, then commit (git diff to review)"
+echo "next: rebuild the image and run izpbx-asterisk/tests/run.sh all-done, then commit (git diff to review)"
 [ "$unavailable" -eq 0 ] || exit 2
 exit 0

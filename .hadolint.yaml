@@ -1,4 +1,4 @@
-# hadolint settings for izpbx (used by tests/lint.sh)
+# hadolint settings for izpbx (used by izpbx-asterisk/tests/lint.sh)
 failure-threshold: warning
 ignored:
   # Debian package versions are not pinned: pins break on every security

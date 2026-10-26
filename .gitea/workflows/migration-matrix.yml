@@ -2,11 +2,11 @@
 # Every Tuesday, and by hand (Repository > Actions > izpbx-migration-matrix > Run workflow):
 # - versions: the 20.16.x release tags of the repository, computed at run time (one job each);
 # - build: the image of the run in the Gitea registry as ci-migration (never latest, never Docker Hub);
-# - migrate: for each version (2 at a time) the fixture of that version (tests/fixtures/make-fixture.sh)
-#   migrated to 22.17 in Docker-in-Docker (tests/ci/checks/MIGRATE.sh): ok, blocked by the
+# - migrate: for each version (2 at a time) the fixture of that version (izpbx-asterisk/tests/fixtures/make-fixture.sh)
+#   migrated to 22.17 in Docker-in-Docker (izpbx-asterisk/tests/ci/checks/MIGRATE.sh): ok, blocked by the
 #   checks M2 with their instructions, or failed; break_version breaks one version on purpose
 #   (an extension removed after the restore) and its job must fail;
-# - report: the table version -> result (tests/ci/migration-report.sh) in the Matrix
+# - report: the table version -> result (izpbx-asterisk/tests/ci/migration-report.sh) in the Matrix
 #   notification; red when a version failed or has no result.
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
@@ -107,7 +107,7 @@ jobs:
           df -h / /var/lib/docker 2>/dev/null || true
           docker pull -q "$IMAGE"
           if [ "${BREAK:-}" == "$MIGRATE_VERSION" ]; then export MIGRATE_BREAK=1; fi
-          TEST_CHECKS_DIR=tests/ci/checks tests/ci/dind-run.sh "$IMAGE" MIGRATE
+          TEST_CHECKS_DIR=izpbx-asterisk/tests/ci/checks izpbx-asterisk/tests/ci/dind-run.sh "$IMAGE" MIGRATE
 
       - name: result
         if: always()
@@ -116,7 +116,7 @@ jobs:
           MIGRATE_VERSION: ${{ matrix.version }}
         run: |
           mkdir -p result
-          f="tests/.logs/migrate-$MIGRATE_VERSION.txt"
+          f="izpbx-asterisk/tests/.logs/migrate-$MIGRATE_VERSION.txt"
           if [ -s "$f" ]; then cp "$f" result/; else printf '%s\tfailed\tno result line\n' "$MIGRATE_VERSION" > "result/migrate-$MIGRATE_VERSION.txt"; fi
           cat result/*.txt
 
@@ -149,7 +149,7 @@ jobs:
           set -uo pipefail
           mapfile -t expected < <(jq -r '.[]' <<< "${VERSIONS:-[]}")
           rc=0
-          table=$(tests/ci/migration-report.sh results "${expected[@]}") || rc=$?
+          table=$(izpbx-asterisk/tests/ci/migration-report.sh results "${expected[@]}") || rc=$?
           printf '%s\n' "$table"
           { echo "table<<IZPBX_TABLE"; printf '%s\n' "$table"; echo "IZPBX_TABLE"; } >> "$GITHUB_OUTPUT"
           exit "$rc"

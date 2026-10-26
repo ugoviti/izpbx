@@ -698,7 +698,7 @@ Check for updates, then apply them (versions and sha256 together; when Asterisk 
 izpbx-asterisk/tools/make-updates.sh            # report (exit 10 when updates are available)
 izpbx-asterisk/tools/make-updates.sh --apply    # write versions.env and freepbx-modules.txt
 ```
-Then rebuild, run `tests/run.sh all-done` and commit.
+Then rebuild, run `izpbx-asterisk/tests/run.sh all-done` and commit.
 
 Release the next patch version (`22.17.0` → `22.17.1` …) from `main` (or `release/X.Y` for a maintenance series):
 ```

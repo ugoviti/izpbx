@@ -35,9 +35,9 @@ find_gitleaks() {
   command -v gitleaks || true
 }
 
-# lint first: tests/lint.sh runs shellcheck and hadolint as pinned containers
-if [ -x "$ROOT/tests/lint.sh" ]; then
-  "$ROOT/tests/lint.sh" "$ROOT" || { echo "lint: commit blocked, fix the findings above" >&2; exit 1; }
+# lint first: izpbx-asterisk/tests/lint.sh runs shellcheck and hadolint as pinned containers
+if [ -x "$ROOT/izpbx-asterisk/tests/lint.sh" ]; then
+  "$ROOT/izpbx-asterisk/tests/lint.sh" "$ROOT" || { echo "lint: commit blocked, fix the findings above" >&2; exit 1; }
 fi
 
 GITLEAKS=$(find_gitleaks)

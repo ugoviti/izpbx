@@ -1,0 +1,46 @@
+# Support services for izpbx-asterisk/tests/checks. Started per test with
+# "docker compose -p $TEST_PROJECT -f izpbx-asterisk/tests/compose.test.yml" (see t_up in lib.sh).
+name: izpbx-test
+
+x-test-labels: &test-labels
+  izpbx.test: ${TEST_PROJECT:-izpbx-test}
+
+services:
+  mariadb:
+    image: docker.io/mariadb:10.11.19
+    labels: *test-labels
+    environment:
+      MARIADB_ROOT_PASSWORD: ${TEST_DB_ROOT_PASSWORD:-izpbx-test-root}
+      MARIADB_DATABASE: asterisk
+      MARIADB_USER: asterisk
+      MARIADB_PASSWORD: ${TEST_DB_PASSWORD:-izpbx-test}
+    command: --sql-mode=NO_ENGINE_SUBSTITUTION
+    volumes:
+      - db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
+
+  mailpit:
+    image: docker.io/axllent/mailpit:v1.27.10
+    labels: *test-labels
+    profiles: [mail]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  sipp:
+    image: izpbx-test/sipp:3.7.3
+    build: ./docker/sipp
+    labels: *test-labels
+    profiles: [sip]
+    entrypoint: ["sleep", "infinity"]
+
+volumes:
+  db:
+    labels: *test-labels

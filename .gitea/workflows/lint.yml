@@ -1,7 +1,7 @@
-# izPBX lint (Gitea Actions): shellcheck and hadolint, the pinned versions of tests/lint.sh.
+# izPBX lint (Gitea Actions): shellcheck and hadolint, the pinned versions of izpbx-asterisk/tests/lint.sh.
 # On every push and pull request: a finding fails the job, so a PR with a shellcheck error
 # is blocked when "lint" is a required status check of the protected branch (main, release/*).
-# The runner runs the job in a container: lint runs in Docker-in-Docker (tests/ci/dind-run.sh),
+# The runner runs the job in a container: lint runs in Docker-in-Docker (izpbx-asterisk/tests/ci/dind-run.sh),
 # where the bind mounts of its tool containers make sense.
 #
 # Failure notify: MATRIX_PASSWORD (secret), MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER (variables)
@@ -23,7 +23,7 @@ jobs:
 
       - name: shellcheck and hadolint
         shell: bash
-        run: tests/ci/dind-run.sh --lint
+        run: izpbx-asterisk/tests/ci/dind-run.sh --lint
 
       - name: matrix notify
         if: failure()
