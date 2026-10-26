@@ -2,7 +2,8 @@
 # Rebuilds the latest stable release tag (X.Y.Z) of each maintained branch every week to pick up the
 # OS security updates (eg. PHP), even when no new izPBX release is tagged (V4). Matrix:
 #   - release/20.16: the 20.16.x tags (Rocky Linux), security only until 2027-01-01;
-#   - main:          the other tags (22.17.x and later, Debian); nothing to do until the first one.
+#   - main:          the tags from 22 on (22.17.x and later, Debian); nothing to do until the first
+#                    one (the older lines 18.x, 16.x are end of life, never rebuilt).
 # OS_UPDATE_STAMP=<ISO week> busts the cached OS upgrade layer of izpbx-asterisk/Dockerfile.
 #
 # Pushes ONLY to the Gitea registry and NEVER moves the release tags (X.Y.Z, X.Y, X, latest), so
@@ -42,8 +43,9 @@ jobs:
             skip_tags: '^$'
           - branch: main
             line: main
-            tags: '^[0-9]+\.[0-9]+\.[0-9]+$'
-            skip_tags: '^20\.16\.'
+            # the lines from 22 on: not 20.16 (release/20.16) nor the older ones (18.x, 16.x, EOL)
+            tags: '^(2[2-9]|[3-9][0-9])\.[0-9]+\.[0-9]+$'
+            skip_tags: '^$'
     name: rebuild ${{ matrix.branch }}
     steps:
       - name: checkout

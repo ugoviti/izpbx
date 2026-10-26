@@ -6,7 +6,8 @@
 # there, in a scratch git repository with the tags of both lines:
 # - release/20.16 -> 20.16.22 (not the prerelease 20.16.23-rc1), main -> 22.17.1;
 # - main with no 22.x tag yet: nothing to rebuild, no tag (build skipped);
-# - negative check: main without its skip_tags would rebuild a 20.16 tag;
+# - negative check: the first rule of main (every X.Y.Z tag but 20.16.x) took
+#   the end of life 18.16.14 when no 22.x tag exists (seen in CI);
 # - no matrix entry uses "exclude", a reserved key of the matrix (the runner
 #   refused the whole matrix: "Matrix exclude entry ... is not a map");
 # - the build is skipped without a tag, the cache is per branch.
@@ -39,17 +40,19 @@ repo() { # tags... -> a repository with izpbx-asterisk/ and those tags, origin i
   for t in "$@"; do "${g[@]}" tag "$t"; done
   "${g[@]}" remote add origin "$work/repo"
 }
-resolve() { # branch [skip_tags] -> the step outputs (tag=...), or nothing
+resolve() { # branch [skip_tags [tags]] -> the step outputs (tag=...), or nothing
   local out="$work/out"; : > "$out"
-  (cd "$work/repo" && TAGS=$(mval "$1" tags) SKIP_TAGS=${2-$(mval "$1" skip_tags)} BRANCH=$1 GITHUB_OUTPUT=$out \
+  (cd "$work/repo" && TAGS=${3-$(mval "$1" tags)} SKIP_TAGS=${2-$(mval "$1" skip_tags)} BRANCH=$1 GITHUB_OUTPUT=$out \
     bash "$work/resolve.sh" >/dev/null 2>&1)
   sed -n 's/^tag=//p' "$out"
 }
-repo 20.16.21 20.16.22 20.16.23-rc1 22.17.0 22.17.1 dev-22.17
+repo 16.15.3 18.16.14 20.16.21 20.16.22 20.16.23-rc1 22.17.0 22.17.1 dev-22.17
 assert_eq "20.16.22" "$(resolve release/20.16)" "release/20.16 rebuilds 20.16.22"
 assert_eq "22.17.1" "$(resolve main)" "main rebuilds 22.17.1"
-repo 20.16.21 20.16.22 dev-22.17
-assert_eq "" "$(resolve main)" "main with no 22.x tag: nothing to rebuild"
+repo 16.15.3 18.16.14 20.16.21 20.16.22 dev-22.17
+assert_eq "" "$(resolve main)" "main with no 22.x tag: nothing to rebuild (not the EOL 18.16.14)"
 assert_eq "20.16.22" "$(resolve release/20.16)" "release/20.16 unaffected"
-assert_eq "20.16.22" "$(resolve main '^$')" "negative: main without its skip_tags would rebuild a 20.16 tag"
+assert_eq "18.16.14" "$(resolve main '^20\.16\.' '^[0-9]+\.[0-9]+\.[0-9]+$')" \
+  "negative: the first rule of main (every X.Y.Z but 20.16) took the EOL 18.16.14 (seen in CI)"
+assert_eq "20.16.22" "$(resolve release/20.16)" "release/20.16 still rebuilds 20.16.22"
 finish
