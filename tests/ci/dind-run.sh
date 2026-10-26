@@ -16,7 +16,9 @@ set -euo pipefail
 image=${1:?usage: $0 IMAGE CHECK... | --lint}; shift
 [ $# -gt 0 ] || [ "$image" == --lint ] || { echo "usage: $0 IMAGE CHECK... | --lint" >&2; exit 2; }
 repo=$(cd "$(dirname "$0")/../.." && pwd)
-name="izpbx-ci-dind-$$"
+# unique: parallel CI jobs share the Docker daemon of the host, and the PID of
+# this shell is the same small number in every job container
+name="izpbx-ci-dind-${GITHUB_RUN_ID:-local}-$$-$(od -An -N4 -tx4 /dev/urandom | tr -d ' ')"
 dind=docker.io/library/docker:27.5.1-dind
 cleanup() {
   if [ -n "${TEST_KEEP:-}" ]; then echo "kept: DinD container $name" >&2; return 0; fi

@@ -2,7 +2,7 @@
 # Every Tuesday, and by hand (Repository > Actions > izpbx-migration-matrix > Run workflow):
 # - versions: the 20.16.x release tags of the repository, computed at run time (one job each);
 # - build: the image of the run in the Gitea registry as ci-migration (never latest, never Docker Hub);
-# - migrate: for each version the fixture of that version (tests/fixtures/make-fixture.sh)
+# - migrate: for each version (2 at a time) the fixture of that version (tests/fixtures/make-fixture.sh)
 #   migrated to 22.17 in Docker-in-Docker (tests/ci/checks/MIGRATE.sh): ok, blocked by the
 #   checks M2 with their instructions, or failed; break_version breaks one version on purpose
 #   (an extension removed after the restore) and its job must fail;
@@ -77,7 +77,9 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      max-parallel: 4
+      # each job runs its own Docker-in-Docker (fixture + migration): 4 at a time
+      # ran the runner out of memory (exit 137)
+      max-parallel: 2
       matrix:
         version: ${{ fromJSON(needs.versions.outputs.list) }}
     name: migrate ${{ matrix.version }}
