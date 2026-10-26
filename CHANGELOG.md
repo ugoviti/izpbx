@@ -22,7 +22,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - New `HEALTHCHECK` (`izpbx-healthcheck`)
 - New shell banner and prompt (`docker exec -it izpbx bash`): the izPBX logo, the versions and the live state of the PBX (health, calls, endpoints, trunk registrations), a two-line prompt with the health and the calls; own lines in `/root/.bashrc.local`; `NO_COLOR` honored
 - Apache TLS ciphers: the Debian `HIGH:!aNULL` instead of the RHEL crypto policy (`PROFILE=SYSTEM`); Apache logs in `${APACHE_LOG_DIR}`
-- `ASTERISK_VER`, `FREEPBX_VER`, `FOP2_VER`, `ZABBIX_VER` are no longer build arguments: every version comes from `izpbx-asterisk/versions.env` (in the image: `/usr/src/izpbx/versions.env`); `build/check-updates.sh` reports newer upstream releases
+- `ASTERISK_VER`, `FREEPBX_VER`, `FOP2_VER`, `ZABBIX_VER` are no longer build arguments: every version comes from `izpbx-asterisk/versions.env` (in the image: `/usr/src/izpbx/versions.env`); `izpbx-asterisk/tools/make-updates.sh` reports newer upstream releases (`--apply` writes them into `versions.env`), `izpbx-asterisk/tools/make-release.sh` releases the next patch version
 - `FREEPBX_MODULES_EXTRA` default without `phonebook` (no FreePBX 17 release)
 - `FREEPBX_AUTOUPGRADE_CORE` does not migrate FreePBX 16 to 17: use `IZPBX_MIGRATE_FREEPBX`
 - `APP_PORT_SIP` (5160, chan_sip in 20.16) is a PJSIP transport, created only by the migration when the 20.16 had chan_sip extensions or trunks; new installations have no transport on 5160

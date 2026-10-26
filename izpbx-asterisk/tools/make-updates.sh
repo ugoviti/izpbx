@@ -1,27 +1,51 @@
 #!/bin/bash
 # Compare izpbx-asterisk/versions.env with upstream and propose updates.
 #
-#   build/check-updates.sh [--versions FILE]
+#   izpbx-asterisk/tools/make-updates.sh [--apply] [--versions FILE] [--no-modules]
 #
 # Prints one line per component of versions.env: current, latest, status
 # (ok | UPDATE | manual | unavailable), and for every UPDATE the new KEY=value
 # lines with the sha256 of the new files. "manual" = no automatic source,
 # "unavailable" = the upstream lookup failed (e.g. GitHub API rate limit).
-# Exit code: 0 all current, 10 updates available, 2 incomplete (lookups
-# unavailable, no update found), 1 error. GITHUB_TOKEN (optional) raises the
-# GitHub API rate limit (60 requests/hour without it).
+# When Asterisk has an update, pjproject and jansson follow the versions of its
+# tarball (third-party/versions.mak). With the default versions.env the FreePBX
+# modules pinned in izpbx-asterisk/build/freepbx-modules.txt are checked too (--no-modules
+# skips them: the FreePBX mirror can be slow).
+#
+# --apply writes the proposed lines into versions.env (only KEY=value lines
+# already present; every value checked, nothing written if one is missing or
+# invalid) and refreshes build/freepbx-modules.txt. Then: rebuild the image
+# and run the tests (tests/run.sh all-done) before committing.
+#
+# Exit code: 0 all current (or, with --apply, updates applied), 10 updates
+# available, 2 incomplete (lookups unavailable), 1 error. GITHUB_TOKEN
+# (optional) raises the GitHub API rate limit (60 requests/hour without it).
 
 set -Eeuo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-versions="$here/../versions.env"
-[ "${1:-}" == "--versions" ] && versions=${2:?--versions FILE}
-# shellcheck source=lib.sh
-. "$here/lib.sh"
+img="$here/.."
+versions="$img/versions.env"
+apply='' modules=1
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --apply) apply=1 ;;
+    --versions) versions=${2:?--versions FILE}; shift ;;
+    --no-modules) modules= ;;
+    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "unknown option: $1 (see --help)" >&2; exit 1 ;;
+  esac
+  shift
+done
+# the FreePBX module list belongs to the repository versions.env only
+[ "$(realpath "$versions")" == "$(realpath "$img/versions.env")" ] || modules=
+# shellcheck source=../build/lib.sh
+. "$img/build/lib.sh"
 load_versions "$versions"
 
 updates=0
 unavailable=0
 proposals=()
+propose_modules=()
 
 row() { printf '%-22s %-44s %-44s %s\n' "$1" "$2" "$3" "$4"; }
 report() { # component current latest [note]   (empty latest = manual check)
@@ -50,7 +74,8 @@ fetch() {
   rm -f "$err"
   return "$rc"
 }
-sha_of() { fetch --proto '=https' "$1" | sha256sum | cut -d' ' -f1; }
+# sha256 of a download; empty when the download fails (never the sha256 of an empty file)
+sha_of() { local t; t=$(mktemp); if fetch --proto '=https' -o "$t" "$1"; then sha256sum "$t" | cut -d' ' -f1; fi; rm -f "$t"; }
 
 gh_api() { # path
   fetch ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} \
@@ -78,12 +103,27 @@ fi
 
 # --- Asterisk 22.x (stable releases only)
 new=$(fetch https://downloads.asterisk.org/pub/telephony/asterisk/releases/ | grep -oE "asterisk-${ASTERISK_VER%%.*}\.[0-9]+\.[0-9]+\.tar\.gz\"" | tr -d '"' | sed 's/^asterisk-//; s/\.tar\.gz$//' | sort -V | tail -1 || true)
-if [ -z "$new" ]; then lookup ASTERISK_VER "$ASTERISK_VER" "" downloads.asterisk.org
-elif ! report ASTERISK_VER "$ASTERISK_VER" "$new" "then refresh PJPROJECT/JANSSON from third-party/versions.mak"; then
+if [ -z "$new" ]; then
+  lookup ASTERISK_VER "$ASTERISK_VER" "" downloads.asterisk.org
+  report PJPROJECT_VER "$PJPROJECT_VER" "" "follows ASTERISK_VER" || true
+  report JANSSON_VER "$JANSSON_VER" "" "follows ASTERISK_VER" || true
+elif report ASTERISK_VER "$ASTERISK_VER" "$new"; then
+  report PJPROJECT_VER "$PJPROJECT_VER" "$PJPROJECT_VER" || true
+  report JANSSON_VER "$JANSSON_VER" "$JANSSON_VER" || true
+else
   propose "ASTERISK_VER=$new" "ASTERISK_SHA256=$(fetch "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$new.sha256" | cut -d' ' -f1)"
+  # the bundled libraries follow the release: third-party/versions.mak of its tarball
+  at=$(mktemp)
+  vmak=$( { fetch --proto '=https' -o "$at" "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$new.tar.gz" &&
+            tar -xzOf "$at" "asterisk-$new/third-party/versions.mak"; } 2>/dev/null || true)
+  rm -f "$at"
+  for lib in PJPROJECT JANSSON; do
+    cur_var="${lib}_VER"; lname=${lib,,}
+    libnew=$(sed -n "s/^${lib}_VERSION=//p" <<< "$vmak" | tr -d '[:space:]')
+    lookup "$cur_var" "${!cur_var}" "$libnew" "versions.mak of asterisk-$new" ||
+      propose "${lib}_VER=$libnew" "${lib}_SHA256=$(sha_of "https://raw.githubusercontent.com/asterisk/third-party/master/$lname/$libnew/$lname-$libnew.tar.bz2")"
+  done
 fi
-report PJPROJECT_VER "$PJPROJECT_VER" "" "follows ASTERISK_VER" || true
-report JANSSON_VER "$JANSSON_VER" "" "follows ASTERISK_VER" || true
 report ASTERISK_MP3_SVN_REV "$ASTERISK_MP3_SVN_REV" "" "svn info https://svn.digium.com/svn/thirdparty/mp3/trunk" || true
 
 # --- addons
@@ -108,6 +148,52 @@ else
   # every component has its row, also when the mirror does not answer
   lookup FREEPBX_VER "$FREEPBX_VER" "" mirror.freepbx.org
   lookup FREEPBX_FRAMEWORK_VER "$FREEPBX_FRAMEWORK_VER" "" mirror.freepbx.org
+fi
+
+# --- FreePBX modules pre-downloaded into the image (build/freepbx-modules.txt):
+# for every module listed there, the latest FreePBX release on the mirror (queried
+# like Module Admin does: POST phpver to all-<ver>.0.xml). A line with the module
+# name only (a new module) gets its version and sha256 with --apply.
+mlist="$img/build/freepbx-modules.txt"
+mod_new=()
+if [ -n "$modules" ]; then
+  nmod=$(grep -vcE '^(#|$)' "$mlist" || true)
+  mxml=$(mktemp)
+  if fetch --proto '=https' -X POST -d "phpver=8.2" -o "$mxml" "https://mirror.freepbx.org/all-$FREEPBX_VER.0.xml"; then
+    # "rawname version location" of the <module> entries (not edge/previous)
+    mapfile -t mlatest < <(python3 -I - "$mxml" <<'PY'
+import sys, xml.etree.ElementTree as ET
+# FreePBX 16 lists <module> entries; FreePBX 17 wraps one element per module
+# (named after it) in a single <module>
+for top in ET.parse(sys.argv[1]).getroot().findall('module'):
+    for m in ([top] if top.find('rawname') is not None else list(top)):
+        if m.findtext('rawname'):
+            print(m.findtext('rawname'), m.findtext('version'), m.findtext('location'))
+PY
+)
+    missing=''
+    while read -r name cur sha _; do
+      [[ -z "$name" || "$name" == \#* ]] && continue
+      line=$(printf '%s\n' "${mlatest[@]}" | awk -v n="$name" '$1 == n' | head -1)
+      [ -n "$line" ] || { missing+=" $name"; continue; }
+      read -r _ ver loc <<< "$line"
+      if [ "$ver" != "${cur:-}" ] || [ -z "${sha:-}" ]; then
+        mod_new+=("$name $ver $loc"); propose_modules+=("$name: ${cur:-new} -> $ver")
+      fi
+    done < "$mlist"
+    if [ -n "$missing" ]; then
+      row FREEPBX_MODULES "$nmod modules" "?" "ERROR: not on the FreePBX $FREEPBX_VER mirror:$missing"
+      unavailable=$((unavailable + 1)); mod_new=()
+    elif [ ${#mod_new[@]} -eq 0 ]; then
+      row FREEPBX_MODULES "$nmod modules" "$nmod modules" "ok"
+    else
+      row FREEPBX_MODULES "$nmod modules" "${#mod_new[@]} newer" "UPDATE (izpbx-asterisk/build/freepbx-modules.txt)"
+      updates=$((updates + 1))
+    fi
+  else
+    row FREEPBX_MODULES "$nmod modules" "?" "unavailable (mirror.freepbx.org)"; unavailable=$((unavailable + 1))
+  fi
+  rm -f "$mxml"
 fi
 
 # --- ionCube: the unversioned tarball holds the latest loaders; same sha256
@@ -155,6 +241,52 @@ if [ "$updates" -eq 0 ]; then
   echo "all components are current"
   exit 0
 fi
-echo "$updates update(s) available, proposed versions.env lines:"
-printf '  %s\n' "${proposals[@]}"
-exit 10
+if [ ${#proposals[@]} -gt 0 ]; then
+  echo "$updates update(s) available, proposed versions.env lines:"
+  printf '  %s\n' "${proposals[@]}"
+fi
+if [ ${#propose_modules[@]} -gt 0 ]; then
+  echo "FreePBX modules (izpbx-asterisk/build/freepbx-modules.txt):"
+  printf '  %s\n' "${propose_modules[@]}"
+fi
+[ -n "$apply" ] || exit 10
+
+# --- --apply: replace the KEY=value lines, all or nothing
+for line in "${proposals[@]}"; do
+  k=${line%%=*} v=${line#*=}
+  [[ "$k" =~ ^[A-Z0-9_]+$ ]] || { echo "apply: invalid line '$line'" >&2; exit 1; }
+  grep -q "^$k=" "$versions" || { echo "apply: $k is not in $versions" >&2; exit 1; }
+  [ -n "$v" ] || { echo "apply: $k has no value (upstream lookup failed): nothing written" >&2; exit 1; }
+  case "$k" in *_SHA256*) [[ "$v" =~ ^[0-9a-f]{64}$ ]] || { echo "apply: $k is not a sha256 ('$v'): nothing written" >&2; exit 1; } ;; esac
+done
+# module lines with the sha256 of the new packages, computed before writing anything
+declare -A modline=()
+for m in "${mod_new[@]}"; do
+  read -r name ver loc <<< "$m"
+  sha=$(sha_of "https://mirror.freepbx.org/modules/$loc")
+  [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || { echo "apply: module $name $ver: download failed: nothing written" >&2; exit 1; }
+  modline[$name]=$(printf '%-18s %-14s %s' "$name" "$ver" "$sha")
+done
+echo
+if [ ${#proposals[@]} -gt 0 ]; then
+  out=$(mktemp "$versions.XXXXXX")
+  awk 'NR == FNR { i = index($0, "="); val[substr($0, 1, i - 1)] = substr($0, i + 1); next }
+       !/^#/ && (i = index($0, "=")) > 1 && ((k = substr($0, 1, i - 1)) in val) { print k "=" val[k]; next }
+       { print }' <(printf '%s\n' "${proposals[@]}") "$versions" > "$out"
+  chmod --reference="$versions" "$out"
+  mv -f "$out" "$versions"
+  echo "applied ${#proposals[@]} line(s) to $versions"
+fi
+if [ ${#modline[@]} -gt 0 ]; then
+  out=$(mktemp "$mlist.XXXXXX")
+  while IFS= read -r l; do
+    n=${l%% *}
+    if [[ -n "$l" && "$l" != \#* && -n "${modline[$n]:-}" ]]; then echo "${modline[$n]}"; else echo "$l"; fi
+  done < "$mlist" > "$out"
+  chmod --reference="$mlist" "$out"
+  mv -f "$out" "$mlist"
+  echo "applied ${#modline[@]} module(s) to $mlist"
+fi
+echo "next: rebuild the image and run tests/run.sh all-done, then commit (git diff to review)"
+[ "$unavailable" -eq 0 ] || exit 2
+exit 0

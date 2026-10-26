@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# P1-03: build/check-updates.sh reports every component of versions.env and,
+# P1-03: izpbx-asterisk/tools/make-updates.sh reports every component of versions.env and,
 # with versions deliberately old, flags the update and proposes the new
 # version with its sha256. Needs internet (upstream release pages). The GitHub
 # API allows 60 requests/hour without GITHUB_TOKEN: when it is exhausted those
@@ -9,7 +9,7 @@ source "$(dirname "$0")/../lib.sh"
 
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-cu="$REPO_DIR/izpbx-asterisk/build/check-updates.sh"
+cu="$REPO_DIR/izpbx-asterisk/tools/make-updates.sh"
 venv="$REPO_DIR/izpbx-asterisk/versions.env"
 
 "$cu" > "$work/current.txt" 2>"$work/current.err" && rc=0 || rc=$?

@@ -25,9 +25,11 @@ assert_ne "s6-svscan" "$(docker exec "$o" cat /proc/1/comm)" "control: with anot
 rc=0; docker run --rm -e IZPBX_ENABLED=false "$image" sh -c 'exit 3' 2>/dev/null || rc=$?
 assert_eq 3 "$rc" "a one-off command keeps its exit code through /init"
 
-# negative: build/s6.sh, run in the image with a wrong sha256 for this arch
+# negative: build/s6.sh (mounted from the repository: the build scripts are not
+# in the image), run in the image with a wrong sha256 for this arch
 arch=$(docker run --rm --entrypoint "" "$image" uname -m); key=S6_OVERLAY_SHA256_${arch^^}
 bad="sed -i 's/^$key=.*/$key=$(printf '0%.0s' {1..64})/' /tmp/izpbx/versions.env"
 assert_cmd_fails "control: build/s6.sh fails with a wrong $key" -- \
-  docker run --rm --entrypoint "" "$image" bash -c "cp -a /usr/src/izpbx /tmp/izpbx && $bad && /tmp/izpbx/build/s6.sh"
+  docker run --rm --entrypoint "" -v "$REPO_DIR/izpbx-asterisk/build:/tmp/izpbx/build:ro" "$image" \
+    bash -c "cp /usr/src/izpbx/versions.env /tmp/izpbx/ && $bad && /tmp/izpbx/build/s6.sh"
 finish

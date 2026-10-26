@@ -37,6 +37,7 @@ shell_files() {
     find_in izpbx-asterisk/rootfs/usr/sbin -- -type f -name safe_asterisk
     find_in tests -- -name '*.sh' -not -path '*/fixtures/data/*'
     find_in .githooks -- -type f
+    find_in izpbx-asterisk/tools -- -type f -name '*.sh'
   } | sort -u
 }
 

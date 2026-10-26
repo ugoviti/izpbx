@@ -1,5 +1,5 @@
 # FreePBX 17 modules pre-downloaded into the image for the offline install (D19).
-# name version sha256-of-the-signed-package. Refresh: build/update-freepbx-modules.sh
+# name version sha256-of-the-signed-package. Refresh: izpbx-asterisk/tools/make-updates.sh --apply (a new module: add its name alone, --apply completes the line)
 # The 20.16 default list, minus phonebook (no FreePBX 17 release).
 core               17.0.18.54     7e951db50e40cf0b305ef6e17aad378ecd285227f92a656bde77269d6f976933
 featurecodeadmin   17.0.2         1ab93ebbdd34299ad17455929ea0b0216b099c4fb91aa79d1bd385afe1eaa088

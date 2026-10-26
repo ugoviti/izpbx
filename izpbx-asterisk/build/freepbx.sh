@@ -32,7 +32,7 @@ mkdir -p "$modules/_cache"
 n=0
 while read -r name ver sha; do
   [[ -z "$name" || "$name" == \#* ]] && continue
-  [ -n "$sha" ] || build_die "$name: no version/sha256 in $FREEPBX_MODULES_LIST (run build/update-freepbx-modules.sh)"
+  [ -n "$sha" ] || build_die "$name: no version/sha256 in $FREEPBX_MODULES_LIST (run izpbx-asterisk/tools/make-updates.sh --apply)"
   pkg="$name-$ver.tgz.gpg"
   fetch_verified "https://mirror.freepbx.org/modules/packages/$name/$pkg" "$sha" "$cache/freepbx-modules/$pkg" \
     || build_die "cannot download module $name $ver"

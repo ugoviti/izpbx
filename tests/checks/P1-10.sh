@@ -6,7 +6,8 @@
 # npm runs as asterisk with the pinned version. The image size stays within
 # 5% of the one recorded in tests/expected/image-size.txt and not above
 # 20.16.22. Negative: the builder stage does have -dev packages and gcc; the
-# size check fails against a smaller limit.
+# size check fails against a smaller limit. No build script in the image
+# (/usr/src/izpbx holds versions.env only).
 source "$(dirname "$0")/../lib.sh"
 
 dir="$REPO_DIR/izpbx-asterisk"
@@ -23,6 +24,9 @@ assert_cmd_fails "g++ is only the stub (cannot compile)" -- docker run --rm --en
 assert_eq "" "$(devpkgs "$image")" "no -dev package"
 assert_eq "$npm_ver" "$(docker run --rm --entrypoint "" -u asterisk "$image" npm --version)" "npm $npm_ver runs as asterisk"
 assert_contains "$(docker run --rm --entrypoint "" "$image" node -v)" "v18." "Node.js is Debian 12's 18.x"
+# the build scripts are bind-mounted into the RUNs: only versions.env stays
+assert_eq "/usr/src/izpbx/versions.env" "$(docker run --rm --entrypoint "" "$image" find /usr/src/izpbx -mindepth 1)" \
+  "no build script in the image, /usr/src/izpbx holds versions.env only"
 
 # negative: the same checks see the toolchain of the builder stage
 assert_cmd "builder stage builds" -- docker build -q --target builder -t "$image-builder" "$dir"

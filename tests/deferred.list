@@ -23,3 +23,6 @@ P1-03
 # every point (~19 min) runs at the end of a phase and before the release
 # only; the quick checks of the migration (P4-08, P4-19, P4-21) stay in all-done.
 P4-06
+
+# Decision of the user (2026-10-26): network check of make-updates.sh --apply
+P7-08
