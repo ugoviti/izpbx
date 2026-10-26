@@ -103,6 +103,8 @@ jobs:
           BREAK: ${{ inputs.break_version }}
         run: |
           set -euo pipefail
+          # the disk of the runner (a space block of the checks M2 means this, not the fixture)
+          df -h / /var/lib/docker 2>/dev/null || true
           docker pull -q "$IMAGE"
           if [ "${BREAK:-}" == "$MIGRATE_VERSION" ]; then export MIGRATE_BREAK=1; fi
           TEST_CHECKS_DIR=tests/ci/checks tests/ci/dind-run.sh "$IMAGE" MIGRATE

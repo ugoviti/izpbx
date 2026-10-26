@@ -6,7 +6,9 @@
 # in a real start with the opt-in. Result line "VERSION<TAB>RESULT<TAB>DETAIL"
 # in MIGRATE_RESULT (default tests/.logs/migrate-<version>.txt), RESULT one of:
 #   ok       migrated, verification M7 passed, healthy
-#   blocked  stopped by the checks M2 with their instructions (maintenance mode)
+#   blocked  stopped by the checks M2 with their instructions (maintenance mode);
+#            a space block is "failed" instead: the fixtures are small, it is the
+#            disk of the CI runner
 #   failed   anything else
 # The check passes for ok and blocked, fails for failed. MIGRATE_BREAK=1 breaks
 # the version on purpose (extension 1003 removed after the restore: the
@@ -42,6 +44,10 @@ logs=$(docker logs "$c" 2>&1)
 grep -E 'preflight: (BLOCK|RESULT)|migration: (FreePBX 16 ->|VERIFICATION)|MAINTENANCE|error:' <<< "$logs" | sed 's/^/    | /' | head -n 20 >&2
 if grep -qE 'migration: FreePBX 16 -> .* completed' <<< "$logs" && t_wait_healthy "$c" 300; then
   record ok "$(grep -oE 'FreePBX 16 -> [0-9.]+' <<< "$logs" | head -n 1)"
+elif grep -q 'preflight: BLOCK space' <<< "$logs"; then
+  # the fixtures are small: a space block is the disk of the CI runner, not a
+  # result of the migration (seen with 4 Docker-in-Docker jobs at a time)
+  record failed "not enough disk space on the CI runner: $(grep -m1 -oE 'preflight: BLOCK space: .*' <<< "$logs" | cut -c 25-140)"
 elif grep -q 'preflight: BLOCK' <<< "$logs" && grep -q 'MAINTENANCE MODE' <<< "$logs"; then
   record blocked "$(grep -m1 -oE 'preflight: BLOCK .*' <<< "$logs" | cut -c 18-200)"
 elif grep -q 'cannot reload the migrated configuration' <<< "$logs"; then
