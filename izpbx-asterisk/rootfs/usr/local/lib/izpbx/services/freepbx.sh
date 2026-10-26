@@ -453,3 +453,12 @@ cfg_asterisk_hep() {
   sed --follow-symlinks "s/^enabled =.*/enabled = $v/" -i "$f"
   log_info "asterisk: HEP capture enabled = $v (HEP_ENABLED)"
 }
+
+# fwconsole chown at every start with FREEPBX_FIX_PERMISSION=true, as 20.16
+# (P3-40); not after the first installation, which has just done it
+freepbx_fix_permission() {
+  [ "$FREEPBX_FIX_PERMISSION" == true ] || return 0
+  [ "$(izpbx_mode)" != install ] || return 0
+  log_info "freepbx: fixing the permissions of the FreePBX and Asterisk files (FREEPBX_FIX_PERMISSION)"
+  izpbx_do fwconsole chown >/dev/null 2>&1 || log_warn "freepbx: fwconsole chown failed"
+}
