@@ -70,4 +70,7 @@ a2disconf -q phpmyadmin
 chgrp asterisk /etc/phpmyadmin/config-db.php
 chown asterisk:asterisk /var/lib/phpmyadmin/tmp
 rm -f /var/lib/phpmyadmin/blowfish_secret.inc.php
+# last build step: the build scripts are not needed in the container, only
+# versions.env (read at runtime) stays in /usr/src/izpbx
+rm -rf /usr/src/izpbx/build
 build_log "runtime ready"

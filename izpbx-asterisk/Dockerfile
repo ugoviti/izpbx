@@ -2,79 +2,59 @@
 # izPBX 22.17: FreePBX 17 + Asterisk 22 on Debian 12.
 # Versions and checksums: versions.env. Build logic: build/*.sh (one script per RUN).
 #   docker build izpbx-asterisk
-# The build scripts are bind-mounted into each RUN (only the files they read, so
-# a change elsewhere does not invalidate the layer): none of them ends up in the
-# image. The image keeps /usr/src/izpbx/versions.env only (read at runtime).
+# The build scripts are removed by the last one (runtime.sh): the container keeps
+# /usr/src/izpbx/versions.env only (read at runtime).
 
 ## base: Debian + runtime packages + asterisk user
 # DEBIAN_IMAGE must match versions.env (checked by tests/checks/P1-04.sh)
 FROM docker.io/library/debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG OS_UPDATE_STAMP=""
+# only what base.sh reads: other changes do not invalidate the base layer
+COPY versions.env /usr/src/izpbx/versions.env
+COPY build/lib.sh build/base.sh build/packages-runtime.txt /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=bind,source=versions.env,target=/usr/src/izpbx/versions.env \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/base.sh,target=/usr/src/izpbx/build/base.sh \
-    --mount=type=bind,source=build/packages-runtime.txt,target=/usr/src/izpbx/build/packages-runtime.txt \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     /usr/src/izpbx/build/base.sh
 
 ## builder: toolchain, Asterisk and addons installed into /staging
 FROM base AS builder
+COPY build/apt.sh build/packages-build.txt /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/apt.sh,target=/usr/src/izpbx/build/apt.sh \
-    --mount=type=bind,source=build/packages-build.txt,target=/usr/src/izpbx/build/packages-build.txt \
     /usr/src/izpbx/build/apt.sh /usr/src/izpbx/build/packages-build.txt
+COPY versions.env /usr/src/izpbx/versions.env
+COPY build/asterisk.sh build/asterisk-menuselect.txt /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=cache,target=/usr/src/download-cache \
-    --mount=type=bind,source=versions.env,target=/usr/src/izpbx/versions.env \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/asterisk.sh,target=/usr/src/izpbx/build/asterisk.sh \
-    --mount=type=bind,source=build/asterisk-menuselect.txt,target=/usr/src/izpbx/build/asterisk-menuselect.txt \
     /usr/src/izpbx/build/asterisk.sh
+COPY build/addons.sh /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=cache,target=/usr/src/download-cache \
-    --mount=type=bind,source=versions.env,target=/usr/src/izpbx/versions.env \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/addons.sh,target=/usr/src/izpbx/build/addons.sh \
     /usr/src/izpbx/build/addons.sh
 
 ## freepbx: FreePBX 17 install tree (independent of builder: built in parallel)
 FROM base AS freepbx
+COPY versions.env /usr/src/izpbx/versions.env
+COPY build/freepbx.sh build/freepbx-modules.txt /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/usr/src/download-cache \
-    --mount=type=bind,source=versions.env,target=/usr/src/izpbx/versions.env \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/freepbx.sh,target=/usr/src/izpbx/build/freepbx.sh \
-    --mount=type=bind,source=build/freepbx-modules.txt,target=/usr/src/izpbx/build/freepbx-modules.txt \
     /usr/src/izpbx/build/freepbx.sh
 
 ## runtime: base + build results, no toolchain
 FROM base AS runtime
 COPY --from=builder /staging/ /
 COPY --from=freepbx /usr/src/freepbx /usr/src/freepbx
-# read at runtime (env.sh, shell banner): the only build file kept in the image
 COPY versions.env /usr/src/izpbx/versions.env
+COPY build/ /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/usr/src/download-cache \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/extras.sh,target=/usr/src/izpbx/build/extras.sh \
     /usr/src/izpbx/build/extras.sh
 RUN --mount=type=cache,target=/usr/src/download-cache \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/s6.sh,target=/usr/src/izpbx/build/s6.sh \
     /usr/src/izpbx/build/s6.sh
 RUN --mount=type=cache,target=/usr/src/download-cache \
-    --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/node-modules.sh,target=/usr/src/izpbx/build/node-modules.sh \
     /usr/src/izpbx/build/node-modules.sh
 # PHP settings and the php-fpm pool, enabled by runtime.sh
 COPY rootfs/etc/php/ /etc/php/
-RUN --mount=type=bind,source=build/lib.sh,target=/usr/src/izpbx/build/lib.sh \
-    --mount=type=bind,source=build/runtime.sh,target=/usr/src/izpbx/build/runtime.sh \
-    --mount=type=bind,source=build/g++-stub,target=/usr/src/izpbx/build/g++-stub \
-    --mount=type=bind,source=build/pkg-config-stub,target=/usr/src/izpbx/build/pkg-config-stub \
-    /usr/src/izpbx/build/runtime.sh
+RUN /usr/src/izpbx/build/runtime.sh
 # izPBX init and services (s6-rc): only the parts already ported to 22.17
 COPY rootfs/etc/s6-overlay/ /etc/s6-overlay/
 COPY rootfs/usr/local/lib/izpbx/ /usr/local/lib/izpbx/
