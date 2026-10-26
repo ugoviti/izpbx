@@ -29,4 +29,31 @@ if fwconsole start --post --skipchown >/tmp/freepbx-start.log 2>&1; then
 else
   log_warn "freepbx-start: fwconsole start --post failed, see /tmp/freepbx-start.log"
 fi
+# the UCP node server stops after 15 failed restarts when its port is taken,
+# and pm2 only says "errored" (P3-36: with network_mode host another program
+# of the host may hold it). The owner of a listening socket is not visible
+# here (no CAP_SYS_PTRACE), so the port is checked only when UCP failed.
+# Wait until pm2 gives up (errored) or UCP is stable (online with the same
+# restart count three times in a row), at most 30 seconds.
+ucp_state() { fwconsole_as_asterisk pm2 --list 2>/dev/null | awk -F'|' '$2 ~ /^ ucp / {gsub(/ /, "", $4); gsub(/ /, "", $5); print $4, $5}'; }
+prev='' same=0 state=''
+for _ in $(seq 1 15); do
+  state=$(ucp_state)
+  case $state in errored*|'') break ;; esac
+  if [ "$state" == "$prev" ]; then same=$((same + 1)); else same=0; fi
+  [ "$same" -lt 2 ] || break
+  prev=$state
+  sleep 2
+done
+if [ "${state%% *}" == errored ]; then
+  declare -A ucp_ports=([APP_PORT_UCP_HTTP]=${FREEPBX_NODEJSBINDPORT:-} [APP_PORT_UCP_HTTPS]=${FREEPBX_NODEJSHTTPSBINDPORT:-})
+  busy=''
+  for var in "${!ucp_ports[@]}"; do
+    port=${ucp_ports[$var]}
+    if [ -n "$port" ] && [ -n "$(ss -ltnH "sport = :$port" 2>/dev/null)" ]; then
+      busy+=" port $port ($var) is already in use by another program (with network_mode host, a program of the host): set $var to a free port;"
+    fi
+  done
+  log_warn "freepbx-start: the UCP node server does not start (pm2: errored):${busy:- see /home/asterisk/.pm2/logs and fwconsole pm2 --list}"
+fi
 exit 0

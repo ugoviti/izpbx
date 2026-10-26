@@ -223,6 +223,9 @@ if [[ "$UMASK" =~ ^0?[0-7]{3}$ ]]; then umask "$UMASK"; fi
 : "${FAIL2BAN_DEFAULT_SENDER:=${SMTP_MAIL_FROM}}"
 : "${FAIL2BAN_DEFAULT_DESTEMAIL:=${SMTP_MAIL_TO}}"
 : "${FREEPBX_HTTPBINDPORT:=${APP_PORT_AMI}}"
+# the UCP node server ports (P3-36: 20.16 published them but never applied them)
+: "${FREEPBX_NODEJSBINDPORT:=${APP_PORT_UCP_HTTP}}"
+: "${FREEPBX_NODEJSHTTPSBINDPORT:=${APP_PORT_UCP_HTTPS}}"
 : "${ZABBIX_SERVER_ACTIVE:=${ZABBIX_SERVER}}"
 # APP_FQDN is the hostname of the services (20.16: hostname + export HOSTNAME)
 [ -n "$APP_FQDN" ] && export HOSTNAME="$APP_FQDN"

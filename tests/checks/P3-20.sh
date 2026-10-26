@@ -5,6 +5,7 @@
 #   calls of the 20.16.22 loops (run from entrypoint-hooks.sh of the tag, with stubs of
 #   fwconsole and php) without the chan_sip bindport; no izPBX variable
 #   (FREEPBX_MODULES_*, FREEPBX_AUTOUPGRADE_*, ...) and no empty value applied;
+#   plus NODEJSBINDPORT/NODEJSHTTPSBINDPORT from APP_PORT_UCP_HTTP/HTTPS (P3-36);
 # - after a real start with FreePBX the values in freepbx_settings and the SIP
 #   Settings match the environment; a new container on the same data with a
 #   different FREEPBX_TONEZONE and APP_PORT_RTP_END changes them;
@@ -34,6 +35,10 @@ docker run --rm --entrypoint "" --env-file "$fx/case.env" -v "$work/old.sh:/old.
 docker run --rm --entrypoint "" --env-file "$fx/case.env" "$image" \
   bash -c 'izpbx-init --dry-run >/dev/null 2>&1; grep -E "^(fwconsole setting|sipsettings) " /run/izpbx/dry-run.log' | LC_ALL=C sort > "$work/new"
 grep -v '^sipsettings bindport ' "$work/old" > "$work/old-nobind"
+# P3-36: the UCP node ports from APP_PORT_UCP_HTTP/HTTPS, new in 22.17
+assert_cmd "P3-36: NODEJSBINDPORT from APP_PORT_UCP_HTTP" -- grep -qx 'fwconsole setting NODEJSBINDPORT 8001' "$work/new"
+assert_cmd "P3-36: NODEJSHTTPSBINDPORT from APP_PORT_UCP_HTTPS" -- grep -qx 'fwconsole setting NODEJSHTTPSBINDPORT 8003' "$work/new"
+sed -i '/^fwconsole setting NODEJS\(HTTPS\)\?BINDPORT /d' "$work/new"
 assert_cmd "20.16 records calls" -- test -s "$work/old"
 if diff -u "$work/old-nobind" "$work/new" > "$work/diff"; then
   pass "golden: recorded calls = 20.16 without bindport ($(wc -l < "$work/new") calls)"
