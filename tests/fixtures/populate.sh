@@ -21,6 +21,13 @@ sql_cdr() { MYSQL_PWD="$MYSQL_PASSWORD" mysql -h "$MYSQL_SERVER" -P "$APP_PORT_M
 step "ring groups module ($RINGGROUPS_TAG, not in the image local repo)"
 as_ast "fwconsole ma downloadinstall ringgroups --tag=$RINGGROUPS_TAG" >/dev/null
 
+# fwconsole bulkimport is the bulkhandler module: not installed by default by
+# the oldest 20.16 releases (20.16.4), installed here when missing (P6-08)
+if ! as_ast "fwconsole list" 2>/dev/null | grep -qw bulkimport; then
+  step "bulk handler module (not installed by this release)"
+  as_ast "fwconsole ma downloadinstall bulkhandler" >/dev/null
+fi
+
 step "enable chan_sip next to chan_pjsip"
 as_ast "fwconsole setting ASTSIPDRIVER both" >/dev/null
 
