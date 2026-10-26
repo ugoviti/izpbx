@@ -21,12 +21,19 @@ else
 fi
 
 _iz_ver() { sed -n "s/^$1=//p" /usr/src/izpbx/versions.env 2>/dev/null; }
-_iz_asterisk_up() { asterisk -rx 'core show uptime' >/dev/null 2>&1; }
+# up: answers on its console; starting: the daemon runs but does not answer yet
+# (the first seconds of the container); down: no daemon. "asterisk -f" is the
+# daemon: the "asterisk -rx" clients have the same process name.
+_iz_asterisk_state() {
+  if asterisk -rx 'core show uptime' 2>/dev/null | grep -q 'System uptime'; then echo up
+  elif pgrep -f '^asterisk -f' >/dev/null 2>&1; then echo starting
+  else echo down; fi
+}
 _iz_calls() { asterisk -rx 'core show channels count' 2>/dev/null | awk '/active call/ {print $1; exit}'; }
 
 # --- the banner
 _iz_motd() {
-  local logo i colors fpbx health hcolor calls ep_on ep_all reg_ok reg_all build
+  local logo i colors fpbx health hcolor calls ep_on ep_all reg_ok reg_all build ast
   logo=(
     '▀  ▀▀█ █▀▀▄ █▀▀▄ ▀▄ ▄▀'
     '█  ▄▀  █▄▄▀ █▀▀▄  ▄▀▄ '
@@ -50,11 +57,16 @@ _iz_motd() {
   if [ -e "$_iz_maint" ]; then
     printf '   %s● maintenance%s  %s\n' "$_iz_warn" "$_iz_r" "$(head -c 160 "$_iz_maint")"
   else
+    ast=$(_iz_asterisk_state)
     health=$(timeout 3 izpbx-healthcheck 2>/dev/null) || true
     case $health in healthy) hcolor=$_iz_ok ;; "") health="state unknown" hcolor=$_iz_dim ;; *) hcolor=$_iz_ko ;; esac
-    printf '   %s● %s%s' "$hcolor" "${health#unhealthy: }" "$_iz_r"
-    [ "$health" == healthy ] || [ -z "$health" ] || [ "$hcolor" != "$_iz_ko" ] || printf ' %s(unhealthy)%s' "$_iz_ko" "$_iz_r"
-    if _iz_asterisk_up; then
+    if [ "$ast" == starting ]; then
+      printf '   %s● Asterisk is starting%s (not answering yet: log in again in a few seconds)' "$_iz_warn" "$_iz_r"
+    else
+      printf '   %s● %s%s' "$hcolor" "${health#unhealthy: }" "$_iz_r"
+      [ "$health" == healthy ] || [ -z "$health" ] || [ "$hcolor" != "$_iz_ko" ] || printf ' %s(unhealthy)%s' "$_iz_ko" "$_iz_r"
+    fi
+    if [ "$ast" == up ]; then
       calls=$(_iz_calls)
       read -r ep_on ep_all < <(asterisk -rx 'pjsip show endpoints' 2>/dev/null |
         awk '/^ *Endpoint: / && !/</ {all++; if ($0 !~ /Unavailable/) on++} END {print on + 0, all + 0}')
@@ -73,13 +85,21 @@ _iz_motd() {
 _iz_domain=$(hostname -f 2>/dev/null | cut -s -d. -f2-); [ -z "$_iz_domain" ] || _iz_domain=".$_iz_domain"
 _iz_state_ts=0 _iz_state=''
 _iz_refresh_state() { # at most every 10 seconds: the health dot and the calls
-  local now calls
+  local now calls ttl=10
   now=$(date +%s)
-  [ $((now - _iz_state_ts)) -ge 10 ] || return 0
+  # while Asterisk starts, again at every prompt: it answers within seconds
+  [ "${_iz_state_kind:-}" != starting ] || ttl=0
+  [ $((now - _iz_state_ts)) -ge "$ttl" ] || return 0
   _iz_state_ts=$now
-  if [ -e "$_iz_maint" ]; then _iz_state="\[$_iz_warn\]● maintenance\[$_iz_r\]"
-  elif _iz_asterisk_up; then calls=$(_iz_calls); _iz_state="\[$_iz_ok\]●\[$_iz_r\] ${calls:-0} calls"
-  else _iz_state="\[$_iz_ko\]● asterisk down\[$_iz_r\]"; fi
+  if [ -e "$_iz_maint" ]; then _iz_state_kind=maintenance _iz_state="\[$_iz_warn\]● maintenance\[$_iz_r\]"
+  else
+    _iz_state_kind=$(_iz_asterisk_state)
+    case $_iz_state_kind in
+      up)       calls=$(_iz_calls); _iz_state="\[$_iz_ok\]●\[$_iz_r\] ${calls:-0} calls" ;;
+      starting) _iz_state="\[$_iz_warn\]● asterisk starting\[$_iz_r\]" ;;
+      *)        _iz_state="\[$_iz_ko\]● asterisk down\[$_iz_r\]" ;;
+    esac
+  fi
 }
 _iz_prompt() {
   local rc=$? arrow=$_iz_acc

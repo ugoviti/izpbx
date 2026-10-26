@@ -9,7 +9,9 @@
 #   the accent color (45) after a command that worked, red (203) after one
 #   that failed;
 # - maintenance mode (/run/izpbx/maintenance): banner "● maintenance <why>",
-#   prompt "● maintenance"; Asterisk stopped: prompt "● asterisk down";
+#   prompt "● maintenance"; Asterisk running but not answering yet (the first
+#   seconds of a container): banner and prompt "starting"; no Asterisk
+#   daemon: prompt "● asterisk down";
 # - NO_COLOR: no escape sequence at all.
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p3-33
@@ -47,7 +49,12 @@ assert_contains "$(shell "$prompt" | plain | tail -n 2)" "● maintenance" "main
 docker exec "$c" rm -f /run/izpbx/maintenance
 # Asterisk not reachable: its control socket moved away (stopping it would end this container)
 docker exec "$c" sh -c 'mv /var/run/asterisk/asterisk.ctl /var/run/asterisk/asterisk.ctl.off' 
-assert_contains "$(shell "$prompt" | plain | tail -n 2)" "● asterisk down" "Asterisk stopped: prompt"
+# the daemon runs but does not answer: the first seconds of a container
+assert_contains "$(shell "$prompt" | plain | tail -n 2)" "● asterisk starting" "Asterisk running, not answering yet: prompt 'starting'"
+assert_cmd "  and the banner says so" -- sh -c "docker exec -t '$c' bash -ic true 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' | grep -qF '● Asterisk is starting'"
+# no Asterisk at all: down
+assert_contains "$(docker run --rm -t -e TERM=xterm-256color --entrypoint "" "$image" bash -ic "$prompt" 2>/dev/null | plain | tail -n 2)" "● asterisk down" \
+  "no Asterisk daemon: prompt 'asterisk down'"
 assert_eq "" "$(docker exec -t -e TERM=xterm-256color -e NO_COLOR=1 "$c" bash -ic "$prompt" 2>/dev/null | grep -c $'\e\[' | grep -v '^0$' || true)" \
   "NO_COLOR: no escape sequence"
 finish
