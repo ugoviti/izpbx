@@ -30,6 +30,8 @@ if [ "$(id -u)" -ne 0 ]; then
   log_warn "izpbx-init: running as uid $(id -u), not root: initialization skipped"
   exit 0
 fi
+# shellcheck source=../lib/izpbx/env.sh
+. /usr/local/lib/izpbx/env.sh
 start=$SECONDS
 # runtime state of izPBX: the dry-run log, the maintenance flag read by
 # izpbx-healthcheck (a stale flag of a previous run does not survive /run)
@@ -37,11 +39,34 @@ mkdir -p /run/izpbx
 if [ "${IZPBX_DRY_RUN:-false}" == "true" ]; then
   : "${IZPBX_DRY_RUN_LOG:=/run/izpbx/dry-run.log}"
   mkdir -p "$(dirname "$IZPBX_DRY_RUN_LOG")" && : > "$IZPBX_DRY_RUN_LOG"
-  log_info "izpbx-init: start (dry-run: actions recorded in $IZPBX_DRY_RUN_LOG)"
+  log_info "izpbx-init: start $APP_DESCRIPTION $APP_VER (dry-run: actions recorded in $IZPBX_DRY_RUN_LOG)"
 else
-  log_info "izpbx-init: start"
+  log_info "izpbx-init: start $APP_DESCRIPTION $APP_VER (build ${APP_VER_BUILD:-unknown}, commit ${APP_BUILD_COMMIT:-unknown})"
 fi
+# user hooks, as 20.16 (P3-38): ${APP_CUSTOM_SCRIPTS}/pre-init/*.custom-inc
+# before the steps, ${APP_CUSTOM_SCRIPTS}/post-init/*.custom-inc after them
+# (before any service starts), sourced in this shell in lexical order. They
+# were written for the non strict shell of 20.16: strict mode is off while
+# they run, and a hook that fails is logged, the start goes on. Not in
+# dry-run; post-init not in maintenance mode.
+run_custom_hooks() { # stage
+  local dir="${APP_CUSTOM_SCRIPTS}/$1" inc rc
+  if [ -z "$APP_CUSTOM_SCRIPTS" ]; then return 0; fi
+  if [ "${IZPBX_DRY_RUN:-false}" == "true" ]; then log_info "izpbx-init: $1 hooks of $dir not run (dry-run)"; return 0; fi
+  if [ ! -d "$dir" ]; then log_warn "izpbx-init: custom scripts directory $dir does not exist ($1 hooks)"; return 0; fi
+  for inc in "$dir"/*.custom-inc; do
+    [ -r "$inc" ] || continue
+    log_info "izpbx-init: $1 hook $inc"
+    set +Eeuo pipefail; trap - ERR
+    # shellcheck source=/dev/null
+    . "$inc"
+    rc=$?
+    izpbx_strict
+    [ "$rc" -eq 0 ] || log_warn "izpbx-init: $1 hook $inc exited with status $rc"
+  done
+}
 shopt -s nullglob
+run_custom_hooks pre-init
 for step in "$IZPBX_INIT_DIR"/*.sh; do
   log_info "izpbx-init: step $(basename "$step")"
   # shellcheck source=/dev/null
@@ -53,4 +78,5 @@ for step in "$IZPBX_INIT_DIR"/*.sh; do
     break
   fi
 done
+[ -e "${IZPBX_MAINTENANCE_FLAG:-/run/izpbx/maintenance}" ] || run_custom_hooks post-init
 log_info "izpbx-init: done in $((SECONDS - start))s"
