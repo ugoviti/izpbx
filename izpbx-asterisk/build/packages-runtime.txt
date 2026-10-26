@@ -26,6 +26,9 @@ ffmpeg
 openssh-client
 rsync
 ipset
+# the izpbx-* tools (P3-32): column for izpbx-callstats, ldapadd/ldapsearch for izpbx-freepbx2ldap
+bsdextrautils
+ldap-utils
 # Asterisk runtime libraries (the -dev packages stay in the builder)
 libssl3
 libncurses6

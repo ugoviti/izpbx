@@ -1,3 +1,0 @@
-#!/bin/sh
- 
-curl -d "submit=Reboot" http://admin:PASSWORD@192.168.2.20/rebootsys.cgi 1>/dev/null

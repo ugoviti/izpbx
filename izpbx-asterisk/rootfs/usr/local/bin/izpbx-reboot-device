@@ -1,0 +1,40 @@
+#!/bin/bash
+# izpbx-reboot-device: reboot VoIP gateways and DECT bases through their web
+# interface (eg. from cron, at night). Replaces izpbx-reboot-portech,
+# izpbx-reboot-gxw4024 and izpbx-reboot-kirkettone of 20.16.
+#   izpbx-reboot-device TYPE HOST [HOST...]
+#   TYPE: portech         Portech GSM gateways   (POST /rebootsys.cgi, basic auth)
+#         grandstream-gxw Grandstream GXW FXO/FXS gateways (login, then /cgi-bin/rs)
+#         kirk            Kirk / Spectralink DECT bases (/firmware.html?action=RebootIdle)
+# The password from IZPBX_DEVICE_PASSWORD or IZPBX_DEVICE_PASSWORD_FILE (asked
+# on a terminal otherwise), the user from IZPBX_DEVICE_USER (default admin);
+# never on the command line. 5 seconds between two hosts. Exit 0, 1 when a
+# host did not answer, 2 on a usage error.
+set -euo pipefail
+usage() { sed -n '5,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+type=${1:-}; [ $# -ge 2 ] || usage; shift
+case $type in portech|grandstream-gxw|kirk) ;; *) usage ;; esac
+user=${IZPBX_DEVICE_USER:-admin} pass=${IZPBX_DEVICE_PASSWORD:-}
+[ -z "${IZPBX_DEVICE_PASSWORD_FILE:-}" ] || pass=$(cat "$IZPBX_DEVICE_PASSWORD_FILE")
+if [ -z "$pass" ]; then
+  [ -t 0 ] || { echo "IZPBX_DEVICE_PASSWORD or IZPBX_DEVICE_PASSWORD_FILE not set" >&2; exit 2; }
+  read -r -s -p "password of $user: " pass; echo
+fi
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+# the credentials in a curl config file (0600), not in the URL or the arguments
+printf 'user = "%s:%s"\n' "$user" "$pass" > "$tmp/auth"
+rc=0 first=1
+for host in "$@"; do
+  [ "$first" -eq 1 ] || sleep 5; first=0
+  case $type in
+    portech)
+      curl -fsS --max-time 20 -K "$tmp/auth" -d "submit=Reboot" "http://$host/rebootsys.cgi" -o /dev/null ;;
+    grandstream-gxw)
+      printf 'P2=%s' "$pass" > "$tmp/login"
+      curl -fsS --max-time 20 -c "$tmp/cookies" -d @"$tmp/login" "http://$host/cgi-bin/dologin" -o /dev/null &&
+        curl -fsS --max-time 20 -b "$tmp/cookies" "http://$host/cgi-bin/rs" -o /dev/null ;;
+    kirk)
+      curl -fsS --max-time 20 --anyauth -K "$tmp/auth" "http://$host/firmware.html?action=RebootIdle" -o /dev/null ;;
+  esac && echo "$host: reboot requested" || { echo "$host: no answer" >&2; rc=1; }
+done
+exit "$rc"

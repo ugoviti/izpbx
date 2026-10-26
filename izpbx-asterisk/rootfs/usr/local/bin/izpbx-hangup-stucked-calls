@@ -1,6 +1,26 @@
 #!/bin/bash
-
-duration=5400
-
-asterisk -r -x "core show channels concise" | while read call ; do call_channel=$(echo $call | awk -F'!' '{print $1}') ; call_duration=$(echo $call | awk -F'!' '{print $12}') ; [ $call_duration -gt $duration ] && asterisk -r -x "channel request hangup $call_channel"; done
-
+# izpbx-hangup-stucked-calls: hang up the calls older than a duration (calls
+# left up by a lost BYE or a stuck channel); for cron.
+#   izpbx-hangup-stucked-calls [-n] [SECONDS]     default 5400 (1 h 30 min)
+#   -n   list the channels that would be hung up, hang up nothing
+# Exit 0, 2 on a usage error.
+set -euo pipefail
+usage() { sed -n '4,6p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+dry=0
+while getopts "nh" o; do case $o in n) dry=1 ;; *) usage ;; esac; done
+shift $((OPTIND - 1))
+max=${1:-5400}
+[[ "$max" =~ ^[0-9]+$ ]] || usage
+n=0
+# "core show channels concise": Channel!Context!Exten!Priority!State!Application!Data!CallerID!...!Duration (12th)!...
+while IFS='!' read -r channel _ _ _ _ _ _ _ _ _ _ duration _; do
+  [[ "$duration" =~ ^[0-9]+$ ]] && [ "$duration" -gt "$max" ] || continue
+  n=$((n + 1))
+  if [ "$dry" -eq 1 ]; then
+    echo "would hang up $channel (${duration} s)"
+  else
+    echo "hanging up $channel (${duration} s)"
+    asterisk -rx "channel request hangup $channel" >/dev/null
+  fi
+done < <(asterisk -rx "core show channels concise" 2>/dev/null)
+echo "$n channel(s) older than $max s"

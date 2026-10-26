@@ -29,6 +29,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - Image for **amd64** only: arm64 comes in a later release (the build scripts already support it)
 - Image tags `22.17.0`, `22.17`, `22`; **`latest` stays on 20.16** for now: use an explicit tag. `compose.yml` uses `22.17.0`; `default.env` lists every configurable variable
 - SLA runs with `app_sla` (MeetMe stays disabled); conferences use ConfBridge
+- The `izpbx-*` tools of 20.16 reviewed for 22.17: `izpbx-blfmonitor` (PJSIP channels, `-T` for the technology, pid file, options also with `start`/`stop`), `izpbx-callstats` (English headers), `izpbx-trunkrotate ROUTE TRUNK...` (no password in the script: the izPBX `MYSQL_*` settings), `izpbx-hangup-stucked-calls [-n] [SECONDS]`, `izpbx-check-iax2 [MIN]`, `izpbx-mtrstats HOST`. Renamed and made generic: `izpbx-rtrt-enumrewrite` → `izpbx-enumrewrite DOMAIN`, `izpbx-rtrt-freepbx2ldap` → `izpbx-freepbx2ldap` (settings in `/etc/izpbx/freepbx2ldap.conf`), `izpbx-reboot-portech`/`-gxw4024`/`-kirkettone` → `izpbx-reboot-device {portech|grandstream-gxw|kirk} HOST...` (password from `IZPBX_DEVICE_PASSWORD`)
 - CI: lint (shellcheck, hadolint) on every push and pull request, migration, new installation and maintenance tests in Docker-in-Docker, weekly rebuild of both `release/20.16` and `main`, dev builds tagged `dev-22.17`
 ### Removed
 - **chan_sip**: extensions and trunks are PJSIP (converted by the migration)
@@ -38,6 +39,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - The FreePBX `phonebook` module (no FreePBX 17 release): its entries are migrated to Contact Manager
 - Workarounds of older releases: `php74.patch`, the RHEL/microdnf and Asterisk 18 branches, `chan_local`
 - `compose-dev-20.16.yml` (the 22.17 one is `compose-dev-22.17.yml`)
+- `izpbx-check-oooh323` (Asterisk 22 has no `chan_ooh323`) and `izpbx-system-mkswap` (a swap file is set up on the host, not in the container)
 - `pbx_lua` is no longer built: FreePBX writes the dialplan in `extensions*.conf`, a Lua dialplan (`extensions.lua`) is not supported (its sample loaded a `demo` context with hints on `SIP/1000` and `SIP/1001`)
 ### Migration
 - izPBX 22.17 on a volume of izPBX 20.16 (FreePBX 16) without `IZPBX_MIGRATE_FREEPBX=true` starts in **maintenance mode**: no service, healthcheck unhealthy, `/data` and the databases untouched. The same happens when a check blocks the migration

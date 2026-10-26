@@ -1,0 +1,23 @@
+#!/bin/bash
+# izpbx-enumrewrite: add an ENUM domain at the head of the ENUM lookups of
+# FreePBX (enumlookup.agi, $enums = Array('e164.org','e164.arpa',...)), so
+# that it is asked first. FreePBX writes the AGI again when the core module is
+# upgraded: run it again after an upgrade (or from cron).
+#   izpbx-enumrewrite DOMAIN       eg. izpbx-enumrewrite e164.example.net
+# Exit 0 (also when DOMAIN is already there), 1 when no enumlookup.agi is
+# found, 2 on a usage error.
+set -euo pipefail
+usage() { sed -n '6p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+domain=${1:-}
+[[ "$domain" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || usage
+files=${IZPBX_ENUM_FILES:-"/var/lib/asterisk/agi-bin/enumlookup.agi /var/www/html/admin/modules/core/agi-bin/enumlookup.agi"}
+n=0
+for f in $files; do
+  [ -f "$f" ] || continue
+  n=$((n + 1))
+  if grep -qF "'$domain'" "$f"; then echo "$f: $domain already there"; continue; fi
+  sed -i -E "s/^(\\s*\\\$enums\\s*=\\s*Array\\()/\\1'$domain',/" "$(readlink -f "$f")"
+  grep -qF "'$domain'" "$f" || { echo "$f: no \$enums = Array(...) line" >&2; exit 1; }
+  echo "$f: $domain added"
+done
+[ "$n" -gt 0 ] || { echo "no enumlookup.agi found ($files)" >&2; exit 1; }

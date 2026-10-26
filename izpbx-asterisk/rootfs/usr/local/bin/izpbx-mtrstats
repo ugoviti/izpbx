@@ -1,14 +1,16 @@
-#!/bin/sh
-mtr_stats() {
-host="$1"
-while true ; do
-  date +"%Y-%m-%d %H:%M:%S %Z"
-  #set -x
-  mtr $host -r -c 5000 -n -4
-  #set +x
-  echo
+#!/bin/bash
+# izpbx-mtrstats: mtr reports to HOST in a loop, to a log file in the home
+# directory (packet loss and latency of a trunk or a provider over time);
+# stop it with Ctrl+C.
+#   izpbx-mtrstats HOST [COUNT]     COUNT pings per report, default 5000
+# Exit 2 on a usage error.
+set -euo pipefail
+usage() { sed -n '5p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+host=${1:-}; count=${2:-5000}
+[ -n "$host" ] && [ "$host" != "-h" ] && [[ "$count" =~ ^[0-9]+$ ]] || usage
+log=~/"izmtrstats-$host-$(date +%Y%m%d-%H%M%S).log"
+echo "mtr reports to $host in $log (Ctrl+C to stop)"
+while true; do
+  { date +"%Y-%m-%d %H:%M:%S %Z"; mtr "$host" -r -c "$count" -n -4 || echo "mtr failed (exit $?)"; echo; } >> "$log" 2>&1
   sleep 1
 done
-}
- 
-[ ! -z "$1" ] && mtr_stats "$1" >~/"izmtrstats-$1-$(date +"%Y%m%d-%H%M%S").log" 2>&1 || exit 1

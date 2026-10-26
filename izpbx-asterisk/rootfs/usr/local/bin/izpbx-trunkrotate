@@ -1,88 +1,44 @@
 #!/bin/bash
-# questo script ruota in automatico le rotte specificate ogni volta che viene eseguito
-# è utile ad esempio per ruotare le sim di un gsm box in modo che le chiamate vengano
-# distribuite giorno dopo giorno, in modo uguale fra le due sim
-# writter: Ugo Viti <ugo.viti@initzero.it>
-# release: 2013/06/11
- 
- 
-ROUTE_NAME="gsm"
-TRUNK_NAME="portech1-sim1 portech1-sim2"
- 
-run_query() {
- mysql -u asterisk --password=pbxizpwd --batch --skip-column-names --execute="$(eval "$*")" asterisk
-}
- 
- 
-reorder_trunks() {
-SEQ_TOT="$(count_args $TRUNK_NAME)"
-for TRUNK in $TRUNK_NAME
-  do
-    TRUNK_ID=$(run_query query_trunk_id)
-    ROUTE_ID=$(run_query query_route_id)
-    SEQ_CUR=$(run_query query_seq)
-    #let SEQ_TOT="$SEQ_TOT-1"
-    SEQ_NEW="$(calc_seq_new $SEQ_CUR $SEQ_TOT)"
-    echo -e -n "\nUPDATE outbound_route_trunks SET seq = '$SEQ_NEW' WHERE trunk_id = '$TRUNK_ID' AND route_id = '$ROUTE_ID';"
-  done
-}
- 
- 
-# caclcola il numero totale di trunk da switchare in round robin
-count_args() {
-echo $(( $# - 1 ))
-}
- 
-# se l'ordine di sequenza corrente è uguale a 0, allora imposta questo trunk come ultima posizione nella sequenza
-calc_seq_new() {
-  if [ "$1" -eq 0 ]
-    then
-     echo $2
-    else
-     cnt=$(( $1 - 1 ))
-     echo $cnt
-  fi
-}
- 
-# stampa l'attuale posizione del trunk dentro l'outbound route
-query_seq() {
-echo "SELECT seq FROM outbound_route_trunks WHERE route_id = '$ROUTE_ID' and trunk_id = '$TRUNK_ID'"
-}
- 
-# stampa l'id della rotta
-query_route_id() {
-echo "SELECT route_id FROM outbound_routes WHERE name = '$ROUTE_NAME'"
-}
- 
-# stampa l'id del trunk
-query_trunk_id() {
-echo "SELECT trunkid FROM trunks WHERE name = '$TRUNK'"
-}
- 
-# stampa la versione di freepbx
-query_freepbx_version() {
-echo "SELECT value FROM admin WHERE variable = 'version'"
-}
- 
-# stampa il nome del contesto in cui è associata la rotta
-print_context() {
-ROUTE_ID=$(run_query query_route_id)
-echo "outrt-$(seq --format="%03.f" $ROUTE_ID $ROUTE_ID)-$ROUTE_NAME"
-}
- 
- 
-# main
-### for freepbx 2.8 and highter
-#VERSION="$(extract_freepbx_version)"
-#CONTEXT="$(print_context)"
- 
-# to debug the query uncomment the following line
-#set -x ; reorder_trunks ; exit $? ; set +x
- 
-# roundrobin current query
-run_query reorder_trunks
- 
-[ $?  = 0 ] && /var/lib/asterisk/bin/retrieve_conf 1>/dev/null
-[ $?  = 0 ] && /var/lib/asterisk/bin/module_admin reload 1>/dev/null
-#[ $?  = 0 ] && asterisk -rx "module reload"
-[ $? != 0 ] && echo "errore nella configurazione di asterisk"
+# izpbx-trunkrotate: rotate the order of the trunks of an outbound route at
+# every run (eg. the SIMs of a GSM gateway used in turn, day after day): the
+# first trunk goes last, the others move up. Then FreePBX applies it
+# (fwconsole reload).
+#   izpbx-trunkrotate [-n] ROUTE TRUNK TRUNK...
+#   -n   print the new order, change nothing
+# The FreePBX database as the rest of izPBX (MYSQL_*). Exit 0, 1 when the route
+# or a trunk is not found or the reload fails, 2 on a usage error.
+# Written by Ugo Viti <ugo.viti@initzero.it> (2013), ported to izPBX 22.17.
+set -euo pipefail
+usage() { sed -n '6,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+# shellcheck source=../lib/izpbx/actions.sh
+. /usr/local/lib/izpbx/actions.sh
+dry=0
+while getopts "nh" o; do case $o in n) dry=1 ;; *) usage ;; esac; done
+shift $((OPTIND - 1))
+[ $# -ge 3 ] || usage
+route=$1; shift
+sq() { printf "'%s'" "${1//\'/\'\'}"; }   # SQL string literal
+route_id=$(izpbx_sql_query "SELECT route_id FROM outbound_routes WHERE name = $(sq "$route")")
+[ -n "$route_id" ] || { echo "route '$route' not found" >&2; exit 1; }
+ids=() seqs=()
+for t in "$@"; do
+  id=$(izpbx_sql_query "SELECT trunkid FROM trunks WHERE name = $(sq "$t")")
+  [ -n "$id" ] || { echo "trunk '$t' not found" >&2; exit 1; }
+  seq=$(izpbx_sql_query "SELECT seq FROM outbound_route_trunks WHERE route_id = $route_id AND trunk_id = $id")
+  [ -n "$seq" ] || { echo "trunk '$t' is not in the route '$route'" >&2; exit 1; }
+  ids+=("$id"); seqs+=("$seq")
+done
+# the positions of these trunks, sorted: each trunk takes the position of the
+# one before it in the order, the first one the last position
+mapfile -t slots < <(printf '%s\n' "${seqs[@]}" | sort -n)
+sql=''
+for i in "${!ids[@]}"; do
+  for j in "${!slots[@]}"; do [ "${slots[$j]}" == "${seqs[$i]}" ] && break; done
+  new=${slots[$(( (j - 1 + ${#slots[@]}) % ${#slots[@]} ))]}
+  echo "$(izpbx_sql_query "SELECT name FROM trunks WHERE trunkid = ${ids[$i]}"): position ${seqs[$i]} -> $new"
+  sql+="UPDATE outbound_route_trunks SET seq = $new WHERE route_id = $route_id AND trunk_id = ${ids[$i]};"
+done
+[ "$dry" -eq 0 ] || exit 0
+izpbx_sql "$sql"
+su -s /bin/bash "${APP_USR:-asterisk}" -c "fwconsole reload" >/dev/null || { echo "fwconsole reload failed" >&2; exit 1; }
+echo "route '$route' rotated and FreePBX reloaded"

@@ -59,7 +59,8 @@ COPY rootfs/usr/local/lib/izpbx/ /usr/local/lib/izpbx/
 COPY rootfs/usr/local/sbin/izpbx-init /usr/local/sbin/izpbx-init
 COPY rootfs/usr/sbin/safe_asterisk /usr/sbin/safe_asterisk
 COPY rootfs/usr/local/sbin/izpbx-service /usr/local/sbin/izpbx-service
-COPY rootfs/usr/local/bin/izpbx-healthcheck /usr/local/bin/izpbx-healthcheck
+# izpbx-healthcheck and the izpbx-* tools (P3-32)
+COPY rootfs/usr/local/bin/ /usr/local/bin/
 COPY rootfs/usr/local/sbin/izpbx-inventory /usr/local/sbin/izpbx-inventory
 COPY rootfs/usr/local/sbin/izpbx-preflight /usr/local/sbin/izpbx-preflight
 COPY rootfs/usr/local/sbin/izpbx-migrate /usr/local/sbin/izpbx-migrate

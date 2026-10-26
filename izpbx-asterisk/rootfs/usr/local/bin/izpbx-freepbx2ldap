@@ -1,0 +1,53 @@
+#!/bin/bash
+# izpbx-freepbx2ldap: the extensions of FreePBX as an LDAP address book
+# (inetOrgPerson entries uid=<extension>,o=<ou>,<base dn>), for the phones
+# that read their directory from LDAP. Only when the extensions changed since
+# the last import: the entries of the ou are deleted and added again.
+#   izpbx-freepbx2ldap [-t]     -t: print the LDIF, change nothing
+# Settings: /etc/izpbx/freepbx2ldap.conf (KEY=value lines, also accepted from
+# the environment): LDAP_URI (ldap://host or ldaps://host), LDAP_BIND_DN,
+# LDAP_PASSWORD or LDAP_PASSWORD_FILE, LDAP_BASE_DN, LDAP_OU. The FreePBX
+# database as the rest of izPBX (MYSQL_*). Exit 0, 1 on an error, 2 on a usage
+# or configuration error.
+# Written by Ugo Viti <ugo.viti@initzero.it> (2011), ported to izPBX 22.17.
+set -euo pipefail
+usage() { sed -n '6p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+# shellcheck source=../lib/izpbx/actions.sh
+. /usr/local/lib/izpbx/actions.sh
+test_only=0
+while getopts "th" o; do case $o in t) test_only=1 ;; *) usage ;; esac; done
+conf=${IZPBX_FREEPBX2LDAP_CONF:-/etc/izpbx/freepbx2ldap.conf}
+# shellcheck disable=SC1090
+[ ! -r "$conf" ] || . "$conf"
+: "${LDAP_URI:=}" "${LDAP_BIND_DN:=}" "${LDAP_PASSWORD:=}" "${LDAP_PASSWORD_FILE:=}" "${LDAP_BASE_DN:=}" "${LDAP_OU:=}"
+export_dir=${IZPBX_FREEPBX2LDAP_DIR:-/var/lib/asterisk/pbx2ldap}
+
+ldif() {
+  local ext name sipname given sn phone
+  izpbx_sql_query "SELECT extension, name, sipname FROM users ORDER BY extension" |
+  while IFS=$'\t' read -r ext name sipname; do
+    given=${name%% *}; sn=${name#* }; [ "$sn" != "$name" ] || sn=$ext; [ -n "$given" ] || given=$ext
+    phone=$sipname; [ -n "$phone" ] && [ "$phone" != "NULL" ] || phone=$ext
+    printf 'dn: uid=%s,o=%s,%s\nobjectClass: inetOrgPerson\nobjectClass: organizationalPerson\nobjectClass: person\nobjectClass: top\ncn: %s\ngivenName: %s\nsn: %s\nou: %s\ntelephoneNumber: %s\nuid: %s\n\n' \
+      "$ext" "$LDAP_OU" "$LDAP_BASE_DN" "${name:-$ext}" "$given" "$sn" "$LDAP_OU" "$phone" "$ext"
+  done
+}
+
+[ -n "$LDAP_OU" ] && [ -n "$LDAP_BASE_DN" ] || { echo "LDAP_BASE_DN and LDAP_OU must be set ($conf)" >&2; exit 2; }
+if [ "$test_only" -eq 1 ]; then ldif; exit 0; fi
+[ -n "$LDAP_URI" ] && [ -n "$LDAP_BIND_DN" ] || { echo "LDAP_URI and LDAP_BIND_DN must be set ($conf)" >&2; exit 2; }
+command -v ldapadd >/dev/null || { echo "ldap-utils not installed" >&2; exit 1; }
+mkdir -p "$export_dir"
+new=$(mktemp "$export_dir/pbx2ldap-XXXXXX.ldif") pw=$(mktemp)
+trap 'rm -f "$new" "$pw"' EXIT
+# the password in a 0600 file (-y), not on the command line
+if [ -n "$LDAP_PASSWORD_FILE" ]; then cat "$LDAP_PASSWORD_FILE" > "$pw"; else printf '%s' "$LDAP_PASSWORD" > "$pw"; fi
+ldif > "$new"
+imported="$export_dir/pbx2ldap-imported.ldif"
+if [ -f "$imported" ] && cmp -s "$imported" "$new"; then echo "extensions unchanged since the last import"; exit 0; fi
+auth=(-x -H "$LDAP_URI" -D "$LDAP_BIND_DN" -y "$pw")
+ldapsearch "${auth[@]}" -LLL -b "o=$LDAP_OU,$LDAP_BASE_DN" '(uid=*)' dn | sed -n 's/^dn: //p' |
+  while IFS= read -r dn; do ldapdelete "${auth[@]}" "$dn"; done
+ldapadd "${auth[@]}" -c -f "$new"
+mv "$new" "$imported"
+echo "$(grep -c '^dn: ' "$imported") extension(s) imported into o=$LDAP_OU,$LDAP_BASE_DN"

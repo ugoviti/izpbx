@@ -1,13 +1,15 @@
 #!/bin/bash
-
-if [[ $(asterisk -r -x "iax2 show peers" | grep UNREACHABLE | wc -l) -ge 5 ]]
-	then
-		#/etc/init.d/asterisk restart
-		echo
-		echo "...unloading module chan_iax2"
-		asterisk -r -x "module unload chan_iax2"
-		echo "...loading module chan_iax2"
-		asterisk -r -x "module load chan_iax2"
-		#echo "...done"
-fi
-
+# izpbx-check-iax2: reload chan_iax2 when too many IAX2 peers are
+# UNREACHABLE (a stuck IAX2 stack after a network outage); for cron.
+#   izpbx-check-iax2 [MIN_UNREACHABLE]     default 5
+# Exit 0, 1 when the reload failed, 2 on a usage error.
+set -euo pipefail
+usage() { sed -n '4p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+[ "${1:-}" != "-h" ] || usage
+min=${1:-5}
+[[ "$min" =~ ^[0-9]+$ ]] && [ "$min" -gt 0 ] || usage
+unreachable=$(asterisk -rx "iax2 show peers" 2>/dev/null | grep -c UNREACHABLE || true)
+echo "$unreachable IAX2 peer(s) unreachable (reload from $min)"
+[ "$unreachable" -ge "$min" ] || exit 0
+echo "reloading chan_iax2"
+asterisk -rx "module unload chan_iax2.so" && asterisk -rx "module load chan_iax2.so"
