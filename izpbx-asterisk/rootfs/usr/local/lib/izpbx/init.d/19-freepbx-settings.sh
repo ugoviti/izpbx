@@ -2,7 +2,7 @@
 # izpbx-init step: FreePBX Advanced Settings (FREEPBX_*) and SIP Settings from
 # the environment (services/freepbx.sh), at every start with FreePBX (in
 # dry-run they are recorded even before the install), then the fixes of
-# 20.16's freepbxSettingsFix (HEP (P3-39), file permissions (P3-40)),
+# 20.16's freepbxSettingsFix (HEP (P3-39), file permissions (P3-40), empty contexts (P3-41)),
 # and the FreePBX notices that do not apply to izPBX (P3-37)
 # shellcheck source=../services/freepbx.sh
 . /usr/local/lib/izpbx/services/freepbx.sh
@@ -12,6 +12,7 @@ if [ "$(izpbx_mode)" != migration ]; then
   if [ "$IZPBX_ENABLED" == "true" ] && { freepbx_installed || izpbx_dry_run; }; then
     cfg_freepbx_settings
     freepbx_fix_permission
+    freepbx_missing_contexts
     freepbx_notices_cleanup
   fi
 fi
