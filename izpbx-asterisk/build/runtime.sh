@@ -23,6 +23,10 @@ chmod 755 /usr/local/bin/pkg-config
 # Debian enables an sshd jail by default: izPBX has no sshd, and without its
 # log file fail2ban refuses to start (the izPBX jails are written at start)
 rm -f /etc/fail2ban/jail.d/defaults-debian.conf
+# the default page the apache2 postinst copies to /var/www/html: it comes before
+# index.php of FreePBX in DirectoryIndex (P3-27); the package keeps its copy in
+# /usr/share/apache2/default-site, which cfg_httpd compares against at start
+rm -f /var/www/html/index.html
 # Apache logs are rotated by /etc/logrotate.d/httpd (rootfs, restart through
 # izpbx-service); Debian's own file reloads through invoke-rc.d
 rm -f /etc/logrotate.d/apache2

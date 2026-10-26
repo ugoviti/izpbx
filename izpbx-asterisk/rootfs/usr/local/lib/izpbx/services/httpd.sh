@@ -77,7 +77,20 @@ _httpd_selfsigned() {
     -keyout "$HTTPD_HTTPS_KEY_FILE" -out "$HTTPD_HTTPS_CERT_FILE" 2>/dev/null
 }
 
+# the Debian default page in the webroot (P3-27): a volume seeded before the
+# build removed it, or by a .dist that still had it, would show "Apache2 Debian
+# Default Page" instead of FreePBX (index.html comes first in DirectoryIndex).
+# Removed only when it is exactly the page of the package: an index.html of
+# the user stays.
+httpd_remove_default_page() {
+  local page=/var/www/html/index.html ref=/usr/share/apache2/default-site/index.html
+  [ -f "$page" ] && [ -f "$ref" ] && cmp -s "$page" "$ref" || return 0
+  rm -f "$page"
+  log_info "httpd: Debian default page removed from the webroot (FreePBX index.php serves /)"
+}
+
 cfg_httpd() {
+  httpd_remove_default_page
   log_info "httpd: ServerName ${SERVERNAME}, port ${APP_PORT_HTTP}$([ "$HTTPD_HTTPS_ENABLED" == "true" ] && echo ", https ${APP_PORT_HTTPS}")"
   # LimitRequestBody (vhost file) is not applied by mod_proxy_fcgi to the PHP
   # requests (20.16 had mod_php): bodies over 128M (PHP post_max_size) are
