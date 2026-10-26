@@ -16,8 +16,9 @@ work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 assert_cmd "image builds" -- t_build_image "$image"
 # changes by design while running: logs, the pm2 runtime (pids, dump, logs),
-# the ban database of fail2ban, the doctrine cache of the FreePBX dashboard
-EXCLUDE='^/data/var/log/|^/data/home/asterisk/\.pm2/|^/data/var/lib/fail2ban/fail2ban\.sqlite3$|^/data/var/spool/asterisk/cache/'
+# the ban database of fail2ban, the doctrine cache of the FreePBX dashboard,
+# the random seed of gpg (rewritten whenever FreePBX checks a signature)
+EXCLUDE='^/data/var/log/|^/data/home/asterisk/\.pm2/|^/data/var/lib/fail2ban/fail2ban\.sqlite3$|^/data/var/spool/asterisk/cache/|^/data/home/asterisk/\.gnupg/random_seed$'
 
 net="$TEST_PROJECT-net"
 docker network create --label "izpbx.test=$TEST_PROJECT" "$net" >/dev/null
@@ -31,6 +32,12 @@ common=(--network "$net" -v "$vol:/data" -v "$TESTS_DIR/fixtures/snapshot.sh:/sn
         --health-cmd izpbx-healthcheck --health-interval 5s --health-retries 2 --health-start-period 30m)
 c=$(t_run pbx "$image" "${common[@]}")
 snap() { docker exec "$1" /snapshot.sh > "$2"; }
+# freepbx-start (s6 oneshot) ends after healthy: on a new installation its
+# fwconsole reload applies the settings of izpbx-init (P3-37); the state is
+# taken once the N-th start of the container has finished it
+started() { # container N
+  t_wait_for 300 -- sh -c "[ \$(docker logs '$1' 2>&1 | grep -c 'service freepbx-start successfully started') -ge $2 ]"
+}
 dups() { # container: duplicated entries, one per line
   docker exec "$1" sh -c '
     grep -v "^#" /var/spool/cron/crontabs/asterisk | sort | uniq -d
@@ -41,10 +48,12 @@ dups() { # container: duplicated entries, one per line
 }
 
 assert_cmd "FreePBX installed: healthy" -- t_wait_healthy "$c" 1500
+assert_cmd "FreePBX post-start done" -- started "$c" 1
 snap "$c" "$work/0"
 for i in 1 2; do
   docker restart "$c" >/dev/null
   assert_cmd "restart $i: healthy" -- t_wait_healthy "$c" 300
+  assert_cmd "restart $i: FreePBX post-start done" -- started "$c" $((i + 1))
   snap "$c" "$work/$i"
   if diff -u "$work/0" "$work/$i" > "$work/diff$i"; then
     pass "restart $i: /data and generated configuration unchanged ($(wc -l < "$work/$i") files)"

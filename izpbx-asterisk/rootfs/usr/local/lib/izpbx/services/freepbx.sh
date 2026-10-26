@@ -171,7 +171,10 @@ freepbx_links() {
   return 0
 }
 
-fwconsole_as_asterisk() { su -s /bin/bash "$APP_USR" -c "fwconsole $*"; }
+# umask 002: the files FreePBX writes (reload, module install) get the modes
+# of "fwconsole chown" (664), so the chown at every start of
+# FREEPBX_FIX_PERMISSION (P3-40) does not change them again (P3-26)
+fwconsole_as_asterisk() { su -s /bin/bash "$APP_USR" -c "umask 002; fwconsole $*"; }
 
 # database as root (or as MYSQL_USER without MYSQL_ROOT_PASSWORD)
 _fpbx_dbroot() {
@@ -491,6 +494,8 @@ freepbx_missing_contexts() {
   [ -e "$custom" ] || : > "$custom"
   grep -qxF '#include freepbx_custom_fix_missing_contexts.conf' "$custom" ||
     echo '#include freepbx_custom_fix_missing_contexts.conf' >> "$custom"
+  # the owner and modes of "fwconsole chown": the same after every start (P3-26)
   chown "$APP_USR:$APP_GRP" "$out" "$custom"
+  chmod 664 "$out"
   log_info "freepbx: $(wc -w <<< "$missing") empty contexts in $out"
 }

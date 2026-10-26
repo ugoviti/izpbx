@@ -62,6 +62,12 @@ if [ -e "$IZPBX_FREEPBX_RELOAD_FLAG" ]; then
   rm -f "$IZPBX_FREEPBX_RELOAD_FLAG"
   if fwconsole_as_asterisk reload >/tmp/freepbx-reload.log 2>&1; then
     log_info "freepbx-start: FreePBX settings changed at start, applied (fwconsole reload)"
+    # the reload copies the AGI scripts of the modules again with their own
+    # modes (755): with FREEPBX_FIX_PERMISSION the state after this start is
+    # the one of "fwconsole chown", as after a restart without reload (P3-26)
+    if [ "$FREEPBX_FIX_PERMISSION" == true ]; then
+      fwconsole chown >/dev/null 2>&1 || log_warn "freepbx-start: fwconsole chown after the reload failed"
+    fi
   else
     log_warn "freepbx-start: fwconsole reload after the settings changed at start failed, see /tmp/freepbx-reload.log"
   fi
