@@ -30,6 +30,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - Image for **amd64** only: arm64 comes in a later release (the build scripts already support it)
 - Image tags `22.17.0`, `22.17`, `22`; **`latest` stays on 20.16** for now: use an explicit tag. `compose.yml` uses `22.17.0`; `default.env` lists every configurable variable
 - SLA runs with `app_sla` (MeetMe stays disabled); conferences use ConfBridge
+- With msmtp (the default MTA) `mailq` answers "Mail queue is empty" (msmtp has no queue): the FreePBX dashboard showed "Unknown output from mailq"
 - The `izpbx-*` tools of 20.16 reviewed for 22.17: `izpbx-blfmonitor` (PJSIP channels, `-T` for the technology, pid file, options also with `start`/`stop`), `izpbx-callstats` (English headers), `izpbx-trunkrotate ROUTE TRUNK...` (no password in the script: the izPBX `MYSQL_*` settings), `izpbx-hangup-stucked-calls [-n] [SECONDS]`, `izpbx-check-iax2 [MIN]`, `izpbx-mtrstats HOST`. Renamed and made generic: `izpbx-rtrt-enumrewrite` → `izpbx-enumrewrite DOMAIN`, `izpbx-rtrt-freepbx2ldap` → `izpbx-freepbx2ldap` (settings in `/etc/izpbx/freepbx2ldap.conf`), `izpbx-reboot-portech`/`-gxw4024`/`-kirkettone` → `izpbx-reboot-device {portech|grandstream-gxw|kirk} HOST...` (password from `IZPBX_DEVICE_PASSWORD`)
 - CI: lint (shellcheck, hadolint) on every push and pull request, migration, new installation and maintenance tests in Docker-in-Docker, weekly rebuild of both `release/20.16` and `main`, dev builds tagged `dev-22.17`
 ### Removed

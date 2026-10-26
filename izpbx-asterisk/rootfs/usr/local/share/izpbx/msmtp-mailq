@@ -1,0 +1,7 @@
+#!/bin/sh
+# mailq when msmtp is the MTA (P3-35): msmtp has no queue, every message is
+# delivered to the relay or refused while sendmail runs. msmtp called as
+# mailq prints "no recipients found" and exits 64, which the FreePBX
+# dashboard shows as a critical error; this is the answer of Postfix with an
+# empty queue, which the dashboard understands.
+echo "Mail queue is empty"
