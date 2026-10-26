@@ -27,6 +27,11 @@ rm -f /etc/fail2ban/jail.d/defaults-debian.conf
 # index.php of FreePBX in DirectoryIndex (P3-27); the package keeps its copy in
 # /usr/share/apache2/default-site, which cfg_httpd compares against at start
 rm -f /var/www/html/index.html
+# root's shell with the izPBX banner and prompt (P3-29): the same line izpbx-init
+# writes into the persisted /root; here for the containers that never get
+# there (maintenance mode stops before the persistence step)
+printf '# written by izpbx-init at every start: your own lines go in /root/.bashrc.local\n%s\n' \
+  '[ -r /usr/local/share/izpbx/bashrc ] && . /usr/local/share/izpbx/bashrc' > /root/.bashrc
 # Apache logs are rotated by /etc/logrotate.d/httpd (rootfs, restart through
 # izpbx-service); Debian's own file reloads through invoke-rc.d
 rm -f /etc/logrotate.d/apache2
