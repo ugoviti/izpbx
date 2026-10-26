@@ -82,7 +82,7 @@ jobs:
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: ${{ matrix.check }} in Docker-in-Docker
+      - name: check in Docker-in-Docker
         shell: bash
         env:
           IMAGE: ${{ steps.login.outputs.image }}:ci-22.17
