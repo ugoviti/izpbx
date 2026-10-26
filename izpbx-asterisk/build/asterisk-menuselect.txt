@@ -11,6 +11,9 @@ enable-category MENUSELECT_CDR
 enable-category MENUSELECT_FORMATS
 enable-category MENUSELECT_FUNCS
 enable-category MENUSELECT_PBX
+# FreePBX writes the dialplan in extensions*.conf: no Lua dialplan (pbx_lua loaded
+# the sample extensions.lua with a "demo" context and SIP/1000, SIP/1001 hints)
+disable pbx_lua
 enable-category MENUSELECT_RES
 enable-category MENUSELECT_CEL
 enable G711_NEW_ALGORITHM

@@ -194,7 +194,6 @@ pbx_ael.so
 pbx_config.so
 pbx_dundi.so
 pbx_loopback.so
-pbx_lua.so
 pbx_realtime.so
 pbx_spool.so
 res_aeap.so

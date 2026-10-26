@@ -235,6 +235,7 @@ Variables of the migration (in `.env`):
 - **Modules with no FreePBX 17 release** block the migration: remove them on 20.16 (`fwconsole ma remove <module>`) or list them in `IZPBX_MIGRATE_IGNORE_MODULES`. Known exceptions that do not block: `phonebook` (installed by default by izPBX 20.16) and `speeddial` (installations born on FreePBX 15): their entries and system speed dials go to Contact Manager (see below).
 - **Commercial modules** are migrated: reactivate them with their license after the migration (the report lists them).
 - **FOP2** is reinstalled from its Debian package at the first start (it needs Internet access); its configuration, license and settings database are kept.
+- **Without Internet access** the migration completes: the FreePBX 17 modules of the image install offline, the system prompts of every language come from the snapshot. FOP2 and modules that are not in the image need Internet. A *new installation* without Internet starts without the system prompts: FreePBX downloads them (Admin > Sound Languages) once the PBX can reach the Internet.
 - **Free space**: about 1.2 times the size of the databases, `var/www`, `var/lib/asterisk` and `var/spool/asterisk` (the recordings are hardlinked, they take no extra space). The checks compute it.
 - **Database privileges**: the migration drops and recreates the FreePBX database. Keep `MYSQL_ROOT_PASSWORD` in `.env`, or give `MYSQL_USER` all privileges on it (the checks print the exact `GRANT`). The CDR database is not touched.
 

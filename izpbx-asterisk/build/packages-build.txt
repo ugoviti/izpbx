@@ -46,8 +46,7 @@ libunbound-dev
 libasound2-dev
 # codec_opus/codec_silk: the Asterisk build downloads them with xmlstarlet
 xmlstarlet
-# codec_codec2, pbx_lua
+# codec_codec2 (no liblua: pbx_lua is not built)
 libcodec2-dev
-liblua5.4-dev
 # bcg729
 cmake

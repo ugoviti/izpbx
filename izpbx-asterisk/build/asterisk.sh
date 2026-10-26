@@ -54,6 +54,8 @@ menuselect/menuselect --check-deps menuselect.makeopts
 make -j"$jobs" >/dev/null
 make install DESTDIR="$STAGING" >/dev/null
 make samples DESTDIR="$STAGING" >/dev/null
+# the sample Lua dialplan, without pbx_lua (asterisk-menuselect.txt)
+rm -f "$STAGING/etc/asterisk/extensions.lua"
 # headers for the addons built in this stage (addons.sh)
 make install-headers >/dev/null
 # Debian has /var/run -> /run: a real var/run directory in /staging cannot be

@@ -38,6 +38,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - The FreePBX `phonebook` module (no FreePBX 17 release): its entries are migrated to Contact Manager
 - Workarounds of older releases: `php74.patch`, the RHEL/microdnf and Asterisk 18 branches, `chan_local`
 - `compose-dev-20.16.yml` (the 22.17 one is `compose-dev-22.17.yml`)
+- `pbx_lua` is no longer built: FreePBX writes the dialplan in `extensions*.conf`, a Lua dialplan (`extensions.lua`) is not supported (its sample loaded a `demo` context with hints on `SIP/1000` and `SIP/1001`)
 ### Migration
 - izPBX 22.17 on a volume of izPBX 20.16 (FreePBX 16) without `IZPBX_MIGRATE_FREEPBX=true` starts in **maintenance mode**: no service, healthcheck unhealthy, `/data` and the databases untouched. The same happens when a check blocks the migration
 - New variables: `IZPBX_MIGRATE_FREEPBX` (opt-in), `IZPBX_MIGRATE_IGNORE_MODULES` (modules with no FreePBX 17 release to leave out), `IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN` (accept custom dialplan with applications Asterisk 22 no longer has)

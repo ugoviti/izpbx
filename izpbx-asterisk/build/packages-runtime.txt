@@ -67,7 +67,6 @@ libradcli4
 libunbound8
 libasound2
 libcodec2-1.0
-liblua5.4-0
 # web + PHP 8.2 (FreePBX 17)
 apache2
 php8.2-cli
