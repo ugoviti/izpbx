@@ -12,6 +12,9 @@ set -Eeuo pipefail
 : "${FETCH_RETRIES:=5}"          # attempts for each download
 : "${FETCH_RETRY_DELAY:=5}"      # seconds between attempts
 : "${FETCH_CONNECT_TIMEOUT:=30}"
+: "${FETCH_STALL_TIME:=60}"       # a transfer slower than FETCH_STALL_SPEED bytes/s for
+: "${FETCH_STALL_SPEED:=1024}"    # this many seconds is aborted (and retried): a stalled
+                                 # connection would otherwise hang the build forever
 
 build_log() { printf 'build: %s\n' "$*" >&2; }
 build_die() { printf 'build: ERROR: %s\n' "$*" >&2; exit 1; }
@@ -38,7 +41,8 @@ fetch_verified() {
   for attempt in $(seq 1 "$FETCH_RETRIES"); do
     rm -f "$dest.part"
     if curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 \
-         --connect-timeout "$FETCH_CONNECT_TIMEOUT" -o "$dest.part" "$url"; then
+         --connect-timeout "$FETCH_CONNECT_TIMEOUT" --speed-limit "$FETCH_STALL_SPEED" --speed-time "$FETCH_STALL_TIME" \
+         -o "$dest.part" "$url"; then
       break
     fi
     build_log "download failed ($attempt/$FETCH_RETRIES): $url"
