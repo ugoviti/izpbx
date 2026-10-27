@@ -6,7 +6,8 @@
 #   the image healthcheck reports unhealthy "maintenance mode";
 # - /data (outside .izpbx-migration, where the preflight report goes) and
 #   the databases are unchanged;
-# - with the opt-in but a blocking check (macro fixture): maintenance mode
+# - with the opt-in but a blocking check (macro fixture plus a Monitor(),
+#   which the migration cannot convert): maintenance mode
 #   too, the reason names the blocking checks;
 # - control: without the maintenance flag the same services do start
 #   (s6-svc -u asterisk brings Asterisk up).
@@ -66,8 +67,11 @@ docker stop "$c" >/dev/null
 assert_eq "$db_before" "$(dbsum)" "the databases are unchanged"
 assert_eq "$files_before" "$(datasum "$vb")" "/data is unchanged outside .izpbx-migration"
 
-# --- opt-in, but a blocking check
+# --- opt-in, but a blocking check: Macro() is converted by the migration
+# (P4-37), Monitor() is not and blocks
 vm=$(t_volume macro); fixture_data "$vm" 20.16.22-macro
+docker run --rm --entrypoint "" -v "$vm:/data" "$image" sh -c \
+  'printf "[fixture-monitor]\nexten => s,1,Monitor(wav,foo)\n" >> /data/etc/asterisk/extensions_custom.conf'
 c2=$(pbx mm "$vm" -e IZPBX_MIGRATE_FREEPBX=true)
 assert_cmd "opt-in + blocking check: the init completes" -- t_wait_for 180 -- init_done "$c2"
 assert_contains "$(docker logs "$c2" 2>&1)" "MAINTENANCE MODE: the migration checks found blocking problems" \

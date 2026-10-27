@@ -63,6 +63,8 @@ fi
 mapfile -t pl_list < <(find_in izpbx-asterisk/rootfs/usr/local/bin -- -maxdepth 1 -type f -name izpbx-dialplan-convert)
 if [ ${#pl_list[@]} -gt 0 ]; then
   echo "perl -cw: ${#pl_list[@]} file(s)"
+  # pulled first: the pull messages of docker run would reach the grep below as findings
+  docker pull -q "$PERL_IMAGE" >/dev/null
   for f in "${pl_list[@]}"; do
     docker run --rm -v "$ROOT:/mnt:ro" -w /mnt "$PERL_IMAGE" perl -cw "$f" 2>&1 | grep -v ' syntax OK$' && rc=1
   done
