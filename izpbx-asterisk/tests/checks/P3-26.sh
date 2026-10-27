@@ -17,8 +17,8 @@ t_on_cleanup "t_rmtree '$work'"
 assert_cmd "image builds" -- t_build_image "$image"
 # changes by design while running: logs, the pm2 runtime (pids, dump, logs),
 # the ban database of fail2ban, the doctrine cache of the FreePBX dashboard,
-# the random seed of gpg (rewritten whenever FreePBX checks a signature)
-EXCLUDE='^/data/var/log/|^/data/home/asterisk/\.pm2/|^/data/var/lib/fail2ban/fail2ban\.sqlite3$|^/data/var/spool/asterisk/cache/|^/data/home/asterisk/\.gnupg/random_seed$'
+# the random seed and the lock files of gpg (whenever FreePBX checks a signature)
+EXCLUDE='^/data/var/log/|^/data/home/asterisk/\.pm2/|^/data/var/lib/fail2ban/fail2ban\.sqlite3$|^/data/var/spool/asterisk/cache/|^/data/home/asterisk/\.gnupg/(random_seed$|\.#lk)'
 
 net="$TEST_PROJECT-net"
 docker network create --label "izpbx.test=$TEST_PROJECT" "$net" >/dev/null
