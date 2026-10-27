@@ -1,6 +1,7 @@
 # izPBX 22.17 tests in CI (Gitea Actions): design E3-E5.
-# On every push to feature/22.17, or by hand (Repository > Actions >
-# izpbx-tests-22.17 > Run workflow).
+# On pull requests, or by hand (Repository > Actions > izpbx-tests-22.17 >
+# Run workflow); not on every push to feature/22.17 any more (to run it at
+# each push again, add back "push: branches: [feature/22.17]" under "on:").
 # - build: the image of the run, pushed to the Gitea registry as ci-22.17
 #   (build-push: buildx cache, verify image E1); never latest, never Docker Hub;
 # - e3-migration: the 20.16.22 fixture migrated with the opt-in, inventory
@@ -21,9 +22,6 @@
 name: izpbx-tests-22.17
 
 on:
-  push:
-    branches:
-      - feature/22.17
   pull_request:
   workflow_dispatch:
     inputs:
