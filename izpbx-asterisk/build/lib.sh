@@ -12,9 +12,20 @@ set -Eeuo pipefail
 : "${FETCH_RETRIES:=5}"          # attempts for each download
 : "${FETCH_RETRY_DELAY:=5}"      # seconds between attempts
 : "${FETCH_CONNECT_TIMEOUT:=30}"
-: "${FETCH_STALL_TIME:=60}"       # a transfer slower than FETCH_STALL_SPEED bytes/s for
-: "${FETCH_STALL_SPEED:=1024}"    # this many seconds is aborted (and retried): a stalled
-                                 # connection would otherwise hang the build forever
+# every attempt but the last one is aborted when slower than FETCH_SLOW_SPEED
+# bytes/s for FETCH_SLOW_TIME seconds: a new connection to a slow mirror is
+# often fast (the 22.17.0-rc4 release spent 23 minutes on two downloads at a
+# few tens of KB/s). The next attempt resumes the partial file.
+: "${FETCH_SLOW_TIME:=30}"
+: "${FETCH_SLOW_SPEED:=102400}"
+# the last attempt accepts a slow server and is aborted only when stalled
+# (under FETCH_STALL_SPEED bytes/s for FETCH_STALL_TIME seconds), which would
+# otherwise hang the build forever
+: "${FETCH_STALL_TIME:=60}"
+: "${FETCH_STALL_SPEED:=1024}"
+# present in a download cache filled by build/downloads.sh: a download made by
+# another script is then reported, it is missing from build/downloads.sh
+: "${FETCH_PREFETCH_MARK:=/usr/src/download-cache/.prefetched}"
 
 build_log() { printf 'build: %s\n' "$*" >&2; }
 build_die() { printf 'build: ERROR: %s\n' "$*" >&2; exit 1; }
@@ -37,17 +48,28 @@ fetch_verified() {
     return 0
   fi
 
+  [ -e "$FETCH_PREFETCH_MARK" ] && build_log "WARNING: $url is not in build/downloads.sh, downloading it now"
+
   mkdir -p "$(dirname "$dest")"
+  rm -f "$dest.part"
+  local speed time rc
   for attempt in $(seq 1 "$FETCH_RETRIES"); do
-    rm -f "$dest.part"
-    if curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 \
-         --connect-timeout "$FETCH_CONNECT_TIMEOUT" --speed-limit "$FETCH_STALL_SPEED" --speed-time "$FETCH_STALL_TIME" \
-         -o "$dest.part" "$url"; then
-      break
+    if [ "$attempt" -lt "$FETCH_RETRIES" ]; then
+      speed=$FETCH_SLOW_SPEED time=$FETCH_SLOW_TIME
+    else
+      speed=$FETCH_STALL_SPEED time=$FETCH_STALL_TIME
     fi
-    build_log "download failed ($attempt/$FETCH_RETRIES): $url"
+    rc=0
+    curl -fsSL --proto '=https' --proto-redir '=https' --tlsv1.2 \
+      --connect-timeout "$FETCH_CONNECT_TIMEOUT" --speed-limit "$speed" --speed-time "$time" \
+      -C - -o "$dest.part" "$url" || rc=$?
+    [ "$rc" -eq 0 ] && break
+    # 33: the server does not resume, 36: bad resume offset -> start again
+    case "$rc" in 33|36) rm -f "$dest.part" ;; esac
+    build_log "download failed ($attempt/$FETCH_RETRIES, curl exit $rc, $(stat -c %s "$dest.part" 2>/dev/null || echo 0) bytes so far): $url"
     [ "$attempt" -lt "$FETCH_RETRIES" ] && sleep "$FETCH_RETRY_DELAY"
   done
+  [ "$rc" -eq 0 ] || { rm -f "$dest.part"; build_log "giving up on $url"; return 1; }
   [ -s "$dest.part" ] || { rm -f "$dest.part"; build_log "giving up on $url"; return 1; }
 
   got=$(sha256sum "$dest.part" | cut -d' ' -f1)

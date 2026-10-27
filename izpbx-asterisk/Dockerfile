@@ -17,6 +17,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     /usr/src/izpbx/build/base.sh
 
+## downloads: every file pinned in versions.env, one layer that the registry
+## build cache keeps until versions.env or freepbx-modules.txt change
+FROM base AS downloads
+COPY build/downloads.sh build/freepbx-modules.txt /usr/src/izpbx/build/
+RUN --mount=type=cache,target=/usr/src/download-cache \
+    /usr/src/izpbx/build/downloads.sh
+
 ## builder: toolchain, Asterisk and addons installed into /staging
 FROM base AS builder
 COPY build/apt.sh build/packages-build.txt /usr/src/izpbx/build/
@@ -26,18 +33,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY versions.env /usr/src/izpbx/versions.env
 COPY build/asterisk.sh build/asterisk-menuselect.txt /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/root/.ccache \
-    --mount=type=cache,target=/usr/src/download-cache \
+    --mount=type=bind,from=downloads,source=/downloads,target=/usr/src/download-cache,rw \
     /usr/src/izpbx/build/asterisk.sh
 COPY build/addons.sh /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/root/.ccache \
-    --mount=type=cache,target=/usr/src/download-cache \
+    --mount=type=bind,from=downloads,source=/downloads,target=/usr/src/download-cache,rw \
     /usr/src/izpbx/build/addons.sh
 
 ## freepbx: FreePBX 17 install tree (independent of builder: built in parallel)
 FROM base AS freepbx
 COPY versions.env /usr/src/izpbx/versions.env
 COPY build/freepbx.sh build/freepbx-modules.txt /usr/src/izpbx/build/
-RUN --mount=type=cache,target=/usr/src/download-cache \
+RUN --mount=type=bind,from=downloads,source=/downloads,target=/usr/src/download-cache,rw \
     /usr/src/izpbx/build/freepbx.sh
 
 ## runtime: base + build results, no toolchain
@@ -46,9 +53,9 @@ COPY --from=builder /staging/ /
 COPY --from=freepbx /usr/src/freepbx /usr/src/freepbx
 COPY versions.env /usr/src/izpbx/versions.env
 COPY build/ /usr/src/izpbx/build/
-RUN --mount=type=cache,target=/usr/src/download-cache \
+RUN --mount=type=bind,from=downloads,source=/downloads,target=/usr/src/download-cache,rw \
     /usr/src/izpbx/build/extras.sh
-RUN --mount=type=cache,target=/usr/src/download-cache \
+RUN --mount=type=bind,from=downloads,source=/downloads,target=/usr/src/download-cache,rw \
     /usr/src/izpbx/build/s6.sh
 RUN --mount=type=cache,target=/usr/src/download-cache \
     /usr/src/izpbx/build/node-modules.sh
