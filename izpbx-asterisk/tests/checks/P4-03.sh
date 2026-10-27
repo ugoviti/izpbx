@@ -76,11 +76,21 @@ assert_eq "$files_before" "$(datasum "$vb")" "base 20.16.22: /data unchanged out
 vm=$(t_volume macro); fixture_data "$vm" 20.16.22-macro
 anomaly=$(sed -n 's/^anomaly=//p' "$fx/20.16.22-macro/manifest.txt")
 out=$(preflight "$vm" db) && rc=0 || rc=$?
-assert_ne 0 "$rc" "macro: blocked (exit != 0)"
-assert_eq "BLOCK dialplan" "$(blocks "$out")" "macro: only the dialplan check blocks"
-assert_contains "$out" "$anomaly" "macro: the report names $anomaly"
+# Macro() is converted by the migration (P4-37): reported, not blocking
+assert_eq 0 "$rc" "macro: Macro() is converted by the migration, nothing blocks"
+assert_contains "$(grep '^INFO dialplan' <<< "$out")" "converted for Asterisk 22 by the migration" "macro: reported as converted"
+assert_contains "$(grep '^INFO dialplan' <<< "$out")" "${anomaly%%:*}" "macro: the report names ${anomaly%%:*}"
+# what cannot be converted blocks: Monitor(), also in an included file
+docker run --rm --entrypoint "" -v "$vm:/data" "$image" sh -c '
+  mkdir -p /data/etc/asterisk/sub
+  printf "[fixture-monitor]\nexten => s,1,Monitor(wav,foo)\n" > /data/etc/asterisk/sub/legacy.conf
+  echo "#include sub/legacy.conf" >> /data/etc/asterisk/extensions_custom.conf'
+out=$(preflight "$vm" db) && rc=0 || rc=$?
+assert_ne 0 "$rc" "monitor: blocked (exit != 0)"
+assert_eq "BLOCK dialplan" "$(blocks "$out")" "monitor: only the dialplan check blocks"
+assert_contains "$(grep '^BLOCK dialplan' <<< "$out")" "etc/asterisk/sub/legacy.conf:2" "monitor: the report names the included file and line"
 out=$(preflight "$vm" db -e IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true) && rc=0 || rc=$?
-assert_eq 0 "$rc" "control: macro with IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true is not blocked"
+assert_eq 0 "$rc" "control: monitor with IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true is not blocked"
 
 v17=$(t_volume module17); fixture_data "$v17" 20.16.22-module17
 out=$(preflight "$v17" dbm) && rc=0 || rc=$?

@@ -30,9 +30,6 @@ IZPBX_PREFLIGHT_INSTALL_MODULES="framework core dashboard sipsettings voicemail 
   announcement asteriskinfo backup callforward callwaiting daynight calendar certman cidlookup contactmanager
   donotdisturb fax findmefollow iaxsettings miscapps miscdests ivr parking phonebook presencestate printextensions
   queues cel timeconditions bulkhandler weakpasswords ucp"
-# apps the custom dialplan may not use: removed from Asterisk 22 (Macro,
-# Monitor, ImportVar, SetAMAFlags, NoCDR)
-IZPBX_PREFLIGHT_DIALPLAN_APPS="Macro|Monitor|ImportVar|SetAMAFlags|NoCDR"
 
 root=${APP_DATA}
 report_dir=$IZPBX_MIGRATION_DIR
@@ -176,17 +173,23 @@ if [ -f "$sla" ] && grep -vE '^[[:space:]]*(;|$)' "$sla" | grep -vE '^\[general\
   say INFO sla "sla.conf defines stations or trunks: SLA runs with app_sla (no MeetMe)"
 fi
 
-# --- custom dialplan: apps removed from Asterisk 22, with file and line
-hits=$(for f in "$root"/etc/asterisk/*_custom.conf; do
-  [ -f "$f" ] || continue
-  grep -nHiE "(^|[^A-Za-z0-9_])(${IZPBX_PREFLIGHT_DIALPLAN_APPS})\(" "$f" | grep -vE '^[^:]+:[0-9]+:[[:space:]]*;' | cut -d: -f1,2 | sed "s|^$root/||"
-done)
-if [ -z "$hits" ]; then
-  say OK dialplan "no ${IZPBX_PREFLIGHT_DIALPLAN_APPS//|/, } in etc/asterisk/*_custom.conf"
+# --- custom dialplan: what Asterisk 22 no longer has, in the *custom*.conf
+# files and in what they include (izpbx-dialplan-convert --check): Macro,
+# MacroExit, SIPAddHeader, MessageSend to sip: are converted by the migration
+# (M6); what it cannot convert (MACRO_ variables, Monitor, ImportVar,
+# SetAMAFlags, NoCDR, chan_sip functions, SIP/ channels) blocks
+dp=$(cd "$root/etc/asterisk" 2>/dev/null && migration_dialplan_files . | sed 's|^\./||' |
+  xargs -r izpbx-dialplan-convert --check 2>&1 | sed "s|$root/||g") || true
+conv=$(grep -c '^CHANGE ' <<< "$dp" || true)
+unconv=$(sed -n 's/^UNCONVERTED //p' <<< "$dp" | sed 's|^|etc/asterisk/|')
+[ "${conv:-0}" -eq 0 ] ||
+  say INFO dialplan "converted for Asterisk 22 by the migration (Macro -> Gosub, MacroExit -> Return, SIPAddHeader, MessageSend to pjsip:): $conv change(s) in $(grep '^CHANGE ' <<< "$dp" | sed -E 's/^CHANGE ([^:]+):.*/etc\/asterisk\/\1/' | sort -u | tr '\n' ' ' | sed 's/ $//')"
+if [ -z "$unconv" ]; then
+  [ "${conv:-0}" -gt 0 ] || say OK dialplan "nothing Asterisk 22 lacks in the custom dialplan (etc/asterisk/*custom*.conf and what they include)"
 elif [ "$IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN" == "true" ]; then
-  say INFO dialplan "apps removed from Asterisk 22, accepted (IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true): ${hits//$'\n'/ }"
+  say INFO dialplan "not convertible, accepted (IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true): ${unconv//$'\n'/; }"
 else
-  say BLOCK dialplan "apps removed from Asterisk 22 (${IZPBX_PREFLIGHT_DIALPLAN_APPS//|/, }) at ${hits//$'\n'/ }: fix them or set IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true"
+  say BLOCK dialplan "not convertible for Asterisk 22, rewrite by hand or set IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN=true: ${unconv//$'\n'/; }"
 fi
 
 # --- report

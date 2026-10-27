@@ -204,12 +204,12 @@ Variables of the migration (in `.env`):
 |---|---|---|
 | `IZPBX_MIGRATE_FREEPBX` | `false` | `true` migrates a FreePBX 16 volume to FreePBX 17 at the next start |
 | `IZPBX_MIGRATE_IGNORE_MODULES` | empty | modules with no FreePBX 17 release to leave out (space separated): their data is **not** migrated |
-| `IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN` | `false` | `true` migrates even if the custom dialplan uses applications Asterisk 22 no longer has |
+| `IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN` | `false` | `true` migrates even if the custom dialplan uses what Asterisk 22 no longer has and the migration cannot convert |
 
 ### Before the migration
 
 - **izPBX 20.16.22 with every module upgraded**: the migration needs a FreePBX 16 framework 16.0.26 or later (`fwconsole ma upgradeall` on 20.16.22). An installation whose first start never completed is refused: complete it on 20.16 first.
-- **Custom dialplan**: Asterisk 22 has no `Macro()`, `Monitor()`, `ImportVar()`, `SetAMAFlags()`, `NoCDR()`. Rewrite them in your `*_custom.conf` files **before** the migration (`GoSub()` instead of `Macro()`, `MixMonitor()` instead of `Monitor()`). The checks list file and line of every use.
+- **Custom dialplan**: Asterisk 22 has no `Macro()` and no chan_sip. The migration converts by itself, in your `*_custom.conf` files and in the files they `#include` (eg. `qhd/on-call.conf`, copied with its directory): `Macro(name,args)` to `Gosub(macro-name,s,1(args))` and `MacroExit()` to `Return()` (as FreePBX 17 does with its own macros, so a `[macro-dialout-trunk-predial-hook]` keeps working), a `Return()` at the end of a `[macro-*]` extension that had none, `SIPAddHeader(Alert-Info: x)` to `Set(__ALERT_INFO=x)` and other headers to `Set(HASH(__SIPHEADERS,Header)=value)`, `MessageSend(sip:` to `MessageSend(pjsip:`. The checks list every change, the report keeps them (`dialplan-<time>.txt`), the files of 20.16 stay in the snapshot. What cannot be converted blocks: `${MACRO_EXTEN}` and the other `MACRO_` variables, `Monitor()` (use `MixMonitor()`), `ImportVar()`, `SetAMAFlags()`, `NoCDR()`, chan_sip functions (`SIP_HEADER`, `SIPDtmfMode`, ...) and `SIP/` channels: rewrite them **before** the migration. `izpbx-dialplan-convert --check FILE...` shows the conversion of any file.
 - **chan_sip**: Asterisk 22 has no chan_sip. Extensions and trunks on chan_sip are converted to PJSIP during the migration. izPBX 20.16 ran chan_sip on `APP_PORT_SIP` (5160): when the 16 had chan_sip extensions or trunks, the migration adds a PJSIP transport on that port and the converted trunks use it, so providers and phones that send to 5160 keep working. New 22.17 installations have no such transport.
 - **Modules with no FreePBX 17 release** block the migration: remove them on 20.16 (`fwconsole ma remove <module>`) or list them in `IZPBX_MIGRATE_IGNORE_MODULES`. Known exceptions that do not block: `phonebook` (installed by default by izPBX 20.16) and `speeddial` (installations born on FreePBX 15): their entries and system speed dials go to Contact Manager (see below).
 - **Commercial modules** are migrated: reactivate them with their license after the migration (the report lists them).
@@ -579,6 +579,7 @@ Commands of the izPBX image, to run inside the container (`docker exec -it izpbx
 | `izpbx-preflight` | Read-only checks before a migration from izPBX 20.16 (see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217)) |
 | `izpbx-rollback` | Back to izPBX 20.16 from the migration snapshot |
 | `izpbx-inventory` | Inventory of the PBX (extensions, trunks, routes, files, ...) as JSON, `--diff` of two inventories |
+| `izpbx-dialplan-convert` | Converts a custom dialplan of FreePBX 16 for Asterisk 22 (`Macro`, `MacroExit`, `SIPAddHeader`, `MessageSend` to `sip:`); `--check` only lists the changes and what cannot be converted |
 | `izpbx-service` | `start`/`stop`/`restart`/`status` of a service |
 | `izpbx-healthcheck` | The container healthcheck: prints `healthy` or why not |
 | `izpbx-callstats` | The calls in progress: caller, called number, state, duration (`-b` brief, `-d` debug) |

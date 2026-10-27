@@ -1,0 +1,127 @@
+#!/usr/bin/perl
+# izpbx-dialplan-convert: custom dialplan of FreePBX 16 / Asterisk 20 made
+# valid for Asterisk 22, which has no app_macro and no chan_sip:
+#   Macro(name,args)        -> Gosub(macro-name,s,1(args))  (as FreePBX 17 does)
+#   MacroExit()             -> Return()
+#   end of an extension of a [macro-*] context without Return/Goto/Hangup:
+#                              exten => NAME,n,Return() added (a Macro returned
+#                              by itself at the end, a Gosub hangs up there)
+#   SIPAddHeader(Alert-Info: V) -> Set(__ALERT_INFO=V)        (FreePBX applies it)
+#   SIPAddHeader(Header: V)     -> Set(HASH(__SIPHEADERS,Header)=V)
+#   MessageSend(sip:...)    -> MessageSend(pjsip:...)
+# What cannot be converted is reported, not changed: ${MACRO_EXTEN} and the
+# other MACRO_ variables, Monitor() and the other apps removed from Asterisk 22
+# (ImportVar, SetAMAFlags, NoCDR), the chan_sip apps and functions
+# (SIPDtmfMode, SIPRemoveHeader, SIP_HEADER, SIPPEER, SIPCHANINFO) and SIP/
+# channels.
+#
+#   izpbx-dialplan-convert [--check] FILE...
+# Prints one line per change ("CHANGE file:line: old => new") and per
+# problem ("UNCONVERTED file:line: text (reason)"). Without --check the files
+# are rewritten in place (same owner and mode). Exit 0, or 3 when something
+# cannot be converted, 2 on usage errors.
+use strict;
+use warnings;
+
+my $check = 0;
+my @files;
+for (@ARGV) {
+  if ($_ eq '--check') { $check = 1 }
+  elsif (/^-/) { print STDERR "usage: izpbx-dialplan-convert [--check] FILE...\n"; exit 2 }
+  else { push @files, $_ }
+}
+@files or do { print STDERR "usage: izpbx-dialplan-convert [--check] FILE...\n"; exit 2 };
+
+my $bal = qr/(\((?:[^()]++|(?-1))*+\))/;   # balanced parentheses
+my @unconvertible = (
+  [qr/\$\{MACRO_(?:EXTEN|CONTEXT|PRIORITY|OFFSET|DEPTH)\}/i, 'MACRO_ variables do not exist with Gosub'],
+  [qr/(?<![A-Za-z_])(?:Monitor|StopMonitor|ChangeMonitor|PauseMonitor|UnpauseMonitor)\s*\(/i, 'Monitor() was removed: use MixMonitor()'],
+  [qr/(?<![A-Za-z_])(?:ImportVar|SetAMAFlags|NoCDR)\s*\(/i, 'removed from Asterisk 22'],
+  [qr/(?<![A-Za-z_])(?:SIPDtmfMode|SIPRemoveHeader|SIP_HEADER|SIPPEER|SIPCHANINFO)\s*\(/i, 'chan_sip function or app: use the PJSIP one'],
+  [qr/(?<![A-Za-z_\/])SIP\//, 'chan_sip channel: use PJSIP/'],
+);
+my $bad = 0;
+
+sub code_part { # line -> (code, comment): the comment starts at an unescaped ;
+  my ($l) = @_;
+  return ($1, $2) if $l =~ /^((?:[^;\\]|\\.)*)(;.*)?$/s;
+  return ($l, '');
+}
+
+for my $file (@files) {
+  open(my $in, '<', $file) or do { print STDERR "izpbx-dialplan-convert: cannot read $file: $!\n"; $bad = 1; next };
+  my @lines = <$in>;
+  close $in;
+  my (@out, $ctx, %last, $cur);   # %last: extension -> [index in @out, terminal]; $cur: extension of "same =>"
+  my $changed = 0;
+  my $flush = sub {         # Return() at the end of the extensions of a macro- context
+    return unless defined $ctx && $ctx =~ /^macro-/i;
+    for my $e (sort { $last{$b}[0] <=> $last{$a}[0] } keys %last) {
+      next if $last{$e}[1];
+      my $i = $last{$e}[0];
+      splice(@out, $i + 1, 0, "exten => $e,n,Return()\n");
+      print "CHANGE $file: [$ctx] extension $e ends without Return(): exten => $e,n,Return() added\n";
+      $changed = 1;
+    }
+  };
+  my $n = 0;
+  for my $line (@lines) {
+    $n++;
+    my ($code, $comment) = code_part($line);
+    $comment //= '';
+    if ($code =~ /^\s*\[([^\]]+)\]/) {
+      $flush->();
+      ($ctx, %last, $cur) = ($1);
+      push @out, $line;
+      next;
+    }
+    my $new = $code;
+    $new =~ s/(?<![A-Za-z_])MacroExit\s*\(\s*\)/Return()/gi;
+    $new =~ s{(?<![A-Za-z_])Macro\s*$bal}{
+      my $inner = substr($1, 1, -1);
+      my ($name, $args) = $inner =~ /^\s*([^,]*?)\s*(?:,(.*))?$/s;
+      "Gosub(macro-$name,s,1(" . ($args // '') . "))";
+    }gie;
+    $new =~ s{(?<![A-Za-z_])SIPAddHeader\s*$bal}{
+      my $inner = substr($1, 1, -1);
+      if ($inner =~ /^\s*Alert-Info\s*:\s*(.*?)\s*$/si) { "Set(__ALERT_INFO=$1)" }
+      elsif ($inner =~ /^\s*([^:\s]+)\s*:\s*(.*?)\s*$/s) { "Set(HASH(__SIPHEADERS,$1)=$2)" }
+      else { "SIPAddHeader($inner)" }
+    }gie;
+    $new =~ s/(?<![A-Za-z_])MessageSend\s*\(\s*sip:/MessageSend(pjsip:/gi;
+    if ($new ne $code) {
+      (my $o = $code) =~ s/\s+$//; (my $c = $new) =~ s/\s+$//;
+      print "CHANGE $file:$n: $o => $c\n";
+      $changed = 1;
+      $line = $new . $comment . ($line =~ /\n$/ && ($new . $comment) !~ /\n$/ ? "\n" : '');
+    }
+    for my $u (@unconvertible) {
+      if ($new =~ $u->[0]) {
+        (my $t = $new) =~ s/^\s+|\s+$//g;
+        print "UNCONVERTED $file:$n: $t ($u->[1])\n";
+        $bad = 1;
+      }
+    }
+    push @out, $line;
+    # the last line of each extension of the context, and whether it ends it
+    if ($new =~ /^\s*exten\s*=>?\s*([^,]+?)\s*,\s*([^,]+?)\s*,\s*(.*)$/i) {
+      my ($e, $pri, $app) = ($1, $2, $3);
+      next if lc($pri) eq 'hint';
+      $last{$e} = [$#out, $app =~ /^\s*(?:Return|Goto|Hangup)\s*\(/i ? 1 : 0];
+      $cur = $e;
+    } elsif ($new =~ /^\s*same\s*=>?\s*[^,]+?\s*,\s*(.*)$/i && defined $cur) {
+      $last{$cur} = [$#out, $1 =~ /^\s*(?:Return|Goto|Hangup)\s*\(/i ? 1 : 0];
+    }
+  }
+  $flush->();
+  next unless $changed && !$check;
+  $file = readlink($file) =~ m{^/} ? readlink($file) : $file if -l $file;
+  my @st = stat($file);
+  open(my $o, '>', "$file.izpbx-new") or do { print STDERR "izpbx-dialplan-convert: cannot write $file: $!\n"; $bad = 1; next };
+  print $o @out;
+  close $o;
+  chmod($st[2] & 07777, "$file.izpbx-new");
+  chown($st[4], $st[5], "$file.izpbx-new");
+  rename("$file.izpbx-new", $file) or do { print STDERR "izpbx-dialplan-convert: cannot replace $file: $!\n"; $bad = 1 };
+}
+exit($bad ? 3 : 0);

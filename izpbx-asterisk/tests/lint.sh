@@ -13,6 +13,7 @@ ROOT=$(cd "${1:-$REPO_DIR}" && pwd)
 
 SHELLCHECK_IMAGE="docker.io/koalaman/shellcheck:v0.11.0@sha256:61862eba1fcf09a484ebcc6feea46f1782532571a34ed51fedf90dd25f925a8d"
 HADOLINT_IMAGE="docker.io/hadolint/hadolint:v2.14.0@sha256:27086352fd5e1907ea2b934eb1023f217c5ae087992eb59fde121dce9c9ff21e"
+PERL_IMAGE="docker.io/library/perl:5.40.0-slim@sha256:20699dab8d5443b2cf8b0cc5547793ad6aef0bf5130bd164e55c8cd54e781571"
 
 command -v docker >/dev/null || { echo "lint: docker is required" >&2; exit 2; }
 
@@ -31,7 +32,9 @@ shell_files() {
   {
     find_in izpbx-asterisk/build -- -name '*.sh'
     find_in izpbx-asterisk/rootfs/usr/local/lib/izpbx -- -type f
-    find_in izpbx-asterisk/rootfs/usr/local/sbin izpbx-asterisk/rootfs/usr/local/bin -- -maxdepth 1 -type f -name 'izpbx*'
+    # (izpbx-dialplan-convert is Perl: checked with perl -c below)
+    find_in izpbx-asterisk/rootfs/usr/local/sbin izpbx-asterisk/rootfs/usr/local/bin -- -maxdepth 1 -type f -name 'izpbx*' \
+      -not -name izpbx-dialplan-convert
     # s6 service scripts (execline "up" files are not shell)
     find_in izpbx-asterisk/rootfs/etc/s6-overlay/s6-rc.d izpbx-asterisk/tests/s6probe -- -type f \( -name run -o -name finish \)
     find_in izpbx-asterisk/rootfs/usr/sbin -- -type f -name safe_asterisk
@@ -54,6 +57,15 @@ if [ ${#sh_list[@]} -gt 0 ]; then
   echo "shellcheck: ${#sh_list[@]} file(s)"
   docker run --rm -v "$ROOT:/mnt:ro" -w /mnt "$SHELLCHECK_IMAGE" \
     --severity=warning --external-sources --source-path=SCRIPTDIR --format=gcc "${sh_list[@]}" || rc=1
+fi
+
+# Perl tools: syntax and warnings (perl -cw)
+mapfile -t pl_list < <(find_in izpbx-asterisk/rootfs/usr/local/bin -- -maxdepth 1 -type f -name izpbx-dialplan-convert)
+if [ ${#pl_list[@]} -gt 0 ]; then
+  echo "perl -cw: ${#pl_list[@]} file(s)"
+  for f in "${pl_list[@]}"; do
+    docker run --rm -v "$ROOT:/mnt:ro" -w /mnt "$PERL_IMAGE" perl -cw "$f" 2>&1 | grep -v ' syntax OK$' && rc=1
+  done
 fi
 
 if [ ${#df_list[@]} -gt 0 ]; then

@@ -602,10 +602,67 @@ migration_inventory_before() {
 # restores, and the inventory checks: copied from the snapshot when FreePBX 17
 # has none (chan_dongle: dongle.conf)
 IZPBX_MIGRATION_CONFS="dongle.conf"
+# The custom dialplan of an etc/asterisk directory: the *custom*.conf files of
+# FreePBX and, recursively, what they include (#include / #tryinclude, globs,
+# relative to the directory, also in subdirectories such as qhd/on-call.conf).
+# One path relative to the directory per line; the file izPBX generates
+# (freepbx_custom_fix_missing_contexts.conf) left out.
+migration_dialplan_files() { # etc dir
+  local etc=$1 f inc g seen=" " queue=()
+  for f in "$etc"/*custom*.conf; do [ -f "$f" ] && queue+=("${f#"$etc"/}"); done
+  while [ ${#queue[@]} -gt 0 ]; do
+    f=${queue[0]} queue=("${queue[@]:1}")
+    [[ "$seen" == *" $f "* ]] && continue
+    seen+="$f "
+    [ "$f" != freepbx_custom_fix_missing_contexts.conf ] || continue
+    printf '%s\n' "$f"
+    while read -r inc; do
+      inc=${inc#/etc/asterisk/}
+      [[ "$inc" != /* ]] || continue
+      # shellcheck disable=SC2086 # the include may be a glob
+      for g in "$etc"/$inc; do [ -f "$g" ] && queue+=("${g#"$etc"/}"); done
+    done < <(sed -nE 's/^[[:space:]]*#(try)?include[[:space:]]+"?([^"[:space:];]+)"?.*/\2/p' "$etc/$f")
+  done
+}
+
 migration_confs() {
   local snap etc f n=0 out
   [ "$(migration_state confs)" == "done" ] && return 0
   snap=$(migration_state snapshot_dir) etc=$(freepbx_dir ASTETCDIR)
+  # files the custom dialplan of the 16 includes and the restore of FreePBX
+  # does not bring back (it restores the *_custom.conf files only): eg.
+  # "#include qhd/on-call.conf"; an included file in a subdirectory brings the
+  # whole subdirectory (the user's own files of etc/asterisk/qhd/)
+  local d
+  while read -r f; do
+    d=${f%%/*}
+    if [ "$d" != "$f" ]; then
+      [ -e "$etc/$d" ] && continue
+      cp -a "$snap/fs/etc/asterisk/$d" "$etc/$d"
+      chown -R "$APP_USR:$APP_GRP" "$etc/$d"
+      log_info "migration: $d/ ($(find "$etc/$d" -type f | wc -l) file(s)), included by the custom dialplan of 20.16, copied to $etc"
+    else
+      [ -e "$etc/$f" ] && continue
+      cp -p "$snap/fs/etc/asterisk/$f" "$etc/$f"
+      chown "$APP_USR:$APP_GRP" "$etc/$f"
+      log_info "migration: $f, included by the custom dialplan of 20.16, copied to $etc"
+    fi
+    n=$((n + 1))
+  done < <(migration_dialplan_files "$snap/fs/etc/asterisk")
+  migration_state_set dialplan_copied "$n"
+  # the custom dialplan made valid for Asterisk 22 (Macro, MacroExit,
+  # SIPAddHeader, MessageSend to sip:, izpbx-dialplan-convert); the files of
+  # 20.16 stay in the snapshot, each change in dialplan-<ts>.txt
+  out="$IZPBX_MIGRATION_DIR/dialplan-$(date -u +%Y%m%dT%H%M%SZ).txt"
+  (cd "$etc" && migration_dialplan_files . | sed 's|^\./||' | xargs -r izpbx-dialplan-convert) > "$out" 2>&1 || true
+  sed -i "s|$etc/||g; s| \./| |g" "$out"
+  if grep -qE '^(CHANGE|UNCONVERTED) ' "$out"; then
+    log_info "migration: custom dialplan converted for Asterisk 22: $(grep -c '^CHANGE ' "$out") change(s), listed in $out"
+    grep -E '^(CHANGE|UNCONVERTED) ' "$out" | while IFS= read -r f; do log_info "migration:   $f"; done
+    migration_state_set dialplan_report "$out"
+  else
+    rm -f "${out:?}"
+  fi
   for f in $IZPBX_MIGRATION_CONFS; do
     [ -f "$snap/fs/etc/asterisk/$f" ] && [ ! -e "$etc/$f" ] || continue
     cp -p "$snap/fs/etc/asterisk/$f" "$etc/$f"
@@ -803,6 +860,10 @@ migration_report() { # FreePBX 17 version
     fi
     [ "$ari_before" != 1 ] || [ "$ari_after" == 1 ] ||
       echo "ENABLE_ARI (D35): enabled in FreePBX 16, '${ari_after:-unset}' (the FreePBX 17 default) after the restore: if you use ARI enable it again (Advanced Settings, or fwconsole setting ENABLE_ARI 1)"
+    [ "$(migration_state dialplan_copied)" -eq 0 ] 2>/dev/null ||
+      echo "custom dialplan: $(migration_state dialplan_copied) included file(s) or directorie(s) the FreePBX restore does not bring back copied from the snapshot"
+    [ -z "$(migration_state dialplan_report)" ] ||
+      echo "custom dialplan converted for Asterisk 22 (Macro -> Gosub, MacroExit -> Return, SIPAddHeader, MessageSend): $(migration_state dialplan_report)"
     if [ -n "$commercial" ]; then
       echo "commercial modules to reactivate with their license: $commercial"
     else
