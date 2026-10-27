@@ -44,6 +44,13 @@ got=$(cd addons && tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owne
 # same fixup as contrib/scripts/get_mp3_source.sh
 grep -q ASTMM_LIBC addons/mp3/interface.c || sed -i -e '/#include "asterisk.h"/i#define ASTMM_LIBC ASTMM_REDIRECT' addons/mp3/interface.c
 
+# AMI DBDel and CLI "database del" (ast_db_del2) log a WARNING when the key
+# does not exist; FreePBX deletes queuehint and pausequeuehint of every device
+# at each reload (queues module), one WARNING per device. Both callers already
+# answer with an error, so the message goes to debug, as in ast_db_del.
+sed -i -e 's|ast_log(LOG_WARNING, "AstDB key %s does not exist\\n", fullkey);|ast_debug(1, "AstDB key %s does not exist\\n", fullkey);|' main/db.c
+grep -q 'ast_debug(1, "AstDB key %s does not exist' main/db.c || build_die "main/db.c: AstDB key warning not found, update the patch in asterisk.sh"
+
 ./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled \
   --with-download-cache="$cache" --with-externals-cache="$cache" >/dev/null
 make menuselect.makeopts >/dev/null
