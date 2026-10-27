@@ -247,6 +247,8 @@ _migration_sql() { # [database] statement
 #   output in <snapshot>/restore.log; then the FreePBX settings izPBX needs
 #   (freepbx_izpbx_settings: the restore puts back ASTMANAGERHOST=localhost,
 #   and the UCP node server cannot reach AMI with it).
+_migration_module_enabled() { fwconsole_as_asterisk ma list 2>/dev/null | grep -qE "^\| $1 +\| [^ ]+ +\| Enabled"; }
+
 migration_restore() {
   local snap arc mods m failed=() rc log tmp
   if [ "$(migration_state restore)" == "done" ]; then
@@ -289,27 +291,65 @@ migration_restore() {
     migration_kill_point install
     migration_state_set install "done"
   fi
+  # the links of fwconsole and amportal live in the image, not in /data: a
+  # resumed run in a new container (install already done) has none of them
+  # ("fwconsole: command not found", every module seen as missing)
+  freepbx_links
 
   if [ "$(migration_state modules_installed)" != "done" ]; then
     [ -z "$(migration_state commercial)" ] || fwconsole_as_asterisk ma enablerepo commercial >/dev/null 2>&1 || true
     for m in $(migration_state modules); do
       [[ " $IZPBX_MIGRATION_REMOVED_MODULES ${IZPBX_MIGRATE_IGNORE_MODULES//,/ } " == *" $m "* ]] && continue
-      fwconsole_as_asterisk ma list 2>/dev/null | grep -qE "^\| $m +\| [^ ]+ +\| Enabled" && continue
+      _migration_module_enabled "$m" && continue
       log_info "migration: installing module $m (installed in FreePBX 16)"
-      fwconsole_as_asterisk ma install "$m" > "/tmp/migration-module-$m.log" 2>&1 ||
+      # "fwconsole ma install" exits 0 also when it fails ("Cannot find
+      # module": not in the image): the result is read from the module list,
+      # then the module is downloaded from the FreePBX mirror
+      fwconsole_as_asterisk ma install "$m" > "/tmp/migration-module-$m.log" 2>&1 || true
+      if ! _migration_module_enabled "$m"; then
+        log_info "migration: module $m is not in the image, downloading it from the FreePBX repositories"
         fwconsole_as_asterisk ma downloadinstall "$m" >> "/tmp/migration-module-$m.log" 2>&1 || true
-      fwconsole_as_asterisk ma list 2>/dev/null | grep -qE "^\| $m +\| [^ ]+ +\| Enabled" || failed+=("$m")
+      fi
+      _migration_module_enabled "$m" || failed+=("$m")
     done
-    [ ${#failed[@]} -eq 0 ] || log_warn "migration: modules of FreePBX 16 not installed, their data is not restored: ${failed[*]}"
+    if [ ${#failed[@]} -gt 0 ]; then
+      # their data would be lost by the restore: stop, a restart tries again
+      log_error "migration: modules of FreePBX 16 not installed: ${failed[*]} (logs in /tmp/migration-module-<name>.log;" \
+        "without Internet the modules that are not in the image cannot be installed; to migrate without them and their data set IZPBX_MIGRATE_IGNORE_MODULES)"
+      return 1
+    fi
     migration_state_set modules_installed "done"
   fi
+
+  # modules of FreePBX 17 that the 16 had not enabled (installed by default,
+  # eg. cidlookup removed on the 16) and of which the dump lacks tables (all
+  # of them, or some left behind by the removal): the legacy restore asks
+  # every module active on FreePBX 17 for its data and fails on the missing
+  # table ("no such table: cidlookup"). One with all its tables in the dump
+  # restores its data (an older 20.16 may lack the row of a module that
+  # works, eg. voicemail on 20.16.15).
+  local ignore='' mods16 dumptables t want have
+  mods16=" $(migration_state modules) "
+  dumptables=" $(gzip -dc "$snap/db/$MYSQL_DATABASE.sql.gz" | sed -nE 's/^CREATE TABLE `([^`]+)`.*/\1/p' | tr '\n' ' ') "
+  for m in $(fwconsole_as_asterisk ma list 2>/dev/null | awk -F'|' '$4 ~ /Enabled/ {gsub(/ /, "", $2); print $2}'); do
+    case $m in framework|builtin|core|backup) continue ;; esac
+    [[ "$mods16" == *" $m "* ]] && continue
+    want=0 have=0
+    for t in $(sed -nE 's/.*<table name="([^"]+)".*/\1/p' "$(freepbx_dir AMPWEBROOT)/admin/modules/$m/module.xml" 2>/dev/null); do
+      want=$((want + 1))
+      [[ "$dumptables" == *" $t "* ]] && have=$((have + 1))
+    done
+    [ "$have" -lt "$want" ] && ignore+="${ignore:+,}$m"
+  done
+  [ -z "$ignore" ] || log_info "migration: modules not enabled in FreePBX 16 and without their tables in its database, nothing to restore: ${ignore//,/ }"
 
   log="$snap/restore.log" tmp="$IZPBX_MIGRATION_DIR/tmp"
   mkdir -p "$tmp" && chown "$APP_USR:$APP_GRP" "$tmp"
   _fpbx_asterisk_start || return 1
   log_info "migration: restoring $arc (output in $log)"
   rc=0
-  TMPDIR=$tmp fwconsole_as_asterisk backup --restore="$arc" --convertchansipexts2pjsip --convertchansiptrunks2pjsip -n > "$log" 2>&1 || rc=$?
+  TMPDIR=$tmp fwconsole_as_asterisk backup --restore="$arc" --convertchansipexts2pjsip --convertchansiptrunks2pjsip \
+    ${ignore:+--ignoremodules="$ignore"} -n > "$log" 2>&1 || rc=$?
   _fpbx_asterisk_stop
   if [ "$rc" -ne 0 ] || ! grep -q 'Restore completed successfully' "$log"; then
     log_error "migration: restore failed (exit $rc), last lines of $log:"
@@ -318,6 +358,10 @@ migration_restore() {
   fi
   # the restore brought back the settings of the 16: those izPBX needs again
   freepbx_izpbx_settings
+  # the notice of the FreePBX 17 install before the restore ("bind address
+  # updated from :: to 127.0.0.1"): the restore brought back the bind
+  # address of the 16, nothing of the user was changed (P3-37)
+  fwconsole notifications --delete core core_bindaddress_changed >/dev/null 2>&1 || true
   migration_kill_point restore
   migration_state_set restore "done"
   log_info "migration: FreePBX 16 configuration restored on FreePBX 17"
@@ -559,7 +603,7 @@ migration_inventory_before() {
 # has none (chan_dongle: dongle.conf)
 IZPBX_MIGRATION_CONFS="dongle.conf"
 migration_confs() {
-  local snap etc f
+  local snap etc f n=0 out
   [ "$(migration_state confs)" == "done" ] && return 0
   snap=$(migration_state snapshot_dir) etc=$(freepbx_dir ASTETCDIR)
   for f in $IZPBX_MIGRATION_CONFS; do
