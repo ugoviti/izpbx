@@ -571,6 +571,22 @@ Actions: `start`, `stop`, `restart`, `status`. Available services (the enabled o
   - `postfix`
   - `zabbix` (Zabbix agent 2)
 
+### Logs
+`docker compose logs -f izpbx` shows one line per event, the phases separated by a `----` line, and at the end of the start a summary (time, services, web address, warnings and errors of the start repeated):
+
+```
+---- 18 freepbx ---------------------------------------------------------
+ *             freepbx: running the FreePBX 17.0.33 installer
+ +             freepbx: FreePBX 17.0.33 installed
+ ! WARNING   migration: ENABLE_ARI was enabled in FreePBX 16 and is '0' now
+!! ERROR          fop2: install of the package failed
+ *           migration: custom dialplan converted for Asterisk 22: 6 change(s)
+                        - CHANGE extensions_custom.conf:40: MacroExit() => Return()
+ |              chrony: Selected source 172.232.209.103 (2.pool.ntp.org)
+```
+
+`*` information, `+` a step done, `! WARNING`, `!! ERROR`, `-` details of the line above, `|` output of the programs izPBX runs (Asterisk, FOP2, chrony, php-fpm, Zabbix agent...), labeled with their name. Colors highlight warnings and errors: `IZPBX_LOG_COLOR=false` (or `NO_COLOR=1`) turns them off. `IZPBX_LOG_FORMAT=logfmt` or `json` writes one record per line (time, level, component, msg) for log collectors. Find the errors with `docker compose logs izpbx | grep -E 'ERROR|WARNING'`; `S6_VERBOSITY=2` adds the start and stop lines of every service.
+
 # izPBX tools
 Commands of the izPBX image, to run inside the container (`docker exec -it izpbx <command>`); every one prints its usage with `-h`.
 

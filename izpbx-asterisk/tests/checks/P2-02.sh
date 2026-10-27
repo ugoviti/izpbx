@@ -45,10 +45,10 @@ assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "probe image builds" -- docker build -q -t "$probe" --build-arg BASE="$image" "$TESTS_DIR/s6probe"
 line() { grep -n -m1 -F -- "$2" <<< "$1" | cut -d: -f1; }
 
-c=$(t_run ok "$probe" -e IZPBX_ENABLED=false -e IZPBX_PROBE_VALUE=hello)
+c=$(t_run ok "$probe" -e S6_VERBOSITY=2 -e IZPBX_ENABLED=false -e IZPBX_PROBE_VALUE=hello)
 t_wait_for 60 -- sh -c "docker logs $c 2>&1 | grep -q 'probe: started'" || log "$(docker logs "$c" 2>&1 | tail -20)"
 logs=$(docker logs "$c" 2>&1)
-done_at=$(line "$logs" "izpbx: info: izpbx-init: done"); start_at=$(line "$logs" "s6-rc: info: service probe: starting"); up_at=$(line "$logs" "probe: started")
+done_at=$(line "$logs" "izpbx-init: done"); start_at=$(line "$logs" "s6-rc: info: service probe: starting"); up_at=$(line "$logs" "probe: started")
 assert_ne "" "$done_at" "izpbx-init completes"
 assert_cmd "the probe service starts after izpbx-init is done" -- test -n "$start_at" -a "${start_at:-0}" -gt "${done_at:-999999}" -a "${up_at:-0}" -gt "${done_at:-999999}"
 assert_contains "$logs" "probe step: IZPBX_PROBE_VALUE=hello" "the container environment reaches izpbx-init"
@@ -57,10 +57,11 @@ assert_eq 0 "$(grep -c 'user bundles.*deprecated' <<< "$logs" || true)" "no s6-o
 rc=0; timeout 90 docker run --rm -u asterisk "$image" true >/dev/null 2>&1 || rc=$?
 assert_eq 0 "$rc" "the image starts and runs a command as a non-root user (asterisk) within 90 s"
 
-f=$(t_run fail "$probe" -e IZPBX_ENABLED=false -e IZPBX_PROBE_FAIL=1)
+f=$(t_run fail "$probe" -e S6_VERBOSITY=2 -e IZPBX_ENABLED=false -e IZPBX_PROBE_FAIL=1)
 t_wait_for 60 -- sh -c "[ \"\$(docker inspect -f '{{.State.Status}}' $f)\" = exited ]" || log "container still running"
 logs=$(docker logs "$f" 2>&1)
-assert_contains "$logs" "izpbx: error: /usr/local/lib/izpbx/init.d/50-probe.sh:7: 'false' exited with status 1" "a failing izpbx-init logs file:line"
+assert_contains "$logs" "/usr/local/lib/izpbx/init.d/50-probe.sh:7: 'false' exited with status 1" "a failing izpbx-init logs file:line"
+assert_cmd "  as an error" -- grep -qE "$T_LOG_ERROR_RE.*50-probe.sh:7:" <<< "$logs"
 assert_eq 0 "$(grep -c -e 'probe: started' -e 'service probe: starting' <<< "$logs" || true)" "when izpbx-init fails the probe service does not start"
 assert_ne 0 "$(docker inspect -f '{{.State.ExitCode}}' "$f")" "when izpbx-init fails the container stops with exit != 0"
 

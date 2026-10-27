@@ -47,7 +47,7 @@ for _ in 1 2 3; do kill_asterisk "$a"; done
 t_wait_for 30 -- sh -c "! docker inspect -f '{{.State.Running}}' $a | grep -q true" || true
 assert_cmd_fails "3 Asterisk failures in a row: the container stopped" -- running "$a"
 assert_ne "0" "$(docker inspect -f '{{.State.ExitCode}}' "$a")" "3 Asterisk failures in a row: exit code != 0"
-assert_contains "$(docker logs "$a" 2>&1)" "asterisk failed 3 times in a row, stopping the container" "the reason is logged"
+assert_contains "$(docker logs "$a" 2>&1)" "asterisk: failed 3 times in a row, stopping the container" "the reason is logged"
 
 # --- a failure after a long run starts the count again
 w=$(t_run window "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
@@ -56,7 +56,7 @@ kill_asterisk "$w"; kill_asterisk "$w"
 sleep 65
 kill_asterisk "$w"
 assert_cmd "2 kills, 65 s up, 1 kill: still running (count restarted)" -- running "$w"
-assert_eq 2 "$(docker logs "$w" 2>&1 | grep -c 'asterisk failed (1/3' || true)" "the late failure counts as the first again (two '1/3' in the log)"
+assert_eq 2 "$(docker logs "$w" 2>&1 | grep -c 'asterisk: failed (1/3' || true)" "the late failure counts as the first again (two '1/3' in the log)"
 kill_asterisk "$w"; kill_asterisk "$w"
 t_wait_for 30 -- sh -c "! docker inspect -f '{{.State.Running}}' $w | grep -q true" || true
 assert_cmd_fails "then 2 more quick kills: the container stopped" -- running "$w"

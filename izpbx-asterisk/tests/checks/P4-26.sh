@@ -32,7 +32,7 @@ env=(-e APP_DATA=/data -e MYSQL_SERVER=db -e MYSQL_PASSWORD=fixture-pw -e MYSQL_
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}")
 t_wait_for 2400 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED)|izpbx-init: done' >/dev/null"
 logs=$(docker logs "$c" 2>&1)
-grep -E 'preflight: (BLOCK|INFO|REMOVED|RESULT)|VERIFICATION|error:   |not installed|completed' <<< "$logs" | sed 's/^/    | /' >&2
+grep -E -e 'preflight: (BLOCK|INFO|REMOVED|RESULT)|VERIFICATION|not installed|completed' -e "$T_LOG_DETAIL_RE" <<< "$logs" | sed 's/^/    | /' >&2
 assert_cmd "M2: speeddial removed on purpose (D30)" -- grep -q 'preflight: REMOVED modules: speeddial has no FreePBX 17 release' <<< "$logs"
 assert_cmd "M2: nothing blocks" -- grep -q 'preflight: RESULT: nothing blocks the migration' <<< "$logs"
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 300

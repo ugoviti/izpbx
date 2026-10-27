@@ -104,7 +104,7 @@ fop2_install() {
   if [ -e /etc/freepbx.conf ] && [ -x "$FOP2_DIR/generate_override_contexts.pl" ]; then
     _fop2_override_contexts
   fi
-  log_info "fop2: installed in $FOP2_DIR"
+  log_ok "fop2: installed in $FOP2_DIR"
 }
 
 # FreePBX setting from the database (empty without FreePBX)

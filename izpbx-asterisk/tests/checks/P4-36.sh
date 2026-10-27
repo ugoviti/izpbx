@@ -20,7 +20,7 @@
 #   FreePBX brings back only the *_custom.conf files);
 # - astdb: a PJSIP registrar contact and a default_user out of sync with the
 #   database: no difference for the verification M7 (P4-38);
-# then: migration completed, healthy, no "izpbx: error" line in the start that
+# then: migration completed, healthy, no izPBX error line in the start that
 # completes it, restore without errors, the notice of the bind address of the
 # fresh install removed, the converted hook and the included context loaded.
 source "$(dirname "$0")/../lib.sh"
@@ -99,7 +99,7 @@ printf '<xml><module><rawname>setcid</rawname></module></xml>\n' > "$work/all-17
 c1=$(t_run offline "$image" --network "$net" --cap-add NET_ADMIN -v "$v:/data" -v "$work:/w:ro" -e APP_CUSTOM_SCRIPTS=/w/hooks \
   -e IZPBX_FREEPBX_MIRROR_LIST=file:///w/all-17.0.xml "${env[@]}")
 t_wait_for 2400 -- ended "$c1"
-docker logs "$c1" 2>&1 | grep -E 'izpbx: (error|warning)|migration: (installing|module)' | sed 's/^/    | /' | tail -n 12 >&2
+docker logs "$c1" 2>&1 | grep -E -e "$T_LOG_ISSUE_RE" -e 'migration: (installing|module)' | sed 's/^/    | /' | tail -n 12 >&2
 assert_contains "$(docker logs "$c1" 2>&1)" "migration: modules of FreePBX 16 not installed: setcid" "offline: the migration stops naming setcid"
 assert_cmd_fails "offline: no restore without setcid" -- sh -c "docker logs '$c1' 2>&1 | grep -q 'migration: restoring'"
 docker rm -f "$c1" >/dev/null
@@ -108,7 +108,7 @@ docker rm -f "$c1" >/dev/null
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}")
 t_wait_for 2400 -- ended "$c"
 log=$(docker logs "$c" 2>&1)
-grep -E 'migration:|izpbx: (error|warning)' <<< "$log" | sed 's/^/    | /' | tail -n 40 >&2
+grep -E -e 'migration:' -e "$T_LOG_ISSUE_RE" <<< "$log" | sed 's/^/    | /' | tail -n 40 >&2
 assert_contains "$log" "migration to FreePBX 17 in progress" "online: the migration resumes"
 assert_contains "$log" "module setcid is not in the image, downloading it" "online: setcid downloaded"
 assert_contains "$log" "modules not enabled in FreePBX 16 and without their tables in its database, nothing to restore: cidlookup" "cidlookup left out of the restore"
@@ -123,7 +123,7 @@ assert_contains "$log" "qhd/ (2 file(s)), included by the custom dialplan of 20.
 assert_contains "$log" "custom dialplan converted for Asterisk 22: 6 change(s)" "custom dialplan converted"
 assert_contains "$log" "migration: verification passed" "verification M7 passed"
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 600
-assert_eq "" "$(grep 'izpbx: error' <<< "$log" || true)" "no error in the start that completes the migration"
+assert_eq "" "$(grep -E "$T_LOG_ERROR_RE" <<< "$log" || true)" "no error in the start that completes the migration"
 state=$(docker exec "$c" cat /data/.izpbx-migration/state)
 snap=$(sed -n 's/^snapshot_dir=//p' <<< "$state" | tail -n 1)
 assert_cmd_fails "restore without errors" -- docker exec "$c" grep -q 'There were errors' "$snap/restore.log"

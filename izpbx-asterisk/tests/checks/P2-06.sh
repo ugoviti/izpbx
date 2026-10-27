@@ -34,7 +34,7 @@ a=$(docker exec "$c" pgrep -xo asterisk)
 assert_cmd "izpbx-service restart asterisk" -- docker exec "$c" izpbx-service restart asterisk
 assert_ne "$a" "$(docker exec "$c" pgrep -xo asterisk)" "restart asterisk: a new Asterisk process"
 assert_eq "true" "$(up asterisk)" "asterisk is up after the restart (not left down)"
-assert_eq 0 "$(docker logs "$c" 2>&1 | grep -c 'asterisk failed' || true)" "a restart is not counted as an Asterisk failure"
+assert_eq 0 "$(docker logs "$c" 2>&1 | grep -c 'asterisk: failed' || true)" "a restart is not counted as an Asterisk failure"
 
 assert_cmd "izpbx-service stop cron" -- docker exec "$c" izpbx-service stop cron
 assert_cmd_fails "izpbx-service status cron: down after stop" -- docker exec "$c" izpbx-service status cron

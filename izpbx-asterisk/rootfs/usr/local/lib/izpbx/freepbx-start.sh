@@ -25,7 +25,7 @@ until asterisk -rx 'core waitfullybooted' >/dev/null 2>&1; do
   sleep 2
 done
 if fwconsole start --post --skipchown >/tmp/freepbx-start.log 2>&1; then
-  log_info "freepbx-start: FreePBX post-start hooks done (pm2: $(fwconsole_as_asterisk pm2 --list 2>/dev/null | awk -F'|' 'NR > 3 && NF > 3 {gsub(/ /, "", $2); printf "%s ", $2}'))"
+  log_ok "freepbx-start: FreePBX post-start hooks done (pm2: $(fwconsole_as_asterisk pm2 --list 2>/dev/null | awk -F'|' 'NR > 3 && NF > 3 {gsub(/ /, "", $2); printf "%s ", $2}'))"
 else
   log_warn "freepbx-start: fwconsole start --post failed, see /tmp/freepbx-start.log"
 fi

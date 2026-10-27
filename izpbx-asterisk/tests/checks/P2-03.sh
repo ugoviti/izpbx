@@ -74,7 +74,7 @@ done
 t0=$SECONDS; docker stop -t 60 "$c" >/dev/null 2>&1
 assert_cmd "docker stop with every service: within 15 s ($((SECONDS - t0)) s)" -- test $((SECONDS - t0)) -le 15
 assert_eq 0 "$(docker inspect -f '{{.State.ExitCode}}' "$c")" "docker stop with every service: exit 0"
-assert_eq 0 "$(docker logs "$c" 2>&1 | grep -c 'asterisk failed' || true)" "a requested stop is not counted as an Asterisk failure"
+assert_eq 0 "$(docker logs "$c" 2>&1 | grep -c 'asterisk: failed' || true)" "a requested stop is not counted as an Asterisk failure"
 # a one-off command starts and stops the default services: it must not hang
 rc=0; t0=$SECONDS; timeout 90 docker run --rm "${T_FREEPBX17[@]}" "$image" true >/dev/null 2>&1 || rc=$?
 assert_eq 0 "$rc" "one-off 'docker run image true' with the default services ends with 0 ($((SECONDS - t0)) s, limit 90 s)"
@@ -98,7 +98,7 @@ t_wait_for 60 -- sh -c "docker logs $n 2>&1 | grep -q 'FOP2 is not installed'"
 assert_contains "$(docker logs "$n" 2>&1)" "fop2: FOP2_ENABLED=true but FOP2 is not installed" "control: FOP2 enabled but missing is reported"
 assert_eq "false false" "$(docker exec "$n" /command/s6-svstat -o up,wantedup /run/service/fop2)" "control: fop2 without FOP2 stays down"
 o=$(t_run noast "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=false)
-t_wait_for 60 -- sh -c "docker logs $o 2>&1 | grep -q 'asterisk: disabled'"
+t_wait_for 60 -- sh -c "docker exec $o /command/s6-svstat -o wantedup /run/service/asterisk | grep -q false"
 assert_eq "false" "$(docker exec "$o" /command/s6-svstat -o up /run/service/asterisk)" "control: IZPBX_ENABLED=false ASTERISK_ENABLED=false leaves asterisk down"
 assert_cmd_fails "control: no asterisk process" -- running "$o" asterisk
 p=$(t_run plain "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)

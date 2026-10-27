@@ -43,7 +43,7 @@ c=$(t_run pbx "$image" --network "$net" --network-alias pbx -v "$v:/data" -e APP
   -e MYSQL_PASSWORD=fixture-pw -e MYSQL_ROOT_PASSWORD=rootpw -e IZPBX_MIGRATE_FREEPBX=true)
 t_wait_for 2400 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED|phonebook to Contact Manager failed)|izpbx-init: maintenance' >/dev/null"
 logs=$(docker logs "$c" 2>&1)
-grep -E 'preflight: (BLOCK|REMOVED|RESULT)|phonebook|speed dial|VERIFICATION|error:   ' <<< "$logs" | sed 's/^/    | /' >&2
+grep -E -e 'preflight: (BLOCK|REMOVED|RESULT)|phonebook|speed dial|VERIFICATION' -e "$T_LOG_DETAIL_RE" <<< "$logs" | sed 's/^/    | /' >&2
 assert_cmd "M2: speeddial removed on purpose" -- grep -q 'preflight: REMOVED modules: speeddial has no FreePBX 17 release' <<< "$logs"
 assert_cmd "M2: nothing blocks" -- grep -q 'preflight: RESULT: nothing blocks the migration' <<< "$logs"
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 300

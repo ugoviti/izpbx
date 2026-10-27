@@ -27,7 +27,7 @@ db=$(t_run db docker.io/mariadb:10.11.19 --network "$net" --network-alias db -e 
   --health-cmd 'healthcheck.sh --connect --innodb_initialized' --health-interval 2s --health-retries 60)
 t_wait_healthy "$db" 120 || die "MariaDB did not start"
 vol=$(t_volume data)
-common=(--network "$net" -v "$vol:/data" -v "$TESTS_DIR/fixtures/snapshot.sh:/snapshot.sh:ro" -e APP_DATA=/data
+common=(--network "$net" -e S6_VERBOSITY=2 -v "$vol:/data" -v "$TESTS_DIR/fixtures/snapshot.sh:/snapshot.sh:ro" -e APP_DATA=/data
         -e MYSQL_SERVER=db -e MYSQL_PASSWORD=astpw -e MYSQL_ROOT_PASSWORD=rootpw -e "SNAPSHOT_EXCLUDE=$EXCLUDE"
         --health-cmd izpbx-healthcheck --health-interval 5s --health-retries 2 --health-start-period 30m)
 c=$(t_run pbx "$image" "${common[@]}")

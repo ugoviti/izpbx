@@ -2,5 +2,7 @@
 # shellcheck shell=bash
 . /usr/local/lib/izpbx/service.sh
 service_gate zabbix
+# its 40 lines "using plugin ..." and "Press Ctrl+C" at every start left out
+izpbx_log_redirect zabbix "using plugin '|Plugin communication protocol version|^Press Ctrl\+C to exit\.$"
 mkdir -p /run/zabbix && chown zabbix:zabbix /run/zabbix
 exec /command/s6-setuidgid zabbix zabbix_agent2 -c /etc/zabbix/zabbix_agent2.conf

@@ -57,13 +57,13 @@ elif grep -q 'preflight: BLOCK space' <<< "$logs"; then
 elif grep -q 'preflight: BLOCK' <<< "$logs" && grep -q 'MAINTENANCE MODE' <<< "$logs"; then
   record blocked "$(grep -m1 -oE 'preflight: BLOCK .*' <<< "$logs" | cut -c 18-200)"
 elif grep -q 'cannot reload the migrated configuration' <<< "$logs"; then
-  record failed "reload of FreePBX 17: $(grep -A4 'cannot reload the migrated configuration' <<< "$logs" | sed -E 's/^izpbx: error: +//' | grep -m1 -iE 'error|understand|exception' | cut -c 1-150)"
+  record failed "reload of FreePBX 17: $(grep -A4 'cannot reload the migrated configuration' <<< "$logs" | t_log_plain | sed 's/^- //' | grep -m1 -iE 'error|understand|exception' | cut -c 1-150)"
 elif grep -q 'VERIFICATION FAILED' <<< "$logs"; then
-  # the first difference of the report, after "VERIFICATION FAILED" (lines "izpbx: error:   <category>: - <record>")
-  record failed "verification M7: $(grep -A8 'VERIFICATION FAILED' <<< "$logs" | sed -E 's/^izpbx: (error|warning|info): +//' |
+  # the first difference of the report, after "VERIFICATION FAILED" (details "- <category>: - <record>")
+  record failed "verification M7: $(grep -A8 'VERIFICATION FAILED' <<< "$logs" | t_log_plain | sed 's/^- //' |
     grep -m1 -E '^[a-z_]+: [-+] ' | cut -c 1-150)"
 else
-  record failed "$(grep -m1 -E 'error:' <<< "$logs" | sed 's/^izpbx: error: //' | cut -c 1-150)"
+  record failed "$(grep -m1 -E "$T_LOG_ERROR_RE" <<< "$logs" | t_log_plain | cut -c 1-150)"
 fi
 assert_cmd_fails "$ver: migrated or blocked with instructions (not failed)" -- grep -qP '\tfailed\t' "$result_file"
 finish

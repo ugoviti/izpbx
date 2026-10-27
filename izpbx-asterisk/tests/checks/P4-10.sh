@@ -33,7 +33,7 @@ assert_ne "null" "$(jq -c '.categories.moh' "$work/before.json")" "the fixture h
 
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}" -e IZPBX_MIGRATE_FREEPBX=true)
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 2400
-log "$(docker logs "$c" 2>&1 | grep 'migration: .* audio file' | sed 's/^izpbx: info: //')"
+log "$(docker logs "$c" 2>&1 | grep 'migration: .* audio file')"
 docker exec "$c" izpbx-inventory --live > "$work/after.json"
 assert_eq "$(audio "$work/before.json")" "$(audio "$work/after.json")" "sounds_custom and moh: same files and checksums as before"
 assert_eq "" "$(docker exec "$c" find /var/lib/asterisk/sounds/custom /var/lib/asterisk/moh/fixture-moh ! -user asterisk)" \

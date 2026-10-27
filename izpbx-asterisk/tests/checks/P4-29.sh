@@ -59,7 +59,7 @@ start=$SECONDS
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}" -e IZPBX_MIGRATE_FREEPBX=true)
 t_wait_for 3600 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED)|izpbx-init: maintenance' >/dev/null"
 duration=$((SECONDS - start))
-docker logs "$c" 2>&1 | grep -E 'migration: (database|spool|snapshot done|archive|FreePBX 16 ->)|VERIFICATION|error:   ' | sed 's/^/    | /' >&2
+docker logs "$c" 2>&1 | grep -E -e 'migration: (database|spool|snapshot done|archive|FreePBX 16 ->)|VERIFICATION' -e "$T_LOG_DETAIL_RE" | sed 's/^/    | /' >&2
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 600
 state=$(docker exec "$c" cat /data/.izpbx-migration/state 2>/dev/null)
 assert_cmd "verification M7 passed (verify=done, inventory diff empty)" -- grep -qx 'verify=done' <<< "$state"

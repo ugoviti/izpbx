@@ -2,6 +2,7 @@
 # shellcheck shell=bash
 . /usr/local/lib/izpbx/service.sh
 service_gate httpd
+izpbx_log_redirect httpd
 # shellcheck source=/dev/null
 . /etc/apache2/envvars
 mkdir -p "$APACHE_RUN_DIR" "$APACHE_LOCK_DIR" "$APACHE_LOG_DIR"

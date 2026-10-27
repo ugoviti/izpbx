@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/command/with-contenv bash
+# shellcheck shell=bash
 # s6 finish of asterisk: $1 = exit code (256 if killed by a signal), $2 = signal.
 # exit 0: Asterisk stopped on request (core stop, fwconsole stop) or the
 # service is disabled: stay down until "fwconsole start" (safe_asterisk shim).
@@ -7,6 +8,8 @@
 # supervisord gave up. "In a row": a failure after Asterisk has been up for
 # WINDOW seconds or more starts the count again, so isolated crashes weeks
 # apart do not stop the PBX.
+# shellcheck source=../../../../usr/local/lib/izpbx/common.sh
+. /usr/local/lib/izpbx/common.sh
 MAX=3
 WINDOW=60
 count_file=/run/izpbx-asterisk-failures
@@ -19,9 +22,9 @@ started=$(cat /run/izpbx-asterisk-started 2>/dev/null || echo 0)
 [ $(( $(date +%s) - started )) -ge "$WINDOW" ] && rm -f "$count_file"
 n=$(( $(cat "$count_file" 2>/dev/null || echo 0) + 1 ))
 echo "$n" > "$count_file"
-echo "izpbx: error: asterisk failed ($n/$MAX, exit=$1 signal=${2:-})" >&2
+log_error "asterisk: failed ($n/$MAX, exit=$1 signal=${2:-})"
 if [ "$n" -ge "$MAX" ]; then
-  echo "izpbx: error: asterisk failed $MAX times in a row, stopping the container" >&2
+  log_error "asterisk: failed $MAX times in a row, stopping the container"
   echo 1 > /run/s6-linux-init-container-results/exitcode
   exec /run/s6/basedir/bin/halt
 fi

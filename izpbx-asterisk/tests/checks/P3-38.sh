@@ -41,8 +41,8 @@ assert_eq "pre-10 no-mode
 pre-20 after a failing command
 post-10 from-pre none" "$(docker exec "$c" cat /tmp/hooks.log)" "pre-init before the steps, post-init after, lexical order, variables shared, only *.custom-inc"
 logs=$(docker logs "$c" 2>&1)
-order=$(grep -nE 'info: izpbx-init: (pre|post)-init hook|step 01-|step 40-|izpbx-init: done' <<< "$logs" | cut -d: -f1 | tr '\n' ' ')
-grep -nE 'info: izpbx-init: (pre|post)-init hook|step 01-|step 40-|izpbx-init: done' <<< "$logs" | sed 's/^/  /' >&2
+order=$(grep -nE 'izpbx-init: (pre|post)-init hook [^ ]+\.custom-inc$|---- 01 |---- 40 |izpbx-init: done' <<< "$logs" | cut -d: -f1 | tr '\n' ' ')
+grep -nE 'izpbx-init: (pre|post)-init hook [^ ]+\.custom-inc$|---- 01 |---- 40 |izpbx-init: done' <<< "$logs" | sed 's/^/  /' >&2
 read -r a b s1 s40 p d <<< "$order"
 assert_cmd "log order: pre-init hooks, steps, post-init hook, done" -- test "$a" -lt "$s1" -a "$b" -lt "$s1" -a "$s40" -lt "$p" -a "$p" -lt "$d"
 assert_contains "$logs" "pre-init hook /hooks/pre-init/20-fails.custom-inc exited with status 2" "a failing hook is logged with its status"

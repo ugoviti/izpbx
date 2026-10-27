@@ -374,7 +374,7 @@ freepbx_install() {
   _fpbx_asterisk_stop
   [ "$rc" -eq 0 ] || die "freepbx: install failed after $IZPBX_FREEPBX_INSTALL_TRIES attempts"
   persistence_mark_initialized "$(fwconsole -V 2>/dev/null | awk '{print $NF}')"
-  log_info "freepbx: FreePBX $(fwconsole -V 2>/dev/null | awk '{print $NF}') installed"
+  log_ok "freepbx: FreePBX $(fwconsole -V 2>/dev/null | awk '{print $NF}') installed"
 }
 
 # Advanced Settings and SIP Settings from the environment, at every start, as

@@ -2,4 +2,5 @@
 # shellcheck shell=bash
 . /usr/local/lib/izpbx/service.sh
 service_gate cron
+izpbx_log_redirect cron
 exec cron -f

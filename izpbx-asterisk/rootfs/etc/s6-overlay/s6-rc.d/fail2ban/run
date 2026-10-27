@@ -2,6 +2,7 @@
 # shellcheck shell=bash
 . /usr/local/lib/izpbx/service.sh
 service_gate fail2ban
+izpbx_log_redirect fail2ban
 mkdir -p /run/fail2ban
 # the client runs the server in the foreground (-f) and loads the jails; it
 # drops a SIGTERM received while starting (service_run repeats it)

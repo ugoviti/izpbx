@@ -3,4 +3,5 @@
 # DHCP and TFTP are served by dnsmasq: either of them turns it on
 . /usr/local/lib/izpbx/service.sh
 service_gate dnsmasq
+izpbx_log_redirect dnsmasq
 exec dnsmasq --keep-in-foreground --log-facility=-

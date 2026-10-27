@@ -2,6 +2,7 @@
 # shellcheck shell=bash
 . /usr/local/lib/izpbx/service.sh
 service_gate postfix
+izpbx_log_redirect postfix
 # "postfix start-fg" execs the master only as PID 1; otherwise it starts it
 # as a child, and a stop (SIGTERM to the script) leaves master, qmgr and
 # pickup behind: run the master in the foreground directly (-s, the mode

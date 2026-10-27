@@ -52,9 +52,9 @@ service_gate() {
   service_is_enabled "$1" || service_off "$1"
 }
 
-# s6-svc -O: run at most once, so the exit below leaves the service down
+# s6-svc -O: run at most once, so the exit below leaves the service down (no
+# log line: the summary of izpbx-init lists the services that run)
 service_off() {
-  log_info "$1: disabled"
   exec /command/s6-svc -O .
 }
 

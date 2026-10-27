@@ -39,7 +39,7 @@ log "fixture: $(wc -l < "$work/want") managed astdb keys in $(cut -d/ -f2 "$work
 
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}" -e IZPBX_MIGRATE_FREEPBX=true)
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 2400
-log "$(docker logs "$c" 2>&1 | grep 'migration: .* astdb key' | sed 's/^izpbx: info: //')"
+log "$(docker logs "$c" 2>&1 | grep 'migration: .* astdb key')"
 have() { docker exec "$c" izpbx-inventory --live | jq -r '.categories.astdb[]' | LC_ALL=C sort; }
 have > "$work/have"
 missing=$(LC_ALL=C comm -23 "$work/want" "$work/have")

@@ -6,7 +6,7 @@
 #   even commented, except the internal ones: sections 1 (image and build
 #   metadata), 14 (legacy entrypoint, removed in 22.17) and 15 (internal
 #   names), and the rows declared "not used" or "Internal"; the new 22.17
-#   variables (IZPBX_MIGRATE_*) too;
+#   variables (IZPBX_MIGRATE_*, IZPBX_LOG_*) too;
 # - removed values: FREEPBX_MODULES_EXTRA without phonebook, no variable of
 #   the legacy entrypoint;
 # - negative checks: a default.env without a contract variable, and a
@@ -28,7 +28,7 @@ assert_cmd "IZPBX_VERSION=22.17.0 in default.env" -- grep -qx 'IZPBX_VERSION=22.
 # the configurable variables of the contract
 awk '/^## / {sec = $2} /^\| `[A-Z]/ {split($0, a, "`"); print sec "\t" a[2] "\t" $0}' "$contract" |
   awk -F '\t' '$1 != "1." && $1 != "14." && $1 != "15." && $3 !~ /not used|Internal/ {print $2}' | sort -u > "$work/vars"
-printf '%s\n' IZPBX_MIGRATE_FREEPBX IZPBX_MIGRATE_IGNORE_MODULES IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN >> "$work/vars"
+printf '%s\n' IZPBX_MIGRATE_FREEPBX IZPBX_MIGRATE_IGNORE_MODULES IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN IZPBX_LOG_FORMAT IZPBX_LOG_COLOR >> "$work/vars"
 log "$(wc -l < "$work/vars") variables to find in default.env"
 assert_cmd "the contract has the configurable variables (MYSQL_ROOT_USER among them)" -- grep -qx MYSQL_ROOT_USER "$work/vars"
 assert_cmd_fails "internal names left out (HOSTNAME)" -- grep -qx HOSTNAME "$work/vars"

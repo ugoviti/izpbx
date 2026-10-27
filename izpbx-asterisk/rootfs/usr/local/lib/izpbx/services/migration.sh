@@ -156,7 +156,7 @@ migration_snapshot() {
   done
 
   migration_state_set snapshot "done"
-  log_info "migration: snapshot done"
+  log_ok "migration: snapshot done"
 }
 
 # M5.1: the archive the FreePBX 17 Backup module restores as a "legacy"
@@ -366,7 +366,7 @@ migration_restore() {
   fwconsole notifications --delete core core_bindaddress_changed >/dev/null 2>&1 || true
   migration_kill_point restore
   migration_state_set restore "done"
-  log_info "migration: FreePBX 16 configuration restored on FreePBX 17"
+  log_ok "migration: FreePBX 16 configuration restored on FreePBX 17"
 }
 
 # M5.5, after the restore: the default modules of the FreePBX 17 install that
@@ -783,7 +783,7 @@ migration_verify() {
     izpbx-inventory --diff "$before" "$after" --mapping "$IZPBX_MIGRATION_DIR/mapping.tsv" > "$report" 2>&1 || rc=$?
   fi
   if [ "$rc" -eq 0 ]; then
-    log_info "migration: verification passed: the inventory of FreePBX 17 matches the one of FreePBX 16 ($report)"
+    log_ok "migration: verification passed: the inventory of FreePBX 17 matches the one of FreePBX 16 ($report)"
     migration_state_set verify "done"
     return 0
   fi
@@ -811,7 +811,7 @@ migration_reload() {
   _fpbx_asterisk_start || return 1
   if fwconsole_as_asterisk reload > "$log" 2>&1; then
     _fpbx_asterisk_stop
-    log_info "migration: FreePBX 17 reloads the migrated configuration ($log)"
+    log_ok "migration: FreePBX 17 reloads the migrated configuration ($log)"
     migration_state_set reload "done"
     return 0
   fi
@@ -835,7 +835,7 @@ migration_complete() {
   ver=$(fwconsole -V 2>/dev/null | awk '{print $NF}')
   persistence_mark_initialized "${ver:-17}"
   migration_state_set migration "done"
-  log_info "migration: FreePBX 16 -> ${ver:-17} completed"
+  log_ok "migration: FreePBX 16 -> ${ver:-17} completed"
   migration_report "${ver:-17}"
   migration_snapshot_notice
 }

@@ -29,6 +29,19 @@ pass() { printf '[%s] PASS: %s\n' "$TEST_ID" "$*" >&2; }
 fail() { printf '[%s] FAIL: %s\n' "$TEST_ID" "$*" >&2; TEST_FAILS=$((TEST_FAILS + 1)); }
 die()  { printf '[%s] ERROR: %s\n' "$TEST_ID" "$*" >&2; exit 2; }
 
+# izPBX log lines (common.sh): an error starts with the mark "!!", a warning
+# with " !", colored or not; their details and the program output have none
+# shellcheck disable=SC2034 # used by the checks
+T_LOG_ERROR_RE=$'^(\e\\[[0-9;]*m)?!! '
+# shellcheck disable=SC2034
+T_LOG_ISSUE_RE=$'^(\e\\[[0-9;]*m)?( !|!!) '
+# a detail: under the line before, "- text"
+# shellcheck disable=SC2034
+T_LOG_DETAIL_RE=$'^ +(\e\\[[0-9;]*m)?- '
+# izPBX log lines without colors, mark, level and padding: "component: text",
+# "- detail"
+t_log_plain() { sed -E $'s/\e\\[[0-9;]*m//g; s/^( \\*| \\+| !|!!| \\|)? (WARNING |ERROR )? *//'; }
+
 # --- assertions: record a failure and keep going, finish() sets the exit code
 
 assert_eq() { # expected actual message

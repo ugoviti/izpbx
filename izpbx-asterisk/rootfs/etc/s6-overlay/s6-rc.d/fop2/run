@@ -5,6 +5,7 @@
 # in a loop. The licensed interface comes from /etc/default/fop2.
 . /usr/local/lib/izpbx/service.sh
 service_gate fop2
+izpbx_log_redirect fop2 '^Press Ctrl\+C to exit\.$'
 if [ ! -x /usr/local/fop2/fop2_server ]; then
   log_error "fop2: FOP2_ENABLED=true but FOP2 is not installed (/usr/local/fop2/fop2_server)"
   exec /command/s6-svc -O .

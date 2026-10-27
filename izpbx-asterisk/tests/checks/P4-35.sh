@@ -41,7 +41,7 @@ cf_before=$(astdb_old /CF/1001)
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" -e APP_DATA=/data -e MYSQL_SERVER=db -e MYSQL_PASSWORD=fixture-pw \
   -e MYSQL_ROOT_PASSWORD=rootpw -e IZPBX_MIGRATE_FREEPBX=true)
 t_wait_for 2400 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED)|MAINTENANCE MODE|rc.init: fatal' >/dev/null"
-docker logs "$c" 2>&1 | grep -E 'migration: (.*astdb|VERIFICATION|FreePBX 16 ->)|error:   ' | sed 's/^/    | /' >&2
+docker logs "$c" 2>&1 | grep -E -e 'migration: (.*astdb|VERIFICATION|FreePBX 16 ->)' -e "$T_LOG_DETAIL_RE" | sed 's/^/    | /' >&2
 assert_cmd "migration completed (verify=done)" -- docker exec "$c" grep -qx 'verify=done' /data/.izpbx-migration/state
 assert_cmd "healthy" -- t_wait_healthy "$c" 300
 dbget() { docker exec "$c" asterisk -rx "database get $1 $2" 2>/dev/null | sed -n 's/^Value: //p'; }

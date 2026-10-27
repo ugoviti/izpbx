@@ -8,6 +8,7 @@
 # repeats it until Asterisk exits (service.sh).
 . /usr/local/lib/izpbx/service.sh
 service_gate asterisk
+izpbx_log_redirect asterisk
 log_info "asterisk: starting under s6"
 # start time for "finish": a failure after a long run is not "in a row"
 date +%s > /run/izpbx-asterisk-started

@@ -31,7 +31,7 @@ assert_cmd "state: migration=done" -- grep -qx 'migration=done' <<< "$state"
 assert_contains "$(docker exec "$c" cat /data/.initialized)" "17." ".initialized has the FreePBX 17 version"
 notice='migration: the snapshot of FreePBX 16 is still in /data/.izpbx-migration/[0-9TZ]+ and takes [0-9]+ MB'
 assert_cmd "the migration log reports the snapshot and its size" -- sh -c "docker logs '$c' 2>&1 | grep -E '$notice' >/dev/null"
-log "$(docker logs "$c" 2>&1 | grep -E 'snapshot of FreePBX 16' | tail -n 1 | sed 's/^izpbx: warning: //')"
+log "$(docker logs "$c" 2>&1 | grep -E 'snapshot of FreePBX 16' | tail -n 1)"
 
 for n in 1 2; do
   since=$(date -u +%Y-%m-%dT%H:%M:%SZ); sleep 1

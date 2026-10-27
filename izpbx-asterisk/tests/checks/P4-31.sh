@@ -42,7 +42,7 @@ c=$(t_run pbx "$image" --network "$net" --network-alias pbx -v "$v:/data" -e APP
   -e MYSQL_PASSWORD=fixture-pw -e MYSQL_ROOT_PASSWORD=rootpw -e IZPBX_MIGRATE_FREEPBX=true)
 t_wait_for 2400 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED|phonebook to Contact Manager failed)|izpbx-init: maintenance' >/dev/null"
 logs=$(docker logs "$c" 2>&1)
-grep -E 'phonebook|VERIFICATION|error:   ' <<< "$logs" | sed 's/^/    | /' >&2
+grep -E -e 'phonebook|VERIFICATION' -e "$T_LOG_DETAIL_RE" <<< "$logs" | sed 's/^/    | /' >&2
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 300
 state=$(docker exec "$c" cat /data/.izpbx-migration/state 2>/dev/null)
 assert_cmd "verification M7 passed (verify=done)" -- grep -qx 'verify=done' <<< "$state"

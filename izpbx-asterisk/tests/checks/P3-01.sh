@@ -38,7 +38,7 @@ printf '#!/bin/bash\n. /c/common.sh\nizpbx_strict\n. /w/lib.sh\necho before\nf_i
 printf '#!/bin/bash\n. /c/common.sh\nizpbx_strict\nls /izpbx-nonexistent >/dev/null\necho after\n' > "$work/inline.sh"
 sed '/^izpbx_strict$/d' "$work/inj.sh" > "$work/loose.sh"
 out=$(in_img 'bash /w/inj.sh; echo "rc=$?"')
-assert_contains "$out" "izpbx: error: /w/lib.sh:2: 'false' exited with status 1" "error inside a library: file:line logged"
+assert_contains "$out" "/w/lib.sh:2: 'false' exited with status 1" "error inside a library: file:line logged"
 assert_contains "$out" "rc=1" "error inside a library: exit != 0"
 assert_eq 0 "$(grep -c '^after$' <<< "$out" || true)" "error inside a library: the script stops"
 out=$(in_img 'bash /w/inline.sh; echo "rc=$?"')

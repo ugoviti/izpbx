@@ -48,7 +48,7 @@ bad=$(pbx bad db1 -e MYSQL_ROOT_PASSWORD=wrong -e MYSQL_DATABASE=other -e IZPBX_
 assert_cmd "new install: the container becomes healthy" -- t_wait_healthy "$c" 1500
 docker logs "$c" > "$work/pbx.log" 2>&1
 [ "$(docker inspect -f '{{.State.Running}}' "$c")" == true ] ||
-  { grep -E 'izpbx: (warning|error)' "$work/pbx.log" | tail -n 20 >&2; die "the container stopped"; }
+  { grep -E "$T_LOG_ISSUE_RE" "$work/pbx.log" | tail -n 20 >&2; die "the container stopped"; }
 assert_contains "$(cat "$work/pbx.log")" "freepbx: NEW INSTALLATION" "the init detects the new installation"
 modules "$c" > "$work/modules.txt"
 if diff -u "$expected" "$work/modules.txt" > "$work/modules.diff"; then

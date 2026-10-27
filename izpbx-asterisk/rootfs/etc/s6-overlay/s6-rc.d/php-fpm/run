@@ -3,6 +3,7 @@
 # php-fpm serves the FreePBX web interface: it runs when httpd does
 . /usr/local/lib/izpbx/service.sh
 service_gate php-fpm
+izpbx_log_redirect php-fpm
 mkdir -p /run/php
 # workers left by a master that died (kill -9, crash) still serve the old
 # socket: stop them before the new master takes it over

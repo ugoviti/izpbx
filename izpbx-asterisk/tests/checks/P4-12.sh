@@ -37,7 +37,7 @@ log "before: $(vm "$work/before.json" | jq -c .), $recs_before recording(s)"
 
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}" -e IZPBX_MIGRATE_FREEPBX=true)
 assert_cmd "migrated: healthy" -- t_wait_healthy "$c" 2400
-log "$(docker logs "$c" 2>&1 | grep 'migration: spool in place' | sed 's/^izpbx: info: //')"
+log "$(docker logs "$c" 2>&1 | grep 'migration: spool in place')"
 docker exec "$c" izpbx-inventory --live > "$work/after.json"
 assert_eq "$(vm "$work/before.json")" "$(vm "$work/after.json")" "voicemail messages per mailbox and folder, and the mailboxes, as before"
 assert_eq "$recs_before" "$(docker exec "$c" sh -c 'find /var/spool/asterisk/monitor -type f | wc -l')" "recordings: same count ($recs_before)"

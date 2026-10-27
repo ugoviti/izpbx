@@ -58,7 +58,7 @@ assert_eq "$data_before" "$(datasum)" "blocked: /data is unchanged outside .izpb
 echo "$grant" | sqlroot
 c=$(t_run pbx "$image" --network "$net" -v "$v:/data" "${env[@]}")
 t_wait_for 2400 -- sh -c "docker logs '$c' 2>&1 | grep -E 'migration: (FreePBX 16 -> .* completed|VERIFICATION FAILED)|izpbx-init: maintenance' >/dev/null"
-docker logs "$c" 2>&1 | grep -E 'preflight: (BLOCK|RESULT|OK database)|VERIFICATION|error:   |completed' | sed 's/^/    | /' >&2
+docker logs "$c" 2>&1 | grep -E -e 'preflight: (BLOCK|RESULT|OK database)|VERIFICATION|completed' -e "$T_LOG_DETAIL_RE" | sed 's/^/    | /' >&2
 assert_cmd "with the GRANT: migrated, healthy" -- t_wait_healthy "$c" 300
 state=$(docker exec "$c" cat /data/.izpbx-migration/state 2>/dev/null)
 assert_cmd "verification M7 passed (verify=done)" -- grep -qx 'verify=done' <<< "$state"
