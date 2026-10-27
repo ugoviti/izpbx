@@ -728,6 +728,7 @@ Release the next patch version (`22.17.0` → `22.17.1` …) from `main` (or `re
 izpbx-asterisk/tools/make-release.sh              # dry run: the CHANGELOG entry and the changes, nothing written
 izpbx-asterisk/tools/make-release.sh --commit     # review the entry in $EDITOR, commit "X.Y.Z release" and tag X.Y.Z
 izpbx-asterisk/tools/make-release.sh --push       # as --commit, then push the branch and the tag (starts the izpbx-release workflow)
+izpbx-asterisk/tools/make-release.sh --rc --push  # release candidate X.Y.Z-rcN of the next version: only the tag, from any branch (pushed with the branch)
 ```
 Write the changes under `## [Unreleased]` in `CHANGELOG.md` while you work: the release dates that block and adds one line per updated component by itself. If nothing was written there, the draft comes from the commit subjects, or from Claude Code with `--ai` (`claude -p`); review it before confirming. Docker Hub is updated separately with the `izpbx-promote` workflow.
 

@@ -10,6 +10,8 @@
 #   claude in PATH);
 # - no option (or --dry-run) is a dry run that writes nothing and prints how to
 #   release (--commit, --push);
+# - --rc: dry run, then tags 22.17.0-rc1 and -rc2 from a feature branch, no
+#   file or commit written; after 22.17.0 the next rc is 22.17.1-rc1;
 # - negatives: dirty tree, existing tag, wrong branch.
 source "$(dirname "$0")/../lib.sh"
 
@@ -42,9 +44,25 @@ assert_cmd "dry run says how to release" -- grep -qF 'izpbx-asterisk/tools/make-
 assert_cmd "--dry-run is the default too" -- rr --dry-run
 assert_eq "" "$(g tag -l 22.17.0)" "--dry-run: no tag"
 
+# --- release candidates, from a feature branch: only the tags
+g checkout -q -b feature/22.17
+rr --rc > "$work/rc0.txt" 2>&1
+assert_cmd "--rc dry run names 22.17.0-rc1" -- grep -qF 'release candidate 22.17.0-rc1' "$work/rc0.txt"
+assert_eq "" "$(g tag -l '22.17.0-rc*')" "--rc dry run: no tag"
+rr --rc --commit > "$work/rc1.txt" 2>&1 || { cat "$work/rc1.txt" >&2; die "--rc --commit failed"; }
+g commit -q --allow-empty -m "fix after rc1"
+rr --rc --commit > "$work/rc2.txt" 2>&1 || { cat "$work/rc2.txt" >&2; die "second --rc --commit failed"; }
+assert_eq "22.17.0-rc1 22.17.0-rc2" "$(g tag -l '22.17.0-rc*' | sort -V | xargs)" "rc1 then rc2"
+assert_eq "izPBX 22.17.0-rc2" "$(g for-each-ref refs/tags/22.17.0-rc2 --format='%(objecttype) %(contents:subject)' | sed 's/^tag //')" "rc2 annotated"
+assert_eq "$(g rev-parse HEAD)" "$(g rev-parse '22.17.0-rc2^{commit}')" "rc2 on HEAD"
+assert_eq "" "$(g status --porcelain)" "--rc: no file changed"
+assert_cmd "--rc: CHANGELOG still Unreleased" -- grep -qF '## [22.17.0] - Unreleased' "$r/CHANGELOG.md"
+g checkout -q main
+g merge -q --ff-only feature/22.17
+
 # --- first release of the series
 rr --commit --yes > "$work/r0.txt" 2>&1 || { cat "$work/r0.txt" >&2; die "release 22.17.0 failed"; }
-assert_eq "22.17.0" "$(g tag -l '22.17.*')" "tag 22.17.0 created"
+assert_eq "22.17.0" "$(g tag -l '22.17.*' | grep -v -- -rc)" "tag 22.17.0 created"
 assert_eq "22.17.0 release" "$(g log -1 --format=%s)" "release commit"
 assert_cmd "heading dated" -- grep -qxF "## [22.17.0] - $today" "$r/CHANGELOG.md"
 assert_cmd "no '- Unreleased' heading left" -- bash -c "! grep -q '22.17.0\] - Unreleased' '$r/CHANGELOG.md'"
@@ -52,6 +70,8 @@ assert_eq "## [Unreleased]" "$(grep -m1 '^## \[' "$r/CHANGELOG.md")" "empty Unre
 assert_cmd "the 22.17.0 sections are kept" -- grep -q '^### Migration' "$r/CHANGELOG.md"
 assert_cmd "older entries kept" -- grep -qF '## [20.16.22] - 2026-10-22' "$r/CHANGELOG.md"
 assert_cmd "compose.yml still on 22.17.0" -- grep -qF 'IZPBX_VERSION:-22.17.0}' "$r/compose.yml"
+rr --rc > "$work/rc3.txt" 2>&1
+assert_cmd "after 22.17.0 the next rc is 22.17.1-rc1" -- grep -qF 'release candidate 22.17.1-rc1' "$work/rc3.txt"
 
 # --- patch release with hand written entries and component updates
 sed -i 's/^ASTERISK_VER=.*/ASTERISK_VER=22.12.0/' "$r/izpbx-asterisk/versions.env"
@@ -98,6 +118,6 @@ printf '#!/bin/sh\nprintf "### Fixed\\n- Drafted by the AI\\n"\n' > "$work/bin/c
 g commit -q --allow-empty -m "something"
 PATH="$work/bin:$PATH" rr --commit --yes --ai > "$work/r3.txt" 2>&1 || { cat "$work/r3.txt" >&2; die "release --ai failed"; }
 assert_cmd "--ai draft used" -- grep -qF -- '- Drafted by the AI' <(awk '/^## \[22\.17\.3\]/ {p = 1; print; next} /^## \[/ {p = 0} p' "$r/CHANGELOG.md")
-assert_eq "4" "$(g tag -l '22.17.*' | wc -l)" "four releases of the series"
+assert_eq "4" "$(g tag -l '22.17.*' | grep -vc -- -rc)" "four releases of the series"
 
 finish

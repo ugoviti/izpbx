@@ -4,6 +4,8 @@
 #   izpbx-asterisk/tools/make-release.sh            dry run: the CHANGELOG entry and the changes, nothing written
 #   izpbx-asterisk/tools/make-release.sh --commit   review the entry in $EDITOR, commit "X.Y.Z release", tag X.Y.Z
 #   izpbx-asterisk/tools/make-release.sh --push     as --commit, then push the branch and the tag
+#   izpbx-asterisk/tools/make-release.sh --rc [--commit|--push]
+#                                                   release candidate X.Y.Z-rcN of the next version
 # other options: --version X.Y.Z, --ai, --yes (no review), --no-fetch (offline)
 #
 # Version: the series X.Y comes from izpbx-asterisk/versions.env (Asterisk major,
@@ -24,12 +26,19 @@
 # the new version, one commit "X.Y.Z release", annotated tag X.Y.Z. --push: the
 # branch and the tag go to origin, the tag starts the izpbx-release workflow
 # (Gitea registry only; Docker Hub needs izpbx-promote).
+#
+# --rc: a release candidate of the next version (or of --version X.Y.Z): tag
+# X.Y.Z-rcN, N = the last rc of that version + 1, annotated "izPBX X.Y.Z-rcN",
+# on HEAD of the current branch (any branch, eg. feature/X.Y). Nothing else is
+# written: CHANGELOG.md stays "Unreleased", compose.yml/default.env/README.md
+# stay on the last release. Dry run without --commit/--push; --push pushes the
+# branch and the tag (the image gets only the X.Y.Z-rcN tags, never X.Y/X/latest).
 
 set -Eeuo pipefail
 die() { echo "release: ERROR: $*" >&2; exit 1; }
 log() { echo "release: $*" >&2; }
 
-version='' ai='' yes='' push='' dry=1 fetch=1
+version='' ai='' yes='' push='' dry=1 fetch=1 rc=''
 while [ $# -gt 0 ]; do
   case "$1" in
     --version) version=${2:?--version X.Y.Z}; shift ;;
@@ -39,7 +48,8 @@ while [ $# -gt 0 ]; do
     --push) dry='' push=1 ;;
     --dry-run|-n) ;;   # the default
     --no-fetch) fetch='' ;;
-    -h|--help) sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --rc) rc=1 ;;
+    -h|--help) sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $1 (see --help)" ;;
   esac
   shift
@@ -72,6 +82,29 @@ fi
 git rev-parse -q --verify "refs/tags/$version" >/dev/null && die "tag $version already exists"
 [ -z "$last" ] || [ "$(printf '%s\n%s\n' "$last" "$version" | sort -V | tail -1)" == "$version" ] ||
   die "$version is older than the last release $last"
+
+# --- release candidate: only the tag X.Y.Z-rcN
+if [ -n "$rc" ]; then
+  n=$(git tag -l "$version-rc*" | sed -nE "s/^${version//./\\.}-rc([0-9]+)$/\1/p" | sort -n | tail -1)
+  tag="$version-rc$(( ${n:-0} + 1 ))"
+  if [ -n "$push" ] && git show-ref -q --verify "refs/remotes/origin/$branch"; then
+    git merge-base --is-ancestor "origin/$branch" HEAD || die "$branch is behind or diverged from origin/$branch: pull first"
+  fi
+  log "release candidate $tag on $branch ($(git log -1 --format='%h %s' | cut -c1-80))"
+  if [ -n "$dry" ]; then
+    log "dry run, nothing written: izpbx-asterisk/tools/make-release.sh --rc --commit (tag only) or --rc --push (tag, then push $branch and $tag)"
+    exit 0
+  fi
+  git tag -a "$tag" -m "izPBX $tag"
+  log "tag $tag created"
+  if [ -n "$push" ]; then
+    git push origin "$branch" "$tag"
+    log "pushed $branch and $tag to origin: the tag starts the izpbx-release workflow"
+  else
+    log "push it with: git push origin $branch $tag"
+  fi
+  exit 0
+fi
 
 series=${version%.*}
 want=main
