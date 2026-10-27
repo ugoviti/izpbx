@@ -708,6 +708,8 @@ migration_verify() {
       for m in $(migration_state commercial) $IZPBX_MIGRATION_REMOVED_MODULES ${IZPBX_MIGRATE_IGNORE_MODULES//,/ }; do
         printf 'modules\t^module=%s \t\n' "$m"
       done
+      # FOP2 not enabled: its files stay in the snapshot on purpose (migration_fop2)
+      service_is_enabled fop2 || printf 'files\t^path=usr/local/fop2/\t\n'
     } > "$IZPBX_MIGRATION_DIR/mapping.tsv"
     izpbx-inventory --diff "$before" "$after" --mapping "$IZPBX_MIGRATION_DIR/mapping.tsv" > "$report" 2>&1 || rc=$?
   fi
