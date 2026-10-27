@@ -28,10 +28,14 @@ mapping:astdb (?<=/tech) value=sip$	chan_sip
 mapping:astdb additions	astdb
 mapping:astdb ^key=/(dundi|pbx)/	dundi
 mapping:astdb ^key=/CustomDevstate/	CustomDevstate
+mapping:astdb ^key=/registrar/contact/	registered phones
+mapping:astdb ^key=/DEVICE/[^/]+/default_user 	default user
+mapping:extensions (?<= name=)WebRTC [^=]*?(?= tech=)	WebRTC
 mapping:modules ^module=phonebook 	phonebook
 mapping:modules additions	infoservices
 mapping:moh ^path=\.nomusic_reserved/	.nomusic_reserved
 mapping:advanced_settings ignore	Advanced Settings
+mapping:sound_settings additions	Sound Languages
 mapping:files ^path=usr/local/fop2/fop2\.cfg 	fop2.cfg
 mapping:pjsip_endpoints ignore	PJSIP
 runtime:commercial	commercial

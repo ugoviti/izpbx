@@ -47,6 +47,7 @@ else
     migration_crontab || die "freepbx: migration failed (see above): restart the container to resume"
     migration_fop2 || die "freepbx: migration failed (see above): restart the container to resume"
     migration_confs || die "freepbx: migration failed (see above): restart the container to resume"
+    migration_soundlang || die "freepbx: migration failed (see above): restart the container to resume"
     # M7: differences -> maintenance mode, izpbx-init stops after this step
     migration_verify || return 0
     migration_phonebook || die "freepbx: migration failed (see above): restart the container to resume"

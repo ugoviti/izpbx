@@ -36,6 +36,10 @@ modules	^module=phonebook
 modules	additions
 # the reserved empty file of the music on hold, written by the music module
 moh	^path=\.nomusic_reserved/	
+# sound language and formats: a value of the 16 missing or changed is a
+# difference (migration_soundlang); "additions" only for an inventory of the
+# 16 taken by an image without this category
+sound_settings	additions
 # Advanced Settings: AMI credentials, versions and the settings izPBX sets differ
 advanced_settings	ignore
 # fop2.cfg: the AMI keys are written at every start (migration_fop2 keeps the rest)

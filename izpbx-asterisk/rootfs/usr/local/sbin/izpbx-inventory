@@ -103,6 +103,8 @@ filecat() { # category dir [find args]
   sqlcat fax "SELECT user, faxenabled FROM fax_users"
   sqlcat modules "SELECT modulename AS module, enabled FROM modules"
   sqlcat advanced_settings "SELECT keyword, value FROM freepbx_settings WHERE value <> defaultval"
+  # language and formats of the prompts (Admin > Sound Languages)
+  sqlcat sound_settings "SELECT keyword, value FROM soundlang_settings WHERE keyword IN ('language', 'formats')"
 
   # voicemail boxes (voicemail.conf) and messages per box
   if [ -f "${root}etc/asterisk/voicemail.conf" ]; then

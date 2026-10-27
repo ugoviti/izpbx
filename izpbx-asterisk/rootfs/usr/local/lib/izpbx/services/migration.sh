@@ -9,6 +9,8 @@
 #                        trunks that were on chan_sip (D3, C19)
 #   migration_audio      M6: custom prompts, sounds/custom and music on hold
 #                        from the snapshot
+#   migration_soundlang  M6: sound language (and formats) of the 16, when the
+#                        restore left another one
 #   migration_astdb      M6: astdb keys the restore did not bring back
 #   migration_spool      M6: voicemail and recordings left in place: counted,
 #                        owned by asterisk
@@ -487,6 +489,37 @@ migration_audio() {
   log_info "migration: $n audio file(s) (prompts of every language, sounds/custom, music on hold) copied from the snapshot, the ones of FreePBX 17 kept"
   migration_kill_point audio
   migration_state_set audio "done"
+}
+
+# M6: the sound language of the 16 (Admin > Sound Languages, soundlang_settings
+# "language"): FreePBX writes it as language= of every PJSIP/IAX endpoint at
+# each reload, and the custom prompts are only in sounds/<language>/custom.
+# After a migration "it" became "en" (the FreePBX 17 default) and at the next
+# Apply Config the calls spoke English and custom/ prompts were not found:
+# the language of the dump written again when it differs (also the formats,
+# same table), just before the verification M7 that compares it
+# (izpbx-inventory sound_settings).
+migration_soundlang() {
+  local snap rows k v now n=0
+  [ "$(migration_state soundlang)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir)
+  # mariadb-dump, one row per line or all on one line:
+  #   INSERT INTO `soundlang_settings` VALUES
+  #   ('formats','ulaw,g722'),
+  #   ('language','it');
+  rows=$(gzip -dc "$snap/db/$MYSQL_DATABASE.sql.gz" | sed -n '/^INSERT INTO `soundlang_settings` VALUES/,/;$/p' |
+    grep -oE "\('(language|formats)','[^']*'\)" | sed -E "s/^\('([^']*)','([^']*)'\)$/\1 \2/") || true
+  while read -r k v; do
+    [ -n "$k" ] && [ -n "$v" ] || continue
+    now=$(_migration_sql "$MYSQL_DATABASE" "SELECT value FROM soundlang_settings WHERE keyword = '$k'" 2>/dev/null || true)
+    [ "$now" != "$v" ] || continue
+    _migration_sql "$MYSQL_DATABASE" "REPLACE INTO soundlang_settings (keyword, value) VALUES ('$k', '$(sqlEscape "$v")')" ||
+      { log_error "migration: cannot set the sound $k '$v' of FreePBX 16"; return 1; }
+    log_info "migration: sound $k '${now:-unset}' after the restore, set to '$v' as in FreePBX 16 (Admin > Sound Languages)"
+    n=$((n + 1))
+  done <<< "$rows"
+  [ "$n" -gt 0 ] || [ -z "$rows" ] || log_info "migration: sound language and formats already as in FreePBX 16"
+  migration_state_set soundlang "done"
 }
 
 # M6: the restore brings back most of the astdb (call forward, DND, devices),

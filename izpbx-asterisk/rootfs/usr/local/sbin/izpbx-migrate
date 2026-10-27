@@ -11,6 +11,7 @@
 #   izpbx-migrate spool        M6: voicemail and recordings in place: counted, owned by asterisk
 #   izpbx-migrate crontab      M6: custom crontab lines of 20.16 in the Debian spool
 #   izpbx-migrate fop2         M6: FOP2 from its Debian package, fop2.cfg and license kept
+#   izpbx-migrate soundlang    M6: sound language (and formats) of the 16 written again
 #   izpbx-migrate verify       M7: inventory after = before (mapping), or maintenance
 # State and snapshot in ${APP_DATA}/.izpbx-migration (services/migration.sh).
 # shellcheck source=../lib/izpbx/common.sh
@@ -30,6 +31,7 @@ case "${1:-}" in
   spool) migration_spool ;;
   crontab) migration_crontab ;;
   fop2) migration_fop2 ;;
+  soundlang) migration_soundlang ;;
   verify) migration_verify ;;
-  *) sed -n '4,14p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
+  *) sed -n '4,15p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
 esac
