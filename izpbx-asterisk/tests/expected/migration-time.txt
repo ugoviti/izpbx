@@ -4,3 +4,4 @@
 2026-10-25	20.16.22-large (500 ext, 2M CDR, 5 GB recordings)	296s	16 cpu
 2026-10-26	20.16.22-large (500 ext, 2M CDR, 5 GB recordings)	434s	16 cpu
 2026-10-26	20.16.22-large (500 ext, 2M CDR, 5 GB recordings)	427s	16 cpu
+2026-10-26	20.16.22-large (500 ext, 2M CDR, 5 GB recordings)	470s	16 cpu
