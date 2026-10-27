@@ -6,6 +6,9 @@
 #   which asks every active module for its data, failed ("no such table:
 #   cidlookup"); now the modules the 16 had not enabled and whose tables are
 #   not all in its database are left out of the restore (--ignoremodules);
+#   after the restore the default modules of FreePBX 17 the 16 had not
+#   active are set as on the 16: cidlookup uninstalled, weakpasswords
+#   (disabled on the 16) disabled;
 # - setcid enabled on the 16 and not in the image: "fwconsole ma install"
 #   exits 0 also when it fails, so it was never downloaded and its data was
 #   lost with a warning. Now it is downloaded; when the download fails the
@@ -43,6 +46,7 @@ sqlroot asterisk <<'EOF'
 DELETE FROM modules WHERE modulename = 'cidlookup';
 DROP TABLE cidlookup;
 DROP TABLE cidlookup_incoming;
+UPDATE modules SET enabled = 0 WHERE modulename = 'weakpasswords';
 INSERT INTO modules (modulename, version, enabled) VALUES ('setcid', '16.0.4', 1);
 CREATE TABLE setcid (cid_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, description VARCHAR(50), cid_name VARCHAR(150), cid_num VARCHAR(150), dest VARCHAR(255));
 INSERT INTO setcid (description, cid_name, cid_num, dest) VALUES ('fixture setcid', 'Fixture', '0612345', 'app-blackhole,hangup,1');
@@ -108,6 +112,13 @@ grep -E 'migration:|izpbx: (error|warning)' <<< "$log" | sed 's/^/    | /' | tai
 assert_contains "$log" "migration to FreePBX 17 in progress" "online: the migration resumes"
 assert_contains "$log" "module setcid is not in the image, downloading it" "online: setcid downloaded"
 assert_contains "$log" "modules not enabled in FreePBX 16 and without their tables in its database, nothing to restore: cidlookup" "cidlookup left out of the restore"
+aligned=$(grep 'not active in FreePBX 16, set as in FreePBX 16:' <<< "$log" || true)
+assert_contains "$aligned" "cidlookup (uninstalled)" "cidlookup uninstalled as on the 16"
+assert_contains "$aligned" "weakpasswords (disabled)" "weakpasswords disabled as on the 16"
+mods=$(docker exec "$c" fwconsole ma list 2>/dev/null)
+assert_cmd_fails "cidlookup not enabled on FreePBX 17" -- grep -qE '^\| cidlookup +\| [^ ]+ +\| Enabled' <<< "$mods"
+assert_cmd "weakpasswords disabled on FreePBX 17" -- grep -qE '^\| weakpasswords +\| [^ ]+ +\| Disabled' <<< "$mods"
+assert_cmd "a module the 16 had enabled stays enabled" -- grep -qE '^\| setcid +\| [^ ]+ +\| Enabled' <<< "$mods"
 assert_contains "$log" "qhd/ (2 file(s)), included by the custom dialplan of 20.16, copied" "qhd/ copied"
 assert_contains "$log" "custom dialplan converted for Asterisk 22: 6 change(s)" "custom dialplan converted"
 assert_contains "$log" "migration: verification passed" "verification M7 passed"

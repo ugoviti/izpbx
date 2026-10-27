@@ -367,6 +367,42 @@ migration_restore() {
   log_info "migration: FreePBX 16 configuration restored on FreePBX 17"
 }
 
+# M5.5, after the restore: the default modules of the FreePBX 17 install that
+# the 16 had not active, so FreePBX 17 has the modules of the 16 (eg.
+# cidlookup uninstalled on the 16 and installed again by the new install):
+# - disabled on the 16 (row with enabled=0): disabled;
+# - uninstalled on the 16 (no row, the code still in its module tree):
+#   uninstalled (the files stay, it can be installed again from the GUI);
+# - no row and no code in the module tree of the 16 (deleted, or a module an
+#   older 20.16 did not have, eg. music on 20.16.0): kept, reported.
+# The states from the inventory of the 16 (M3); a failure is a warning (the
+# verification still accepts a module the new install adds).
+migration_modules_align() {
+  local snap inv m st done_=() fail=() kept=()
+  [ "$(migration_state modules_aligned)" == "done" ] && return 0
+  snap=$(migration_state snapshot_dir) inv="$IZPBX_MIGRATION_DIR/inventory-before.json"
+  [ -s "$inv" ] || { log_warn "migration: no inventory of FreePBX 16, modules not aligned"; return 0; }
+  for m in $(fwconsole_as_asterisk ma list 2>/dev/null | awk -F'|' '$4 ~ /Enabled/ {gsub(/ /, "", $2); print $2}'); do
+    case $m in framework|builtin|core|backup) continue ;; esac
+    st=$(jq -r --arg m "$m" '.categories.modules[]? | select(startswith("module=\($m) ")) | sub("^.* enabled="; "")' "$inv" | head -1)
+    case $st in
+      1) continue ;;
+      0) fwconsole_as_asterisk ma disable "$m" >> "/tmp/migration-module-$m.log" 2>&1 || true
+         if _migration_module_enabled "$m"; then fail+=("$m"); else done_+=("$m (disabled)"); fi ;;
+      *) if [ -d "$snap/fs/var/www/html/admin/modules/$m" ]; then
+           fwconsole_as_asterisk ma uninstall "$m" >> "/tmp/migration-module-$m.log" 2>&1 || true
+           if _migration_module_enabled "$m"; then fail+=("$m"); else done_+=("$m (uninstalled)"); fi
+         else
+           kept+=("$m")
+         fi ;;
+    esac
+  done
+  [ ${#done_[@]} -eq 0 ] || log_info "migration: modules of the FreePBX 17 install not active in FreePBX 16, set as in FreePBX 16: ${done_[*]}"
+  [ ${#fail[@]} -eq 0 ] || log_warn "migration: modules not active in FreePBX 16 left enabled (disable or uninstall failed, logs in /tmp/migration-module-<name>.log): ${fail[*]}"
+  [ ${#kept[@]} -eq 0 ] || log_info "migration: modules of the FreePBX 17 install FreePBX 16 did not have, kept: ${kept[*]}"
+  migration_state_set modules_aligned "done"
+}
+
 # M6: the chan_sip of izPBX 20.16 listened on APP_PORT_SIP (5160): providers
 # and phones of the trunks and extensions converted to PJSIP still send
 # there. If the 16 had chan_sip extensions or trunks, a PJSIP transport

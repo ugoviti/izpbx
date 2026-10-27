@@ -4,5 +4,7 @@
 # CAP_SYS_TIME; it serves time to the LAN and reports the offset
 . /usr/local/lib/izpbx/service.sh
 service_gate ntp
-mkdir -p /run/chrony
+# chronyd keeps its command socket (chronyc) only in a directory of its own
+# user, not readable by others: "Wrong permissions on /run/chrony" otherwise
+install -d -m 0750 -o _chrony -g _chrony /run/chrony
 exec chronyd -d -x

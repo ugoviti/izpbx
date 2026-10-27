@@ -10,6 +10,11 @@
 #   fails, so the test raises it before a restart) at every start, and core
 #   core_bindaddress_changed (raised during the install, freepbx.log) on the
 #   new installation; the other notices stay (control);
+# - the image has the key of the Sangoma Debian repository, valid for more
+#   than the 30 days FreePBX asks: its own check (GPG::checkAndUpdateRepoKey,
+#   run by every install or upgrade of framework) finds nothing to update, so
+#   an upgrade of framework from Module Admin does not raise the notice again
+#   (negative: without the key the check wants an update);
 # - the HTTP bind address stays the FreePBX 17 one, 127.0.0.1; on a restart
 #   FREEPBX_HTTPBINDADDRESS=0.0.0.0 (default.env) opens it: the changed
 #   setting is applied with a fwconsole reload once Asterisk is up (20.16 left
@@ -55,6 +60,14 @@ log=$(docker exec "$c" cat /var/log/asterisk/freepbx.log)
 assert_contains "$log" "core_bindaddress_changed" "control: FreePBX raised the bind address notice during the install"
 n=$(notices "$c"); log "notices: $(tr '\n' ' ' <<< "$n")"
 assert_cmd_fails "GPG key notice removed" -- grep -q '^framework:GPG_KEY_EXPIRY$' <<< "$n"
+gpgcheck() { # container: "applicable ok|update", the check of FreePBX as asterisk
+  docker exec -u asterisk "$1" php -r 'include "/etc/freepbx.conf"; $r = \FreePBX::GPG()->checkAndUpdateRepoKey(false);
+    echo ($r["applicable"] ? "applicable" : "n/a"), " ", ($r["needed_update"] ? "update" : "ok"), "\n";' 2>/dev/null | tail -n 1
+}
+assert_eq "applicable ok" "$(gpgcheck "$c")" "FreePBX finds the repository key of the image valid"
+docker exec "$c" mv /etc/apt/trusted.gpg.d/freepbx.gpg /tmp/freepbx.gpg
+assert_eq "applicable update" "$(gpgcheck "$c")" "negative: without the key FreePBX wants an update"
+docker exec "$c" mv /tmp/freepbx.gpg /etc/apt/trusted.gpg.d/freepbx.gpg
 assert_cmd_fails "bind address notice removed on the new installation" -- grep -q '^core:core_bindaddress_changed$' <<< "$n"
 assert_cmd "control: the other notices stay" -- grep -q '^core:EXTENSIONS_MOVE$' <<< "$n"
 assert_eq 127.0.0.1 "$(setting "$c" HTTPBINDADDRESS)" "HTTPBINDADDRESS stays 127.0.0.1"

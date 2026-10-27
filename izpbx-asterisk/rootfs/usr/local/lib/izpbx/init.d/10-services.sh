@@ -10,7 +10,7 @@
 
 enabled=()
 for svc in "${!SERVICE_VARS[@]}"; do service_is_enabled "$svc" && enabled+=("$svc"); done
-log_info "services enabled: $(printf '%s\n' "${enabled[@]}" | sort | tr '\n' ' ')"
+log_info "services enabled: $(printf '%s\n' "${enabled[@]}" | sort | paste -sd ' ')"
 
 if [ "$MSMTP_ENABLED" == "true" ]; then
   ln -sfn /usr/bin/msmtp /usr/sbin/sendmail

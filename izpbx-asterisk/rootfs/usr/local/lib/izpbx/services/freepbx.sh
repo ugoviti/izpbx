@@ -195,12 +195,12 @@ _fpbx_wait_db() {
   done
 }
 
-_fpbx_create_db() {
+_fpbx_create_db() { # [quiet]: no log line (already said by freepbx_install)
   local user pass db cdr
   user=$(sqlEscape "$MYSQL_USER"); pass=$(sqlEscape "$MYSQL_PASSWORD")
   db=${MYSQL_DATABASE//\`/\`\`}; cdr=${MYSQL_DATABASE_CDR//\`/\`\`}
   if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
-    log_info "freepbx: creating the databases ${MYSQL_DATABASE}, ${MYSQL_DATABASE_CDR} and the user ${MYSQL_USER}"
+    [ "${1:-}" == quiet ] || log_info "freepbx: creating the databases ${MYSQL_DATABASE}, ${MYSQL_DATABASE_CDR} and the user ${MYSQL_USER}"
     _fpbx_dbroot "CREATE USER IF NOT EXISTS '$user'@'%' IDENTIFIED BY '$pass';
       CREATE DATABASE IF NOT EXISTS \`$db\`; GRANT ALL PRIVILEGES ON \`$db\`.* TO '$user'@'%' WITH GRANT OPTION;
       CREATE DATABASE IF NOT EXISTS \`$cdr\`; GRANT ALL PRIVILEGES ON \`$cdr\`.* TO '$user'@'%' WITH GRANT OPTION;" || return 1
@@ -260,7 +260,9 @@ _fpbx_install_once() { # attempt
     log_info "freepbx: FreePBX file cache $cache removed before the install"
   fi
   read -r -a dirs <<< "$(freepbx_dir_options)"
-  _fpbx_wait_db && _fpbx_create_db || return 1
+  # the first attempt follows freepbx_install, which created them already;
+  # after a failed attempt they are created again (_fpbx_reset_attempt)
+  _fpbx_wait_db && _fpbx_create_db "$([ "$1" -gt 1 ] || echo quiet)" || return 1
   [ -s /etc/machine-id ] || tr -d - < /proc/sys/kernel/random/uuid > /etc/machine-id
   _fpbx_asterisk_start || return 1
   log_info "freepbx: running the FreePBX $(_izpbx_version FREEPBX_FRAMEWORK_VER) installer"
@@ -432,7 +434,10 @@ cfg_freepbx_settings() {
 #   FreePBX checks the key of the Sangoma Debian repository and tries to
 #   write it in /etc/apt/trusted.gpg.d; izPBX installs nothing from that
 #   repository (no apt source for it), so the notice "Sangoma Debian
-#   Repository GPG Key Expiring Soon" (in 0 days, on unknown) is noise;
+#   Repository GPG Key Expiring Soon" (in 0 days, on unknown) is noise. The
+#   image has the key (Dockerfile), so an upgrade of framework while the
+#   container runs does not raise it again; removed here as well for a key
+#   close to its expiry;
 # - core core_bindaddress_changed, on a new installation only: core moves the
 #   Asterisk HTTP bind address from its default "::" to 127.0.0.1 and says it
 #   "updated" it, while nothing was configured before. 127.0.0.1 stays (the

@@ -5,7 +5,8 @@
 #   /etc/chrony/chrony.keys, design C10);
 # - chronyd -p parses the file; bindcmdaddress 127.0.0.1 (chronyc commands
 #   only from localhost); without NTP_SERVERS the default pool is used;
-# - the ntp service runs chronyd with the file (s6, pid);
+# - the ntp service runs chronyd with the file (s6, pid); /run/chrony owned by
+#   _chrony 0750, so chronyd keeps the command socket (no "Wrong permissions");
 # - negative checks: a different NTP_ALLOW_FROM changes the file; an invalid
 #   directive makes chronyd -p fail.
 source "$(dirname "$0")/../lib.sh"
@@ -22,6 +23,7 @@ gen() { # outfile [docker args]
              chronyd -p -f /etc/chrony/chrony.conf >/dev/null 2>&1 && echo "chronyd parse ok" >&2
              cat /etc/chrony/chrony.conf' >"$out" 2>"$out.err"
 }
+logs_grep() { docker logs "$1" 2>&1 | grep -q "$2"; } # container pattern
 gen "$work/ntp" --env-file "$golden/cases/ntp.env"
 sed 's|^keyfile /etc/chrony.keys$|keyfile /etc/chrony/chrony.keys|' "$golden/20.16.22/ntp/files/etc/chrony.conf" > "$work/ntp.old"
 if diff -u "$work/ntp.old" "$work/ntp" > "$work/ntp.diff"; then
@@ -39,6 +41,10 @@ c=$(t_run run "$image" -e NTP_ENABLED=true -e NTP_ALLOW_FROM=10.0.0.0/8 -e HTTPD
   -e IZPBX_ENABLED=false -e FAIL2BAN_ENABLED=false -e CRON_ENABLED=false)
 assert_cmd "ntp service runs chronyd" -- t_wait_for 60 -- docker exec "$c" pgrep -x chronyd
 assert_cmd "chronyc answers on localhost" -- t_wait_for 30 -- docker exec "$c" chronyc -h 127.0.0.1 tracking
+assert_eq "_chrony:_chrony 750" "$(docker exec "$c" stat -c '%U:%G %a' /run/chrony)" "/run/chrony owned by _chrony, 0750"
+assert_cmd "chronyd command socket in place" -- t_wait_for 30 -- docker exec "$c" test -S /run/chrony/chronyd.sock
+assert_cmd "chronyc answers on the command socket" -- docker exec "$c" chronyc -h /run/chrony/chronyd.sock tracking
+assert_cmd_fails "no wrong permissions on /run/chrony" -- logs_grep "$c" "Wrong permissions on /run/chrony"
 
 gen "$work/neg" --env-file "$golden/cases/ntp.env" -e NTP_ALLOW_FROM=172.16.0.0/12
 assert_cmd_fails "control: a different NTP_ALLOW_FROM is caught" -- diff -q "$work/ntp.old" "$work/neg"

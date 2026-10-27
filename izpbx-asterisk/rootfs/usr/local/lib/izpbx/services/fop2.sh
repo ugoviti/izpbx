@@ -80,12 +80,29 @@ _fop2_make_install() {
   return $rc
 }
 
+# the dialplan contexts of FOP2 (extensions_override_fop2.conf) and its tables
+# in the FreePBX database (FOP2 Manager): run by izpbx-init, Asterisk and AMI
+# are down, so its "Unable to connect to remote asterisk" and "Unable to
+# connect to manager localhost:5038" lines are expected (Asterisk loads the
+# dialplan when it starts): the output goes to a file, the log gets one line,
+# or its last lines on a failure (it stops only when it cannot write a file)
+FOP2_OVERRIDE_LOG=/tmp/fop2-override-contexts.log
+_fop2_override_contexts() {
+  if izpbx_dry_run; then izpbx_record "$FOP2_DIR/generate_override_contexts.pl -write"; return 0; fi
+  if "$FOP2_DIR/generate_override_contexts.pl" -write > "$FOP2_OVERRIDE_LOG" 2>&1; then
+    log_info "fop2: dialplan contexts and FOP2 Manager tables written (output in $FOP2_OVERRIDE_LOG)"
+  else
+    log_warn "fop2: generate_override_contexts.pl failed, last lines of $FOP2_OVERRIDE_LOG:"
+    tail -n 8 "$FOP2_OVERRIDE_LOG" | while IFS= read -r line; do log_warn "  $line"; done
+  fi
+}
+
 # fop2_install: download, verify and install the package
 fop2_install() {
   fop2_fetch || return 1
   _fop2_make_install || { log_error "fop2: install of the package failed"; return 1; }
   if [ -e /etc/freepbx.conf ] && [ -x "$FOP2_DIR/generate_override_contexts.pl" ]; then
-    izpbx_do "$FOP2_DIR/generate_override_contexts.pl" -write
+    _fop2_override_contexts
   fi
   log_info "fop2: installed in $FOP2_DIR"
 }
@@ -93,10 +110,14 @@ fop2_install() {
 # FreePBX setting from the database (empty without FreePBX)
 _fop2_setting() { izpbx_sql_query "SELECT value FROM freepbx_settings WHERE keyword='$(sqlEscape "$1")'" 2>/dev/null || true; }
 
-# the FOP2 license code never goes to the logs, not even inside fop2_server output
+# the FOP2 license code never goes to the logs, not even inside fop2_server output;
+# left out too: the lines of fop2_server telling the running server about the
+# license, which does not run yet during izpbx-init ("Could not connect to
+# socket /var/run/fop2.ctl" and the Perl error that follows it)
 _fop2_mask() {
   local line code=$FOP2_LICENSE_CODE
   while IFS= read -r line; do
+    [[ "$line" == "Could not connect to socket /var/run/fop2.ctl"* || "$line" == "Can't use an undefined value as a symbol reference"* ]] && continue
     [ -n "$code" ] && line=${line//"$code"/********}
     printf '%s\n' "$line"
   done

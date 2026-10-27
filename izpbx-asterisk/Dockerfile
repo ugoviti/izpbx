@@ -75,6 +75,12 @@ COPY --chmod=0440 rootfs/etc/sudoers.d/zabbix /etc/sudoers.d/zabbix
 # log rotation: Apache, Asterisk (full, messages, security, freepbx logs), fail2ban, FOP2
 COPY rootfs/etc/logrotate.d/ /etc/logrotate.d/
 COPY rootfs/etc/cron.daily/freepbx-le-renew /etc/cron.daily/freepbx-le-renew
+# key of the Sangoma Debian repository (deb.freepbx.org/gpg/aptly-pubkey.asc,
+# dearmored, expires 2028-02-11): no apt source uses it, but every install or
+# upgrade of framework checks it and, missing or expiring within 30 days,
+# raises the notice "Sangoma Debian Repository GPG Key Expiring Soon"
+# (fwconsole runs as asterisk and cannot write it in /etc/apt/trusted.gpg.d)
+COPY --chmod=0644 rootfs/etc/apt/trusted.gpg.d/freepbx.gpg /etc/apt/trusted.gpg.d/freepbx.gpg
 
 ARG APP_VER
 ARG APP_VER_BUILD
