@@ -15,9 +15,9 @@ log_info "services: enabled: $(printf '%s\n' "${enabled[@]}" | sort | paste -sd 
 if [ "$MSMTP_ENABLED" == "true" ]; then
   ln -sfn /usr/bin/msmtp /usr/sbin/sendmail
   ln -sfn /usr/local/share/izpbx/msmtp-mailq /usr/bin/mailq
-  log_info "sendmail: msmtp"
+  log_info "sendmail: via msmtp (no local queue)"
 else
   ln -sfn /usr/sbin/sendmail.postfix /usr/sbin/sendmail
   ln -sfn ../sbin/sendmail /usr/bin/mailq
-  log_info "sendmail: postfix$([ "$POSTFIX_ENABLED" == "true" ] && echo " (POSTFIX_ENABLED=true turns msmtp off)")"
+  log_info "sendmail: via postfix$([ "$POSTFIX_ENABLED" == "true" ] && echo " (POSTFIX_ENABLED=true turns msmtp off)")"
 fi

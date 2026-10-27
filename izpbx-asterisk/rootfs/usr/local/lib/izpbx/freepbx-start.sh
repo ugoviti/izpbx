@@ -7,11 +7,44 @@
 # service. Only with FreePBX in use (IZPBX_ENABLED, mode normal or install),
 # not in migration or dry-run. It never fails: a failed oneshot would stop
 # the container (S6_BEHAVIOUR_IF_STAGE2_FAILS=2); the problem is logged.
+# Last, in every mode: the "ready" line (izpbx_ready).
 # shellcheck source=services/freepbx.sh
 . /usr/local/lib/izpbx/services/freepbx.sh
+# shellcheck source=service.sh
+. /usr/local/lib/izpbx/service.sh
 : "${IZPBX_FREEPBX_START_WAIT:=300}"
 
+# izpbx_ready: the end of the start, after the summary of izpbx-init (the
+# services were still starting then): time since izpbx-init started, and
+# with Asterisk its version, the PJSIP endpoints and the registrations of
+# the trunks. Not in maintenance mode (izpbx-init said it, nothing runs).
+izpbx_ready() {
+  local t0 since='' ver endpoints regs reg_ok waited=$SECONDS
+  [ ! -e "$IZPBX_MAINTENANCE_FLAG" ] || return 0
+  if service_is_enabled asterisk; then
+    until asterisk -rx 'core waitfullybooted' >/dev/null 2>&1; do
+      if [ $((SECONDS - waited)) -ge "$IZPBX_FREEPBX_START_WAIT" ]; then
+        log_warn "asterisk: not up after ${IZPBX_FREEPBX_START_WAIT}s"
+        return 0
+      fi
+      sleep 2
+    done
+  fi
+  t0=$(cat /run/izpbx/started 2>/dev/null || true)
+  [[ "$t0" =~ ^[0-9]+$ ]] && since=" in $(( $(date +%s) - t0 ))s"
+  log_section "$APP_DESCRIPTION $APP_VER ready$since"
+  if service_is_enabled asterisk; then
+    ver=$(asterisk -rx 'core show version' 2>/dev/null | awk 'NR == 1 {print $1, $2}')
+    endpoints=$(asterisk -rx 'pjsip show endpoints' 2>/dev/null | awk '/^Objects found:/ {print $3}')
+    regs=$(asterisk -rx 'pjsip show registrations' 2>/dev/null | awk '/^Objects found:/ {print $3}')
+    reg_ok=$(asterisk -rx 'pjsip show registrations' 2>/dev/null | grep -cw 'Registered' || true)
+    log_ok "asterisk: ${ver:-Asterisk} up, ${endpoints:-0} PJSIP endpoint(s), ${reg_ok:-0}/${regs:-0} trunk registration(s) registered"
+    log_section ""
+  fi
+}
+
 izpbx_dry_run && exit 0
+trap izpbx_ready EXIT
 [ "$IZPBX_ENABLED" == "true" ] || exit 0
 case "$(izpbx_mode)" in normal|install) ;; *) log_info "freepbx-start: mode $(izpbx_mode), FreePBX post-start hooks skipped"; exit 0 ;; esac
 freepbx_installed || exit 0
@@ -25,7 +58,7 @@ until asterisk -rx 'core waitfullybooted' >/dev/null 2>&1; do
   sleep 2
 done
 if fwconsole start --post --skipchown >/tmp/freepbx-start.log 2>&1; then
-  log_ok "freepbx-start: FreePBX post-start hooks done (pm2: $(fwconsole_as_asterisk pm2 --list 2>/dev/null | awk -F'|' 'NR > 3 && NF > 3 {gsub(/ /, "", $2); printf "%s ", $2}'))"
+  log_ok "freepbx-start: FreePBX post-start hooks done (pm2: $(fwconsole_as_asterisk pm2 --list 2>/dev/null | awk -F'|' 'NR > 3 && NF > 3 {gsub(/ /, "", $2); printf "%s%s", (n++ ? " " : ""), $2}'))"
 else
   log_warn "freepbx-start: fwconsole start --post failed, see /tmp/freepbx-start.log"
 fi

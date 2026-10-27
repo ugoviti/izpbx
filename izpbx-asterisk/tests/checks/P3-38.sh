@@ -41,13 +41,17 @@ assert_eq "pre-10 no-mode
 pre-20 after a failing command
 post-10 from-pre none" "$(docker exec "$c" cat /tmp/hooks.log)" "pre-init before the steps, post-init after, lexical order, variables shared, only *.custom-inc"
 logs=$(docker logs "$c" 2>&1)
-order=$(grep -nE 'izpbx-init: (pre|post)-init hook [^ ]+\.custom-inc$|---- 01 |---- 40 |izpbx-init: done' <<< "$logs" | cut -d: -f1 | tr '\n' ' ')
-grep -nE 'izpbx-init: (pre|post)-init hook [^ ]+\.custom-inc$|---- 01 |---- 40 |izpbx-init: done' <<< "$logs" | sed 's/^/  /' >&2
-read -r a b s1 s40 p d <<< "$order"
+# hooks, the first and the last section of a step (a step with nothing to
+# say has none), done: their line numbers
+line_of() { { grep -nE -e "$1" <<< "$logs" || true; } | cut -d: -f1 | sed -n "$2"; }
+a=$(line_of 'izpbx-init: pre-init hook [^ ]+\.custom-inc$' 1p) b=$(line_of 'izpbx-init: pre-init hook [^ ]+\.custom-inc$' 2p)
+s1=$(line_of '---- [0-9]{2} ' 1p) s40=$(line_of '---- [0-9]{2} ' '$p')
+p=$(line_of 'izpbx-init: post-init hook [^ ]+\.custom-inc$' 1p) d=$(line_of 'izpbx-init: done' 1p)
+log "lines: pre-init $a $b, sections $s1..$s40, post-init $p, done $d"
 assert_cmd "log order: pre-init hooks, steps, post-init hook, done" -- test "$a" -lt "$s1" -a "$b" -lt "$s1" -a "$s40" -lt "$p" -a "$p" -lt "$d"
 assert_contains "$logs" "pre-init hook /hooks/pre-init/20-fails.custom-inc exited with status 2" "a failing hook is logged with its status"
 assert_cmd "the start goes on after a failing hook: Asterisk runs" -- t_wait_for 60 -- docker exec "$c" asterisk -rx 'core show uptime'
-assert_contains "$logs" "izpbx-init: start izPBX Cloud Native Telephony System" "start line with APP_DESCRIPTION"
+assert_cmd "start section with APP_DESCRIPTION" -- grep -qe '---- izPBX Cloud Native Telephony System ' <<< "$logs"
 
 m=$(t_run missing "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=false -e APP_CUSTOM_SCRIPTS=/nothere)
 t_wait_for 120 -- sh -c "docker logs '$m' 2>&1 | grep -q 'izpbx-init: done'" || die "izpbx-init did not finish (missing dir)"

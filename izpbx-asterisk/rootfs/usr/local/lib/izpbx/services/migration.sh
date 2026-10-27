@@ -849,7 +849,7 @@ migration_snapshot_notice() {
   snap=$(migration_state snapshot_dir)
   [ -d "$snap" ] || return 0
   kb=$(du -sk "$(freepbx_dir ASTSPOOLDIR)" "$snap" 2>/dev/null | tail -n 1 | cut -f1)
-  log_warn "migration: the snapshot of FreePBX 16 is still in $snap and takes $(( ${kb:-0} / 1024 )) MB: remove it when you no longer need to go back to izPBX 20.16"
+  log_warn "migration: the snapshot of FreePBX 16 is still in $snap and takes $(( ${kb:-0} / 1024 )) MB: when you no longer need to go back to izPBX 20.16 (izpbx-rollback), remove it with: rm -rf $snap"
 }
 
 # M9: back to izPBX 20.16 from a snapshot, with the izPBX container stopped

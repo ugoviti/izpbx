@@ -34,8 +34,10 @@ fi
 . /usr/local/lib/izpbx/env.sh
 start=$SECONDS
 # runtime state of izPBX: the dry-run log, the maintenance flag read by
-# izpbx-healthcheck (a stale flag of a previous run does not survive /run)
+# izpbx-healthcheck (a stale flag of a previous run does not survive /run),
+# the start time for the "ready" line of freepbx-start
 mkdir -p /run/izpbx
+date +%s > /run/izpbx/started
 # warnings and errors of the start, repeated in the final summary
 export IZPBX_LOG_ISSUES=/run/izpbx/init-issues
 : > "$IZPBX_LOG_ISSUES"
@@ -43,9 +45,9 @@ log_section "$APP_DESCRIPTION $APP_VER"
 if [ "${IZPBX_DRY_RUN:-false}" == "true" ]; then
   : "${IZPBX_DRY_RUN_LOG:=/run/izpbx/dry-run.log}"
   mkdir -p "$(dirname "$IZPBX_DRY_RUN_LOG")" && : > "$IZPBX_DRY_RUN_LOG"
-  log_info "izpbx-init: start $APP_DESCRIPTION $APP_VER (dry-run: actions recorded in $IZPBX_DRY_RUN_LOG)"
+  log_info "izpbx-init: dry-run, actions recorded in $IZPBX_DRY_RUN_LOG"
 else
-  log_info "izpbx-init: start $APP_DESCRIPTION $APP_VER (build ${APP_VER_BUILD:-unknown}, commit ${APP_BUILD_COMMIT:-unknown})"
+  log_info "izpbx-init: build ${APP_VER_BUILD:-unknown}, commit ${APP_BUILD_COMMIT:-unknown}"
 fi
 # user hooks, as 20.16 (P3-38): ${APP_CUSTOM_SCRIPTS}/pre-init/*.custom-inc
 # before the steps, ${APP_CUSTOM_SCRIPTS}/post-init/*.custom-inc after them
@@ -70,17 +72,23 @@ run_custom_hooks() { # stage
     [ "$rc" -eq 0 ] || log_warn "izpbx-init: $1 hook $inc exited with status $rc"
   done
 }
-# the final summary: time, services, web address, the warnings and errors
+# the final summary: time (and the slow steps), services, web address, the
+# warnings and errors. The services start after it: freepbx-start writes the
+# "ready" line when Asterisk answers.
 init_summary() {
-  local issues=() line level warn=0 err=0 svc enabled=() url=''
+  local issues=() line level warn=0 err=0 svc enabled=() url='' slow=''
   if [ -e "${IZPBX_MAINTENANCE_FLAG:-/run/izpbx/maintenance}" ]; then
     log_section "$APP_DESCRIPTION $APP_VER: MAINTENANCE MODE"
   else
-    log_section "$APP_DESCRIPTION $APP_VER ready in $((SECONDS - start))s"
+    log_section "init summary"
   fi
   [ -s "$IZPBX_LOG_ISSUES" ] && mapfile -t issues < "$IZPBX_LOG_ISSUES"
   IZPBX_LOG_ISSUES=
-  log_ok "izpbx-init: done in $((SECONDS - start))s"
+  # the 3 slowest steps that took at least 1 second
+  if [ ${#step_times[@]} -gt 0 ]; then
+    slow=$(printf '%s\n' "${step_times[@]}" | sort -t$'\t' -k2,2nr | awk -F'\t' '$2 >= 1 && n++ < 3 {printf "%s%s %ss", (n > 1 ? ", " : ""), $1, $2}')
+  fi
+  log_ok "izpbx-init: done in $((SECONDS - start))s${slow:+ (slowest: $slow)}"
   if [ -e "${IZPBX_MAINTENANCE_FLAG:-/run/izpbx/maintenance}" ]; then
     log_error "izpbx-init: maintenance mode: no service starts ($(head -n 1 "${IZPBX_MAINTENANCE_FLAG:-/run/izpbx/maintenance}"))"
   else
@@ -112,13 +120,16 @@ init_summary() {
 
 shopt -s nullglob
 run_custom_hooks pre-init
+step_times=() # "18 freepbx<TAB>seconds"
 for step in "$IZPBX_INIT_DIR"/*.sh; do
-  # "18-freepbx.sh": section "18 freepbx", output of its commands labeled "freepbx"
+  # "18-freepbx.sh": section "18 freepbx" (written before its first line, a
+  # step with nothing to say has none), output of its commands labeled "freepbx"
   name=$(basename "$step" .sh)
-  log_section "${name/-/ }"
-  izpbx_log_redirect "${name#[0-9]*-}"
+  izpbx_log_redirect "${name#[0-9]*-}" "" "${name/-/ }"
+  step_start=$SECONDS
   # shellcheck source=/dev/null
   . "$step"
+  step_times+=("${name/-/ }"$'\t'"$((SECONDS - step_start))")
   # maintenance mode (04-freepbx-detect.sh, 18-freepbx.sh): the next steps would write to
   # the FreePBX 16 /data, and no service runs anyway
   if [ -e "${IZPBX_MAINTENANCE_FLAG:-/run/izpbx/maintenance}" ]; then

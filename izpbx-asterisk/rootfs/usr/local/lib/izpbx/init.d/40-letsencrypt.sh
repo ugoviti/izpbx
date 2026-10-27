@@ -10,3 +10,4 @@ if [ "$HTTPD_HTTPS_ENABLED" == "true" ] && [ "$LETSENCRYPT_ENABLED" == "true" ];
   if [ "$(izpbx_mode)" == migration ]; then log_info "letsencrypt: migration mode, certificate request skipped"; else cfg_letsencrypt; fi
 fi
 cfg_cronenv
+le_status

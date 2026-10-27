@@ -502,5 +502,5 @@ freepbx_missing_contexts() {
   # the owner and modes of "fwconsole chown": the same after every start (P3-26)
   chown "$APP_USR:$APP_GRP" "$out" "$custom"
   chmod 664 "$out"
-  log_info "freepbx: $(wc -w <<< "$missing") empty contexts in $out"
+  log_info "freepbx: $(wc -w <<< "$missing") dialplan contexts included but not defined, defined empty in $out"
 }

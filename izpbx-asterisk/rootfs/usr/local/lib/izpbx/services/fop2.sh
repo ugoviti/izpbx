@@ -131,6 +131,21 @@ _fop2_license() { # fop2_server options...
   "$FOP2_DIR/fop2_server" "$@" 2>&1 | _fop2_mask >&2 || true
 }
 
+# _fop2_reactivate OPTIONS...: the license file is there but the license
+# server does not know this host (new interface or MAC address): reactivate
+# it. A warning only if the reactivation fails, with what fop2_server said.
+_fop2_reactivate() {
+  local out line
+  if izpbx_dry_run; then _fop2_license --reactivate "$@"; return 0; fi
+  out=$("$FOP2_DIR/fop2_server" --reactivate "$@" 2>&1 | _fop2_mask) || true
+  if grep -qi 'success' <<< "$out"; then
+    log_ok "fop2: license not found for this host, reactivated"
+  else
+    log_warn "fop2: license not found for this host and its reactivation failed (FOP2 runs in demo mode)"
+    while IFS= read -r line; do [ -z "${line//[[:space:]]/}" ] || log_detail "fop2: $line"; done <<< "$out"
+  fi
+}
+
 cfg_fop2() {
   local f=$FOP2_DIR/fop2.cfg opts=(--rp=http) cur
   if [ ! -e "$f" ]; then
@@ -175,8 +190,7 @@ cfg_fop2() {
     fi
   elif [ "$FOP2_AUTOACTIVATION" == "true" ]; then
     if "$FOP2_DIR/fop2_server" --getinfo "${opts[@]}" 2>/dev/null | grep -q '^Not Found'; then
-      log_warn "fop2: license not found, reactivating it"
-      _fop2_license --reactivate "${opts[@]}"
+      _fop2_reactivate "${opts[@]}"
     fi
   fi
   log_info "fop2: configured (AMI ${FOP2_AMI_HOST:-unchanged}:${FOP2_AMI_PORT:-unchanged})"

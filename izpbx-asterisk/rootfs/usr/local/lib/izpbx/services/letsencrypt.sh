@@ -26,7 +26,32 @@ cfg_cronenv() {
     } > "$CRON_ENV" )
   chown root:root "$CRON_ENV"
   chmod 0600 "$CRON_ENV"
-  log_info "cron: environment of the cron jobs in $CRON_ENV"
+}
+
+# le_status: one line on the certificate of the web server, also when Let's
+# Encrypt is off: whose it is and when it expires (a warning under 15 days,
+# an error when expired); the file is the one of httpd.sh (HTTPD_HTTPS_CERT_FILE)
+le_status() {
+  local cert=${HTTPD_HTTPS_CERT_FILE:-} end days issuer
+  if [ "$HTTPD_HTTPS_ENABLED" != "true" ]; then
+    log_info "letsencrypt: disabled (no HTTPS)"
+    return 0
+  fi
+  [ "$LETSENCRYPT_ENABLED" == "true" ] || log_info "letsencrypt: disabled (LETSENCRYPT_ENABLED=false)"
+  if [ -z "$cert" ] || [ ! -r "$cert" ] || ! end=$(openssl x509 -noout -enddate -in "$cert" 2>/dev/null); then
+    log_info "letsencrypt: no readable HTTPS certificate${cert:+ in $cert}"
+    return 0
+  fi
+  end=${end#notAfter=}
+  days=$(( ( $(date -d "$end" +%s) - $(date +%s) ) / 86400 ))
+  issuer=$(openssl x509 -noout -issuer -in "$cert" 2>/dev/null | sed -n 's/.*O *= *\([^,/]*\).*/\1/p')
+  if [ "$days" -lt 0 ]; then
+    log_error "letsencrypt: the HTTPS certificate $cert expired on $(date -d "$end" +%F)"
+  elif [ "$days" -lt 15 ]; then
+    log_warn "letsencrypt: the HTTPS certificate $cert expires in $days days ($(date -d "$end" +%F))"
+  else
+    log_info "letsencrypt: certificate $cert${issuer:+ by $issuer}, expires in $days days ($(date -d "$end" +%F))"
+  fi
 }
 
 _le_missing() {
