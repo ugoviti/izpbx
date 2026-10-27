@@ -28,7 +28,9 @@ services:
     container_name: izpbx-db
     ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
     ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
-    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    ## --log-warnings=1: no "Aborted connection" note for every fwconsole run (FreePBX exits without closing
+    ## its connection); --expire-logs-days=0: no binlog is written, no warning about expire_logs_days of the image
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --log-warnings=1 --expire-logs-days=0
     restart: unless-stopped
     env_file:
     - .env

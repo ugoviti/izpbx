@@ -376,7 +376,7 @@ services:
     image: mariadb:10.11.19
     ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
     ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
-    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --log-warnings=1 --expire-logs-days=0
     restart: unless-stopped
     env_file:
     - .env
@@ -467,7 +467,7 @@ services:
     image: mariadb:10.11.19
     ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
     ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
-    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --log-warnings=1 --expire-logs-days=0
     restart: unless-stopped
     env_file:
     - db.env

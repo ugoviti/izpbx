@@ -1,0 +1,4 @@
+# izPBX: fail2ban 1.0.2 (Debian 12) warns at every start that allowipv6 is not
+# set ("not defined in Definition"): its default, set explicitly
+[DEFAULT]
+allowipv6 = auto
