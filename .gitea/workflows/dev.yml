@@ -6,8 +6,8 @@
 # checksums): to build other versions change versions.env on the branch.
 # Build/push logic: .gitea/actions/build-push  -  notification: .gitea/actions/matrix-notify
 #
-# Required secrets: REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+# Required secrets: REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-dev
 
@@ -59,7 +59,6 @@ jobs:
         with:
           status: ${{ job.status }}
           label: dev:${{ steps.ver.outputs.tag }} asterisk:${{ steps.ver.outputs.asterisk }} ref:${{ gitea.ref_name }}
-          password: ${{ secrets.MATRIX_PASSWORD }}
+          token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
-          user: ${{ vars.MATRIX_USER }}

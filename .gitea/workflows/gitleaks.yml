@@ -4,7 +4,7 @@
 #
 # Optional secret: GITLEAKS_CONFIG  private extra rules (TOML), kept out of the repo because
 #                                   it contains the private hostnames it has to detect.
-# Failure notify:  MATRIX_PASSWORD (secret), MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER (variables)
+# Failure notify:  MATRIX_TOKEN (secret), MATRIX_HOMESERVER, MATRIX_ROOM_ID (variables)
 
 name: gitleaks
 
@@ -34,7 +34,6 @@ jobs:
         with:
           status: ${{ job.status }}
           label: gitleaks ref:${{ gitea.ref_name }}
-          password: ${{ secrets.MATRIX_PASSWORD }}
+          token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
-          user: ${{ vars.MATRIX_USER }}

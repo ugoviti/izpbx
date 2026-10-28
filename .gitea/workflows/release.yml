@@ -5,8 +5,8 @@
 # latest decided by the branch of the version (V2/V3): 20.16.x tags come from
 # release/20.16 and keep latest, the others (main, 22.17) do not until Q1
 #
-# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-release
 
@@ -55,7 +55,6 @@ jobs:
         with:
           status: ${{ job.status }}
           label: build tag:${{ gitea.ref_name }}
-          password: ${{ secrets.MATRIX_PASSWORD }}
+          token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
-          user: ${{ vars.MATRIX_USER }}

@@ -9,8 +9,8 @@
 # - report: the table version -> result (izpbx-asterisk/tests/ci/migration-report.sh) in the Matrix
 #   notification; red when a version failed or has no result.
 #
-# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-migration-matrix
 
@@ -161,7 +161,6 @@ jobs:
           status: ${{ job.status }}
           label: migration from every 20.16.x (${{ needs.versions.outputs.count }} versions)
           details: ${{ steps.table.outputs.table }}
-          password: ${{ secrets.MATRIX_PASSWORD }}
+          token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
-          user: ${{ vars.MATRIX_USER }}

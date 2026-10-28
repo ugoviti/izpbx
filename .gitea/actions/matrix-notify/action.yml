@@ -1,18 +1,22 @@
 name: matrix notify
-description: Send the build result to the izPBX Matrix room (shared by release and dev workflows)
+description: >-
+  Send the build result to the izPBX Matrix room (shared by the release, dev,
+  promote, weekly rebuild, migration matrix, lint and gitleaks workflows), with
+  the bot access token. The notification never fails the job: when the
+  configuration is missing or Matrix does not answer it prints a warning.
 
 inputs:
   status:
     description: Build status (eg. job.status)
     required: true
   label:
-    description: Extra label shown in the message (eg. tag:20.16.22)
+    description: Extra label shown in the message (eg. build tag:22.17.0 amd64)
     default: ''
   details:
     description: Optional text appended to the message (eg. a table), shown preformatted
     default: ''
-  password:
-    description: Matrix bot password
+  token:
+    description: Matrix access token of the bot (secrets.MATRIX_TOKEN)
     required: true
   homeserver:
     description: Matrix homeserver URL (vars.MATRIX_HOMESERVER)
@@ -20,43 +24,65 @@ inputs:
   room-id:
     description: Matrix room id (vars.MATRIX_ROOM_ID)
     required: true
-  user:
-    description: Matrix bot user id (vars.MATRIX_USER)
-    required: true
 
 runs:
   using: composite
   steps:
     - name: matrix notify
-      shell: bash
+      shell: sh
       env:
         STATUS: ${{ inputs.status }}
         LABEL: ${{ inputs.label }}
         DETAILS: ${{ inputs.details }}
-        MATRIX_PASSWORD: ${{ inputs.password }}
+        MATRIX_TOKEN: ${{ inputs.token }}
         MATRIX_HOMESERVER: ${{ inputs.homeserver }}
         MATRIX_ROOM_ID: ${{ inputs.room-id }}
-        MATRIX_USER: ${{ inputs.user }}
+      # POSIX sh, so it also runs in a busybox/alpine job container. jq and curl
+      # must be in the image (the ubuntu-latest runner image has them).
       run: |
-        set -eu
-        RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_NUMBER}"
-        BODY="${GITHUB_REPOSITORY} build:#${GITHUB_RUN_NUMBER} ${LABEL} status:${STATUS}"
-        HTML="<a href=\"${RUN_URL}\"><code>${GITHUB_REPOSITORY}</code></a> build:[<code>#${GITHUB_RUN_NUMBER}</code>] [<code>${LABEL}</code>] status:[<strong>${STATUS}</strong>]"
-        if [ -n "$DETAILS" ]; then
-          BODY+=$'\n'"$DETAILS"
-          HTML+="<pre>$(printf '%s' "$DETAILS" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g')</pre>"
-        fi
+        set -u
+        # A notification never decides the result of a build: on any problem it
+        # prints a warning and the job keeps the status it already had.
+        warn() { echo "::warning title=matrix notify::$1"; exit 0; }
 
-        TOKEN=$(jq -n --arg u "$MATRIX_USER" --arg p "$MATRIX_PASSWORD" \
-            '{type:"m.login.password", identifier:{type:"m.id.user", user:$u}, password:$p}' \
-          | curl -fsS -X POST -H 'Content-Type: application/json' -d @- \
-            "${MATRIX_HOMESERVER}/_matrix/client/v3/login" | jq -r .access_token)
+        MISSING=""
+        [ -n "$MATRIX_TOKEN" ] || MISSING="$MISSING secret MATRIX_TOKEN,"
+        [ -n "$MATRIX_HOMESERVER" ] || MISSING="$MISSING variable MATRIX_HOMESERVER,"
+        [ -n "$MATRIX_ROOM_ID" ] || MISSING="$MISSING variable MATRIX_ROOM_ID,"
+        [ -z "$MISSING" ] || warn "not configured:${MISSING%,}. Notification skipped"
+        command -v jq >/dev/null && command -v curl >/dev/null || warn "jq or curl missing: notification skipped"
+
+        case "$STATUS" in
+          success) ICON="✅" ;;
+          failure) ICON="❌" ;;
+          *) ICON="⚠️" ;;
+        esac
+        RUN_URL="${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_NUMBER:-}"
+        # The commit: short SHA linked to its page, and its subject when git can read it.
+        SHA=$(printf '%.9s' "${GITHUB_SHA:-}")
+        COMMIT_URL="${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/commit/${GITHUB_SHA:-}"
+        SUBJECT=$(git log -1 --format=%s "${GITHUB_SHA:-HEAD}" 2>/dev/null || true)
+
+        # jq builds the whole event: every value is escaped for JSON and HTML.
+        EVENT=$(jq -n --arg icon "$ICON" --arg repo "${GITHUB_REPOSITORY:-}" --arg run "${GITHUB_RUN_NUMBER:-}" \
+            --arg url "$RUN_URL" --arg label "$LABEL" --arg status "$STATUS" --arg details "$DETAILS" \
+            --arg sha "$SHA" --arg commit_url "$COMMIT_URL" --arg subject "$SUBJECT" '
+          def html: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
+          {
+            msgtype: "m.notice",
+            body: ("\($icon) \($repo) build:#\($run) \($label) status:\($status)"
+                   + (if $sha == "" then "" else " commit:\($sha)" end)
+                   + (if $subject == "" then "" else " «\($subject)»" end)
+                   + (if $details == "" then "" else "\n" + $details end)),
+            format: "org.matrix.custom.html",
+            formatted_body: ("\($icon) <a href=\"\($url)\"><code>\($repo | html)</code></a> build:[<code>#\($run)</code>] [<code>\($label | html)</code>] status:[<strong>\($status | html)</strong>]"
+                   + (if $sha == "" then "" else " commit:[<a href=\"\($commit_url)\"><code>\($sha)</code></a>]" end)
+                   + (if $subject == "" then "" else " <em>\($subject | html)</em>" end)
+                   + (if $details == "" then "" else "<pre>\($details | html)</pre>" end))
+          }') || warn "message not built"
 
         ROOM=$(jq -rn --arg r "$MATRIX_ROOM_ID" '$r|@uri')
-        jq -n --arg b "$BODY" --arg h "$HTML" \
-            '{msgtype:"m.notice", body:$b, format:"org.matrix.custom.html", formatted_body:$h}' \
-          | curl -fsS -X PUT -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' -d @- \
-            "${MATRIX_HOMESERVER}/_matrix/client/v3/rooms/${ROOM}/send/m.room.message/gitea-${GITHUB_RUN_ID}-$(date +%s)" >/dev/null
-
-        # logout so a new Matrix device isn't left behind for every build
-        curl -fsS -X POST -H "Authorization: Bearer ${TOKEN}" "${MATRIX_HOMESERVER}/_matrix/client/v3/logout" >/dev/null || true
+        printf '%s' "$EVENT" | curl -fsS --max-time 20 -X PUT \
+            -H "Authorization: Bearer ${MATRIX_TOKEN}" -H 'Content-Type: application/json' -d @- \
+            "${MATRIX_HOMESERVER}/_matrix/client/v3/rooms/${ROOM}/send/m.room.message/gitea-${GITHUB_RUN_ID:-}-$(date +%s)" \
+            >/dev/null || warn "Matrix did not accept the message (homeserver, token or room)"

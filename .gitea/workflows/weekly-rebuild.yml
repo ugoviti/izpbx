@@ -14,8 +14,8 @@
 # The CI tooling (.gitea/actions) comes from the branch of the matrix entry (release/20.16 keeps the
 # Rocky checks), the build context (izpbx-asterisk/) from the tag.
 #
-# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_PASSWORD
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER
+# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-weekly-rebuild
 
@@ -103,7 +103,6 @@ jobs:
         with:
           status: ${{ job.status }}
           label: weekly rebuild ${{ matrix.branch }} tag:${{ steps.ver.outputs.tag || 'none' }} -> ${{ steps.ver.outputs.version || 'nothing to rebuild' }}
-          password: ${{ secrets.MATRIX_PASSWORD }}
+          token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
-          user: ${{ vars.MATRIX_USER }}

@@ -4,7 +4,7 @@
 # The runner runs the job in a container: lint runs in Docker-in-Docker (izpbx-asterisk/tests/ci/dind-run.sh),
 # where the bind mounts of its tool containers make sense.
 #
-# Failure notify: MATRIX_PASSWORD (secret), MATRIX_HOMESERVER, MATRIX_ROOM_ID, MATRIX_USER (variables)
+# Failure notify: MATRIX_TOKEN (secret), MATRIX_HOMESERVER, MATRIX_ROOM_ID (variables)
 
 name: lint
 
@@ -31,7 +31,6 @@ jobs:
         with:
           status: ${{ job.status }}
           label: lint ref:${{ gitea.ref_name }}
-          password: ${{ secrets.MATRIX_PASSWORD }}
+          token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
-          user: ${{ vars.MATRIX_USER }}
