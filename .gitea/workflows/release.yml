@@ -5,6 +5,12 @@
 # latest decided by the branch of the version (V2/V3): 20.16.x tags come from
 # release/20.16 and keep latest, the others (main, 22.17) do not until Q1
 #
+# Two jobs, one after the other: "amd64" publishes the tags (amd64 only, to
+# test right away), then "arm64" (not for 20.16) builds the arm64 image under
+# QEMU (~35 min without cache) and turns the same tags into amd64 + arm64.
+# izpbx-promote run before "arm64" ends copies the amd64 image only: run it
+# again afterwards.
+#
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
@@ -20,8 +26,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  amd64:
     runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.branch.outputs.branch }}
     steps:
       - name: checkout
         uses: actions/checkout@v4
@@ -44,6 +52,7 @@ jobs:
           latest: branch
           branch: ${{ steps.branch.outputs.branch }}
           build-number: ${{ gitea.run_number }}
+          platforms: linux/amd64
           cache-tag: buildcache
           registry-host: ${{ secrets.REGISTRY_HOST }}
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
@@ -54,7 +63,40 @@ jobs:
         uses: ./.gitea/actions/matrix-notify
         with:
           status: ${{ job.status }}
-          label: build tag:${{ gitea.ref_name }}
+          label: build tag:${{ gitea.ref_name }} amd64
+          token: ${{ secrets.MATRIX_TOKEN }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+
+  # 20.16 stays amd64 only
+  arm64:
+    needs: amd64
+    if: needs.amd64.outputs.branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build, push and add to the tags
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ${{ gitea.ref_name }}
+          latest: branch
+          branch: ${{ needs.amd64.outputs.branch }}
+          build-number: ${{ gitea.run_number }}
+          platforms: linux/arm64
+          append-platform: 'true'
+          cache-tag: buildcache-arm64
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: matrix notify
+        if: always()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: build tag:${{ gitea.ref_name }} arm64
           token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}

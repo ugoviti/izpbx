@@ -41,11 +41,13 @@ jobs:
             line: '20.16'
             tags: '^20\.16\.[0-9]+$'
             skip_tags: '^$'
+            arm64: 'false'
           - branch: main
             line: main
             # the lines from 22 on: not 20.16 (release/20.16) nor the older ones (18.x, 16.x, EOL)
             tags: '^(2[2-9]|[3-9][0-9])\.[0-9]+\.[0-9]+$'
             skip_tags: '^$'
+            arm64: 'true'
     name: rebuild ${{ matrix.branch }}
     steps:
       - name: checkout
@@ -90,6 +92,24 @@ jobs:
           latest: 'false'
           build-number: ${{ gitea.run_number }}
           cache-tag: buildcache-weekly-${{ matrix.line }}
+          build-args: |
+            OS_UPDATE_STAMP=${{ steps.ver.outputs.stamp }}
+            APP_BUILD_COMMIT=${{ steps.ver.outputs.commit }}
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      # main from 22.17: the arm64 image added to the same tags (emulated, after amd64)
+      - name: build arm64 and add it to the tags
+        if: steps.ver.outputs.tag != '' && matrix.arm64 == 'true'
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ${{ steps.ver.outputs.version }}
+          latest: 'false'
+          build-number: ${{ gitea.run_number }}
+          platforms: linux/arm64
+          append-platform: 'true'
+          cache-tag: buildcache-weekly-${{ matrix.line }}-arm64
           build-args: |
             OS_UPDATE_STAMP=${{ steps.ver.outputs.stamp }}
             APP_BUILD_COMMIT=${{ steps.ver.outputs.commit }}

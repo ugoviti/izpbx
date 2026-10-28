@@ -1,6 +1,12 @@
 name: izpbx build & push
 description: Build izpbx-asterisk and push it to the private registry (Docker Hub is reached only through the promote workflow)
 
+# One platform per job, so the amd64 image is published without waiting for
+# the emulated arm64 build:
+#   job 1: platforms linux/amd64                       -> the tags, amd64 only
+#   job 2: platforms linux/arm64, append-platform true -> built by digest (no
+#          tag), verified, then the same tags become amd64 + arm64
+
 inputs:
   version:
     description: Version, used as APP_VER and for the image tags (see .gitea/actions/image-tags)
@@ -18,10 +24,14 @@ inputs:
     description: Extra newline separated build args (KEY=value)
     default: ''
   cache-tag:
-    description: Registry tag used for the buildx cache
+    description: Registry tag used for the buildx cache (one per platform)
     default: buildcache
   platforms:
+    description: Platform to build; linux/arm64 is emulated with QEMU (~35 min without cache)
     default: linux/amd64
+  append-platform:
+    description: "'true': push by digest and add it to the tags already pushed by the amd64 job (same version and build-number)"
+    default: 'false'
   registry-host:
     description: Private registry host (secrets.REGISTRY_HOST)
     required: true
@@ -33,6 +43,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: setup qemu
+      if: contains(inputs.platforms, 'arm64')
+      uses: docker/setup-qemu-action@v3
+      with:
+        platforms: arm64
+
     - name: registry login
       id: login
       uses: ./.gitea/actions/registry-login
@@ -54,22 +70,31 @@ runs:
     - name: build metadata
       id: meta
       shell: bash
+      env:
+        APPEND: ${{ inputs.append-platform }}
+        IMAGE: ${{ steps.login.outputs.image }}
       run: |
         echo "app_build_commit=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
         echo "app_build_date=$(date +%s)" >> "$GITHUB_OUTPUT"
+        # append: no tag, the image is pushed by digest only
+        if [ "$APPEND" == true ]; then
+          echo "outputs=type=image,name=${IMAGE},push-by-digest=true,name-canonical=true,push=true" >> "$GITHUB_OUTPUT"
+        fi
         env | sort
 
     - name: build and push
+      id: build
       uses: docker/build-push-action@v6
       with:
         context: izpbx-asterisk
         file: izpbx-asterisk/Dockerfile
         platforms: ${{ inputs.platforms }}
-        push: true
+        push: ${{ inputs.append-platform != 'true' }}
+        outputs: ${{ steps.meta.outputs.outputs }}
         # no provenance attestation and no metadata-action labels:
         # they would embed the private build source URL in the image
         provenance: false
-        tags: ${{ steps.tags.outputs.tags }}
+        tags: ${{ inputs.append-platform != 'true' && steps.tags.outputs.tags || '' }}
         build-args: |
           APP_VER=${{ inputs.version }}
           APP_VER_BUILD=${{ github.run_number }}
@@ -87,14 +112,45 @@ runs:
       shell: bash
       env:
         TAGS: ${{ steps.tags.outputs.tags }}
+        APPEND: ${{ inputs.append-platform }}
+        REPO: ${{ steps.login.outputs.image }}
+        DIGEST: ${{ steps.build.outputs.digest }}
+        PLATFORM: ${{ inputs.platforms }}
         BUILD_ARGS: ${{ inputs.build-args }}
         SCRIPT: ${{ github.action_path }}/verify-image.sh
       run: |
         set -euo pipefail
         IMAGE=$(printf '%s\n' "$TAGS" | sed '/^$/d' | head -1)
+        [ "$APPEND" != true ] || IMAGE="${REPO}@${DIGEST}"
         # expected Asterisk version: build-arg override (eg. dev workflow) or versions.env
         ASTERISK_VER=$(printf '%s\n' "$BUILD_ARGS" | sed -n 's/^ *ASTERISK_VER=//p' | tail -1 | tr -d ' ')
         [ -n "$ASTERISK_VER" ] || ASTERISK_VER=$(sed -n 's/^ASTERISK_VER=//p' izpbx-asterisk/versions.env | head -1)
         [ -n "$ASTERISK_VER" ] || { echo "::error::cannot determine the expected ASTERISK_VER"; exit 1; }
-        docker pull -q "$IMAGE"
-        docker run -i --rm --entrypoint "" -e ASTERISK_VER="$ASTERISK_VER" "$IMAGE" bash -s < "$SCRIPT"
+        docker pull -q --platform "$PLATFORM" "$IMAGE"
+        docker run -i --rm --platform "$PLATFORM" --entrypoint "" -e ASTERISK_VER="$ASTERISK_VER" "$IMAGE" bash -s < "$SCRIPT"
+
+    # the tags of the amd64 job become a list with the new platform; idempotent:
+    # on a rerun the tag is already a list and only its amd64 entry is taken
+    - name: add the platform to the tags
+      if: inputs.append-platform == 'true'
+      shell: bash
+      env:
+        TAGS: ${{ steps.tags.outputs.tags }}
+        REPO: ${{ steps.login.outputs.image }}
+        DIGEST: ${{ steps.build.outputs.digest }}
+      run: |
+        set -euo pipefail
+        FIRST=$(printf '%s\n' "$TAGS" | sed '/^$/d' | head -1)
+        RAW=$(docker buildx imagetools inspect --raw "$FIRST") || { echo "::error::${FIRST} not found: the amd64 job must push it first"; exit 1; }
+        if jq -e '.manifests' >/dev/null <<< "$RAW"; then
+          AMD64=$(jq -r '.manifests[] | select(.platform.architecture == "amd64") | .digest' <<< "$RAW" | head -1)
+        else
+          AMD64=$(docker buildx imagetools inspect "$FIRST" --format '{{.Manifest.Digest}}')
+        fi
+        [ -n "$AMD64" ] || { echo "::error::no amd64 image in ${FIRST}"; exit 1; }
+        ARGS=()
+        while read -r TAG; do
+          if [ -n "$TAG" ]; then ARGS+=(-t "$TAG"); echo "-> $TAG"; fi
+        done <<< "$TAGS"
+        docker buildx imagetools create "${ARGS[@]}" "${REPO}@${AMD64}" "${REPO}@${DIGEST}"
+        docker buildx imagetools inspect "$FIRST"

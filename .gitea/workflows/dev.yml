@@ -13,6 +13,11 @@ name: izpbx-dev
 
 on:
   workflow_dispatch:
+    inputs:
+      arm64:
+        description: Also build the arm64 image (emulated, ~35 min more, after the amd64 one), as a release of main
+        type: boolean
+        default: false
 
 concurrency:
   group: izpbx-dev
@@ -49,6 +54,18 @@ jobs:
         with:
           version: ${{ steps.ver.outputs.tag }}
           cache-tag: buildcache-dev
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: build arm64 and add it to the tag
+        if: inputs.arm64 == true || inputs.arm64 == 'true'
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ${{ steps.ver.outputs.tag }}
+          platforms: linux/arm64
+          append-platform: 'true'
+          cache-tag: buildcache-dev-arm64
           registry-host: ${{ secrets.REGISTRY_HOST }}
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}

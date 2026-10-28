@@ -7,7 +7,7 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 # Supported tags
 
 ## Release Candidate (testing, not yet for production):
-* `22.17.0-rcN`, `22.17.0-rcN-BUILD` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64): the git branch `main`. When `22.17.0` is released the tags become `22.17`, `22.17.X`, `22.17.X-BUILD`, `22`
+* `22.17.0-rcN`, `22.17.0-rcN-BUILD` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64 and arm64): the git branch `main`. When `22.17.0` is released the tags become `22.17`, `22.17.X`, `22.17.X-BUILD`, `22`
 
 ## Production Branch (security fixes only, until 2027-01-01):
 * `20.16`, `20.16.X`, `20.16.X-BUILD`, `20`, `latest` (Asterisk 20 LTS + FreePBX 16): the git branch `release/20.16`. `latest` stays here for now, use an explicit tag. To move from 20.16 to 22.17 see [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md)
@@ -43,7 +43,7 @@ Cloud and On-Premise, Fast, Automatic and Repeatable deploy of VoIP PBX systems
 - Built-in WEB Management GUI based on FreePBX® 17 (default modules predownloaded in the image: the first install needs no module download)
 - No vendor lock-in, you can migrate to and away from izPBX simply by importing/exporting FreePBX Backups
 - Automatic migration of an izPBX 20.16 volume (FreePBX 16) to FreePBX 17, opt-in, verified and reversible (see [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md))
-- Based on Debian 12 (bookworm) 64bit, amd64 image (arm64 planned after 22.17.0)
+- Based on Debian 12 (bookworm) 64bit, amd64 and arm64 images (arm64: Raspberry Pi 4/5 with a 64-bit OS and ARM servers; no Digium `codec_opus`/`codec_silk`, FOP2 from its armv7l build)
 - Multi-Tenant PBX System Support (see [docs/multi-tenant.md](docs/multi-tenant.md))
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and non-volatile data
@@ -187,7 +187,7 @@ Up to izPBX 20.16 a major FreePBX upgrade (eg. FreePBX 15 to 16, from 18.15.x to
 
 # Upgrade from 20.16 to 22.17
 
-izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 / Asterisk 22 on Debian 12** (PHP 8.2 with php-fpm, services supervised by s6-overlay, amd64 images). A volume created by izPBX 20.16 is migrated by the container itself, but only when you ask for it: it is not a plain image update.
+izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 / Asterisk 22 on Debian 12** (PHP 8.2 with php-fpm, services supervised by s6-overlay, amd64 and arm64 images). A volume created by izPBX 20.16 is migrated by the container itself, but only when you ask for it: it is not a plain image update.
 
 The short version:
 
@@ -338,7 +338,6 @@ For Yealink / Fanvil phones you can use a single Phonebook Menu: **http://IZPBX_
 Building the image, component updates, tests and releases: **[docs/maintainers.md](docs/maintainers.md)** and **[docs/development.md](docs/development.md)**.
 
 # TODO / Future Development
-- arm64 image (Raspberry PI and ARM servers): planned after 22.17.0, the build scripts already support it
 - Kubernetes deploy via Helm Chart (major problems for RTP UDP ports range... needs further investigation, no valid solutions right now)
 - Hylafax+ Server + IAXModem (used for sending FAXes. Receiving FAXes via mail is already possible using FreePBX FAX Module)
 - macOS host support? (edit `compose.yml` and comment localtime volume?)
@@ -377,7 +376,7 @@ for best security, fine-tune the ports range based on your needs by not using st
   email: [support@initzero.it](mailto:support@initzero.it) - web: [InitZero Support](https://www.initzero.it/)
   
 - **Supported architectures**:
-  [`amd64`]
+  [`amd64`, `arm64`] (`arm64` from 22.17; 20.16 is `amd64` only)
 
 - **Supported Docker versions**:
   [the latest release](https://github.com/docker/docker-ce/releases/latest) (down to 1.6 on a best-effort basis)

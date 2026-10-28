@@ -1,6 +1,6 @@
 # Upgrade from 20.16 to 22.17
 
-izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 / Asterisk 22 on Debian 12** (PHP 8.2 with php-fpm, services supervised by s6-overlay, amd64 images). A volume created by izPBX 20.16 is migrated by the container itself, but only when you ask for it: it is not a plain image update.
+izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 / Asterisk 22 on Debian 12** (PHP 8.2 with php-fpm, services supervised by s6-overlay, amd64 and arm64 images). A volume created by izPBX 20.16 is migrated by the container itself, but only when you ask for it: it is not a plain image update.
 
 The short version:
 
@@ -148,4 +148,4 @@ Calls recorded and voicemail left while on 22.17 stay in the spool.
 - The Asterisk built-in HTTP server (ARI, WebSocket, WebRTC) listens on `127.0.0.1` only, the FreePBX 17 default: set `FREEPBX_HTTPBINDADDRESS=0.0.0.0` (and `FREEPBX_HTTPTLSBINDADDRESS=0.0.0.0`) to reach it from the network, behind a firewall.
 - `APP_PORT_UCP_HTTP` / `APP_PORT_UCP_HTTPS` set the ports of the UCP node server (FreePBX `NODEJSBINDPORT` / `NODEJSHTTPSBINDPORT`); with `network_mode: host` they must be free on the host.
 - The image versions are in `.env` (`IZPBX_VERSION`, `MARIADB_VERSION`), read by `compose.yml`.
-- Image tags: `22.17.0`, `22.17`, `22`; `latest` stays on 20.16 for now. Images for amd64 only: arm64 comes in a later release.
+- Image tags: `22.17.0`, `22.17`, `22`; `latest` stays on 20.16 for now. Images for amd64 and arm64 (20.16 is amd64 only).

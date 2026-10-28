@@ -30,7 +30,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - `FREEPBX_AUTOUPGRADE_CORE` does not migrate FreePBX 16 to 17: use `IZPBX_MIGRATE_FREEPBX`
 - `APP_PORT_SIP` (5160, chan_sip in 20.16) is a PJSIP transport, created only by the migration when the 20.16 had chan_sip extensions or trunks; new installations have no transport on 5160
 - Updated FOP2 `2.31.53` (Debian package), ionCube loader `15.5.1` for PHP 8.2, Zabbix agent 2 `7.0`, npm `10.9.9` on the Node.js 18 of Debian 12, sngrep `1.9.0`, bcg729 `1.1.2`; MariaDB `10.11.19` LTS unchanged
-- Image for **amd64** only: arm64 comes in a later release (the build scripts already support it)
+- Images for **amd64** and **arm64** (Raspberry Pi 4/5 with a 64-bit OS, ARM servers; https://github.com/ugoviti/izpbx/issues/91): on arm64 there are no Digium binary codecs (`codec_opus`, `codec_silk`, `format_ogg_opus`, x86_64 only) and FOP2 is its armv7l build (`2.31.48`) on the armhf libraries. The release workflow publishes the amd64 image first, then adds the arm64 one (emulated, built after it) to the same tags
 - Image tags `22.17.0`, `22.17`, `22`; **`latest` stays on 20.16** for now: use an explicit tag. `compose.yml` uses `22.17.0`; `default.env` lists every configurable variable
 - SLA runs with `app_sla` (MeetMe stays disabled); conferences use ConfBridge
 - The Asterisk built-in HTTP server (ARI, WebSocket, WebRTC) listens on `127.0.0.1` only, the FreePBX 17 default: `FREEPBX_HTTPBINDADDRESS` / `FREEPBX_HTTPTLSBINDADDRESS=0.0.0.0` open it to the network
