@@ -405,6 +405,72 @@ migration_modules_align() {
   migration_state_set modules_aligned "done"
 }
 
+# M5.6, after the restore: the legacy restore of FreePBX 17 (backup module,
+# Handlers/Restore/Legacy.php) loads the dump of the 16 into SQLite without
+# undoing its escapes, so CR, quotes, apostrophes and backslashes come back
+# as "\r", \", \', \\ (seen on pbx01: calendar events with an unreadable
+# DTSTART, "error 500" in the calendar; "\r" in the outbound route emails;
+# "\\n" in the voicemail email body; "\;" in the paging auto answer headers).
+# The dump of M4 is loaded in another database (its CREATE DATABASE and USE
+# left out) and migration-repair-escapes.php puts back every value of FreePBX
+# 17 that, with the dump escapes undone, is the value of the same column in
+# FreePBX 16. The tables it changes are dumped first in
+# <snapshot>/repair-escapes-<ts>.sql.gz. --check: only the report, nothing
+# written. Also for a PBX migrated before this repair existed:
+#   docker exec izpbx izpbx-migrate repair-escapes --check | --apply
+IZPBX_MIGRATION_REPAIR_DB=izpbx_fpbx16_repair
+migration_repair_escapes() { # [--check|--apply]
+  local mode=${1:-auto} snap dump out tables bak line rc=0
+  [ "$mode" != auto ] || [ "$(migration_state escapes)" != "done" ] || return 0
+  snap=$(migration_state snapshot_dir) dump="$(migration_state snapshot_dir)/db/$MYSQL_DATABASE.sql.gz"
+  if [ -z "$snap" ] || [ ! -s "$dump" ]; then
+    log_warn "migration: no dump of FreePBX 16 (${dump}), the values damaged by the restore cannot be checked"
+    return 0
+  fi
+  _migration_sql "DROP DATABASE IF EXISTS \`$IZPBX_MIGRATION_REPAIR_DB\`" &&
+    _migration_sql "CREATE DATABASE \`$IZPBX_MIGRATION_REPAIR_DB\`" ||
+    { log_warn "migration: cannot create the database $IZPBX_MIGRATION_REPAIR_DB, the values damaged by the restore are not checked"; return 0; }
+  # the dump has "CREATE DATABASE" and "USE `<config database>`": without them
+  # everything goes to the repair database, the config database is not touched
+  if ! gzip -dc "$dump" | sed -E '/^CREATE DATABASE /d; /^USE `/d' |
+      MYSQL_PWD="$(_migration_dbpass)" mariadb -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$(_migration_dbuser)" "$IZPBX_MIGRATION_REPAIR_DB"; then
+    _migration_sql "DROP DATABASE IF EXISTS \`$IZPBX_MIGRATION_REPAIR_DB\`" || true
+    log_warn "migration: the dump of FreePBX 16 cannot be loaded, the values damaged by the restore are not checked"
+    return 0
+  fi
+  _migration_repair_php() {
+    IZPBX_REPAIR_DBUSER="$(_migration_dbuser)" IZPBX_REPAIR_DBPASS="$(_migration_dbpass)" \
+      php /usr/local/share/izpbx/migration-repair-escapes.php "$IZPBX_MIGRATION_REPAIR_DB" "$MYSQL_DATABASE" "$@"
+  }
+  out=$(_migration_repair_php 2>&1) || rc=$?
+  tables=$(sed -n 's/^TABLES //p' <<< "$out")
+  if [ "$rc" -ne 0 ]; then
+    log_warn "migration: check of the values damaged by the restore failed:"
+    while IFS= read -r line; do log_detail "migration: $line"; done <<< "$out"
+  elif [ -z "$tables" ]; then
+    log_info "migration: no value damaged by the restore of FreePBX 17 (escapes of the FreePBX 16 dump)"
+  elif [ "$mode" == --check ]; then
+    log_warn "migration: values damaged by the restore of FreePBX 17, to repair with: izpbx-migrate repair-escapes --apply"
+    grep -E '^(FIX|LEFT) ' <<< "$out" | while IFS= read -r line; do log_detail "migration: $line"; done
+  else
+    bak="$snap/repair-escapes-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+    # shellcheck disable=SC2086 # one argument per table
+    MYSQL_PWD="$(_migration_dbpass)" mariadb-dump -h "$MYSQL_SERVER" -P "$APP_PORT_MYSQL" -u "$(_migration_dbuser)" \
+      --single-transaction "$MYSQL_DATABASE" $tables | gzip > "$bak"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+      log_warn "migration: cannot save the tables to repair ($tables), nothing changed"
+    else
+      out=$(_migration_repair_php --apply 2>&1) || rc=$?
+      log_ok "migration: values of FreePBX 16 damaged by the restore of FreePBX 17 put back (tables before the repair in $bak):"
+      grep -E '^(FIX|LEFT) ' <<< "$out" | while IFS= read -r line; do log_detail "migration: $line"; done
+      [ "$rc" -eq 0 ] || log_warn "migration: the repair stopped with an error, the tables before it are in $bak"
+    fi
+  fi
+  _migration_sql "DROP DATABASE IF EXISTS \`$IZPBX_MIGRATION_REPAIR_DB\`" || true
+  [ "$mode" == --check ] || [ "$rc" -ne 0 ] || migration_state_set escapes "done"
+  return 0
+}
+
 # M6: the chan_sip of izPBX 20.16 listened on APP_PORT_SIP (5160): providers
 # and phones of the trunks and extensions converted to PJSIP still send
 # there. If the 16 had chan_sip extensions or trunks, a PJSIP transport

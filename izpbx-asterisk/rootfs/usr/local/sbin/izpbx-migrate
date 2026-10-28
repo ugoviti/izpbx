@@ -5,6 +5,7 @@
 #   izpbx-migrate archive      M5.1: FreePBX "legacy" backup archive from the raw data
 #   izpbx-migrate restore      M5.2-M5.4: database recreated, FreePBX 17 installed, restore
 #   izpbx-migrate modules      M5.5: default modules of FreePBX 17 not active in the 16 disabled/uninstalled
+#   izpbx-migrate repair-escapes [--check|--apply]  M5.6: values of FreePBX 16 damaged by the legacy restore put back (default --check)
 #   izpbx-migrate sip-transport  M6: PJSIP transport on APP_PORT_SIP for the ex chan_sip trunks
 #   izpbx-migrate audio        M6: custom prompts, sounds/custom and music on hold from the snapshot
 #   izpbx-migrate astdb        M6: astdb keys the restore did not bring back (Asterisk stopped)
@@ -25,6 +26,7 @@ case "${1:-}" in
   archive) migration_archive ;;
   restore) migration_restore ;;
   modules) migration_modules_align ;;
+  repair-escapes) migration_repair_escapes "${2:---check}" ;;
   sip-transport) migration_sip_transport ;;
   audio) migration_audio ;;
   astdb) migration_astdb ;;
@@ -33,5 +35,5 @@ case "${1:-}" in
   fop2) migration_fop2 ;;
   soundlang) migration_soundlang ;;
   verify) migration_verify ;;
-  *) sed -n '4,15p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
+  *) sed -n '4,16p' "$0" | sed 's/^# \{0,1\}/usage: /' >&2; exit 2 ;;
 esac

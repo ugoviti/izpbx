@@ -40,6 +40,7 @@ else
   if [ "$mode" == migration ]; then
     migration_restore || die "freepbx: migration failed (see above): restart the container to resume"
     migration_modules_align || die "freepbx: migration failed (see above): restart the container to resume"
+    migration_repair_escapes || die "freepbx: migration failed (see above): restart the container to resume"
     migration_sip_transport || die "freepbx: migration failed (see above): restart the container to resume"
     migration_audio || die "freepbx: migration failed (see above): restart the container to resume"
     migration_astdb || die "freepbx: migration failed (see above): restart the container to resume"
