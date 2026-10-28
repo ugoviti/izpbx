@@ -72,7 +72,7 @@ jobs:
       - name: version
         id: ver
         env:
-          VERSION: ${{ steps.ver.outputs.version }}
+          VERSION: ${{ inputs.version }}
           LATEST: ${{ inputs.latest }}
         run: |
           set -eu
