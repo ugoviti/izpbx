@@ -6,11 +6,11 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 
 # Supported tags
 
-## Production Branch:
-* `22.17`, `22.17.X`, `22.17.X-BUILD`, `22` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64)
+## Release Candidate (testing, not yet for production):
+* `22.17.0-rcN`, `22.17.0-rcN-BUILD` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64): the git branch `main`. When `22.17.0` is released the tags become `22.17`, `22.17.X`, `22.17.X-BUILD`, `22`
 
-## Maintenance Branch (security fixes only, until 2027-01-01):
-* `20.16`, `20.16.X`, `20.16.X-BUILD`, `20`, `latest` (Asterisk 20 LTS + FreePBX 16): `latest` stays here for now, use an explicit tag. To move from 20.16 to 22.17 see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217)
+## Production Branch (security fixes only, until 2027-01-01):
+* `20.16`, `20.16.X`, `20.16.X-BUILD`, `20`, `latest` (Asterisk 20 LTS + FreePBX 16): the git branch `release/20.16`. `latest` stays here for now, use an explicit tag. To move from 20.16 to 22.17 see [Upgrade from 20.16 to 22.17](#upgrade-from-2016-to-2217)
 
 ## End of Life Branches (no more updates, don't use in production):
 * `18.16`, `18.16.X`, `18.16.X-BUILD`,`18` (Asterisk 18 LTS + FreePBX 16)
@@ -98,8 +98,9 @@ sudo systemctl enable --now docker
   - `git clone https://github.com/ugoviti/izpbx.git /opt/izpbx`
   - `cd /opt/izpbx`
 
-- Checkout into latest official release:
-  - `git checkout tags/$(git tag | sort --version-sort | tail -1)`
+- Checkout into latest official release (release candidates `-rcN` left out):
+  - `git checkout tags/$(git tag | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort --version-sort | tail -1)`
+  - to stay on izPBX 20.16 (FreePBX 16): `git checkout tags/$(git tag -l '20.16.*' | grep -E '^[0-9.]+$' | sort --version-sort | tail -1)`
 
 - Copy default configuration file `default.env` into `.env`:
   - `cp default.env .env`
@@ -158,7 +159,11 @@ cd /opt/izpbx
 git checkout main
 git pull
 git fetch --tags --all -f
-git checkout tags/$(git tag | sort --version-sort | tail -1)
+git checkout tags/$(git tag | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort --version-sort | tail -1)
+```
+On izPBX 20.16 (FreePBX 16) stay on its releases: `main` now holds 22.17, a 20.16 deploy that pulls it gets the 22.17 `compose.yml`. Use the 20.16 tags instead of the last line above:
+```
+git checkout tags/$(git tag -l '20.16.*' | grep -E '^[0-9.]+$' | sort --version-sort | tail -1)
 ```
 
 2. Upgrade the **izpbx** deploy with:  
@@ -219,6 +224,8 @@ Variables of the migration (in `.env`):
 - **Database privileges**: the migration drops and recreates the FreePBX database. Keep `MYSQL_ROOT_PASSWORD` in `.env`, or give `MYSQL_USER` all privileges on it (the checks print the exact `GRANT`). The CDR database is not touched.
 
 ### 1. Switch the image and run the checks
+
+> 22.17 is a release candidate until `22.17.0` is out: to test the migration now use the last `22.17.0-rcN` tag (see the [Docker Hub tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags)) where the commands below say `22.17.0`, on a copy of your PBX first.
 
 Set the 22.17 image (always an explicit version: `latest` stays on 20.16 for now) and pull it. In 22.17 the version is `IZPBX_VERSION` of `.env`: the first line turns the image line of a 20.16 `compose.yml`, which has the tag written in it, into the 22.17 form (`izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`; nothing to do with the `compose.yml` of 22.17), the second sets the version in `.env`:
 
