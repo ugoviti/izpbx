@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# P0-06: izpbx-asterisk/docs/env-contract.md documents every variable read by the 20.16.22
+# P0-06: izpbx-asterisk/tests/expected/env-contract-20.16.22.md documents every variable read by the 20.16.22
 # entrypoint (entrypoint-hooks.sh + entrypoint.sh), plus the variables
 # declared by that release's default.env and Dockerfile ENV.
 source "$(dirname "$0")/../lib.sh"
 
 REF=20.16.22
-contract="$REPO_DIR/izpbx-asterisk/docs/env-contract.md"
+contract="$REPO_DIR/izpbx-asterisk/tests/expected/env-contract-20.16.22.md"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 
@@ -32,7 +32,7 @@ missing() { # contract file -> prints variables not documented as `VAR`
 
 miss=$(missing "$contract")
 [ -z "$miss" ] || log "missing from the contract: $(echo $miss)"
-assert_eq "0" "$(printf '%s' "$miss" | grep -c . || true)" "every $REF variable is in izpbx-asterisk/docs/env-contract.md"
+assert_eq "0" "$(printf '%s' "$miss" | grep -c . || true)" "every $REF variable is in izpbx-asterisk/tests/expected/env-contract-20.16.22.md"
 
 # negative: a contract where APP_FQDN is no longer documented must be reported
 sed 's/`APP_FQDN`/APP_FQDN/g' "$contract" > "$work/broken.md"

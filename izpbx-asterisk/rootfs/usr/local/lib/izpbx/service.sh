@@ -12,7 +12,7 @@
 # shellcheck source=env.sh
 . /usr/local/lib/izpbx/env.sh
 
-# rules kept from 20.16 (izpbx-asterisk/docs/env-contract.md §5): Postfix replaces msmtp,
+# rules kept from 20.16 (izpbx-asterisk/tests/expected/env-contract-20.16.22.md §5): Postfix replaces msmtp,
 # DHCP and TFTP are served by dnsmasq
 services_resolve() {
   [ "$POSTFIX_ENABLED" == "true" ] && MSMTP_ENABLED=false

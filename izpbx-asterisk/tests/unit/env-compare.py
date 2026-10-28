@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare the defaults of env.sh with izpbx-asterisk/docs/env-contract.md (P3-02).
+"""Compare the defaults of env.sh with izpbx-asterisk/tests/expected/env-contract-20.16.22.md (P3-02).
 
   env-compare.py CONTRACT VERSIONS_ENV DIFFERENCES DESIGN ACTUAL
 

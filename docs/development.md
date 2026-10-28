@@ -1,14 +1,10 @@
-# izpbx-asterisk
-
-izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine and FreePBX Management GUI
-
-for more info: https://github.com/ugoviti/izdock-izpbx
-
 # izPBX Development
+
+Notes to build and run the `izpbx-asterisk` image from the sources. Component updates, tests and releases: [maintainers.md](maintainers.md).
 
 ## BUILD
 
-run docker build from inside `izpbx-asterisk` directory
+run docker build from inside the `izpbx-asterisk` directory
 
 
 Asterisk 22 + FreePBX 17 (component versions and checksums from `versions.env`):

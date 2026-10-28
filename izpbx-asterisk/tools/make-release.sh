@@ -22,7 +22,7 @@
 #   else   the commit subjects are used as a draft.
 # The entry is opened in $EDITOR for review (skipped with --yes).
 #
-# --commit: compose.yml, default.env and README.md move from <previous X.Y.N> to
+# --commit: compose.yml, default.env, README.md and docs/*.md move from <previous X.Y.N> to
 # the new version, one commit "X.Y.Z release", annotated tag X.Y.Z. --push: the
 # branch and the tag go to origin, the tag starts the izpbx-release workflow
 # (Gitea registry only; Docker Hub needs izpbx-promote).
@@ -277,10 +277,10 @@ fi
 # --- image references of the same series, <last> -> <version>: the
 # explicit tags izpbx-asterisk:<last> (README examples), the default of
 # compose.yml ${IZPBX_VERSION:-<last>} and IZPBX_VERSION=<last> (default.env,
-# README upgrade steps)
+# upgrade steps of docs/)
 files=()
 if [ -n "$last" ]; then
-  for f in compose.yml default.env README.md; do
+  for f in compose.yml default.env README.md docs/*.md; do
     [ -f "$f" ] && grep -qE "izpbx-asterisk:${last//./\\.}\b|IZPBX_VERSION(:-|=)${last//./\\.}\b" "$f" && files+=("$f")
   done
 fi

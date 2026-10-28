@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# P7-01: README section "Upgrade from 20.16 to 22.17".
+# P7-01: the guide "Upgrade from 20.16 to 22.17" (docs/upgrade-20.16-to-22.17.md).
 # - every variable new or removed in the release notes (§13 of the design:
 #   the list below, and the names in backticks of §13 when .specs is there)
-#   is named in the README; negative check: a README without one is reported;
+#   is named in the README or in docs/; negative check: docs without
+#   one is reported;
 # - the code blocks marked "<!-- test:run -->" are run, in order, as written,
 #   in a docker CLI container (sh, docker compose) on a deploy made of the
 #   compose.yml and default.env of the repository as a 20.16 deploy has them
@@ -19,7 +20,8 @@
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p7-01
 cli=docker.io/library/docker:27.5.1-cli
-readme="$REPO_DIR/README.md"
+readme="$REPO_DIR/docs/upgrade-20.16-to-22.17.md"
+main_readme="$REPO_DIR/README.md"
 fx="$TESTS_DIR/fixtures/out/20.16.22"
 work=$(mktemp -d)
 
@@ -35,9 +37,10 @@ vars=$(tr ' \n' '\n\n' <<< "$vars" | grep . | sort -u)
 missing_vars() { # readme -> the variables it does not name
   local v; for v in $vars; do grep -qw "$v" "$1" || printf '%s ' "$v"; done
 }
-assert_eq "" "$(missing_vars "$readme")" "the README names every variable of the release notes"
-grep -vw IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN "$readme" > "$work/readme-without"
-assert_eq "IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN " "$(missing_vars "$work/readme-without")" "negative: a README without one is reported"
+cat "$main_readme" "$REPO_DIR"/docs/*.md > "$work/docs-all"
+assert_eq "" "$(missing_vars "$work/docs-all")" "the README and docs/ name every variable of the release notes"
+grep -vw IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN "$work/docs-all" > "$work/readme-without"
+assert_eq "IZPBX_MIGRATE_ACCEPT_CUSTOM_DIALPLAN " "$(missing_vars "$work/readme-without")" "negative: docs without one are reported"
 
 # --- the marked blocks
 awk -v dir="$work" '

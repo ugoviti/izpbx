@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # P3-02: env.sh holds every default in one place and follows the contract:
-# for every variable of izpbx-asterisk/docs/env-contract.md (sections 1-14) the value after
+# for every variable of izpbx-asterisk/tests/expected/env-contract-20.16.22.md (sections 1-14) the value after
 # sourcing env.sh in an empty environment equals the contract default, or the
 # difference is in izpbx-asterisk/tests/expected/env-differences.txt and §13 of the design
 # mentions it (izpbx-asterisk/tests/unit/env-compare.py). env.sh works under "set -u".
@@ -10,7 +10,7 @@ work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 dir="$REPO_DIR/izpbx-asterisk"
 env_sh="$dir/rootfs/usr/local/lib/izpbx/env.sh"
-contract="$REPO_DIR/izpbx-asterisk/docs/env-contract.md"
+contract="$REPO_DIR/izpbx-asterisk/tests/expected/env-contract-20.16.22.md"
 design="$REPO_DIR/.specs/2026-10-23-release-22.17.0-freepbx17.md"
 image=izpbx-asterisk:p3-02
 compare=("$TESTS_DIR/unit/env-compare.py" "$contract" "$dir/versions.env" "$TESTS_DIR/expected/env-differences.txt" "$design")

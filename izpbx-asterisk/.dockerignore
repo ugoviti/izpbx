@@ -2,8 +2,6 @@
 # build/ and rootfs/ (tests/ alone holds gigabytes of fixtures)
 tests/
 tools/
-docs/
 compose/
 screenshots/
-README.md
 .dockerignore

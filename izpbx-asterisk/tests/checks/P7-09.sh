@@ -4,8 +4,8 @@
 #   "## [22.17.0] - <date>", an empty "## [Unreleased]" stays on top, tag 22.17.0;
 # - patch: 22.17.1 with the hand written Unreleased entries plus one line per
 #   component changed in versions.env and freepbx-modules.txt, compose.yml
-#   (${IZPBX_VERSION:-...}), default.env (IZPBX_VERSION=) and README.md moved
-#   from 22.17.0 to 22.17.1 (the 20.16 examples of the README untouched, P7-10);
+#   (${IZPBX_VERSION:-...}), default.env (IZPBX_VERSION=), README.md and
+#   docs/*.md moved from 22.17.0 to 22.17.1 (the 20.16 examples untouched, P7-10);
 # - empty Unreleased: draft from the commit subjects, or from --ai (a fake
 #   claude in PATH);
 # - no option (or --dry-run) is a dry run that writes nothing and prints how to
@@ -21,7 +21,8 @@ rel="$REPO_DIR/izpbx-asterisk/tools/make-release.sh"
 r="$work/repo"
 today=$(date +%F)
 
-mkdir -p "$r/izpbx-asterisk/build" "$r/izpbx-asterisk/tools"
+mkdir -p "$r/izpbx-asterisk/build" "$r/izpbx-asterisk/tools" "$r/docs"
+cp "$REPO_DIR"/docs/*.md "$r/docs/"
 cp "$REPO_DIR/CHANGELOG.md" "$REPO_DIR/compose.yml" "$REPO_DIR/default.env" "$REPO_DIR/README.md" "$r/"
 cp "$REPO_DIR/izpbx-asterisk/versions.env" "$r/izpbx-asterisk/"
 cp "$REPO_DIR/izpbx-asterisk/build/freepbx-modules.txt" "$r/izpbx-asterisk/build/"
@@ -96,12 +97,14 @@ assert_cmd "FreePBX modules line added" -- grep -qE 'Updated FreePBX modules: `c
 assert_cmd "component lines under ### Changed" -- bash -c "grep -A3 '^### Changed' '$work/e1' | grep -q 'Asterisk'"
 assert_cmd "compose.yml moved to 22.17.1" -- grep -qF 'izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.1}' "$r/compose.yml"
 assert_cmd "default.env moved to 22.17.1" -- grep -qx 'IZPBX_VERSION=22.17.1' "$r/default.env"
-assert_cmd "README upgrade steps moved to 22.17.1" -- grep -qF "echo 'IZPBX_VERSION=22.17.1' >> .env" "$r/README.md"
+assert_cmd "upgrade guide steps moved to 22.17.1" -- grep -qF "echo 'IZPBX_VERSION=22.17.1' >> .env" "$r/docs/upgrade-20.16-to-22.17.md"
+assert_cmd "multi-tenant guide moved to 22.17.1" -- grep -qF 'izpbx-asterisk:22.17.1' "$r/docs/multi-tenant.md"
+assert_cmd "release commit has the docs" -- sh -c "git -C '$r' show --name-only --format= HEAD | grep -qx docs/upgrade-20.16-to-22.17.md"
 assert_cmd "release commit has default.env" -- sh -c "git -C '$r' show --name-only --format= HEAD | grep -qx default.env"
 assert_cmd "README image references moved to 22.17.1" -- grep -qF 'izpbx-asterisk:22.17.1' "$r/README.md"
-assert_eq "0" "$(cat "$r/README.md" "$r/compose.yml" "$r/default.env" | grep -cE 'izpbx-asterisk:22\.17\.0|IZPBX_VERSION(:-|=)22\.17\.0' || true)" "no 22.17.0 image reference left"
+assert_eq "0" "$(cat "$r/README.md" "$r"/docs/*.md "$r/compose.yml" "$r/default.env" | grep -cE 'izpbx-asterisk:22\.17\.0|IZPBX_VERSION(:-|=)22\.17\.0' || true)" "no 22.17.0 image reference left"
 assert_cmd "MARIADB_VERSION untouched" -- grep -qx 'MARIADB_VERSION=10.11.19' "$r/default.env"
-assert_cmd "20.16 examples of the README untouched" -- grep -qF 'izpbx-asterisk:20\.16\.[0-9]*' "$r/README.md"
+assert_cmd "20.16 examples of the upgrade guide untouched" -- grep -qF 'izpbx-asterisk:20\.16\.[0-9]*' "$r/docs/upgrade-20.16-to-22.17.md"
 
 # negative: existing tag, empty entry, wrong branch
 assert_cmd_fails "existing tag refused" -- rr --commit --yes --version 22.17.1

@@ -28,7 +28,7 @@ assert_cmd_fails "izpbx-asterisk/patch/php74.patch removed" -- test -e "$dir/pat
 assert_cmd_fails "izpbx-asterisk/legacy-20.16 removed" -- test -e "$dir/legacy-20.16"
 for name in "${!patterns[@]}"; do
   re=${patterns[$name]}
-  # the image sources only: tests/, docs/ and tools/ of izpbx-asterisk name these patterns on purpose
+  # the image sources only: tests/ and tools/ of izpbx-asterisk name these patterns on purpose
   found=$(grep -rnE -- "$re" "$dir/Dockerfile" "$dir/versions.env" "$dir/build" "$dir/rootfs" || true)
   [ -z "$found" ] || log "$name:"$'\n'"$found"
   assert_eq 0 "$(grep -c . <<< "$found" || true)" "no $name in izpbx-asterisk/"

@@ -62,7 +62,7 @@ services:
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
   ## NOTE: the version is IZPBX_VERSION in .env, always an explicit tag ('latest' stays on 20.16 for now).
-  ##       From a 20.16 volume (FreePBX 16) the migration to FreePBX 17 is opt-in: see README.md
+  ##       From a 20.16 volume (FreePBX 16) the migration to FreePBX 17 is opt-in: see docs/upgrade-20.16-to-22.17.md
   ##       "Upgrade from 20.16 to 22.17"
   izpbx:
     image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.0}

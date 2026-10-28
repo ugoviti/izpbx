@@ -4,7 +4,7 @@
 # after common.sh:
 #   . /usr/local/lib/izpbx/env.sh
 #
-# The defaults follow izpbx-asterisk/docs/env-contract.md (the 20.16.22 behaviour); the
+# The defaults follow izpbx-asterisk/tests/expected/env-contract-20.16.22.md (the 20.16.22 behaviour); the
 # intended differences are in §13 of the design and in
 # izpbx-asterisk/tests/expected/env-differences.txt. As in 20.16, ": ${VAR:=default}" gives
 # the default also to a variable set but empty. A default that refers to

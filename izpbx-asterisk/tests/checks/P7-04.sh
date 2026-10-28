@@ -3,7 +3,7 @@
 # - docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-22.17.yml
 #   config is valid (default.env as .env) and gives izpbx the image dev-22.17;
 # - compose-dev-20.16.yml exists neither in the tree nor among the files git
-#   tracks, and nothing but the CHANGELOG names it; the image README builds
+#   tracks, and nothing but the CHANGELOG names it; the development notes (docs/development.md) build
 #   and runs dev-22.17;
 # - negative check: the same command with a compose file that does not exist
 #   fails.
@@ -24,7 +24,7 @@ assert_cmd "izpbx image dev-22.17" -- grep -qE '^ +image: izpbx-asterisk:dev-22\
 assert_cmd_fails "compose-dev-20.16.yml not in the tree" -- test -e "$REPO_DIR/$old"
 assert_eq "" "$(git -C "$REPO_DIR" ls-files -- "$old")" "compose-dev-20.16.yml not tracked by git"
 assert_eq "" "$(git -C "$REPO_DIR" grep -l 'compose-dev-20\.16' -- . ':!CHANGELOG.md' ':!izpbx-asterisk/tests/checks/P7-04.sh' || true)" "only the CHANGELOG (and this check) names compose-dev-20.16.yml"
-assert_eq "" "$(git -C "$REPO_DIR" grep -n 'dev-20\.16' -- izpbx-asterisk/README.md || true)" "the image README has no dev-20.16 left"
-assert_cmd "the image README uses compose-dev-22.17.yml" -- grep -qF "$dev" "$REPO_DIR/izpbx-asterisk/README.md"
+assert_eq "" "$(git -C "$REPO_DIR" grep -n 'dev-20\.16' -- docs/development.md || true)" "the development notes have no dev-20.16 left"
+assert_cmd "the development notes use compose-dev-22.17.yml" -- grep -qF "$dev" "$REPO_DIR/docs/development.md"
 assert_cmd_fails "negative: a compose file that does not exist fails" -- config "$old"
 finish

@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [22.17.0] - Unreleased
-New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volumes of izPBX 20.16 (FreePBX 16) are migrated by the container, opt-in: read [Upgrade from 20.16 to 22.17](README.md#upgrade-from-2016-to-2217) before switching image.
+New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volumes of izPBX 20.16 (FreePBX 16) are migrated by the container, opt-in: read [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md) before switching image.
 ### Security
 - FreePBX 16 reaches end of life on 2027-01-01: FreePBX `17` (framework `17.0.33`) on PHP `8.2` (PHP 7.4 is end of life)
 - Base image `debian:bookworm-slim` pinned by digest; every downloaded source and binary (Asterisk, s6-overlay, FreePBX, ionCube, FOP2, npm, addons) is fetched over HTTPS only and verified with the sha256 of `izpbx-asterisk/versions.env`, per architecture where it differs
@@ -35,6 +35,7 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - The Asterisk built-in HTTP server (ARI, WebSocket, WebRTC) listens on `127.0.0.1` only, the FreePBX 17 default: `FREEPBX_HTTPBINDADDRESS` / `FREEPBX_HTTPTLSBINDADDRESS=0.0.0.0` open it to the network
 - `FREEPBX_*` and SIP settings changed in the `.env` are applied at start with a `fwconsole reload` once Asterisk is up (20.16 wrote them in the database and waited for the next "Apply Config")
 - `APP_PORT_UCP_HTTP` / `APP_PORT_UCP_HTTPS` now set the ports of the UCP node server (FreePBX `NODEJSBINDPORT` / `NODEJSHTTPSBINDPORT`; in 20.16 they were only published, FreePBX kept 8001/8003); with `network_mode: host` they must be free on the host, the log says so when they are taken
+- Documentation: `README.md` shorter (it is also the Docker Hub overview, limit 25000 bytes); the migration guide, multi-tenant examples, service commands and logs, maintainer and development notes are in `docs/`. The `izpbx-promote` workflow updates the Docker Hub overview from the README of the published tag
 - With msmtp (the default MTA) `mailq` answers "Mail queue is empty" (msmtp has no queue): the FreePBX dashboard showed "Unknown output from mailq"
 - `compose.yml`: MariaDB with `--log-warnings=1` (no "Aborted connection" note for every `fwconsole` run) and `--expire-logs-days=0` (no warning about the binlog expiry of the image); fail2ban without the `allowipv6` warning at every start
 - "Apply Config" no longer logs one `AstDB key /AMPUSER/<device>/queuehint does not exist` WARNING per device (FreePBX queues module): Asterisk writes that message of AMI `DBDel` at debug level

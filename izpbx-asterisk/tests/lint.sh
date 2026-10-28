@@ -76,5 +76,12 @@ if [ ${#df_list[@]} -gt 0 ]; then
     "$HADOLINT_IMAGE" hadolint --no-color --config /etc/hadolint.yaml "${df_list[@]}" || rc=1
 fi
 
+# README.md is also the Docker Hub overview (izpbx-promote): under the 25000
+# bytes of Docker Hub once its links are made absolute (a long tag as REF)
+if [ -f README.md ] && [ -x izpbx-asterisk/tools/readme-dockerhub.sh ]; then
+  echo "readme: Docker Hub overview size"
+  izpbx-asterisk/tools/readme-dockerhub.sh 22.17.0-rc99 README.md >/dev/null || rc=1
+fi
+
 [ "$rc" -eq 0 ] && echo "lint: clean" || echo "lint: findings above" >&2
 exit "$rc"

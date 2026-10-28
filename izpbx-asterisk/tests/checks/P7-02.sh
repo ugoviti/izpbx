@@ -2,7 +2,7 @@
 # P7-02: default.env and compose.yml of 22.17.
 # - docker compose config is valid (compose.yml with default.env as .env);
 # - the izpbx image is 22.17.0, an explicit tag (IZPBX_VERSION, P7-10);
-# - every variable of the contract (izpbx-asterisk/docs/env-contract.md) is in default.env,
+# - every variable of the contract (izpbx-asterisk/tests/expected/env-contract-20.16.22.md) is in default.env,
 #   even commented, except the internal ones: sections 1 (image and build
 #   metadata), 14 (legacy entrypoint, removed in 22.17) and 15 (internal
 #   names), and the rows declared "not used" or "Internal"; the new 22.17
@@ -13,7 +13,7 @@
 #   compose.yml with an invalid key, are reported.
 source "$(dirname "$0")/../lib.sh"
 cli=docker.io/library/docker:27.5.1-cli
-contract="$REPO_DIR/izpbx-asterisk/docs/env-contract.md"
+contract="$REPO_DIR/izpbx-asterisk/tests/expected/env-contract-20.16.22.md"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 
