@@ -29,6 +29,7 @@ fetch "https://sources.buildroot.net/spandsp/spandsp-$SPANDSP_VER.tar.gz" "$SPAN
 fetch "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$ASTERISK_VER.tar.gz" "$ASTERISK_SHA256" "$cache/asterisk-$ASTERISK_VER.tar.gz"
 fetch "https://raw.githubusercontent.com/asterisk/third-party/master/pjproject/$PJPROJECT_VER/pjproject-$PJPROJECT_VER.tar.bz2" "$PJPROJECT_SHA256" "$cache/pjproject-$PJPROJECT_VER.tar.bz2"
 fetch "https://raw.githubusercontent.com/asterisk/third-party/master/jansson/$JANSSON_VER/jansson-$JANSSON_VER.tar.bz2" "$JANSSON_SHA256" "$cache/jansson-$JANSSON_VER.tar.bz2"
+fetch "https://raw.githubusercontent.com/asterisk/third-party/master/libjwt/$LIBJWT_VER/libjwt-$LIBJWT_VER.tar.gz" "$LIBJWT_SHA256" "$cache/libjwt-$LIBJWT_VER.tar.gz"
 
 ## addons.sh
 fetch "https://github.com/BelledonneCommunications/bcg729/archive/$BCG729_VER.tar.gz" "$BCG729_SHA256" "$cache/bcg729.tar.gz"

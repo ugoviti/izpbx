@@ -107,9 +107,11 @@ if [ -z "$new" ]; then
   lookup ASTERISK_VER "$ASTERISK_VER" "" downloads.asterisk.org
   report PJPROJECT_VER "$PJPROJECT_VER" "" "follows ASTERISK_VER" || true
   report JANSSON_VER "$JANSSON_VER" "" "follows ASTERISK_VER" || true
+  report LIBJWT_VER "$LIBJWT_VER" "" "follows ASTERISK_VER" || true
 elif report ASTERISK_VER "$ASTERISK_VER" "$new"; then
   report PJPROJECT_VER "$PJPROJECT_VER" "$PJPROJECT_VER" || true
   report JANSSON_VER "$JANSSON_VER" "$JANSSON_VER" || true
+  report LIBJWT_VER "$LIBJWT_VER" "$LIBJWT_VER" || true
 else
   propose "ASTERISK_VER=$new" "ASTERISK_SHA256=$(fetch "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$new.sha256" | cut -d' ' -f1)"
   # the bundled libraries follow the release: third-party/versions.mak of its tarball
@@ -117,11 +119,13 @@ else
   vmak=$( { fetch --proto '=https' -o "$at" "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$new.tar.gz" &&
             tar -xzOf "$at" "asterisk-$new/third-party/versions.mak"; } 2>/dev/null || true)
   rm -f "$at"
-  for lib in PJPROJECT JANSSON; do
+  for lib in PJPROJECT JANSSON LIBJWT; do
     cur_var="${lib}_VER"; lname=${lib,,}
+    # tarball type of asterisk/third-party: libjwt is a .tar.gz, the others .tar.bz2
+    ext=tar.bz2; [ "$lib" == "LIBJWT" ] && ext=tar.gz
     libnew=$(sed -n "s/^${lib}_VERSION=//p" <<< "$vmak" | tr -d '[:space:]')
     lookup "$cur_var" "${!cur_var}" "$libnew" "versions.mak of asterisk-$new" ||
-      propose "${lib}_VER=$libnew" "${lib}_SHA256=$(sha_of "https://raw.githubusercontent.com/asterisk/third-party/master/$lname/$libnew/$lname-$libnew.tar.bz2")"
+      propose "${lib}_VER=$libnew" "${lib}_SHA256=$(sha_of "https://raw.githubusercontent.com/asterisk/third-party/master/$lname/$libnew/$lname-$libnew.$ext")"
   done
 fi
 report ASTERISK_MP3_SVN_REV "$ASTERISK_MP3_SVN_REV" "" "svn info https://svn.digium.com/svn/thirdparty/mp3/trunk" || true

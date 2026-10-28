@@ -33,6 +33,7 @@ fetch_verified "https://downloads.asterisk.org/pub/telephony/asterisk/releases/a
 # bundled third-party sources, prefetched so configure does not download them
 fetch_verified "https://raw.githubusercontent.com/asterisk/third-party/master/pjproject/$PJPROJECT_VER/pjproject-$PJPROJECT_VER.tar.bz2" "$PJPROJECT_SHA256" "$cache/pjproject-$PJPROJECT_VER.tar.bz2"
 fetch_verified "https://raw.githubusercontent.com/asterisk/third-party/master/jansson/$JANSSON_VER/jansson-$JANSSON_VER.tar.bz2" "$JANSSON_SHA256" "$cache/jansson-$JANSSON_VER.tar.bz2"
+fetch_verified "https://raw.githubusercontent.com/asterisk/third-party/master/libjwt/$LIBJWT_VER/libjwt-$LIBJWT_VER.tar.gz" "$LIBJWT_SHA256" "$cache/libjwt-$LIBJWT_VER.tar.gz"
 rm -rf "$src/asterisk" && mkdir -p "$src/asterisk"
 tar -xzf "$cache/asterisk-$ASTERISK_VER.tar.gz" -C "$src/asterisk" --strip-components=1
 cd "$src/asterisk"
@@ -51,7 +52,7 @@ grep -q ASTMM_LIBC addons/mp3/interface.c || sed -i -e '/#include "asterisk.h"/i
 sed -i -e 's|ast_log(LOG_WARNING, "AstDB key %s does not exist\\n", fullkey);|ast_debug(1, "AstDB key %s does not exist\\n", fullkey);|' main/db.c
 grep -q 'ast_debug(1, "AstDB key %s does not exist' main/db.c || build_die "main/db.c: AstDB key warning not found, update the patch in asterisk.sh"
 
-./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled \
+./configure --prefix=/usr --libdir=/usr/lib64 --with-pjproject-bundled --with-jansson-bundled --with-libjwt-bundled \
   --with-download-cache="$cache" --with-externals-cache="$cache" >/dev/null
 make menuselect.makeopts >/dev/null
 while read -r action name; do
@@ -63,6 +64,9 @@ make install DESTDIR="$STAGING" >/dev/null
 make samples DESTDIR="$STAGING" >/dev/null
 # the sample Lua dialplan, without pbx_lua (asterisk-menuselect.txt)
 rm -f "$STAGING/etc/asterisk/extensions.lua"
+# STIR/SHAKEN off instead of the sample (all comments): without an
+# [attestation] and a [verification] Asterisk warns at every start and reload
+install -m 0644 "$here/stir_shaken.conf" "$STAGING/etc/asterisk/stir_shaken.conf"
 # headers for the addons built in this stage (addons.sh)
 make install-headers >/dev/null
 # Debian has /var/run -> /run: a real var/run directory in /staging cannot be
@@ -74,7 +78,7 @@ if [ -d "$STAGING/var/run" ] && [ ! -L "$STAGING/var/run" ]; then
 fi
 # modules that depend on libraries found by configure: a failed check would
 # drop them without an error
-for m in res_fax_spandsp format_mp3 res_xmpp chan_pjsip res_config_odbc; do
+for m in res_fax_spandsp format_mp3 res_xmpp chan_pjsip res_config_odbc res_stir_shaken res_pjsip_stir_shaken; do
   [ -f "$STAGING/usr/lib64/asterisk/modules/$m.so" ] || build_die "$m.so was not built (configure did not find its library?)"
 done
 build_log "Asterisk $ASTERISK_VER installed into $STAGING"

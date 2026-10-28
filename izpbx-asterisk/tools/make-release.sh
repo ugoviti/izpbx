@@ -128,6 +128,7 @@ label() {
     S6_OVERLAY_VER) echo "s6-overlay" ;;
     PJPROJECT_VER) echo "bundled pjproject" ;;
     JANSSON_VER) echo "bundled jansson" ;;
+    LIBJWT_VER) echo "bundled libjwt" ;;
     ASTERISK_MP3_SVN_REV) echo "format_mp3 sources (svn revision)" ;;
     SPANDSP_VER) echo "spandsp" ;;
     BCG729_VER) echo "bcg729" ;;

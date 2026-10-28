@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # P7-08: izpbx-asterisk/tools/make-updates.sh --apply writes the proposed versions into
 # versions.env. Needs internet (deferred). On a copy of versions.env with
-# Asterisk and pjproject deliberately old (and, on a scratch tree, FreePBX modules): --apply brings them back to the
-# pinned versions with the same sha256 (pjproject read from the
+# Asterisk, pjproject and libjwt deliberately old (and, on a scratch tree, FreePBX modules): --apply brings them back to the
+# pinned versions with the same sha256 (pjproject and libjwt read from the
 # third-party/versions.mak of the Asterisk tarball), so the copy equals the
 # repository file; a second run reports them ok. Negative: a lookup that fails
 # (unknown Asterisk major) never writes a partial file.
@@ -16,17 +16,19 @@ zero=0000000000000000000000000000000000000000000000000000000000000000
 
 sed -e 's/^ASTERISK_VER=.*/ASTERISK_VER=22.10.1/' -e "s/^ASTERISK_SHA256=.*/ASTERISK_SHA256=$zero/" \
     -e 's/^PJPROJECT_VER=.*/PJPROJECT_VER=2.16/' -e "s/^PJPROJECT_SHA256=.*/PJPROJECT_SHA256=$zero/" \
+    -e 's/^LIBJWT_VER=.*/LIBJWT_VER=1.15.2/' -e "s/^LIBJWT_SHA256=.*/LIBJWT_SHA256=$zero/" \
     "$venv" > "$work/old.env"
 "$cu" --apply --versions "$work/old.env" > "$work/apply.txt" 2>&1 && rc=0 || rc=$?
 log "apply: exit $rc"
 assert_cmd "exit code 0 (applied) or 2 (applied, other lookups unavailable)" -- test "$rc" -eq 0 -o "$rc" -eq 2
 assert_cmd "ASTERISK_VER flagged UPDATE" -- grep -qE '^ASTERISK_VER +22\.10\.1 .*UPDATE' "$work/apply.txt"
 assert_cmd "PJPROJECT_VER follows the Asterisk tarball" -- grep -qE '^PJPROJECT_VER +2\.16 .*UPDATE' "$work/apply.txt"
+assert_cmd "LIBJWT_VER follows the Asterisk tarball (a .tar.gz)" -- grep -qE '^LIBJWT_VER +1\.15\.2 .*UPDATE' "$work/apply.txt"
 assert_cmd "the applied lines are reported" -- grep -qE '^applied [0-9]+ line\(s\)' "$work/apply.txt"
-for k in ASTERISK_VER ASTERISK_SHA256 PJPROJECT_VER PJPROJECT_SHA256 JANSSON_VER JANSSON_SHA256; do
+for k in ASTERISK_VER ASTERISK_SHA256 PJPROJECT_VER PJPROJECT_SHA256 JANSSON_VER JANSSON_SHA256 LIBJWT_VER LIBJWT_SHA256; do
   assert_eq "$(grep "^$k=" "$venv")" "$(grep "^$k=" "$work/old.env")" "$k equals the pinned value after --apply"
 done
-assert_eq "$(grep -vE '^(ASTERISK|PJPROJECT|JANSSON)_' "$venv")" "$(grep -vE '^(ASTERISK|PJPROJECT|JANSSON)_' "$work/old.env")" \
+assert_eq "$(grep -vE '^(ASTERISK|PJPROJECT|JANSSON|LIBJWT)_' "$venv")" "$(grep -vE '^(ASTERISK|PJPROJECT|JANSSON|LIBJWT)_' "$work/old.env")" \
   "the other lines and the comments are unchanged"
 "$cu" --versions "$work/old.env" > "$work/again.txt" 2>&1 || true
 assert_cmd "second run: Asterisk ok" -- grep -qE '^ASTERISK_VER +22\.[0-9.]+ +22\.[0-9.]+ +ok$' "$work/again.txt"

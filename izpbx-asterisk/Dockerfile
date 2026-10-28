@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     /usr/src/izpbx/build/apt.sh /usr/src/izpbx/build/packages-build.txt
 COPY versions.env /usr/src/izpbx/versions.env
-COPY build/asterisk.sh build/asterisk-menuselect.txt /usr/src/izpbx/build/
+COPY build/asterisk.sh build/asterisk-menuselect.txt build/stir_shaken.conf /usr/src/izpbx/build/
 RUN --mount=type=cache,target=/root/.ccache \
     --mount=type=bind,from=downloads,source=/downloads,target=/usr/src/download-cache,rw \
     /usr/src/izpbx/build/asterisk.sh
