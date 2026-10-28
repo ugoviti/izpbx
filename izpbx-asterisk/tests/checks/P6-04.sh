@@ -8,8 +8,12 @@
 #   prerelease (no X.Y, X, latest even when asked) and dev-22.17 (as-is,
 #   never latest) get no latest;
 # - release.yml passes latest 'branch' and the branch of the version;
-# - izpbx-promote refuses latest for a version outside 20.16.x (Q1), before
-#   any other step.
+# - izpbx-promote, its first step (before gitleaks): version "last" (the
+#   default) is the most recent version tag, rc included (a newer tag that is
+#   no version is skipped), empty stays empty (branch only), any other value
+#   as it is; latest only for 20.16.x (Q1): for any other version it is
+#   ignored with a warning, the publish goes on; every later step uses the
+#   resolved version and latest.
 source "$(dirname "$0")/../lib.sh"
 dir="$REPO_DIR/.gitea/actions/image-tags"
 tags() { # version branch [latest] -> the tags, space separated, without the image
@@ -35,16 +39,34 @@ assert_cmd "release.yml: 20.16.x -> release/20.16" -- grep -qF '20.16.*) echo "b
 assert_cmd "release.yml: other versions -> main" -- grep -qF '*) echo "branch=main"' "$rel"
 assert_cmd "build-push passes the branch" -- grep -qF 'branch: ${{ inputs.branch }}' "$REPO_DIR/.gitea/actions/build-push/action.yml"
 
-# izpbx-promote refuses "latest" outside the 20.16 line (decision of the user, 2026-10-25)
+# izpbx-promote: version "last" and latest only for the 20.16 line (decision of
+# the user, 2026-10-25: never refused, ignored with a warning since 2026-10-28)
 promote="$REPO_DIR/.gitea/workflows/promote.yml"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-awk '/- name: check latest/ {s = 1} s && /- name: gitleaks/ {exit} s && r {print substr($0, 11)} s && /run: \|/ {r = 1}' "$promote" > "$work/check.sh"
+awk '/- name: version$/ {s = 1} s && /- name: gitleaks/ {exit} s && r {print substr($0, 11)} s && /run: \|/ {r = 1}' "$promote" > "$work/version.sh"
 latest_versions=$(sed -nE "s/^  LATEST_VERSIONS: '(.*)'$/\1/p" "$promote")
-guard() { VERSION=$1 LATEST=$2 LATEST_VERSIONS=$latest_versions bash "$work/check.sh" >/dev/null 2>&1; }
-assert_cmd "the guard runs before gitleaks" -- grep -q 'latest' "$work/check.sh"
-assert_cmd "promote: 20.16.23 with latest accepted" -- guard 20.16.23 true
-assert_cmd_fails "promote: 22.17.0 with latest refused" -- guard 22.17.0 true
-assert_cmd_fails "promote: dev-22.17 with latest refused" -- guard dev-22.17 true
-assert_cmd "promote: 22.17.0 without latest accepted" -- guard 22.17.0 false
+# a repository with tags in a known order (tagger dates)
+git init -q "$work/repo" && git -C "$work/repo" -c user.name=t -c user.email=t@t commit -q --allow-empty -m c
+n=0
+for t in 20.16.22 22.17.0-rc6 22.17.0-rc7 not-a-version; do
+  n=$((n + 1))
+  GIT_COMMITTER_DATE="2026-10-2${n}T10:00:00Z" git -C "$work/repo" -c user.name=t -c user.email=t@t tag -a -m "$t" "$t"
+done
+resolve() { # version latest -> "version=... latest=..." (the outputs of the step)
+  : > "$work/out"
+  (cd "$work/repo" && VERSION=$1 LATEST=$2 LATEST_VERSIONS=$latest_versions GITHUB_OUTPUT="$work/out" bash "$work/version.sh" > "$work/log" 2>&1) || echo "failed"
+  tr '\n' ' ' < "$work/out" | sed 's/ $//'
+}
+assert_cmd "the step runs before gitleaks" -- grep -q 'GITHUB_OUTPUT' "$work/version.sh"
+assert_cmd "promote: the default version is last" -- grep -qE '^ +default: last$' "$promote"
+assert_eq "version=22.17.0-rc7 latest=false" "$(resolve last true)" "promote: last = the most recent version tag (a newer non-version tag skipped)"
+assert_contains "$(cat "$work/log")" "version last = 22.17.0-rc7" "promote: the log says which tag last is"
+assert_eq "version=20.16.23 latest=true" "$(resolve 20.16.23 true)" "promote: 20.16.23 with latest: latest"
+assert_eq "version=22.17.0 latest=false" "$(resolve 22.17.0 true)" "promote: 22.17.0 with latest: not moved, the publish goes on"
+assert_contains "$(cat "$work/log")" "::warning::" "promote: and a warning says so"
+assert_eq "version=dev-22.17 latest=false" "$(resolve dev-22.17 true)" "promote: dev-22.17 with latest: not moved"
+assert_eq "version= latest=false" "$(resolve '' true)" "promote: empty version (branch only) stays empty"
+assert_cmd_fails "promote: no later step reads inputs.version" -- grep -q 'inputs\.version' <(grep -v '^ *description:' "$promote" | sed '/- name: version$/,/- name: gitleaks/d')
+assert_cmd "promote: the image tags get the checked latest" -- grep -qF 'latest: ${{ steps.ver.outputs.latest }}' "$promote"
 finish

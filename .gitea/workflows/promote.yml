@@ -10,7 +10,8 @@
 #   4. with branch main (the project page): the README.md of the tag becomes the Docker Hub
 #      overview, its relative links made absolute on GitHub at the tag
 #      (izpbx-asterisk/tools/readme-dockerhub.sh; skipped with a warning when over 25000 bytes)
-# Branch only (version empty): no release, no image. The branch of Gitea is pushed as it is to
+# Version "last" (the default): the most recent git tag (rc included), written in the log of the
+# first step. Branch only (version empty): no release, no image. The branch of Gitea is pushed as it is to
 # GitHub (fast-forward only, after gitleaks); with branch main the Docker Hub overview follows
 # its README (links at main).
 #
@@ -24,11 +25,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to publish (must exist in the Gitea registry, eg. 20.16.22); empty = push only the branch to GitHub
+        description: 'Version to publish (must exist in the Gitea registry, eg. 20.16.22); last = the most recent git tag; empty = push only the branch to GitHub'
         required: false
-        default: ''
+        default: last
       latest:
-        description: Also move the "latest" Docker tag (only 20.16.x until the decision Q1, refused otherwise)
+        description: Also move the "latest" Docker tag (only 20.16.x until the decision Q1, ignored with a warning otherwise)
         type: boolean
         default: true
       github:
@@ -66,16 +67,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: check latest
+      # version "last": the most recent tag X.Y.Z or X.Y.Z-rcN (tagger date), so that it
+      # needs no typing; empty stays empty (branch only); any other value as it is
+      - name: version
+        id: ver
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.ver.outputs.version }}
           LATEST: ${{ inputs.latest }}
         run: |
           set -eu
-          if [ -n "$VERSION" ] && [ "$LATEST" == true ] && ! [[ "$VERSION" =~ $LATEST_VERSIONS ]]; then
-            echo "::error::'latest' stays on the 20.16 line until the decision Q1: run again with latest unchecked for ${VERSION}"
-            exit 1
+          if [ "$VERSION" == last ]; then
+            VERSION=$(git tag --sort=-creatordate | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$' | head -n 1)
+            [ -n "$VERSION" ] || { echo "::error::no version tag in the repository"; exit 1; }
+            echo "version last = ${VERSION} (most recent tag)"
           fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          # "latest" only for the 20.16 line until the decision Q1: for any other version it is ignored
+          latest=false
+          if [ -n "$VERSION" ] && [ "$LATEST" == true ]; then
+            if [[ "$VERSION" =~ $LATEST_VERSIONS ]]; then latest=true
+            else echo "::warning::'latest' stays on the 20.16 line until the decision Q1: not moved for ${VERSION}"; fi
+          fi
+          echo "latest=${latest}" >> "$GITHUB_OUTPUT"
+          echo "publishing: version='${VERSION:-<branch only>}' latest=${latest}"
 
       - name: gitleaks
         uses: ./.gitea/actions/gitleaks
@@ -83,7 +97,7 @@ jobs:
           config: ${{ secrets.GITLEAKS_CONFIG }}
 
       - name: registry login
-        if: inputs.version != ''
+        if: steps.ver.outputs.version != ''
         id: login
         uses: ./.gitea/actions/registry-login
         with:
@@ -94,15 +108,15 @@ jobs:
           dockerhub-password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: check source image
-        if: inputs.version != ''
+        if: steps.ver.outputs.version != ''
         env:
-          SRC: ${{ steps.login.outputs.image }}:${{ inputs.version }}
+          SRC: ${{ steps.login.outputs.image }}:${{ steps.ver.outputs.version }}
         run: docker buildx imagetools inspect "$SRC" >/dev/null
 
       - name: push to github
         if: inputs.github == true || inputs.github == 'true'
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.ver.outputs.version }}
           BRANCH: ${{ inputs.branch }}
           GH_PUSH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
         run: |
@@ -124,18 +138,18 @@ jobs:
             push "$PUBLIC_REPO_URL" "${VERSION}^{commit}:refs/heads/${BRANCH}" "refs/tags/${VERSION}"
 
       - name: image tags
-        if: inputs.version != '' && (inputs.dockerhub == true || inputs.dockerhub == 'true')
+        if: steps.ver.outputs.version != '' && (inputs.dockerhub == true || inputs.dockerhub == 'true')
         id: tags
         uses: ./.gitea/actions/image-tags
         with:
           images: ${{ env.DOCKERHUB_IMAGE }}
-          version: ${{ inputs.version }}
-          latest: ${{ inputs.latest }}
+          version: ${{ steps.ver.outputs.version }}
+          latest: ${{ steps.ver.outputs.latest }}
 
       - name: copy image to docker hub
-        if: inputs.version != '' && (inputs.dockerhub == true || inputs.dockerhub == 'true')
+        if: steps.ver.outputs.version != '' && (inputs.dockerhub == true || inputs.dockerhub == 'true')
         env:
-          SRC: ${{ steps.login.outputs.image }}:${{ inputs.version }}
+          SRC: ${{ steps.login.outputs.image }}:${{ steps.ver.outputs.version }}
           TAGS: ${{ steps.tags.outputs.tags }}
         run: |
           set -eu
@@ -148,7 +162,7 @@ jobs:
       - name: docker hub overview
         if: (inputs.overview == true || inputs.overview == 'true') && (inputs.dockerhub == true || inputs.dockerhub == 'true') && (inputs.github == true || inputs.github == 'true') && inputs.branch == 'main'
         env:
-          VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.ver.outputs.version }}
           BRANCH: ${{ inputs.branch }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -185,7 +199,7 @@ jobs:
         uses: ./.gitea/actions/matrix-notify
         with:
           status: ${{ job.status }}
-          label: publish ${{ inputs.version }} (github:${{ inputs.github }} dockerhub:${{ inputs.dockerhub }})
+          label: publish ${{ steps.ver.outputs.version }} (github:${{ inputs.github }} dockerhub:${{ inputs.dockerhub }})
           password: ${{ secrets.MATRIX_PASSWORD }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
