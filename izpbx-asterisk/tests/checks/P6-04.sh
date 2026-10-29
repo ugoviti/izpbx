@@ -10,7 +10,8 @@
 # - release.yml passes latest 'branch' and the branch of the version;
 # - izpbx-promote, its first step (before gitleaks): version "last" (the
 #   default) is the most recent version tag, rc included (a newer tag that is
-#   no version is skipped), empty stays empty (branch only), any other value
+#   no version is skipped), none or empty = branch only (empty version; Gitea
+#   runs an empty field with the default, so none is what the user types), any other value
 #   as it is; latest only for 20.16.x (Q1): for any other version it is
 #   ignored with a warning, the publish goes on; every later step uses the
 #   resolved version and latest.
@@ -67,6 +68,8 @@ assert_eq "version=22.17.0 latest=false" "$(resolve 22.17.0 true)" "promote: 22.
 assert_contains "$(cat "$work/log")" "::warning::" "promote: and a warning says so"
 assert_eq "version=dev-22.17 latest=false" "$(resolve dev-22.17 true)" "promote: dev-22.17 with latest: not moved"
 assert_eq "version= latest=false" "$(resolve '' true)" "promote: empty version (branch only) stays empty"
+assert_eq "version= latest=false" "$(resolve none true)" "promote: none = branch only, the version becomes empty"
+assert_cmd "promote: the description says none" -- grep -qF 'none = push only the branch to GitHub' "$promote"
 assert_cmd_fails "promote: no later step reads inputs.version" -- grep -q 'inputs\.version' <(grep -v '^ *description:' "$promote" | sed '/- name: version$/,/- name: gitleaks/d')
 assert_cmd "promote: the image tags get the checked latest" -- grep -qF 'latest: ${{ steps.ver.outputs.latest }}' "$promote"
 finish

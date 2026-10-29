@@ -11,9 +11,9 @@
 #      overview, its relative links made absolute on GitHub at the tag
 #      (izpbx-asterisk/tools/readme-dockerhub.sh; skipped with a warning when over 25000 bytes)
 # Version "last" (the default): the most recent git tag (rc included), written in the log of the
-# first step. Branch only (version empty): no release, no image. The branch of Gitea is pushed as it is to
+# first step. Branch only (version none): no release, no image. The branch of Gitea is pushed as it is to
 # GitHub (fast-forward only, after gitleaks); with branch main the Docker Hub overview follows
-# its README (links at main).
+# its README (links at main). An empty field is not branch only: Gitea runs it with the default (last).
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, DOCKER_USERNAME,
 #                     DOCKER_PASSWORD, GH_PUSH_TOKEN, GITLEAKS_CONFIG, MATRIX_TOKEN
@@ -25,7 +25,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to publish (must exist in the Gitea registry, eg. 20.16.22); last = the most recent git tag; empty = push only the branch to GitHub'
+        description: 'Version to publish (must exist in the Gitea registry, eg. 20.16.22); last = the most recent git tag; none = push only the branch to GitHub'
         required: false
         default: last
       latest:
@@ -68,7 +68,7 @@ jobs:
           fetch-depth: 0
 
       # version "last": the most recent tag X.Y.Z or X.Y.Z-rcN (tagger date), so that it
-      # needs no typing; empty stays empty (branch only); any other value as it is
+      # needs no typing; none (or empty) = branch only, the version becomes empty; any other value as it is
       - name: version
         id: ver
         env:
@@ -76,6 +76,7 @@ jobs:
           LATEST: ${{ inputs.latest }}
         run: |
           set -eu
+          if [ "$VERSION" == none ]; then VERSION=''; fi
           if [ "$VERSION" == last ]; then
             VERSION=$(git tag --sort=-creatordate | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$' | head -n 1)
             [ -n "$VERSION" ] || { echo "::error::no version tag in the repository"; exit 1; }
