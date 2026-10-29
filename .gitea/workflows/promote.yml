@@ -8,7 +8,7 @@
 #        20.16.22    -> 20.16.22, 20.16, 20 [, latest]
 #        dev-22.17   -> dev-22.17 (not a git tag: GitHub push is skipped, never latest)
 #   4. the GitHub release page of the tag, from its CHANGELOG.md entry (github_release, with
-#      github; izpbx-asterisk/tools/github-release.sh): rc tags as pre-releases, the GitHub
+#      github; izpbx-asterisk/tools/forge-release.sh): rc tags as pre-releases, the GitHub
 #      "Latest" only for the highest X.Y.Z, an existing release updated
 #   5. with branch main (the project page): the README.md of the tag becomes the Docker Hub
 #      overview, its relative links made absolute on GitHub at the tag
@@ -179,7 +179,7 @@ jobs:
         if: steps.ver.outputs.version != '' && (inputs.github == true || inputs.github == 'true') && (inputs.github_release == true || inputs.github_release == 'true')
         env:
           VERSION: ${{ steps.ver.outputs.version }}
-          GH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
+          FORGE_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
           DOCKERHUB_IMAGE: ${{ env.DOCKERHUB_IMAGE }}
         run: |
           set -eu
@@ -187,8 +187,8 @@ jobs:
             echo "${VERSION} is not a git tag: no GitHub release"
             exit 0
           fi
-          PUBLIC_REPO=$(sed -E 's#^https://github.com/##; s#\.git$##' <<< "$PUBLIC_REPO_URL") \
-            izpbx-asterisk/tools/github-release.sh "$VERSION"
+          FORGE_REPO=$(sed -E 's#^https://github.com/##; s#\.git$##' <<< "$PUBLIC_REPO_URL") \
+            izpbx-asterisk/tools/forge-release.sh --forge github "$VERSION"
 
       - name: docker hub overview
         if: (inputs.overview == true || inputs.overview == 'true') && (inputs.dockerhub == true || inputs.dockerhub == 'true') && (inputs.github == true || inputs.github == 'true') && inputs.branch == 'main'

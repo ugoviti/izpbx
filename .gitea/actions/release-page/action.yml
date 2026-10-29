@@ -1,0 +1,31 @@
+name: release page
+description: >-
+  Create (or update) the Gitea release page of a tag from its CHANGELOG.md
+  entry (izpbx-asterisk/tools/forge-release.sh --forge gitea). Used by
+  izpbx-release (last job, after the images) and izpbx-release-page (by hand).
+  Needs a checkout with the tags (fetch-depth 0).
+
+inputs:
+  version:
+    description: The git tag (X.Y.Z or X.Y.Z-rcN)
+    required: true
+  token:
+    description: Token that can write the releases of the repository (gitea.token, or a secret)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: release page
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        FORGE_TOKEN: ${{ inputs.token }}
+      run: |
+        set -eu
+        if ! git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
+          echo "${VERSION} is not a git tag: no release page"
+          exit 0
+        fi
+        FORGE_URL=$GITHUB_SERVER_URL FORGE_REPO=$GITHUB_REPOSITORY \
+          izpbx-asterisk/tools/forge-release.sh --forge gitea "$VERSION"

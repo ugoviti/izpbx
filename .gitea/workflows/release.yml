@@ -10,8 +10,12 @@
 # QEMU (~35 min without cache) and turns the same tags into amd64 + arm64.
 # izpbx-promote run before "arm64" ends copies the amd64 image only: run it
 # again afterwards.
+# Last job "page": the Gitea release page of the tag from its CHANGELOG.md
+# entry (.gitea/actions/release-page), once the images are there (rc tags as
+# pre-releases); izpbx-release-page does the same by hand for an existing tag.
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
+# Optional secret:    RELEASE_TOKEN (when the automatic token cannot write releases)
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-release
@@ -97,6 +101,33 @@ jobs:
         with:
           status: ${{ job.status }}
           label: build tag:${{ gitea.ref_name }} arm64
+          token: ${{ secrets.MATRIX_TOKEN }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+
+  # the release page once the images are there (arm64 skipped for 20.16)
+  page:
+    needs: [amd64, arm64]
+    if: always() && needs.amd64.result == 'success' && (needs.arm64.result == 'success' || needs.arm64.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: release page
+        uses: ./.gitea/actions/release-page
+        with:
+          version: ${{ gitea.ref_name }}
+          token: ${{ secrets.RELEASE_TOKEN || gitea.token }}
+
+      - name: matrix notify
+        if: failure()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: release page ${{ gitea.ref_name }}
           token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}

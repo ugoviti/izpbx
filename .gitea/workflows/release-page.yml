@@ -1,0 +1,43 @@
+# izPBX release page (Gitea Actions)
+# Manual only: Repository > Actions > izpbx-release-page > Run workflow.
+# Creates (or updates) the Gitea release page of an existing tag from its
+# CHANGELOG.md entry, as the last job of izpbx-release does for every new tag
+# (.gitea/actions/release-page). For tags released before that job existed,
+# or to refresh a page after a CHANGELOG fix in the tag.
+#
+# Optional secret: RELEASE_TOKEN (when the automatic token cannot write releases)
+# Required secrets: MATRIX_TOKEN; variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+
+name: izpbx-release-page
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Git tag of the release (eg. 22.17.0)'
+        required: true
+
+jobs:
+  page:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: release page
+        uses: ./.gitea/actions/release-page
+        with:
+          version: ${{ inputs.version }}
+          token: ${{ secrets.RELEASE_TOKEN || gitea.token }}
+
+      - name: matrix notify
+        if: failure()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: release page ${{ inputs.version }}
+          token: ${{ secrets.MATRIX_TOKEN }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
