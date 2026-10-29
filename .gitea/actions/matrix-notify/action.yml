@@ -65,17 +65,17 @@ runs:
 
         # jq builds the whole event: every value is escaped for JSON and HTML.
         EVENT=$(jq -n --arg icon "$ICON" --arg repo "${GITHUB_REPOSITORY:-}" --arg run "${GITHUB_RUN_NUMBER:-}" \
-            --arg url "$RUN_URL" --arg label "$LABEL" --arg status "$STATUS" --arg details "$DETAILS" \
+            --arg url "$RUN_URL" --arg lbl "$LABEL" --arg status "$STATUS" --arg details "$DETAILS" \
             --arg sha "$SHA" --arg commit_url "$COMMIT_URL" --arg subject "$SUBJECT" '
           def html: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
           {
             msgtype: "m.notice",
-            body: ("\($icon) \($repo) build:#\($run) \($label) status:\($status)"
+            body: ("\($icon) \($repo) build:#\($run) \($lbl) status:\($status)"
                    + (if $sha == "" then "" else " commit:\($sha)" end)
                    + (if $subject == "" then "" else " «\($subject)»" end)
                    + (if $details == "" then "" else "\n" + $details end)),
             format: "org.matrix.custom.html",
-            formatted_body: ("\($icon) <a href=\"\($url)\"><code>\($repo | html)</code></a> build:[<code>#\($run)</code>] [<code>\($label | html)</code>] status:[<strong>\($status | html)</strong>]"
+            formatted_body: ("\($icon) <a href=\"\($url)\"><code>\($repo | html)</code></a> build:[<code>#\($run)</code>] [<code>\($lbl | html)</code>] status:[<strong>\($status | html)</strong>]"
                    + (if $sha == "" then "" else " commit:[<a href=\"\($commit_url)\"><code>\($sha)</code></a>]" end)
                    + (if $subject == "" then "" else " <em>\($subject | html)</em>" end)
                    + (if $details == "" then "" else "<pre>\($details | html)</pre>" end))
