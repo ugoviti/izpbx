@@ -27,6 +27,10 @@ cp "$REPO_DIR/CHANGELOG.md" "$REPO_DIR/compose.yml" "$REPO_DIR/default.env" "$RE
 cp "$REPO_DIR/izpbx-asterisk/versions.env" "$r/izpbx-asterisk/"
 cp "$REPO_DIR/izpbx-asterisk/build/freepbx-modules.txt" "$r/izpbx-asterisk/build/"
 cp "$rel" "$r/izpbx-asterisk/tools/"
+# the CHANGELOG as before the first release of the series (the real one has
+# 22.17.0 dated and an empty "## [Unreleased]" on top since the release)
+sed -i -E -e '/^## \[Unreleased\]$/{N;/\n$/d}' -e 's/^## \[22\.17\.0\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$/## [22.17.0] - Unreleased/' "$r/CHANGELOG.md"
+grep -qx '## \[22.17.0\] - Unreleased' "$r/CHANGELOG.md" || die "fixture: no '## [22.17.0] - Unreleased' in CHANGELOG.md"
 g() { git -C "$r" -c user.name=t -c user.email=t@t "$@"; }
 g init -q -b main
 g add -A && g commit -q -m "base"
@@ -56,6 +60,9 @@ rr --rc --commit > "$work/rc2.txt" 2>&1 || { cat "$work/rc2.txt" >&2; die "secon
 assert_eq "22.17.0-rc1 22.17.0-rc2" "$(g tag -l '22.17.0-rc*' | sort -V | xargs)" "rc1 then rc2"
 assert_eq "izPBX 22.17.0-rc2" "$(g for-each-ref refs/tags/22.17.0-rc2 --format='%(objecttype) %(contents:subject)' | sed 's/^tag //')" "rc2 annotated"
 assert_eq "$(g rev-parse HEAD)" "$(g rev-parse '22.17.0-rc2^{commit}')" "rc2 on HEAD"
+rcmsg=$(g for-each-ref refs/tags/22.17.0-rc2 --format='%(contents)')
+assert_cmd "rc2 message: the Unreleased entry of 22.17.0 (### lines kept)" -- grep -qx '### Migration' <<< "$rcmsg"
+assert_cmd_fails "rc2 message: not the older entries" -- grep -qF '## [20.16.22]' <<< "$rcmsg"
 assert_eq "" "$(g status --porcelain)" "--rc: no file changed"
 assert_cmd "--rc: CHANGELOG still Unreleased" -- grep -qF '## [22.17.0] - Unreleased' "$r/CHANGELOG.md"
 g checkout -q main
@@ -88,6 +95,8 @@ g checkout -q README.md
 rr --commit --yes > "$work/r1.txt" 2>&1 || { cat "$work/r1.txt" >&2; die "release 22.17.1 failed"; }
 assert_cmd "tag 22.17.1" -- g rev-parse -q --verify refs/tags/22.17.1
 awk '/^## \[22\.17\.1\]/ {p = 1; print; next} /^## \[/ {p = 0} p' "$r/CHANGELOG.md" > "$work/e1"
+assert_eq "izPBX 22.17.1" "$(g for-each-ref refs/tags/22.17.1 --format='%(contents:subject)')" "22.17.1 tag: subject"
+assert_eq "$(tail -n +2 "$work/e1" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')" "$(g for-each-ref refs/tags/22.17.1 --format='%(contents:body)' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')" "22.17.1 tag: the CHANGELOG entry as its body"
 log "entry 22.17.1:"; sed 's/^/    /' "$work/e1" >&2
 assert_cmd "hand written Fixed entry kept" -- grep -qF -- '- Voicemail greetings kept by the migration' "$work/e1"
 # shellcheck disable=SC2016  # literal backticks

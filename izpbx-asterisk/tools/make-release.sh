@@ -23,12 +23,13 @@
 # The entry is opened in $EDITOR for review (skipped with --yes).
 #
 # --commit: compose.yml, default.env, README.md and docs/*.md move from <previous X.Y.N> to
-# the new version, one commit "X.Y.Z release", annotated tag X.Y.Z. --push: the
+# the new version, one commit "X.Y.Z release", annotated tag X.Y.Z with the CHANGELOG entry as its message ("izPBX X.Y.Z", then the entry). --push: the
 # branch and the tag go to origin, the tag starts the izpbx-release workflow
 # (Gitea registry only; Docker Hub needs izpbx-promote).
 #
 # --rc: a release candidate of the next version (or of --version X.Y.Z): tag
-# X.Y.Z-rcN, N = the last rc of that version + 1, annotated "izPBX X.Y.Z-rcN",
+# X.Y.Z-rcN, N = the last rc of that version + 1, annotated "izPBX X.Y.Z-rcN" with the
+# entry still Unreleased of X.Y.Z as its message,
 # on HEAD of the current branch (any branch, eg. feature/X.Y). Nothing else is
 # written: CHANGELOG.md stays "Unreleased", compose.yml/default.env/README.md
 # stay on the last release. Dry run without --commit/--push; --push pushes the
@@ -83,6 +84,15 @@ git rev-parse -q --verify "refs/tags/$version" >/dev/null && die "tag $version a
 [ -z "$last" ] || [ "$(printf '%s\n%s\n' "$last" "$version" | sort -V | tail -1)" == "$version" ] ||
   die "$version is older than the last release $last"
 
+work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+
+# tag_with_notes TAG NOTES_FILE: annotated tag "izPBX TAG", the CHANGELOG entry
+# as its body (verbatim: the default cleanup would drop the "### ..." lines)
+tag_with_notes() {
+  { echo "izPBX $1"; if [ -s "$2" ]; then echo; cat "$2"; fi; } > "$work/tag-msg"
+  git tag -a --cleanup=verbatim -F "$work/tag-msg" "$1"
+}
+
 # --- release candidate: only the tag X.Y.Z-rcN
 if [ -n "$rc" ]; then
   n=$(git tag -l "$version-rc*" | sed -nE "s/^${version//./\\.}-rc([0-9]+)$/\1/p" | sort -n | tail -1)
@@ -95,7 +105,14 @@ if [ -n "$rc" ]; then
     log "dry run, nothing written: izpbx-asterisk/tools/make-release.sh --rc --commit (tag only) or --rc --push (tag, then push $branch and $tag)"
     exit 0
   fi
-  git tag -a "$tag" -m "izPBX $tag"
+  # the entry of the version still being written ("## [X.Y.Z] - Unreleased" or "## [Unreleased]")
+  [ -f CHANGELOG.md ] || : > "$work/rc-notes"
+  [ -f CHANGELOG.md ] && awk -v v="$version" '
+    index($0, "## [" v "]") == 1 || $0 ~ /^## \[Unreleased\]/ { if (!d) { s = 1; d = 1; next } }
+    s && /^## \[/ { exit }
+    s { print }' CHANGELOG.md | sed -e '/./,$!d' > "$work/rc-notes" || true
+  [ -n "$(tr -d '[:space:]' < "$work/rc-notes")" ] || : > "$work/rc-notes"
+  tag_with_notes "$tag" "$work/rc-notes"
   log "tag $tag created"
   if [ -n "$push" ]; then
     git push origin "$branch" "$tag"
@@ -116,8 +133,6 @@ if [ -n "$push" ] && git show-ref -q --verify "refs/remotes/origin/$branch"; the
     die "$branch differs from origin/$branch: pull or push it first"
 fi
 log "version $version (previous release ${prev:-none}, last of $series: ${last:-none}), branch $branch"
-
-work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 
 # --- component lines: what changed in versions.env and freepbx-modules.txt since $prev
 label() {
@@ -301,7 +316,8 @@ cp "$work/CHANGELOG.md" "$cl"
 for f in "${files[@]}"; do sed -i "${moves[@]}" "$f"; done
 git add "$cl" "${files[@]}"
 git commit -q -m "$version release"
-git tag -a "$version" -m "izPBX $version"
+tail -n +2 "$work/entry" > "$work/tag-notes"
+tag_with_notes "$version" "$work/tag-notes"
 log "commit $(git rev-parse --short HEAD) and tag $version created"
 if [ -n "$push" ]; then
   git push origin "HEAD:refs/heads/$branch"
