@@ -20,17 +20,17 @@
 : "${FOP2_DEFAULTS:=/etc/default/fop2}"
 : "${FOP2_DOWNLOAD:=https://download2.fop2.com}"
 
-# package name, version and sha256 for this architecture (the arm64 download
-# of fop2.com is the armv7l build, see versions.env)
+# package name, version and sha256 for this architecture (same FOP2_VER,
+# the native arm64 package is named debian12-aarch64, see versions.env)
 _fop2_package() {
-  local ver sha arch
+  local ver=$FOP2_VER sha pkg
   case "$(uname -m)" in
-    x86_64) arch=x86_64; ver=$FOP2_VER; sha=$(_izpbx_version FOP2_SHA256_X86_64) ;;
-    aarch64) arch=armv7l; ver=$(_izpbx_version FOP2_VER_AARCH64); sha=$(_izpbx_version FOP2_SHA256_AARCH64) ;;
+    x86_64) pkg="fop2-${ver}-debian-x86_64.tgz"; sha=$(_izpbx_version FOP2_SHA256_X86_64) ;;
+    aarch64) pkg="fop2-${ver}-debian12-aarch64.tgz"; sha=$(_izpbx_version FOP2_SHA256_AARCH64) ;;
     *) log_error "fop2: no FOP2 package for $(uname -m)"; return 1 ;;
   esac
   [ -n "$FOP2_SHA256" ] && sha=$FOP2_SHA256
-  printf '%s %s %s\n' "fop2-${ver}-debian-${arch}.tgz" "$ver" "$sha"
+  printf '%s %s %s\n' "$pkg" "$ver" "$sha"
 }
 
 # fop2_fetch: download and verify the package, extract it into FOP2_SRC

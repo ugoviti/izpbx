@@ -137,7 +137,6 @@ label() {
     SNGREP_VER) echo "sngrep" ;;
     IONCUBE_VER) echo "ionCube loader" ;;
     FOP2_VER) echo "FOP2" ;;
-    FOP2_VER_AARCH64) echo "FOP2 (arm64)" ;;
     ZABBIX_VER) echo "Zabbix agent 2" ;;
     NPM_VER) echo "npm" ;;
     IZSYNTH_VER) echo "izsynth" ;;

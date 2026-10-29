@@ -4,7 +4,8 @@
 # ~30 min, later ones reuse the cache); /usr/sbin/asterisk is an aarch64
 # binary; P1-06, P1-07 and P1-09 pass on the arm64 image (run with
 # DOCKER_DEFAULT_PLATFORM=linux/arm64; P1-06 then expects
-# izpbx-asterisk/tests/expected/asterisk-modules-aarch64.txt).
+# izpbx-asterisk/tests/expected/asterisk-modules-aarch64.txt); FOP2 on arm64
+# is the native aarch64 package and fop2_server starts.
 # Negative: the same binary check on the x86_64 image does not say aarch64.
 source "$(dirname "$0")/../lib.sh"
 
@@ -27,6 +28,22 @@ for c in P1-06 P1-07 P1-09; do
   [ "$rc" -eq 0 ] || log "$c on arm64:"$'\n'"$(grep -E '\] (FAIL|ERROR)' <<< "$out" | head -20)"
   assert_eq 0 "$rc" "$c passes on arm64 ($(grep -c '\] PASS: ' <<< "$out") assertions)"
 done
+
+# FOP2 on arm64: the native debian12-aarch64 package of versions.env (sha256
+# verified by fop2_fetch), an aarch64 binary that starts and reports FOP2_VER
+# (the 32-bit armv7l build of the fop2.com "ARM64" link did not start)
+ver=$(sed -n 's/^FOP2_VER=//p' "$dir/versions.env")
+out=$(docker run --rm --platform linux/arm64 --entrypoint "" "$image" bash -c \
+  '. /usr/local/lib/izpbx/services/fop2.sh && fop2_fetch && file -b "$FOP2_SRC/server/fop2_server" && "$FOP2_SRC/server/fop2_server" -v' 2>&1) && rc=0 || rc=$?
+assert_eq 0 "$rc" "FOP2 fetched and fop2_server -v runs on arm64"
+assert_contains "$out" "debian12-aarch64.tgz verified" "FOP2: native aarch64 package, sha256 verified"
+assert_contains "$out" "ARM aarch64" "FOP2: fop2_server is an aarch64 binary"
+assert_contains "$out" "$ver" "FOP2: fop2_server -v reports FOP2_VER ($ver)"
+# negative: a wrong sha256 refuses the arm64 package
+out=$(docker run --rm --platform linux/arm64 --entrypoint "" -e FOP2_SHA256=0000000000000000000000000000000000000000000000000000000000000000 "$image" bash -c \
+  '. /usr/local/lib/izpbx/services/fop2.sh && fop2_fetch' 2>&1) && rc=0 || rc=$?
+assert_eq 1 "$rc" "control: a wrong sha256 refuses the arm64 FOP2 package"
+assert_contains "$out" "install refused" "control: the refusal is logged"
 
 docker rmi "$image" >/dev/null 2>&1 || true
 finish

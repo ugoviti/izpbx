@@ -293,9 +293,11 @@ Items marked **permanent** compensate the container itself (no systemd) or a Deb
 - **Tests**: P3-13, P4-14.
 - **Check**: at every FOP2 update, verify that the extraction of the recipe still works.
 
-### arm64: only an older armv7l build exists
-- **izPBX**: separate `FOP2_VER_AARCH64` and sha256 (`versions.env`, `fop2.sh` `_fop2_package`).
-- **Remove when**: fop2.com publishes a native aarch64 build at the same version.
+### arm64: the "Debian 12 ARM64" download link gives the 32-bit build
+- **Defect**: the "Debian 12 - ARM64 (aarch64)" button of fop2.com/download.php (`file.php?file=24`) downloads `fop2-2.31.48-debian-armv7l.tgz`, a 32-bit armhf binary that does not start on the arm64 image (no `/lib/ld-linux-armhf.so.3`). The native package, same version as amd64, is `fop2-<ver>-debian12-aarch64.tgz` (`file.php?file=25`).
+- **izPBX**: one `FOP2_VER`, the arm64 file name built from it with its own sha256 `FOP2_SHA256_AARCH64` (`versions.env`, `fop2.sh` `_fop2_package`, `tools/make-updates.sh`).
+- **Tests**: P1-11 (aarch64 binary, `fop2_server -v` on the arm64 image).
+- **Remove when**: never needed as code; check the file name at every FOP2 update (make-updates proposes an empty sha256 if `debian12-aarch64` is renamed).
 
 ### FOP2 tools run before Asterisk and fop2_server print errors
 - **izPBX**: the output of `generate_override_contexts.pl` goes to `/tmp/fop2-override-contexts.log`, and `_fop2_mask` filters the `fop2.ctl` lines along with the license code.

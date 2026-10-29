@@ -218,11 +218,12 @@ if ! lookup IONCUBE_VER "$IONCUBE_VER" "$new" "ioncube.com"; then
 fi
 
 # --- FOP2: the download links redirect to the current files
-fop2_file() { fetch -I "https://www.fop2.com/$1" | grep -i '^location:.*download2' | tail -1 | grep -oE 'fop2-[0-9.]+-debian-[a-z0-9_]+\.tgz' || true; }
+# (one FOP2_VER for amd64 and arm64: the arm64 file is fop2-<ver>-debian12-aarch64.tgz)
+fop2_file() { fetch -I "https://www.fop2.com/$1" | grep -i '^location:.*download2' | tail -1 | grep -oE 'fop2-[0-9.]+-debian[0-9]*-[a-z0-9_]+\.tgz' || true; }
 f=$(fop2_file download/debian64); new=$(sed -E 's/^fop2-([0-9.]+)-.*/\1/' <<< "$f")
-lookup FOP2_VER "$FOP2_VER" "$new" "fop2.com" || propose "FOP2_VER=$new" "FOP2_SHA256_X86_64=$(sha_of "https://download2.fop2.com/$f")"
-f=$(fop2_file 'file.php?file=24'); new=$(sed -E 's/^fop2-([0-9.]+)-.*/\1/' <<< "$f")
-lookup FOP2_VER_AARCH64 "$FOP2_VER_AARCH64" "$new" "fop2.com" || propose "FOP2_VER_AARCH64=$new" "FOP2_SHA256_AARCH64=$(sha_of "https://download2.fop2.com/$f")"
+lookup FOP2_VER "$FOP2_VER" "$new" "fop2.com" || propose "FOP2_VER=$new" \
+  "FOP2_SHA256_X86_64=$(sha_of "https://download2.fop2.com/$f")" \
+  "FOP2_SHA256_AARCH64=$(sha_of "https://download2.fop2.com/fop2-$new-debian12-aarch64.tgz")"
 
 # --- Zabbix: LTS major chosen by hand
 report ZABBIX_VER "$ZABBIX_VER" "" "LTS branch, key $ZABBIX_GPG_FPR" || true
