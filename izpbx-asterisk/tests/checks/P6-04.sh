@@ -10,7 +10,7 @@
 # - release.yml passes latest 'branch' and the branch of the version;
 # - izpbx-promote, its first step (before gitleaks): version "last" (the
 #   default) is the most recent version tag, rc included (a newer tag that is
-#   no version is skipped), none or empty = branch only (empty version; Gitea
+#   no version is skipped), branch_only checked, none or empty = branch only (empty version; Gitea
 #   runs an empty field with the default, so none is what the user types), any other value
 #   as it is; latest only for 20.16.x (Q1): for any other version it is
 #   ignored with a warning, the publish goes on; every later step uses the
@@ -54,9 +54,9 @@ for t in 20.16.22 22.17.0-rc6 22.17.0-rc7 not-a-version; do
   n=$((n + 1))
   GIT_COMMITTER_DATE="2026-10-2${n}T10:00:00Z" git -C "$work/repo" -c user.name=t -c user.email=t@t tag -a -m "$t" "$t"
 done
-resolve() { # version latest -> "version=... latest=..." (the outputs of the step)
+resolve() { # version latest [branch_only] -> "version=... latest=..." (the outputs of the step)
   : > "$work/out"
-  (cd "$work/repo" && VERSION=$1 LATEST=$2 LATEST_VERSIONS=$latest_versions GITHUB_OUTPUT="$work/out" bash "$work/version.sh" > "$work/log" 2>&1) || echo "failed"
+  (cd "$work/repo" && VERSION=$1 LATEST=$2 BRANCH_ONLY=${3:-false} LATEST_VERSIONS=$latest_versions GITHUB_OUTPUT="$work/out" bash "$work/version.sh" > "$work/log" 2>&1) || echo "failed"
   tr '\n' ' ' < "$work/out" | sed 's/ $//'
 }
 assert_cmd "the step runs before gitleaks" -- grep -q 'GITHUB_OUTPUT' "$work/version.sh"
@@ -69,6 +69,10 @@ assert_contains "$(cat "$work/log")" "::warning::" "promote: and a warning says 
 assert_eq "version=dev-22.17 latest=false" "$(resolve dev-22.17 true)" "promote: dev-22.17 with latest: not moved"
 assert_eq "version= latest=false" "$(resolve '' true)" "promote: empty version (branch only) stays empty"
 assert_eq "version= latest=false" "$(resolve none true)" "promote: none = branch only, the version becomes empty"
+assert_eq "version= latest=false" "$(resolve last true true)" "promote: branch_only checked = branch only, version ignored"
+assert_eq "version=20.16.23 latest=true" "$(resolve 20.16.23 true false)" "promote: branch_only not checked, the version as it is"
+assert_eq "type: boolean default: false" "$(grep -A3 '^      branch_only:$' "$promote" | sed -nE 's/^ +(type|default): /\1: /p' | tr '\n' ' ' | sed 's/ $//')" \
+  "promote: branch_only is a checkbox, not checked by default"
 assert_cmd "promote: the description says none" -- grep -qF 'none = push only the branch to GitHub' "$promote"
 assert_cmd_fails "promote: no later step reads inputs.version" -- grep -q 'inputs\.version' <(grep -v '^ *description:' "$promote" | sed '/- name: version$/,/- name: gitleaks/d')
 assert_cmd "promote: the image tags get the checked latest" -- grep -qF 'latest: ${{ steps.ver.outputs.latest }}' "$promote"
