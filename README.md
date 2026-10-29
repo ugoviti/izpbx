@@ -6,11 +6,11 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 
 # Supported tags
 
-## Release Candidate (testing, not yet for production):
-* `22.17.0-rcN`, `22.17.0-rcN-BUILD` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64 and arm64): the git branch `main`. When `22.17.0` is released the tags become `22.17`, `22.17.X`, `22.17.X-BUILD`, `22`
+## Production Branch:
+* `22.17`, `22.17.X`, `22.17.X-BUILD`, `22` (Asterisk 22 LTS + FreePBX 17, Debian 12, amd64 and arm64): the git branch `main`. To move from 20.16 to 22.17 see [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md)
 
-## Production Branch (security fixes only, until 2027-01-01):
-* `20.16`, `20.16.X`, `20.16.X-BUILD`, `20`, `latest` (Asterisk 20 LTS + FreePBX 16): the git branch `release/20.16`. `latest` stays here for now, use an explicit tag. To move from 20.16 to 22.17 see [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md)
+## Previous Production Branch (security fixes only, until 2027-01-01):
+* `20.16`, `20.16.X`, `20.16.X-BUILD`, `20`, `latest` (Asterisk 20 LTS + FreePBX 16): the git branch `release/20.16`. `latest` stays here for now, use an explicit tag
 
 ## End of Life Branches (no more updates, don't use in production):
 * `18.16`, `18.16.X`, `18.16.X-BUILD`,`18` (Asterisk 18 LTS + FreePBX 16)
@@ -43,7 +43,7 @@ Cloud and On-Premise, Fast, Automatic and Repeatable deploy of VoIP PBX systems
 - Built-in WEB Management GUI based on FreePBX® 17 (default modules predownloaded in the image: the first install needs no module download)
 - No vendor lock-in, you can migrate to and away from izPBX simply by importing/exporting FreePBX Backups
 - Automatic migration of an izPBX 20.16 volume (FreePBX 16) to FreePBX 17, opt-in, verified and reversible (see [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md))
-- Based on Debian 12 (bookworm) 64bit, amd64 and arm64 images (arm64: Raspberry Pi 4/5 with a 64-bit OS and ARM servers; no Digium `codec_opus`/`codec_silk`, FOP2 from its armv7l build)
+- Based on Debian 12 (bookworm) 64bit, amd64 and arm64 images (arm64: Raspberry Pi 4/5 with a 64-bit OS and ARM servers; no Digium `codec_opus`/`codec_silk`)
 - Multi-Tenant PBX System Support (see [docs/multi-tenant.md](docs/multi-tenant.md))
 - Automatic Remote XML PhoneBook support for compatible VoIP Phones
 - Persistent storage mode for configuration and non-volatile data

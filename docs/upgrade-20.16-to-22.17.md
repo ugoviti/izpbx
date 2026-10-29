@@ -38,8 +38,6 @@ Variables of the migration (in `.env`):
 
 ### 1. Switch the image and run the checks
 
-> 22.17 is a release candidate until `22.17.0` is out: to test the migration now use the last `22.17.0-rcN` tag (see the [Docker Hub tags](https://hub.docker.com/r/izdock/izpbx-asterisk/tags)) where the commands below say `22.17.0`, on a copy of your PBX first.
-
 Set the 22.17 image (always an explicit version: `latest` stays on 20.16 for now) and pull it. In 22.17 the version is `IZPBX_VERSION` of `.env`: the first line turns the image line of a 20.16 `compose.yml`, which has the tag written in it, into the 22.17 form (`izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`; nothing to do with the `compose.yml` of 22.17), the second sets the version in `.env`:
 
 <!-- test:run -->
