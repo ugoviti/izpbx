@@ -81,8 +81,23 @@ runs:
                    + (if $details == "" then "" else "<pre>\($details | html)</pre>" end))
           }') || warn "message not built"
 
+        # The answer of Matrix is kept, so that a refusal says why (HTTP code, errcode, error).
+        RESP=$(mktemp) && CERR=$(mktemp) || warn "no temporary file: notification skipped"
+        trap 'rm -f "$RESP" "$CERR"' EXIT
         ROOM=$(jq -rn --arg r "$MATRIX_ROOM_ID" '$r|@uri')
-        printf '%s' "$EVENT" | curl -fsS --max-time 20 -X PUT \
+        CODE=$(printf '%s' "$EVENT" | curl -sS --max-time 20 -o "$RESP" -w '%{http_code}' -X PUT \
             -H "Authorization: Bearer ${MATRIX_TOKEN}" -H 'Content-Type: application/json' -d @- \
             "${MATRIX_HOMESERVER}/_matrix/client/v3/rooms/${ROOM}/send/m.room.message/gitea-${GITHUB_RUN_ID:-}-$(date +%s)" \
-            >/dev/null || warn "Matrix did not accept the message (homeserver, token or room)"
+            2>"$CERR") || warn "${MATRIX_HOMESERVER} not reached: $(tr '\n' ' ' < "$CERR" | head -c 300)"
+        case "$CODE" in
+          2??) echo "matrix notify: sent to ${MATRIX_ROOM_ID}" ;;
+          *)
+            ERR=$(jq -r '"\(.errcode // "") \(.error // "")"' "$RESP" 2>/dev/null) || ERR=$(tr '\n' ' ' < "$RESP" | head -c 300)
+            case "$ERR" in
+              *M_UNKNOWN_TOKEN*|*M_MISSING_TOKEN*) HINT="secret MATRIX_TOKEN not valid: a new access token of the bot is needed" ;;
+              *M_FORBIDDEN*) HINT="the bot must be invited to the room ${MATRIX_ROOM_ID} and accept, and be allowed to write" ;;
+              *M_NOT_FOUND*|*M_UNRECOGNIZED*) HINT="variable MATRIX_HOMESERVER (${MATRIX_HOMESERVER}) or MATRIX_ROOM_ID (${MATRIX_ROOM_ID}) wrong" ;;
+              *) HINT="homeserver ${MATRIX_HOMESERVER}, room ${MATRIX_ROOM_ID}" ;;
+            esac
+            warn "Matrix refused the message: HTTP ${CODE} ${ERR} (${HINT})" ;;
+        esac
