@@ -14,8 +14,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Git tag of the release (eg. 22.17.0)'
-        required: true
+        description: 'Git tag of the release (eg. 22.17.0); last = the most recent version tag, rc included'
+        required: false
+        default: last
 
 jobs:
   page:

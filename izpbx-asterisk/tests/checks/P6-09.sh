@@ -163,7 +163,20 @@ assert_contains "$job" "needs.arm64.result == 'skipped'" "release.yml: also for 
 assert_contains "$job" "fetch-depth: 0" "release.yml: page with the tags"
 assert_contains "$job" "uses: ./.gitea/actions/release-page" "release.yml: page by the release-page action"
 assert_contains "$(cat "$REPO_DIR/.gitea/workflows/release-page.yml")" "uses: ./.gitea/actions/release-page" "release-page.yml: by hand, same action"
-assert_contains "$(cat "$REPO_DIR/.gitea/actions/release-page/action.yml")" "forge-release.sh --forge gitea" "release-page action: Gitea forge"
+action="$REPO_DIR/.gitea/actions/release-page/action.yml"
+assert_contains "$(cat "$action")" "forge-release.sh --forge gitea" "release-page action: Gitea forge"
+assert_eq "last" "$(awk '/^      version:/ {s = 1} s && /default:/ {print $2; exit}' "$REPO_DIR/.gitea/workflows/release-page.yml")" "release-page.yml: version last by default"
+# "last" of the action: the most recent version tag (tagger date), rc included, other tags skipped
+awk '/run: \|/ {r = 1; next} r {print substr($0, 9)}' "$action" > "$work/page.sh"
+mkdir -p "$work/bin" && printf '#!/bin/sh\necho "tool $*"\n' > "$work/bin/forge-release.sh" && chmod +x "$work/bin/forge-release.sh"
+sed -i "s#izpbx-asterisk/tools/forge-release.sh#$work/bin/forge-release.sh#" "$work/page.sh"
+GIT_COMMITTER_DATE=2030-01-01T10:00:00Z g tag -a -m t 22.17.1-rc1 "22.17.0^{}"
+GIT_COMMITTER_DATE=2030-01-02T10:00:00Z g tag -a -m t not-a-version "22.17.0^{}"
+out=$(cd "$r" && VERSION=last FORGE_TOKEN=x GITHUB_SERVER_URL=https://git.example GITHUB_REPOSITORY=Org/izpbx bash "$work/page.sh" 2>&1) || true
+assert_contains "$out" "version last = 22.17.1-rc1" "release-page: last = the most recent version tag (a newer non-version tag skipped)"
+assert_contains "$out" "tool --forge gitea 22.17.1-rc1" "release-page: the tool gets the resolved version"
+out=$(cd "$r" && VERSION=22.17.0 FORGE_TOKEN=x GITHUB_SERVER_URL=https://git.example GITHUB_REPOSITORY=Org/izpbx bash "$work/page.sh" 2>&1) || true
+assert_contains "$out" "tool --forge gitea 22.17.0" "release-page: an explicit version as it is"
 
 # --- promote.yml
 step=$(awk '/- name: github release$/ {s = 1} s && /- name: docker hub overview$/ {exit} s {print}' "$promote")

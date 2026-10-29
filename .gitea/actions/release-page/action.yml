@@ -7,7 +7,7 @@ description: >-
 
 inputs:
   version:
-    description: The git tag (X.Y.Z or X.Y.Z-rcN)
+    description: The git tag (X.Y.Z or X.Y.Z-rcN); last = the most recent version tag (as izpbx-promote)
     required: true
   token:
     description: Token that can write the releases of the repository (gitea.token, or a secret)
@@ -23,6 +23,11 @@ runs:
         FORGE_TOKEN: ${{ inputs.token }}
       run: |
         set -eu
+        if [ "$VERSION" == last ]; then
+          VERSION=$(git tag --sort=-creatordate | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$' | head -n 1)
+          [ -n "$VERSION" ] || { echo "::error::no version tag in the repository"; exit 1; }
+          echo "version last = ${VERSION} (most recent tag)"
+        fi
         if ! git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
           echo "${VERSION} is not a git tag: no release page"
           exit 0
