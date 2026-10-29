@@ -7,7 +7,10 @@
 #      (same digest you tested). Tag scheme: .gitea/actions/image-tags
 #        20.16.22    -> 20.16.22, 20.16, 20 [, latest]
 #        dev-22.17   -> dev-22.17 (not a git tag: GitHub push is skipped, never latest)
-#   4. with branch main (the project page): the README.md of the tag becomes the Docker Hub
+#   4. the GitHub release page of the tag, from its CHANGELOG.md entry (github_release, with
+#      github; izpbx-asterisk/tools/github-release.sh): rc tags as pre-releases, the GitHub
+#      "Latest" only for the highest X.Y.Z, an existing release updated
+#   5. with branch main (the project page): the README.md of the tag becomes the Docker Hub
 #      overview, its relative links made absolute on GitHub at the tag
 #      (izpbx-asterisk/tools/readme-dockerhub.sh; skipped with a warning when over 25000 bytes)
 # Version "last" (the default): the most recent git tag (rc included), written in the log of the
@@ -40,6 +43,10 @@ on:
         default: true
       github:
         description: Also push the git tag and branch to GitHub
+        type: boolean
+        default: true
+      github_release:
+        description: Also create (or update) the GitHub release page of the tag from CHANGELOG.md (only with github)
         type: boolean
         default: true
       branch:
@@ -167,6 +174,22 @@ jobs:
           done <<< "$TAGS"
           docker buildx imagetools create "${ARGS[@]}" "$SRC"
 
+      # after the image copy: the release page shows when its images exist
+      - name: github release
+        if: steps.ver.outputs.version != '' && (inputs.github == true || inputs.github == 'true') && (inputs.github_release == true || inputs.github_release == 'true')
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          GH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
+          DOCKERHUB_IMAGE: ${{ env.DOCKERHUB_IMAGE }}
+        run: |
+          set -eu
+          if ! git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
+            echo "${VERSION} is not a git tag: no GitHub release"
+            exit 0
+          fi
+          PUBLIC_REPO=$(sed -E 's#^https://github.com/##; s#\.git$##' <<< "$PUBLIC_REPO_URL") \
+            izpbx-asterisk/tools/github-release.sh "$VERSION"
+
       - name: docker hub overview
         if: (inputs.overview == true || inputs.overview == 'true') && (inputs.dockerhub == true || inputs.dockerhub == 'true') && (inputs.github == true || inputs.github == 'true') && inputs.branch == 'main'
         env:
@@ -207,7 +230,7 @@ jobs:
         uses: ./.gitea/actions/matrix-notify
         with:
           status: ${{ job.status }}
-          label: publish ${{ steps.ver.outputs.version }} (github:${{ inputs.github }} dockerhub:${{ inputs.dockerhub }})
+          label: publish ${{ steps.ver.outputs.version }} (github:${{ inputs.github }} release:${{ inputs.github_release }} dockerhub:${{ inputs.dockerhub }})
           token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
