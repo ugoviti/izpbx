@@ -1,0 +1,27 @@
+# izPBX Matrix notification test (Gitea Actions): sends one test message to the room, in a few
+# seconds, without building anything. By hand only (Repository > Actions > izpbx-matrix-test > Run workflow).
+# The log of the step "matrix notify" says "sent to <room>" or why Matrix refused the message.
+#
+# Required secrets:   MATRIX_TOKEN
+# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+
+name: izpbx-matrix-test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  matrix-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: matrix notify
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: success
+          label: matrix test ref:${{ gitea.ref_name }}
+          token: ${{ secrets.MATRIX_TOKEN }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
