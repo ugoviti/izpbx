@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [22.17.0] - Unreleased
+## [Unreleased]
+
+## [22.17.0] - 2026-10-29
 New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volumes of izPBX 20.16 (FreePBX 16) are migrated by the container, opt-in: read [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md) before switching image.
 ### Security
 - FreePBX 16 reaches end of life on 2027-01-01: FreePBX `17` (framework `17.0.33`) on PHP `8.2` (PHP 7.4 is end of life)
