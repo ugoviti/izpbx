@@ -130,7 +130,12 @@ runs:
         docker run -i --rm --platform "$PLATFORM" --entrypoint "" -e ASTERISK_VER="$ASTERISK_VER" "$IMAGE" bash -s < "$SCRIPT"
 
     # the tags of the amd64 job become a list with the new platform; idempotent:
-    # on a rerun the tag is already a list and only its amd64 entry is taken
+    # on a rerun the tag is already a list and only its amd64 entry is taken.
+    # Gitea keeps a manifest pushed with a tag only inside that tag, and deletes it
+    # when the tag is overwritten: the list would point to an amd64 manifest that
+    # no longer exists (22.17.0-rc9: "manifests/sha256:... not found" in
+    # izpbx-promote). So the amd64 manifest is pushed again by its digest first,
+    # like the arm64 one, and the list is checked entry by entry at the end.
     - name: add the platform to the tags
       if: inputs.append-platform == 'true'
       shell: bash
@@ -138,6 +143,9 @@ runs:
         TAGS: ${{ steps.tags.outputs.tags }}
         REPO: ${{ steps.login.outputs.image }}
         DIGEST: ${{ steps.build.outputs.digest }}
+        REGISTRY_HOST: ${{ inputs.registry-host }}
+        REGISTRY_USERNAME: ${{ inputs.registry-username }}
+        REGISTRY_TOKEN: ${{ inputs.registry-token }}
       run: |
         set -euo pipefail
         FIRST=$(printf '%s\n' "$TAGS" | sed '/^$/d' | head -1)
@@ -148,9 +156,28 @@ runs:
           AMD64=$(docker buildx imagetools inspect "$FIRST" --format '{{.Manifest.Digest}}')
         fi
         [ -n "$AMD64" ] || { echo "::error::no amd64 image in ${FIRST}"; exit 1; }
+
+        # the amd64 manifest, byte for byte, pushed again under its digest (registry API:
+        # buildx imagetools would wrap it in a new list with another digest)
+        URL="https://${REGISTRY_HOST}/v2/${REPO#"${REGISTRY_HOST}"/}/manifests/${AMD64}"
+        MANIFEST=$(mktemp)
+        TYPE=$(curl -fsS --max-time 60 -u "${REGISTRY_USERNAME}:${REGISTRY_TOKEN}" -o "$MANIFEST" -w '%{content_type}' \
+          -H 'Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' "$URL") \
+          || { echo "::error::amd64 manifest ${AMD64} not readable: run the amd64 job again"; exit 1; }
+        [ "sha256:$(sha256sum "$MANIFEST" | cut -d' ' -f1)" == "$AMD64" ] || { echo "::error::amd64 manifest read does not match ${AMD64}"; exit 1; }
+        curl -fsS --max-time 60 -u "${REGISTRY_USERNAME}:${REGISTRY_TOKEN}" -o /dev/null -X PUT \
+          -H "Content-Type: ${TYPE}" --data-binary @"$MANIFEST" "$URL"
+        rm -f "$MANIFEST"
+        echo "amd64 manifest ${AMD64} kept by digest"
+
         ARGS=()
         while read -r TAG; do
           if [ -n "$TAG" ]; then ARGS+=(-t "$TAG"); echo "-> $TAG"; fi
         done <<< "$TAGS"
         docker buildx imagetools create "${ARGS[@]}" "${REPO}@${AMD64}" "${REPO}@${DIGEST}"
         docker buildx imagetools inspect "$FIRST"
+        # every entry of the list must be readable by digest (what a pull and izpbx-promote do)
+        for D in $(docker buildx imagetools inspect --raw "$FIRST" | jq -r '.manifests[].digest'); do
+          docker buildx imagetools inspect --raw "${REPO}@${D}" >/dev/null \
+            || { echo "::error::${FIRST}: manifest ${D} of the list not found in the registry"; exit 1; }
+        done
