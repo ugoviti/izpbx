@@ -1,5 +1,5 @@
 # Name
-[<img src="https://www.initzero.it/images/initzero-logo-izpbx-48x48.png">](https://www.initzero.it) izPBX Cloud Native VoIP Telephony System
+[<img src="https://www.initzero.it/images/initzero-logo-izpbx-48x48.png">](https://wearequantico.it) izPBX Cloud Native VoIP Telephony System
 
 # Description
 izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine and FreePBX Management GUI
@@ -367,13 +367,13 @@ for best security, fine-tune the ports range based on your needs by not using st
   
 # Quick reference
 - **Developed and maintained by**:
-  [Ugo Viti](https://github.com/ugoviti/izpbx) @ InitZero S.r.l.
+  [Ugo Viti](mailto:u.viti@wearequantico.it) @ [Quantico S.r.l.](https://wearequantico.it)
 
 - **Where to file issues**:
   [https://github.com/ugoviti/izpbx/issues](https://github.com/ugoviti/izpbx/issues)
 
 - **Where to get commercial help**:
-  email: [support@initzero.it](mailto:support@initzero.it) - web: [InitZero Support](https://www.initzero.it/)
+  email: [support+izpbx@wearequantico.it](mailto:support+izpbx@wearequantico.it) - web: [Quantico](https://wearequantico.it)
   
 - **Supported architectures**:
   [`amd64`, `arm64`] (`arm64` from 22.17; 20.16 is `amd64` only)
