@@ -20,10 +20,10 @@ t_on_cleanup "t_rmtree '$work'"
 compose_config() { # dir with compose.yml and .env
   docker run --rm -v "$1:/w:ro" -w /w "$cli" docker compose -f compose.yml config -q >"$work/config.out" 2>&1
 }
-cp "$REPO_DIR/compose.yml" "$work/compose.yml"; cp "$REPO_DIR/default.env" "$work/.env"
+cp "$DEPLOY_FILES/compose.yml" "$work/compose.yml"; cp "$DEPLOY_FILES/default.env" "$work/.env"
 assert_cmd "docker compose config valid" -- compose_config "$work"
-assert_cmd "izpbx image 22.17.0 (IZPBX_VERSION, P7-10)" -- grep -qE '^    image: docker.io/izdock/izpbx-asterisk:\$\{IZPBX_VERSION:-22\.17\.0\}$' "$REPO_DIR/compose.yml"
-assert_cmd "IZPBX_VERSION=22.17.0 in default.env" -- grep -qx 'IZPBX_VERSION=22.17.0' "$REPO_DIR/default.env"
+assert_cmd "izpbx image 22.17.0 (IZPBX_VERSION, P7-10)" -- grep -qE '^    image: docker.io/izdock/izpbx-asterisk:\$\{IZPBX_VERSION:-22\.17\.0\}$' "$DEPLOY_FILES/compose.yml"
+assert_cmd "IZPBX_VERSION=22.17.0 in default.env" -- grep -qx 'IZPBX_VERSION=22.17.0' "$DEPLOY_FILES/default.env"
 
 # the configurable variables of the contract
 awk '/^## / {sec = $2} /^\| `[A-Z]/ {split($0, a, "`"); print sec "\t" a[2] "\t" $0}' "$contract" |
@@ -35,14 +35,14 @@ assert_cmd_fails "internal names left out (HOSTNAME)" -- grep -qx HOSTNAME "$wor
 missing() { # env file -> the variables it lacks
   local v; while read -r v; do grep -qE "^#? ?$v=" "$1" || printf '%s ' "$v"; done < "$work/vars"
 }
-assert_eq "" "$(missing "$REPO_DIR/default.env")" "every contract variable in default.env"
-grep -v '^#\?UMASK=' "$REPO_DIR/default.env" > "$work/without.env"
+assert_eq "" "$(missing "$DEPLOY_FILES/default.env")" "every contract variable in default.env"
+grep -v '^#\?UMASK=' "$DEPLOY_FILES/default.env" > "$work/without.env"
 assert_eq "UMASK " "$(missing "$work/without.env")" "negative: a default.env without UMASK is reported"
 
 # removed values
-assert_cmd_fails "FREEPBX_MODULES_EXTRA without phonebook" -- grep -qE '^#?FREEPBX_MODULES_EXTRA=.*\bphonebook\b' "$REPO_DIR/default.env"
-assert_cmd_fails "no variable of the legacy entrypoint" -- grep -qE '^#? ?(APP_RUNAS|MULTISERVICE|CMD_OVERRIDE|ENTRYPOINT_TINI)=' "$REPO_DIR/default.env"
+assert_cmd_fails "FREEPBX_MODULES_EXTRA without phonebook" -- grep -qE '^#?FREEPBX_MODULES_EXTRA=.*\bphonebook\b' "$DEPLOY_FILES/default.env"
+assert_cmd_fails "no variable of the legacy entrypoint" -- grep -qE '^#? ?(APP_RUNAS|MULTISERVICE|CMD_OVERRIDE|ENTRYPOINT_TINI)=' "$DEPLOY_FILES/default.env"
 
-sed 's/^    restart: unless-stopped$/    restart: unless-stopped\n    no_such_key: true/' "$REPO_DIR/compose.yml" > "$work/compose.yml"
+sed 's/^    restart: unless-stopped$/    restart: unless-stopped\n    no_such_key: true/' "$DEPLOY_FILES/compose.yml" > "$work/compose.yml"
 assert_cmd_fails "negative: a compose.yml with an invalid key is reported" -- compose_config "$work"
 finish

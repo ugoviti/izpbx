@@ -48,10 +48,12 @@ Create the [macvlan network](#one-macvlan-network-for-all-izpbx-instances) (once
 ```
 mkdir yourgreatpbx
 cd yourgreatpbx
-cp /path/to/izpbx/default.env .env
+docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy init
 vim compose.yml
 vim .env
 ```
+
+`izpbx-deploy init` writes `compose.yml` and `.env` (see [izpbx-deploy](izpbx-deploy.md)); `izpbx-deploy upgrade` updates them later and keeps the changes below (local edits of `compose.yml` are merged).
 
 Modify `compose.yml` according to your environment needs:
 - `ipv4_address:` (a different LAN address for every izPBX, inside the `--ip-range` of the macvlan network)
@@ -130,6 +132,7 @@ mkdir izpbx
 cd izpbx
 vim compose.yml
 vim db.env
+for n in 1 2 3; do docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy init --only env --env-file izpbx$n.env; done
 vim izpbx1.env
 vim izpbx2.env
 vim izpbx3.env
@@ -142,7 +145,7 @@ TZ=Europe/Rome
 MYSQL_ROOT_PASSWORD=YourRootPasswordV3ryS3cur3
 ```
 
-Every `PBXNAME.env` is a copy of [default.env](../default.env) with its own database, user and password (for best security use a different password for every izPBX), example for `izpbx1.env`:
+Every `PBXNAME.env` is a [default.env](../izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env) (written by `izpbx-deploy init --only env --env-file PBXNAME.env`, updated by `izpbx-deploy upgrade --only env --env-file PBXNAME.env`: this `compose.yml` is your own) with its own database, user and password (for best security use a different password for every izPBX), example for `izpbx1.env`:
 ```
 MYSQL_SERVER=db
 MYSQL_DATABASE=izpbx1_asterisk

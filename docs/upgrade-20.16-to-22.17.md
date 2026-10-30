@@ -4,8 +4,8 @@ izPBX 22.17 moves from FreePBX 16 / Asterisk 20 on Rocky Linux to **FreePBX 17 /
 
 The short version:
 
-1. update to izPBX **20.16.22** and upgrade all FreePBX modules;
-2. switch the image to 22.17 and run the **checks** from the host, in the directory of `compose.yml` (`docker compose run --rm --no-deps --entrypoint izpbx-preflight izpbx`): fix what they report. The container runs the same checks by itself at every start on a 20.16 volume; running them first lets you read the report while 20.16 is still up;
+1. update to izPBX **20.16.22** (the last 20.16, see the README of the [`release/20.16`](https://github.com/ugoviti/izpbx/tree/release/20.16) branch) and upgrade all FreePBX modules;
+2. switch the image to 22.17 (`izpbx-deploy upgrade --major --apply`) and run the **checks** from the host, in the directory of `compose.yml` (`docker compose run --rm --no-deps --entrypoint izpbx-preflight izpbx`): fix what they report. The container runs the same checks by itself at every start on a 20.16 volume; running them first lets you read the report while 20.16 is still up;
 3. **back up** `data/` and the databases;
 4. set `IZPBX_MIGRATE_FREEPBX=true` and start the container: it migrates, verifies the result and starts;
 5. keep the **snapshot** in `data/izpbx/.izpbx-migration/` until you are sure: `izpbx-rollback` goes back to 20.16 from it.
@@ -38,13 +38,14 @@ Variables of the migration (in `.env`):
 
 ### 1. Switch the image and run the checks
 
-Set the 22.17 image (always an explicit version: `latest` stays on 20.16 for now) and pull it. In 22.17 the version is `IZPBX_VERSION` of `.env`: the first line turns the image line of a 20.16 `compose.yml`, which has the tag written in it, into the 22.17 form (`izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`; nothing to do with the `compose.yml` of 22.17), the second sets the version in `.env`:
+Switch to the 22.17 image (always an explicit version: `latest` stays on 20.16 for now) with `izpbx-deploy`, on the host, in the directory of `compose.yml` (eg. `/opt/izpbx`). It adds `IZPBX_VERSION=22.17.0` and the new variables of 22.17 to `.env` (your values stay) and replaces the 20.16 `compose.yml` with the one of 22.17 (it reads the version from `.env`: `izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`). The old files stay next to the new ones (`.env.YYYYmmdd-HHMMSS.bak`, `compose.yml.YYYYmmdd-HHMMSS.bak`): move the local changes of your 20.16 `compose.yml` (networks, ports, volumes) to `compose.override.yml`. Without `--apply` it only shows the changes; `--major` is needed because 20.16 -> 22.17 is a new version series (see [izpbx-deploy](izpbx-deploy.md)):
 
 <!-- test:run -->
 ```sh
-sed -i 's|izpbx-asterisk:20\.16\.[0-9]*$|izpbx-asterisk:${IZPBX_VERSION:-22.17.0}|' compose.yml
-sed -i '/^IZPBX_VERSION=/d' .env && echo 'IZPBX_VERSION=22.17.0' >> .env
+docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy upgrade --major --apply
 ```
+
+Check the summary it prints: the values of your `.env` that differ from the new `default.env` are listed (they are kept).
 
 ```sh
 docker compose pull izpbx

@@ -74,6 +74,9 @@ COPY rootfs/usr/local/sbin/izpbx-inventory /usr/local/sbin/izpbx-inventory
 COPY rootfs/usr/local/sbin/izpbx-preflight /usr/local/sbin/izpbx-preflight
 COPY rootfs/usr/local/sbin/izpbx-migrate /usr/local/sbin/izpbx-migrate
 COPY rootfs/usr/local/sbin/izpbx-rollback /usr/local/sbin/izpbx-rollback
+# compose.yml and .env of a deploy from the image (docs/izpbx-deploy.md): the
+# files are in /usr/local/share/izpbx/deploy (tools/deploy-sync.sh)
+COPY rootfs/usr/local/sbin/izpbx-deploy rootfs/usr/local/sbin/izpbx-entrypoint /usr/local/sbin/
 COPY rootfs/etc/fail2ban/ /etc/fail2ban/
 COPY rootfs/etc/dnsmasq.d/ /etc/dnsmasq.d/
 COPY rootfs/usr/local/share/phonebook/ /usr/local/share/phonebook/
@@ -113,6 +116,7 @@ ENV APP_NAME="izpbx-asterisk" \
 # health (design H5): the first start installs FreePBX and a migration can
 # take tens of minutes, so failures count only after 30 minutes
 HEALTHCHECK --interval=30s --timeout=20s --start-period=30m --retries=3 CMD ["/usr/local/bin/izpbx-healthcheck"]
-# s6-overlay is PID 1 (s6-svscan); without a CMD it runs the services only
-ENTRYPOINT ["/init"]
+# s6-overlay is PID 1 (s6-svscan); without a CMD it runs the services only.
+# izpbx-entrypoint execs /init, except "izpbx-deploy ..." that runs alone
+ENTRYPOINT ["/usr/local/sbin/izpbx-entrypoint"]
 CMD []

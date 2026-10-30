@@ -1,4 +1,6 @@
-# NOTE: don't edit this file, instead specify your changes creating docker-compose.override.yml
+# izPBX deploy, written by izpbx-deploy (https://github.com/ugoviti/izpbx/blob/main/docs/izpbx-deploy.md)
+# NOTE: don't edit this file, put your changes in compose.override.yml: izpbx-deploy upgrade replaces it
+#       with the compose.yml of the new version (local edits are merged, a conflict stops the upgrade)
 
 networks:
   izpbx:

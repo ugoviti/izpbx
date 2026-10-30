@@ -22,8 +22,8 @@
 #   else   the commit subjects are used as a draft.
 # The entry is opened in $EDITOR for review (skipped with --yes).
 #
-# --commit: compose.yml, default.env, README.md and docs/*.md move from <previous X.Y.N> to
-# the new version, one commit "X.Y.Z release", annotated tag X.Y.Z with the CHANGELOG entry as its message ("izPBX X.Y.Z", then the entry). --push: the
+# --commit: compose.yml and default.env (in $deploy), README.md and docs/*.md move from
+# <previous X.Y.N> to the new version (history of izpbx-deploy: tools/deploy-sync.sh), one commit "X.Y.Z release", annotated tag X.Y.Z with the CHANGELOG entry as its message ("izPBX X.Y.Z", then the entry). --push: the
 # branch and the tag go to origin, the tag starts the izpbx-release workflow
 # (Gitea registry only; Docker Hub needs izpbx-promote).
 #
@@ -59,6 +59,8 @@ done
 root=$(git rev-parse --show-toplevel) || die "not in a git repository"
 cd "$root"
 venv=izpbx-asterisk/versions.env
+# compose.yml and default.env of a deploy, read by izpbx-deploy in the image
+deploy=izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy
 mods=izpbx-asterisk/build/freepbx-modules.txt
 
 # --- preconditions
@@ -290,19 +292,21 @@ fi
 [ "$start" -eq "$first" ] || [ "$start" -gt "$end" ] || die "the Unreleased block of $cl is not the first entry"
 
 # --- image references of the same series, <last> -> <version>: the
-# explicit tags izpbx-asterisk:<last> (README examples), the default of
+# explicit tags izpbx-asterisk:<last> (README examples), the download URLs
+# .../ugoviti/izpbx/<last>/... of the README, the default of
 # compose.yml ${IZPBX_VERSION:-<last>} and IZPBX_VERSION=<last> (default.env,
-# upgrade steps of docs/)
+# upgrade steps of docs/); compose.yml and default.env are in $deploy
 files=()
 if [ -n "$last" ]; then
-  for f in compose.yml default.env README.md docs/*.md; do
-    [ -f "$f" ] && grep -qE "izpbx-asterisk:${last//./\\.}\b|IZPBX_VERSION(:-|=)${last//./\\.}\b" "$f" && files+=("$f")
+  for f in "$deploy/compose.yml" "$deploy/default.env" README.md docs/*.md; do
+    [ -f "$f" ] && grep -qE "izpbx-asterisk:${last//./\\.}\b|IZPBX_VERSION(:-|=)${last//./\\.}\b|ugoviti/izpbx/${last//./\\.}/" "$f" && files+=("$f")
   done
 fi
 lq=${last//./\\.}
 moves=(-e "s|izpbx-asterisk:${lq}\\b|izpbx-asterisk:$version|g"
        -e "s|IZPBX_VERSION:-${lq}}|IZPBX_VERSION:-$version}|g"
-       -e "s|IZPBX_VERSION=${lq}\\b|IZPBX_VERSION=$version|g")
+       -e "s|IZPBX_VERSION=${lq}\\b|IZPBX_VERSION=$version|g"
+       -e "s|ugoviti/izpbx/${lq}/|ugoviti/izpbx/$version/|g")
 
 if [ -n "$dry" ]; then
   diff -u "$cl" "$work/CHANGELOG.md" | head -40 || true
@@ -315,6 +319,11 @@ fi
 cp "$work/CHANGELOG.md" "$cl"
 for f in "${files[@]}"; do sed -i "${moves[@]}" "$f"; done
 git add "$cl" "${files[@]}"
+# izpbx-deploy: the files of the previous releases (base of the upgrade) and every variable
+if [ -x izpbx-asterisk/tools/deploy-sync.sh ]; then
+  izpbx-asterisk/tools/deploy-sync.sh >/dev/null
+  git add "$deploy"
+fi
 git commit -q -m "$version release"
 tail -n +2 "$work/entry" > "$work/tag-notes"
 tag_with_notes "$version" "$work/tag-notes"

@@ -33,11 +33,11 @@ docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ${PWD}/da
 
 ### docker compose:
 
-from izpbx directory root, exec:
+from izpbx directory root, with a `.env` there (`cp izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env .env`, ignored by git), exec (`--project-directory .`: `.env` and `./data` of the repository root, `compose.yml` of the image):
 
 Asterisk 22 + FreePBX 17:  
 ```
-docker compose down ; docker compose -f compose.yml -f izpbx-asterisk/compose/compose-dev-22.17.yml up
+docker compose --project-directory . -f izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/compose.yml -f izpbx-asterisk/compose/compose-dev-22.17.yml down ; docker compose --project-directory . -f izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/compose.yml -f izpbx-asterisk/compose/compose-dev-22.17.yml up
 ```
 
 ### entering into container:

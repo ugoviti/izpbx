@@ -1,0 +1,9 @@
+#!/bin/sh
+# ENTRYPOINT of the image: "izpbx-deploy ..." runs izpbx-deploy alone, without
+# the services (docs/izpbx-deploy.md); anything else goes to /init (s6-overlay,
+# PID 1), as before.
+if [ "${1:-}" = izpbx-deploy ]; then
+  shift
+  exec /usr/local/sbin/izpbx-deploy "$@"
+fi
+exec /init "$@"

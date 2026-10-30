@@ -12,7 +12,7 @@ source "$(dirname "$0")/../lib.sh"
 cli=docker.io/library/docker:27.5.1-cli
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
-compose="$REPO_DIR/compose.yml" env="$REPO_DIR/default.env"
+compose="$DEPLOY_FILES/compose.yml" env="$DEPLOY_FILES/default.env"
 
 iv=$(sed -n 's/^IZPBX_VERSION=//p' "$env"); mv=$(sed -n 's/^MARIADB_VERSION=//p' "$env")
 assert_eq 22.17.0 "$iv" "default.env: IZPBX_VERSION"

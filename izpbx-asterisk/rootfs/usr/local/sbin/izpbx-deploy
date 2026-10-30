@@ -1,0 +1,411 @@
+#!/bin/bash
+# izpbx-deploy: create and upgrade the compose.yml and .env of an izPBX deploy
+# from the files of this image (docs/izpbx-deploy.md).
+#
+#   docker run --rm -v "$PWD:/deploy" IMAGE izpbx-deploy init               compose.yml and .env in an empty directory
+#   docker run --rm -v "$PWD:/deploy" IMAGE izpbx-deploy upgrade [--apply]  bring them to the version of IMAGE (dry-run by default)
+#   docker run --rm IMAGE izpbx-deploy compose > compose.yml                the compose.yml of IMAGE on stdout
+#   docker run --rm IMAGE izpbx-deploy env > .env                           a new .env on stdout (random passwords)
+#
+# Options:
+#   --apply            upgrade: write the changes (default: dry-run, nothing written)
+#   --env-file FILE    init, upgrade: the env file, relative to the deploy directory (default: .env)
+#   --only env|compose init, upgrade: handle one file only
+#   --keep-version     upgrade: keep IZPBX_VERSION and MARIADB_VERSION of the .env
+#   --major            upgrade: allow a change of version series of IZPBX_VERSION (e.g. 20.16 -> 22.17);
+#                      a compose.yml of an unknown version (20.16) is replaced, with backup
+#   --prune            upgrade: delete the variables removed from default.env instead of commenting them
+#   --no-backup        upgrade: no FILE.YYYYmmdd-HHMMSS.bak copy before writing
+#
+# Exit code: 0 nothing to do or written, 1 error, 2 dry-run with pending
+# changes, 3 refused (compose.yml merge conflict, version series change
+# without --major).
+#
+# IZPBX_DEPLOY_DIR (default /deploy) is the deploy directory, IZPBX_DEPLOY_SHARE
+# (default /usr/local/share/izpbx/deploy) the files of the image: compose.yml,
+# default.env, history/VERSION.env and history/VERSION.compose.yml (the files
+# of every release, the base of the 3-way merge), keys.txt (every variable
+# default.env ever had) and renames.tsv (OLD NEW VERSION).
+
+set -Eeuo pipefail
+
+dir=${IZPBX_DEPLOY_DIR:-/deploy}
+share=${IZPBX_DEPLOY_SHARE:-/usr/local/share/izpbx/deploy}
+new_env=$share/default.env
+new_compose=$share/compose.yml
+
+die() { echo "izpbx-deploy: ERROR: $*" >&2; exit 1; }
+refuse() { echo "izpbx-deploy: REFUSED: $*" >&2; exit 3; }
+note() { echo "izpbx-deploy: $*"; }
+usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+
+cmd=${1:-}
+[ -n "$cmd" ] || usage 1
+shift
+apply='' envfile=.env only='' keepver='' major='' prune='' backup=1
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --apply) apply=1 ;;
+    --env-file) envfile=${2:?--env-file FILE}; shift ;;
+    --only) only=${2:?--only env|compose}; shift
+            [[ "$only" =~ ^(env|compose)$ ]] || die "--only env or --only compose" ;;
+    --keep-version) keepver=1 ;;
+    --major) major=1 ;;
+    --prune) prune=1 ;;
+    --no-backup) backup='' ;;
+    -h|--help) usage ;;
+    *) die "unknown option: $1 (izpbx-deploy --help)" ;;
+  esac
+  shift
+done
+do_env=1 do_compose=1
+[ "$only" != compose ] || do_env=''
+[ "$only" != env ] || do_compose=''
+
+[ -f "$new_env" ] && [ -f "$new_compose" ] || die "files of the image not found in $share"
+
+# envval FILE KEY: the value of the last active KEY= line of FILE
+envval() {
+  awk -v k="$2" '{ sub(/\r$/, ""); s = $0; sub(/^[ \t]+/, "", s); sub(/^export[ \t]+/, "", s)
+    if (index(s, k "=") == 1) v = substr(s, length(k) + 2) } END { printf "%s", v }' "$1"
+}
+newver=$(envval "$new_env" IZPBX_VERSION)
+series() { local v=${1%%-*}; echo "${v%.*}"; }
+
+randpw() { local p; p=$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32) || true; echo "$p"; }
+
+# the default.env of the image with random database passwords
+gen_env() {
+  awk -v p1="$(randpw)" -v p2="$(randpw)" '
+    /^MYSQL_PASSWORD=/ { print "MYSQL_PASSWORD=" p1; next }
+    /^MYSQL_ROOT_PASSWORD=/ { print "MYSQL_ROOT_PASSWORD=" p2; next }
+    { print }' "$new_env"
+}
+
+work=''
+cleanup() { [ -z "$work" ] || rm -rf "$work"; }
+trap cleanup EXIT
+
+case "$cmd" in
+  compose) [ $# -eq 0 ] || usage 1; cat "$new_compose"; exit 0 ;;
+  env)     gen_env; exit 0 ;;
+  init|upgrade) ;;
+  -h|--help|help) usage ;;
+  *) die "unknown subcommand: $cmd (init, upgrade, compose, env)" ;;
+esac
+
+[ -d "$dir" ] || die "deploy directory $dir not found (docker run -v \"\$PWD:$dir\" ...)"
+ef=$dir/$envfile
+cf=$dir/compose.yml
+work=$(mktemp -d "$dir/.izpbx-deploy.XXXXXX") || die "cannot write in $dir"
+
+# put SRC FILE MODE: atomic write of FILE (temporary file in the same
+# directory, then rename); MODE and owner of the existing FILE, else MODE
+# and the owner of the deploy directory
+put() {
+  local src=$1 f=$2 mode=$3 t
+  t=$(mktemp "$(dirname "$f")/.izpbx-deploy.XXXXXX")
+  cat "$src" > "$t"
+  if [ -e "$f" ]; then
+    chmod --reference="$f" "$t"; chown --reference="$f" "$t" 2>/dev/null || true
+  else
+    chmod "$mode" "$t"; chown --reference="$dir" "$t" 2>/dev/null || true
+  fi
+  mv -f "$t" "$f"
+}
+
+# ---------------------------------------------------------------- init
+if [ "$cmd" == init ]; then
+  [ -z "$do_env" ] || [ ! -e "$ef" ] || die "$envfile already exists: use izpbx-deploy upgrade"
+  [ -z "$do_compose" ] || [ ! -e "$cf" ] || die "compose.yml already exists: use izpbx-deploy upgrade"
+  if [ -n "$do_compose" ]; then put "$new_compose" "$cf" 0644; note "written compose.yml"; fi
+  if [ -n "$do_env" ]; then
+    gen_env > "$work/env"; put "$work/env" "$ef" 0600
+    note "written $envfile (izPBX $newver, random MYSQL_PASSWORD and MYSQL_ROOT_PASSWORD): review it, then docker compose up -d"
+  fi
+  exit 0
+fi
+
+# ---------------------------------------------------------------- upgrade
+[ -z "$do_env" ] || [ -f "$ef" ] || die "$envfile not found in $dir: izpbx-deploy init for a new deploy"
+uver=''
+[ ! -f "$ef" ] || uver=$(envval "$ef" IZPBX_VERSION)
+
+# base: the files of the version the deploy comes from
+base_env='' base_compose=''
+if [ -n "$uver" ] && [ "$uver" == "$newver" ]; then
+  base_env=$new_env base_compose=$new_compose
+elif [ -n "$uver" ] && [ -f "$share/history/$uver.env" ]; then
+  base_env=$share/history/$uver.env
+  [ ! -f "$share/history/$uver.compose.yml" ] || base_compose=$share/history/$uver.compose.yml
+fi
+
+# version series change (e.g. 20.16 -> 22.17): a migration, not an image update
+if [ -n "$do_env" ] && [ -z "$keepver" ] && [ -z "$major" ]; then
+  if [ -z "$uver" ]; then
+    refuse "no IZPBX_VERSION in $envfile: it comes from izPBX 20.16 or older, and 20.16 -> $(series "$newver") is a migration,
+  see docs/upgrade-20.16-to-22.17.md (https://github.com/ugoviti/izpbx/blob/main/docs/upgrade-20.16-to-22.17.md).
+  Run again with --major to go on (also when this deploy already runs $(series "$newver")), or --keep-version."
+  elif [ "$(series "$uver")" != "$(series "$newver")" ]; then
+    refuse "IZPBX_VERSION $uver -> $newver changes the version series: it is a migration, not an image update,
+  see docs/upgrade-20.16-to-22.17.md (https://github.com/ugoviti/izpbx/blob/main/docs/upgrade-20.16-to-22.17.md).
+  Run again with --major to go on, or --keep-version."
+  fi
+fi
+
+# ---- .env: merge of base (the default.env of $uver), the .env and the new default.env
+merge_env() { # base user new report
+  awk -v base="$1" -v user="$2" -v new="$3" -v rep="$4" -v nver="$newver" \
+      -v renames="$share/renames.tsv" -v keys="$share/keys.txt" -v keepver="$keepver" -v prune="$prune" '
+  # kv LINE: PT "a" (active KEY=value), "c" (commented #KEY=value) or "", PK, PV
+  function kv(line,   s, p) {
+    PT = ""; PK = ""; PV = ""; s = line
+    if (s ~ /^#/) {
+      sub(/^#[ \t]*/, "", s)
+      if (s !~ /^[A-Za-z_][A-Za-z0-9_]*=/) return
+      PT = "c"
+    } else {
+      sub(/^[ \t]+/, "", s); sub(/^export[ \t]+/, "", s)
+      if (s !~ /^[A-Za-z_][A-Za-z0-9_]*=/) return
+      PT = "a"
+    }
+    p = index(s, "="); PK = substr(s, 1, p - 1); PV = substr(s, p + 1)
+  }
+  # load FILE into lines/type/key/value; per key: has, state ("set" when an
+  # active line exists), val (the last active value), cnt (active lines)
+  function load(file, l, t, k, v, has, state, val, cnt,   n, line) {
+    n = 0
+    while ((getline line < file) > 0) {
+      sub(/\r$/, "", line); n++; l[n] = line; kv(line); t[n] = PT; k[n] = PK; v[n] = PV
+      if (PT == "") continue
+      has[PK] = 1
+      if (PT == "a") { state[PK] = "set"; val[PK] = PV; cnt[PK]++ }
+    }
+    close(file)
+    return n
+  }
+  function report(s) { print s > rep }
+  function isset(state, k) { return (k in state) && state[k] == "set" }
+  # decide K: "T" the lines of the new default.env, "S" the value of the
+  # user (set), "D" disabled by the user (the active lines commented)
+  function decide(k,   u, b) {
+    u = !(k in uhas) ? "absent" : (isset(us, k) ? "set" : "unset")
+    if ((k == "IZPBX_VERSION" || k == "MARIADB_VERSION") && !keepver) {
+      if (u == "set" && uval[k] != nval[k]) report("version " k " " uval[k] " " nval[k])
+      else if (u == "absent") report("added " k)
+      return "T"
+    }
+    if ((k == "IZPBX_VERSION" || k == "MARIADB_VERSION") && u == "set") return uval[k] == nval[k] ? "T" : "S"
+    if (u == "absent") {
+      if (hasbase && (k in bhas)) return isset(bs, k) && isset(ns, k) ? "D" : "T"
+      report("added " k); return "T"
+    }
+    if (hasbase) {
+      b = isset(bs, k) ? "set" : "unset"
+      if (u == b && (u == "unset" || uval[k] == bval[k])) {
+        if (b == "set" && isset(ns, k) && nval[k] != bval[k]) report("default " k " " bval[k] " " nval[k])
+        else if (b != (isset(ns, k) ? "set" : "unset")) report("default " k " " (b == "set" ? bval[k] : "(unset)") " " (isset(ns, k) ? nval[k] : "(unset)"))
+        return "T"
+      }
+    }
+    if (u == "set") {
+      if (isset(ns, k) && uval[k] == nval[k]) return "T"
+      report("kept " k); return "S"
+    }
+    if (isset(ns, k)) { report("disabled " k); return "D" }
+    return "T"
+  }
+  BEGIN {
+    HC1 = "### Custom"; HC2 = "## variables not in default.env, kept by izpbx-deploy"
+    HR1 = "### Removed"; HR2 = "## variables no longer in default.env, commented by izpbx-deploy: delete them when not needed (or izpbx-deploy upgrade --prune)"
+    header[HC1] = 1; header[HC2] = 1; header[HR1] = 1; header[HR2] = 1
+    hasbase = (base != "")
+    while ((getline line < keys) > 0) known[line] = 1
+    close(keys)
+    nr = 0
+    while ((getline line < renames) > 0) {
+      if (line ~ /^[ \t]*(#|$)/) continue
+      split(line, f, /[ \t]+/); nr++; ro[nr] = f[1]; rn[nr] = f[2]
+    }
+    close(renames)
+    nb = hasbase ? load(base, bl, bt, bk, bv, bhas, bs, bval, bcnt) : 0
+    nu = load(user, ul, ut, uk, uv, uhas, us, uval, ucnt)
+    nn = load(new, nl, nt, nk, nv, nhas, ns, nval, ncnt)
+    for (i = 1; i <= nb; i++) tpl[bl[i]] = 1
+    for (i = 1; i <= nn; i++) tpl[nl[i]] = 1
+
+    # renamed variables: the value of the old name moves to the new one
+    for (j = 1; j <= nr; j++) {
+      o = ro[j]; w = rn[j]
+      if (isset(us, o) && (!isset(us, w) || uval[w] == "")) {
+        uhas[w] = 1; us[w] = "set"; uval[w] = uval[o]; renamed[o] = w; report("renamed " o " " w)
+      } else if (o in uhas) renamed[o] = w
+      if (hasbase && (o in bhas) && !(w in bhas)) { bhas[w] = 1; if (o in bs) bs[w] = bs[o]; if (o in bval) bval[w] = bval[o] }
+    }
+    for (k in ucnt) if (ucnt[k] > 1) report("dup " k)
+
+    # the new default.env, with the values of the user
+    for (i = 1; i <= nn; i++) {
+      if (nt[i] == "") continue
+      k = nk[i]
+      if (!(k in dec)) dec[k] = decide(k)
+      if (dec[k] != "S") continue
+      # where the value goes: a commented example with the same value, else
+      # the last active line, else after the last line of the variable
+      if (!(k in tgt) || tmode[k] != "ex") {
+        if (nt[i] == "c" && nv[i] == uval[k]) { tgt[k] = i; tmode[k] = "ex" }
+        else if (nt[i] == "a") { tgt[k] = i; tmode[k] = "rep" }
+        else if (!(k in tgt) || tmode[k] == "after") { tgt[k] = i; tmode[k] = "after" }
+      }
+    }
+    for (i = 1; i <= nn; i++) {
+      if (nt[i] == "") { print nl[i]; continue }
+      k = nk[i]; d = dec[k]
+      if (d == "T") print nl[i]
+      else if (d == "S" && tgt[k] == i) {
+        if (tmode[k] == "after") print nl[i]
+        print k "=" uval[k]
+      } else print (nt[i] == "a" ? "#" nl[i] : nl[i])
+    }
+
+    # variables of the user not in the new default.env: removed or custom
+    buf = ""; custom = ""; nm = 0
+    for (i = 1; i <= nu; i++) {
+      if (ut[i] == "") {
+        if (ul[i] ~ /^# REMOVED in [^:]*: [A-Za-z_][A-Za-z0-9_]*=/) {
+          s = ul[i]; sub(/^# REMOVED in [^:]*: /, "", s); k = substr(s, 1, index(s, "=") - 1)
+          if (!prune && !(k in marked) && !(k in nhas)) { marked[k] = 1; nm++; marks[nm] = ul[i] }
+          else if (prune) report("pruned " k)
+          buf = ""
+        } else if (ul[i] ~ /^#/ && !(ul[i] in tpl) && !(ul[i] in header)) buf = buf ul[i] "\n"
+        else buf = ""
+        continue
+      }
+      k = uk[i]
+      if ((k in nhas) || (k in renamed)) { buf = ""; continue }
+      if ((k in known) || (hasbase && (k in bhas))) {
+        buf = ""
+        if (k in seen) continue
+        seen[k] = 1
+        if (!isset(us, k) || (hasbase && isset(bs, k) && bval[k] == uval[k])) report("removed " k)
+        else if (prune) report("pruned " k)
+        else if (!(k in marked)) { marked[k] = 1; nm++; marks[nm] = "# REMOVED in " nver ": " k "=" uval[k]; report("marked " k) }
+        continue
+      }
+      custom = custom buf ul[i] "\n"; buf = ""
+      if (!(k in seen)) { seen[k] = 1; report("custom " k) }
+    }
+    if (custom != "") { print ""; print HC1; print HC2; printf "%s", custom }
+    if (nm > 0) { print ""; print HR1; print HR2; for (i = 1; i <= nm; i++) print marks[i] }
+  }'
+}
+
+: > "$work/report"
+if [ -n "$do_env" ]; then
+  merge_env "$base_env" "$ef" "$new_env" "$work/report" > "$work/env"
+fi
+
+# ---- compose.yml
+compose_note='' conflict=''
+if [ -n "$do_compose" ]; then
+  if [ ! -f "$cf" ]; then
+    compose_note="compose.yml not found in $dir: not changed (izpbx-deploy init --only compose writes it)"
+  elif cmp -s "$cf" "$new_compose"; then
+    :
+  elif [ -n "$base_compose" ] && cmp -s "$cf" "$base_compose"; then
+    cp "$new_compose" "$work/compose"
+  elif [ -n "$base_compose" ]; then
+    rc=0
+    diff3 -m -L compose.yml -L "compose.yml of $uver" -L "compose.yml of $newver" \
+      "$cf" "$base_compose" "$new_compose" > "$work/compose" || rc=$?
+    if [ "$rc" -eq 1 ]; then conflict=1
+    elif [ "$rc" -ne 0 ]; then die "diff3 failed on compose.yml"
+    else compose_note="compose.yml edited in this deploy: local changes merged into the compose.yml of $newver"
+    fi
+  elif [ "$only" == compose ] || [ -n "$major" ]; then
+    # asked (--only compose), or a new version series (--major, e.g. the compose.yml of 20.16)
+    cp "$new_compose" "$work/compose"
+    compose_note="compose.yml of an unknown version (e.g. 20.16) replaced by the one of $newver: the old one stays in the backup, move its local changes to compose.override.yml"
+  else
+    compose_note="compose.yml edited, from an unknown version: not changed (diff below; --only compose replaces it, with backup; local changes belong in compose.override.yml)"
+    diff -u --label compose.yml --label "compose.yml of $newver" "$cf" "$new_compose" > "$work/compose.diff" || true
+  fi
+fi
+
+# ---- show the changes
+color=''
+[ -t 1 ] && [ -z "${NO_COLOR:-}" ] && color=1
+# diff without the values of passwords, secrets and tokens
+show_diff() {
+  sed -E 's/^([-+ ]#?[ \t]*[A-Za-z0-9_]*(PASSWORD|PASS|SECRET|TOKEN|_KEY)[A-Za-z0-9_]*=).+$/\1*****/' |
+  if [ -n "$color" ]; then
+    sed -E -e $'s/^(@@.*)$/\e[36m\\1\e[0m/' -e $'s/^(\\+.*)$/\e[32m\\1\e[0m/' -e $'s/^(-.*)$/\e[31m\\1\e[0m/'
+  else cat; fi
+}
+
+changed=()
+if [ -f "$work/env" ] && ! cmp -s "$ef" "$work/env"; then
+  changed+=(env)
+  diff -u --label "$envfile" --label "$envfile (izPBX $newver)" "$ef" "$work/env" | show_diff || true
+fi
+if [ -n "$conflict" ]; then
+  sed -n '/^<<<<<<< /,/^>>>>>>> /p' "$work/compose" | show_diff
+  refuse "compose.yml: the local changes conflict with the compose.yml of $newver (above); nothing written.
+  Move the local changes to compose.override.yml, then run again."
+fi
+if [ -f "$work/compose" ] && ! cmp -s "$cf" "$work/compose"; then
+  changed+=(compose)
+  diff -u --label compose.yml --label "compose.yml (izPBX $newver)" "$cf" "$work/compose" | show_diff || true
+fi
+[ ! -s "$work/compose.diff" ] || show_diff < "$work/compose.diff"
+
+# ---- summary
+secret() { [[ "$1" =~ (PASSWORD|PASS|SECRET|TOKEN|_KEY) ]]; }
+list() { awk -v w="$1" '$1 == w { print $2 }' "$work/report" | sort -u | xargs; }
+line() { local l; l=$(list "$1"); [ -z "$l" ] || note "  $2: $l"; }
+echo
+if [ -n "$do_env" ]; then
+  if [ -z "$uver" ]; then note "$envfile without IZPBX_VERSION: 2-way merge, the values of $envfile are always kept"
+  elif [ -z "$base_env" ]; then note "no default.env of $uver in the image: 2-way merge, the values of $envfile are always kept"
+  else note "$envfile of izPBX $uver -> $newver"
+  fi
+  while read -r _ k a b; do
+    note "  version: $k $a -> $b"
+    [ "$k" != MARIADB_VERSION ] || note "    after the restart run mariadb-upgrade (see compose.yml)"
+  done < <(awk '$1 == "version"' "$work/report")
+  line added "new variables"
+  line renamed "renamed (old new)"
+  while read -r _ k a b; do
+    if secret "$k"; then note "  default changed: $k"; else note "  default changed: $k $a -> $b"; fi
+  done < <(awk '$1 == "default"' "$work/report")
+  line kept "$([ -n "$base_env" ] && echo "customized values kept" || echo "values kept that differ from default.env $newver, check them")"
+  line disabled "kept disabled (active in default.env)"
+  line removed "removed (no longer in default.env)"
+  line marked "commented as '# REMOVED in $newver' (--prune deletes them)"
+  line pruned "deleted (--prune)"
+  line custom "custom variables, in the '### Custom' section"
+  line dup "defined more than once (the last one is kept)"
+  awk '$1 == "renamed" { print $2, $3 }' "$work/report" | while read -r o w; do note "    $o -> $w"; done
+fi
+[ -z "$compose_note" ] || note "$compose_note"
+
+if [ ${#changed[@]} -eq 0 ]; then
+  note "up to date: nothing to change"
+  exit 0
+fi
+if [ -z "$apply" ]; then
+  note "dry run, nothing written: run again with --apply to write ${changed[*]/env/$envfile} (with backup)"
+  exit 2
+fi
+
+# ---- write: backups first, then both files
+ts=$(date +%Y%m%d-%H%M%S)
+for c in "${changed[@]}"; do
+  f=$ef; [ "$c" == env ] || f=$cf
+  if [ -n "$backup" ]; then cp -p "$f" "$f.$ts.bak"; note "backup: $(basename "$f").$ts.bak"; fi
+done
+for c in "${changed[@]}"; do
+  if [ "$c" == env ]; then put "$work/env" "$ef" 0600; note "written $envfile"
+  else put "$work/compose" "$cf" 0644; note "written compose.yml"; fi
+done
+note "next: docker compose pull && docker compose up -d"

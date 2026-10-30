@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # P2-01: s6-overlay installed by build/s6.sh with a sha256 per architecture
-# (noarch + x86_64/aarch64, versions.env); ENTRYPOINT ["/init"]: PID 1 in
-# the container is s6-svscan; one-off commands keep their exit code.
+# (noarch + x86_64/aarch64, versions.env); ENTRYPOINT izpbx-entrypoint, that
+# execs /init: PID 1 in the container is s6-svscan; one-off commands keep
+# their exit code; "izpbx-deploy ..." runs without s6 (P7-11).
 # Negative: with a wrong sha256 build/s6.sh fails; a container started with
 # another entrypoint does not have s6-svscan as PID 1.
 source "$(dirname "$0")/../lib.sh"
@@ -12,7 +13,7 @@ for a in NOARCH X86_64 AARCH64; do
   assert_cmd "S6_OVERLAY_SHA256_$a pinned (64 hex)" -- grep -qE "^S6_OVERLAY_SHA256_$a=[0-9a-f]{64}$" "$dir/versions.env"
 done
 assert_cmd "image builds" -- t_build_image "$image"
-assert_eq '["/init"]' "$(docker image inspect -f '{{json .Config.Entrypoint}}' "$image")" "docker inspect: entrypoint /init"
+assert_eq '["/usr/local/sbin/izpbx-entrypoint"]' "$(docker image inspect -f '{{json .Config.Entrypoint}}' "$image")" "docker inspect: entrypoint izpbx-entrypoint"
 
 c=$(t_run svc "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
 t_wait_for 30 -- docker exec "$c" true || die "container did not start"
@@ -24,6 +25,9 @@ assert_ne "s6-svscan" "$(docker exec "$o" cat /proc/1/comm)" "control: with anot
 
 rc=0; docker run --rm -e IZPBX_ENABLED=false "$image" sh -c 'exit 3' 2>/dev/null || rc=$?
 assert_eq 3 "$rc" "a one-off command keeps its exit code through /init"
+assert_eq "$(cat "$DEPLOY_FILES/compose.yml")" "$(docker run --rm "$image" izpbx-deploy compose 2>&1)" "izpbx-deploy compose: the compose.yml of the repository, without s6 output"
+rc=0; docker run --rm "$image" izpbx-deploy --bad-option >/dev/null 2>&1 || rc=$?
+assert_eq 1 "$rc" "izpbx-deploy keeps its exit code"
 
 # negative: build/s6.sh (mounted from the repository: the build scripts are not
 # in the image), run in the image with a wrong sha256 for this arch

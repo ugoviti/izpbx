@@ -83,5 +83,11 @@ if [ -f README.md ] && [ -x izpbx-asterisk/tools/readme-dockerhub.sh ]; then
   izpbx-asterisk/tools/readme-dockerhub.sh 22.17.0-rc99 README.md >/dev/null || rc=1
 fi
 
+# izpbx-deploy: history of the releases and keys.txt in step with default.env and the tags
+if [ -x izpbx-asterisk/tools/deploy-sync.sh ] && [ -f izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env ]; then
+  echo "deploy: izpbx-deploy history and keys"
+  izpbx-asterisk/tools/deploy-sync.sh --check || rc=1
+fi
+
 [ "$rc" -eq 0 ] && echo "lint: clean" || echo "lint: findings above" >&2
 exit "$rc"

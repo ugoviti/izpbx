@@ -10,6 +10,9 @@ set -Eeuo pipefail
 TESTS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_DIR=$(cd "$TESTS_DIR/../.." && pwd)   # repository root (the tests live in izpbx-asterisk/tests)
 export REPO_DIR
+# compose.yml and default.env of a deploy: in the image, for izpbx-deploy (docs/izpbx-deploy.md)
+DEPLOY_FILES="$REPO_DIR/izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy"
+export DEPLOY_FILES
 COMPOSE_FILE="$TESTS_DIR/compose.test.yml"
 
 : "${TEST_ID:=$(basename "${0%.sh}")}"

@@ -12,6 +12,8 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 ## Previous Production Branch (security fixes only, until 2027-01-01):
 * `20.16`, `20.16.X`, `20.16.X-BUILD`, `20`, `latest` (Asterisk 20 LTS + FreePBX 16): the git branch `release/20.16`. `latest` stays here for now, use an explicit tag
 
+> **Still on izPBX 20.16?** Its deploy files, install and upgrade instructions are in the [`release/20.16`](https://github.com/ugoviti/izpbx/tree/release/20.16) branch: follow its README to update to the last 20.16 release (20.16.22) **before** migrating to 22.17 with [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md). Don't `git pull` the `main` branch in a 20.16 deploy directory: `main` holds 22.17 and no longer has `compose.yml` and `default.env` at its root.
+
 ## End of Life Branches (no more updates, don't use in production):
 * `18.16`, `18.16.X`, `18.16.X-BUILD`,`18` (Asterisk 18 LTS + FreePBX 16)
 * `18.15`, `18.15.X`, `18.15.X-BUILD` (Asterisk 18 LTS + FreePBX 15)
@@ -63,7 +65,7 @@ Cloud and On-Premise, Fast, Automatic and Repeatable deploy of VoIP PBX systems
 - Custom commercial SSL Certificates support
 - Logrotating of service logs
 - All configurations made via single central `.env` file
-- Many customizable variables to use (look inside `default.env` file)
+- Many customizable variables to use (look inside [`default.env`](izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env))
 - Only two containers setup: (**Antipattern container design** but needed by the FreePBX ecosystem to work)
   - **izpbx** (izpbx-asterisk container: Asterisk Engine + FreePBX Frontend + other services)
   - **izpbx-db** (mariadb container: Database Backend)
@@ -94,18 +96,14 @@ sudo dnf install docker-ce docker-compose-plugin -y
 sudo systemctl enable --now docker
 ```
 
-- Create a `compose.yml`, or clone git repository, or download the latest tarball release from: https://github.com/ugoviti/izpbx/releases and unpack it into a directory (ex. `/opt/izpbx`), faster method with git:
-  - `git clone https://github.com/ugoviti/izpbx.git /opt/izpbx`
-  - `cd /opt/izpbx`
+- Create the deploy directory and write `compose.yml` and `.env` in it with `izpbx-deploy`, from the image of the version you want (see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)); `.env` gets random database passwords:
+```
+mkdir -p /opt/izpbx && cd /opt/izpbx
+docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy init
+```
+  Without `izpbx-deploy`: download `compose.yml` and `default.env` (as `.env`) of the release, see [docs/izpbx-deploy.md](docs/izpbx-deploy.md#without-izpbx-deploy).
 
-- Checkout into latest official release (release candidates `-rcN` left out):
-  - `git checkout tags/$(git tag | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort --version-sort | tail -1)`
-  - to stay on izPBX 20.16 (FreePBX 16): `git checkout tags/$(git tag -l '20.16.*' | grep -E '^[0-9.]+$' | sort --version-sort | tail -1)`
-
-- Copy default configuration file `default.env` into `.env`:
-  - `cp default.env .env`
-
-- Customize `.env` variables, especially the security section of default passwords:
+- Customize `.env` variables (see [Environment default variables](#environment-default-variables)):
   - `vim .env`
 
 - Deploy and start izpbx using `docker compose` command:
@@ -124,7 +122,7 @@ Another available option is to disable `network_mode: host` and use **macvlan** 
 
 The versions of the images are in `.env`: `IZPBX_VERSION` (izPBX) and `MARIADB_VERSION` (MariaDB), always explicit versions, never `latest`. `compose.yml` reads them (`izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`), so a new release only changes `.env`.
 
-If you need to customize the default `compose.yml`, don't edit it, but create an **override** file:
+If you need to customize the default `compose.yml`, don't edit it (`izpbx-deploy upgrade` replaces it with the one of the new version: local edits are merged, a conflict stops the upgrade), but create an **override** file:
 
 - `compose.override.yml`
 
@@ -153,21 +151,17 @@ If you want to test izPBX without using docker compose command, you can use the 
 
 > From izPBX 20.16.x (FreePBX 16) to 22.17.x (FreePBX 17) see [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md): it is not a plain image update.
 
-1. Upgrade the version of izpbx by setting the new version in `IZPBX_VERSION` of your `.env` (eg. `IZPBX_VERSION=22.17.1`, see the git releases page), or by downloading a new tgz release, or if you cloned directly from GIT, use the following commands as quick method:
+1. In the deploy directory (eg. `/opt/izpbx`), see what the new version changes in `compose.yml` and `.env` (`NEW_VERSION`: see the [releases](https://github.com/ugoviti/izpbx/releases)); nothing is written:
 ```
-cd /opt/izpbx
-git checkout main
-git pull
-git fetch --tags --all -f
-git checkout tags/$(git tag | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort --version-sort | tail -1)
+docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:NEW_VERSION izpbx-deploy upgrade
 ```
-On izPBX 20.16 (FreePBX 16) stay on its releases: `main` now holds 22.17, a 20.16 deploy that pulls it gets the 22.17 `compose.yml`. Use the 20.16 tags instead of the last line above:
+then write the changes: `IZPBX_VERSION` moves to `NEW_VERSION`, the new variables are added, your values stay, the old files are kept as `.env.YYYYmmdd-HHMMSS.bak` and `compose.yml.YYYYmmdd-HHMMSS.bak` (see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)):
 ```
-git checkout tags/$(git tag -l '20.16.*' | grep -E '^[0-9.]+$' | sort --version-sort | tail -1)
+docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:NEW_VERSION izpbx-deploy upgrade --apply
 ```
+Without `izpbx-deploy`: see [docs/izpbx-deploy.md](docs/izpbx-deploy.md#without-izpbx-deploy). In a deploy made with `git clone` of this repository don't `git pull` (git would delete `compose.yml`, no longer in the repository): use `izpbx-deploy`.
 
-2. Upgrade the **izpbx** deploy with:  
-(NB. **First** verify if `compose.yml` and `default.env` were updated and make the same changes in your `.env` file)
+2. Upgrade the **izpbx** deploy with:
 ```
 docker compose pull
 docker compose up -d
@@ -241,8 +235,7 @@ Tested Host Operating Systems:
   - Ubuntu 20.04
 
 # Environment default variables
-Consult the `default.env` file: 
-  - https://github.com/ugoviti/izpbx/blob/main/default.env
+Consult the [`default.env`](izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env) file: `izpbx-deploy` writes it as `.env` of a new deploy, `izpbx-deploy upgrade` brings an existing `.env` to its new version (see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)).
 
 # Zabbix Agent Configuration
 Consult official repository page for installation and configuration of Asterisk Zabbix Template in your Zabbix Server:

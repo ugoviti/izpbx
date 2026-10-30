@@ -351,13 +351,13 @@ Items marked **permanent** compensate the container itself (no systemd) or a Deb
 
 ### `--log-warnings=1`
 - **Defect**: an "Aborted connection" note for every `fwconsole` run, which closes without saying goodbye; hundreds during a migration.
-- **Where**: `compose.yml`.
+- **Where**: `compose.yml` (`izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy`).
 - **Tests**: P3-42.
 - **Remove when**: with the default `log_warnings`, `fwconsole ma list` writes nothing in the database log.
 
 ### `--expire-logs-days=0`
 - **Defect**: the official image warns about `expire_logs_days` although it writes no binlog.
-- **Where**: `compose.yml`.
+- **Where**: `compose.yml` (`izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy`).
 - **Tests**: P3-42.
 
 ### `--sql-mode` without `STRICT_TRANS_TABLES`
@@ -367,5 +367,5 @@ Items marked **permanent** compensate the container itself (no systemd) or a Deb
 ## Open points
 - **`max_input_vars`**: FreePBX sets 5000 in `admin/.htaccess` inside `<IfModule php7_module>`, which has no effect with php-fpm. The prototype moved it to the fpm pool (`tests/proto/fpbx17-fpm`), but the image's pool (`rootfs/etc/php/8.2/fpm/pool.d/asterisk.conf`) does not set it. To check: large FreePBX forms (many extensions or routes) could be truncated at 1000 variables.
 - **Undocumented reasons**: `/etc/machine-id` (the reason is only in `tests/proto/fpbx17/proto-install.sh`), FOP2 `par-root`, `sql-mode`: add a comment in the code.
-- **`FREEPBX_SIGNATURECHECK`** (FREEPBX-20559, from 2020) in `default.env`: only a commented example from the FreePBX 15 days. It can be removed.
+- **`FREEPBX_SIGNATURECHECK`** (FREEPBX-20559, from 2020) in `default.env` (`izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy`): only a commented example from the FreePBX 15 days. It can be removed.
 - **Already removed** in 22.17 (P1-12, P3-22 check they do not come back): `php74.patch`, `SECLEVEL=1`, `gpg --refresh-keys`, microdnf, `chan_local`, `Encoding.php`, FREEPBX-21703, FREEPBX-22983.

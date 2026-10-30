@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [22.17.0] - 2026-10-29
+## [22.17.0] - 2026-10-30
 New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volumes of izPBX 20.16 (FreePBX 16) are migrated by the container, opt-in: read [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md) before switching image.
 ### Security
 - FreePBX 16 reaches end of life on 2027-01-01: FreePBX `17` (framework `17.0.33`) on PHP `8.2` (PHP 7.4 is end of life)
@@ -17,7 +17,11 @@ New major release: **FreePBX 17** and **Asterisk 22** LTS on **Debian 12**. Volu
 - Removed the `SECLEVEL=1` OpenSSL workaround and `gpg --refresh-keys`
 - `MYSQL_PASSWORD` and `MYSQL_ROOT_PASSWORD` can be read from files (`IZPBX_MYSQL_PASSWORD_FILE`, `IZPBX_MYSQL_ROOT_PASSWORD_FILE`, docker secrets); no password in the logs or in the process list
 - The security fixes of 20.16.22 (XML phonebook `/pb`, `zabbix` sudoers, SMTP password files, FOP2 license in the logs) are kept
+### Added
+- `izpbx-deploy`: `compose.yml` and `.env` of a deploy straight from the image (`docker run --rm -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17.0 izpbx-deploy init`, random database passwords), and their upgrade to the version of the image (`izpbx-deploy upgrade`, dry-run by default, `--apply` writes with a backup): the `.env` takes the layout and the new variables of the new `default.env` and keeps every value of the deploy (customized, disabled, renamed, custom variables), the `compose.yml` changed by hand is merged, see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)
 ### Changed
+- `compose.yml` and `default.env` are no longer at the root of the repository: they are the files of the image, in [`izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy`](izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy), written by `izpbx-deploy` (or downloaded from there)
+- The entrypoint of the image is `izpbx-entrypoint`: it runs `izpbx-deploy` without the services, and execs `/init` (s6-overlay) for anything else
 - Base OS **Debian 12** instead of Rocky Linux 8: the internal paths of Apache, cron, PHP, phpMyAdmin, msmtp (CA bundle), fail2ban (Apache logs), chrony, Postfix (Debian defaults) and Zabbix agent are different (relevant only for custom scripts in `APP_CUSTOM_SCRIPTS`); `PMA_CONFIG` defaults to `/etc/phpmyadmin/config.inc.php`
 - PBX engine Asterisk `22.11.0` LTS (pjproject `2.17`), FreePBX `17`, PHP `8.2` through **php-fpm** (Apache `mpm_event` + `proxy_fcgi`)
 - STIR/SHAKEN: `res_stir_shaken` and `res_pjsip_stir_shaken` are built (bundled libjwt `1.15.3`), `stir_shaken.conf` of a new installation has both services off instead of the Asterisk sample (no `Stir/Shaken ... service disabled` WARNING at every start and reload); configuration for US/Canada carriers in [docs/operations.md](docs/operations.md#stirshaken) (https://github.com/ugoviti/izpbx/issues/100)

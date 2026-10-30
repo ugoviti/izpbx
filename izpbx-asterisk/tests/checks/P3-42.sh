@@ -23,7 +23,7 @@ assert_cmd_fails "no allowipv6 warning in the container log" -- sh -c "docker lo
 docker exec "$c" mv /etc/fail2ban/fail2ban.d/izpbx.local /tmp/
 assert_contains "$(docker exec "$c" fail2ban-client -t 2>&1 || true)" "'allowipv6' not defined" "negative: without izpbx.local the warning is back"
 
-dbcmd=$(sed -n 's/^    command: //p' "$REPO_DIR/compose.yml" | head -n 1)
+dbcmd=$(sed -n 's/^    command: //p' "$DEPLOY_FILES/compose.yml" | head -n 1)
 assert_contains "$dbcmd" "--log-warnings=1 --expire-logs-days=0" "compose.yml: MariaDB options"
 mdb() { # name options -> log of a MariaDB with two clients killed
   local m opts
