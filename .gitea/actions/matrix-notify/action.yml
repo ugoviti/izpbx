@@ -58,26 +58,23 @@ runs:
           *) ICON="⚠️" ;;
         esac
         RUN_URL="${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/actions/runs/${GITHUB_RUN_NUMBER:-}"
-        # The commit: short SHA linked to its page, and its subject when git can read it.
+        # The commit: short SHA linked to its page (the subject is on that page).
         SHA=$(printf '%.9s' "${GITHUB_SHA:-}")
         COMMIT_URL="${GITHUB_SERVER_URL:-}/${GITHUB_REPOSITORY:-}/commit/${GITHUB_SHA:-}"
-        SUBJECT=$(git log -1 --format=%s "${GITHUB_SHA:-HEAD}" 2>/dev/null || true)
 
         # jq builds the whole event: every value is escaped for JSON and HTML.
         EVENT=$(jq -n --arg icon "$ICON" --arg repo "${GITHUB_REPOSITORY:-}" --arg run "${GITHUB_RUN_NUMBER:-}" \
             --arg url "$RUN_URL" --arg lbl "$LABEL" --arg status "$STATUS" --arg details "$DETAILS" \
-            --arg sha "$SHA" --arg commit_url "$COMMIT_URL" --arg subject "$SUBJECT" '
+            --arg sha "$SHA" --arg commit_url "$COMMIT_URL" '
           def html: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
           {
             msgtype: "m.notice",
             body: ("\($icon) \($repo) build:#\($run) \($lbl) status:\($status)"
                    + (if $sha == "" then "" else " commit:\($sha)" end)
-                   + (if $subject == "" then "" else " «\($subject)»" end)
                    + (if $details == "" then "" else "\n" + $details end)),
             format: "org.matrix.custom.html",
             formatted_body: ("\($icon) <a href=\"\($url)\"><code>\($repo | html)</code></a> build:[<code>#\($run)</code>] [<code>\($lbl | html)</code>] status:[<strong>\($status | html)</strong>]"
                    + (if $sha == "" then "" else " commit:[<a href=\"\($commit_url)\"><code>\($sha)</code></a>]" end)
-                   + (if $subject == "" then "" else " <em>\($subject | html)</em>" end)
                    + (if $details == "" then "" else "<pre>\($details | html)</pre>" end))
           }') || warn "message not built"
 
