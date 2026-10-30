@@ -38,11 +38,11 @@ Variables of the migration (in `.env`):
 
 ### 1. Switch the image and run the checks
 
-Switch to the 22.17 image (always an explicit version: `latest` stays on 20.16 for now) with `izpbx-deploy`, on the host, in the directory of `compose.yml` (eg. `/opt/izpbx`). It adds `IZPBX_VERSION=22.17.0` and the new variables of 22.17 to `.env` (your values stay) and replaces the 20.16 `compose.yml` with the one of 22.17 (it reads the version from `.env`: `izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`). The old files stay next to the new ones (`.env.YYYYmmdd-HHMMSS.bak`, `compose.yml.YYYYmmdd-HHMMSS.bak`): move the local changes of your 20.16 `compose.yml` (networks, ports, volumes) to `compose.override.yml`. Without `--apply` it only shows the changes; `--major` is needed because 20.16 -> 22.17 is a new version series (see [izpbx-deploy](izpbx-deploy.md)):
+Switch to the 22.17 image (always an explicit version: `latest` stays on 20.16 for now) with `izpbx-deploy`, on the host, in the directory of `compose.yml` (eg. `/opt/izpbx`). The image `22.17` is the last 22.17.x release: it adds `IZPBX_VERSION` (its exact version) and the new variables of 22.17 to `.env` (your values stay) and replaces the 20.16 `compose.yml` with the one of 22.17 (it reads the version from `.env`: `izpbx-asterisk:${IZPBX_VERSION}`). The old files stay next to the new ones (`.env.YYYYmmdd-HHMMSS.bak`, `compose.yml.YYYYmmdd-HHMMSS.bak`): move the local changes of your 20.16 `compose.yml` (networks, ports, volumes) to `compose.override.yml`. Without `--apply` it only shows the changes; `--major` is needed because 20.16 -> 22.17 is a new version series (see [izpbx-deploy](izpbx-deploy.md)):
 
 <!-- test:run -->
 ```sh
-docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy upgrade --major --apply
+docker run --rm --pull always -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade --major --apply
 ```
 
 Check the summary it prints: the values of your `.env` that differ from the new `default.env` are listed (they are kept).
@@ -147,4 +147,4 @@ Calls recorded and voicemail left while on 22.17 stay in the spool.
 - The Asterisk built-in HTTP server (ARI, WebSocket, WebRTC) listens on `127.0.0.1` only, the FreePBX 17 default: set `FREEPBX_HTTPBINDADDRESS=0.0.0.0` (and `FREEPBX_HTTPTLSBINDADDRESS=0.0.0.0`) to reach it from the network, behind a firewall.
 - `APP_PORT_UCP_HTTP` / `APP_PORT_UCP_HTTPS` set the ports of the UCP node server (FreePBX `NODEJSBINDPORT` / `NODEJSHTTPSBINDPORT`); with `network_mode: host` they must be free on the host.
 - The image versions are in `.env` (`IZPBX_VERSION`, `MARIADB_VERSION`), read by `compose.yml`.
-- Image tags: `22.17.0`, `22.17`, `22`; `latest` stays on 20.16 for now. Images for amd64 and arm64 (20.16 is amd64 only).
+- Image tags: `22.17.X` (every release), `22.17`, `22`; `latest` stays on 20.16 for now. Images for amd64 and arm64 (20.16 is amd64 only).

@@ -3,10 +3,12 @@
 # - first release of a series: "## [22.17.0] - Unreleased" becomes
 #   "## [22.17.0] - <date>", an empty "## [Unreleased]" stays on top, tag 22.17.0;
 # - patch: 22.17.1 with the hand written Unreleased entries plus one line per
-#   component changed in versions.env and freepbx-modules.txt, compose.yml
-#   (${IZPBX_VERSION:-...}) and default.env (IZPBX_VERSION=) of the image, README.md and
-#   docs/*.md moved from 22.17.0 to 22.17.1 (the 20.16 examples untouched, P7-10),
-#   the izpbx-deploy copies refreshed by tools/deploy-sync.sh (P7-11);
+#   component changed in versions.env and freepbx-modules.txt; IZPBX_VERSION of
+#   default.env and every reference to a 22.17.N in README.md and docs/*.md (any
+#   patch, not only the last release) moved to 22.17.1, release candidates, series
+#   tags (22.17) and the 20.16 examples untouched, compose.yml without version;
+#   the izpbx-deploy history written by tools/deploy-sync.sh (P7-11), no stale
+#   version left (tools/check-versions.sh, negative: a 22.17.0 left is reported);
 # - empty Unreleased: draft from the commit subjects, or from --ai (a fake
 #   claude in PATH);
 # - no option (or --dry-run) is a dry run that writes nothing and prints how to
@@ -30,10 +32,12 @@ cp "$REPO_DIR/CHANGELOG.md" "$REPO_DIR/README.md" "$r/"
 cp "$DEPLOY_FILES/compose.yml" "$DEPLOY_FILES/default.env" "$DEPLOY_FILES/keys.txt" "$DEPLOY_FILES/renames.tsv" "$r/$dd/"
 cp "$REPO_DIR/izpbx-asterisk/versions.env" "$r/izpbx-asterisk/"
 cp "$REPO_DIR/izpbx-asterisk/build/freepbx-modules.txt" "$r/izpbx-asterisk/build/"
-cp "$rel" "$REPO_DIR/izpbx-asterisk/tools/deploy-sync.sh" "$r/izpbx-asterisk/tools/"
+cp "$rel" "$REPO_DIR/izpbx-asterisk/tools/deploy-sync.sh" "$REPO_DIR/izpbx-asterisk/tools/check-versions.sh" "$r/izpbx-asterisk/tools/"
 # the CHANGELOG as before the first release of the series (the real one has
 # 22.17.0 dated and an empty "## [Unreleased]" on top since the release)
-sed -i -E -e '/^## \[Unreleased\]$/{N;/\n$/d}' -e 's/^## \[22\.17\.0\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$/## [22.17.0] - Unreleased/' "$r/CHANGELOG.md"
+# (the "## [Unreleased]" block of the real one, empty or not, is dropped)
+awk '/^## \[Unreleased\]$/ {skip = 1; next} skip && /^## \[/ {skip = 0} !skip' "$r/CHANGELOG.md" > "$work/c0" && cp "$work/c0" "$r/CHANGELOG.md"
+sed -i -E 's/^## \[22\.17\.0\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$/## [22.17.0] - Unreleased/' "$r/CHANGELOG.md"
 grep -qx '## \[22.17.0\] - Unreleased' "$r/CHANGELOG.md" || die "fixture: no '## [22.17.0] - Unreleased' in CHANGELOG.md"
 g() { git -C "$r" -c user.name=t -c user.email=t@t "$@"; }
 g init -q -b main
@@ -81,7 +85,8 @@ assert_cmd "no '- Unreleased' heading left" -- bash -c "! grep -q '22.17.0\] - U
 assert_eq "## [Unreleased]" "$(grep -m1 '^## \[' "$r/CHANGELOG.md")" "empty Unreleased on top"
 assert_cmd "the 22.17.0 sections are kept" -- grep -q '^### Migration' "$r/CHANGELOG.md"
 assert_cmd "older entries kept" -- grep -qF '## [20.16.22] - 2026-10-22' "$r/CHANGELOG.md"
-assert_cmd "compose.yml still on 22.17.0" -- grep -qF 'IZPBX_VERSION:-22.17.0}' "$r/$dd/compose.yml"
+assert_cmd_fails "compose.yml has no version (IZPBX_VERSION required in .env)" -- grep -qE '22\.17\.[0-9]' "$r/$dd/compose.yml"
+assert_cmd "default.env: IZPBX_VERSION=22.17.0" -- grep -qx 'IZPBX_VERSION=22.17.0' "$r/$dd/default.env"
 rr --rc > "$work/rc3.txt" 2>&1
 assert_cmd "after 22.17.0 the next rc is 22.17.1-rc1" -- grep -qF 'release candidate 22.17.1-rc1' "$work/rc3.txt"
 
@@ -89,6 +94,10 @@ assert_cmd "after 22.17.0 the next rc is 22.17.1-rc1" -- grep -qF 'release candi
 sed -i 's/^ASTERISK_VER=.*/ASTERISK_VER=22.12.0/' "$r/izpbx-asterisk/versions.env"
 sed -i -E 's/^(core +)[0-9.]+/\117.0.99.1/' "$r/izpbx-asterisk/build/freepbx-modules.txt"
 awk '{print} /^## \[Unreleased\]/ {print ""; print "### Fixed"; print "- Voicemail greetings kept by the migration"}' "$r/CHANGELOG.md" > "$work/c" && cp "$work/c" "$r/CHANGELOG.md"
+# references written by hand: any patch of the series (also one older or newer than the
+# last release), a release candidate and the series tag
+printf '%s\n' '```' 'docker run docker.io/izdock/izpbx-asterisk:22.17.7 izpbx-deploy init' 'IZPBX_VERSION=22.17.3' \
+  'tested on izpbx-asterisk:22.17.0-rc2' 'docker run --pull always docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade' '```' >> "$r/docs/multi-tenant.md"
 g add -A && g commit -q -m "fix voicemail greetings, Asterisk 22.12.0"
 
 # negative: dirty tree
@@ -108,18 +117,25 @@ assert_cmd "Asterisk component line added" -- grep -qF 'Updated PBX engine to As
 # shellcheck disable=SC2016  # literal backticks
 assert_cmd "FreePBX modules line added" -- grep -qE 'Updated FreePBX modules: `core` [0-9.]+ → 17\.0\.99\.1' "$work/e1"
 assert_cmd "component lines under ### Changed" -- bash -c "grep -A3 '^### Changed' '$work/e1' | grep -q 'Asterisk'"
-assert_cmd "compose.yml moved to 22.17.1" -- grep -qF 'izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.1}' "$r/$dd/compose.yml"
+assert_cmd_fails "compose.yml still without version" -- grep -qE '22\.17\.[0-9]' "$r/$dd/compose.yml"
 assert_cmd "default.env moved to 22.17.1" -- grep -qx 'IZPBX_VERSION=22.17.1' "$r/$dd/default.env"
-assert_cmd "upgrade guide steps moved to 22.17.1" -- grep -qF "izpbx-asterisk:22.17.1 izpbx-deploy upgrade --major --apply" "$r/docs/upgrade-20.16-to-22.17.md"
+assert_cmd "upgrade guide: the series tag, untouched" -- grep -qF "izpbx-asterisk:22.17 izpbx-deploy upgrade --major --apply" "$r/docs/upgrade-20.16-to-22.17.md"
 assert_cmd "download URLs of docs/izpbx-deploy.md moved to 22.17.1" -- grep -qF 'raw.githubusercontent.com/ugoviti/izpbx/22.17.1/' "$r/docs/izpbx-deploy.md"
-assert_cmd "multi-tenant guide moved to 22.17.1" -- grep -qF 'izpbx-asterisk:22.17.1' "$r/docs/multi-tenant.md"
-assert_cmd "release commit has the docs" -- sh -c "git -C '$r' show --name-only --format= HEAD | grep -qx docs/upgrade-20.16-to-22.17.md"
+assert_cmd "any patch reference moved (22.17.7 -> 22.17.1)" -- grep -qxF 'docker run docker.io/izdock/izpbx-asterisk:22.17.1 izpbx-deploy init' "$r/docs/multi-tenant.md"
+assert_cmd "IZPBX_VERSION in docs moved (22.17.3 -> 22.17.1)" -- grep -qx 'IZPBX_VERSION=22.17.1' "$r/docs/multi-tenant.md"
+assert_cmd "release candidate reference untouched" -- grep -qx 'tested on izpbx-asterisk:22.17.0-rc2' "$r/docs/multi-tenant.md"
+assert_cmd "series tag untouched" -- grep -qxF 'docker run --pull always docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade' "$r/docs/multi-tenant.md"
+assert_cmd "release commit has the docs" -- sh -c "git -C '$r' show --name-only --format= HEAD | grep -qx docs/multi-tenant.md"
 assert_cmd "release commit has default.env" -- sh -c "git -C '$r' show --name-only --format= HEAD | grep -qx $dd/default.env"
 assert_cmd "izpbx-deploy history has 22.17.0 (deploy-sync.sh)" -- grep -qx 'IZPBX_VERSION=22.17.0' "$r/$dd/history/22.17.0.env"
 assert_cmd "izpbx-deploy history has no 22.17.1 (the current version)" -- test ! -e "$r/$dd/history/22.17.1.env"
 assert_cmd "release commit has the izpbx-deploy history" -- sh -c "git -C '$r' show --name-only --format= HEAD | grep -qx $dd/history/22.17.0.env"
-assert_cmd "README image references moved to 22.17.1" -- grep -qF 'izpbx-asterisk:22.17.1' "$r/README.md"
-assert_eq "0" "$(cat "$r/README.md" "$r"/docs/*.md "$r/$dd/compose.yml" "$r/$dd/default.env" | grep -cE 'izpbx-asterisk:22\.17\.0|IZPBX_VERSION(:-|=)22\.17\.0' || true)" "no 22.17.0 image reference left"
+assert_cmd_fails "README: no exact version (series tag)" -- grep -qE 'izpbx-asterisk:22\.17\.[0-9]' "$r/README.md"
+assert_eq "0" "$(cat "$r/README.md" "$r"/docs/*.md "$r/$dd/compose.yml" "$r/$dd/default.env" | grep -cE '(izpbx-asterisk:|IZPBX_VERSION(:-|=))22\.17\.0([^-0-9]|$)' || true)" "no 22.17.0 image reference left (rc references aside)"
+assert_cmd "after the release every izPBX reference is 22.17.1 (check-versions.sh)" -- "$r/izpbx-asterisk/tools/check-versions.sh" "$r"
+printf 'docker run docker.io/izdock/izpbx-asterisk:22.17.0\n' >> "$r/docs/multi-tenant.md"
+assert_cmd_fails "negative: a 22.17.0 left in docs/ is reported" -- "$r/izpbx-asterisk/tools/check-versions.sh" "$r"
+g checkout -q -- docs/multi-tenant.md
 assert_cmd "MARIADB_VERSION untouched" -- grep -qx 'MARIADB_VERSION=10.11.19' "$r/$dd/default.env"
 assert_cmd "20.16 examples of the upgrade guide untouched" -- grep -qF 'IZPBX_VERSION=20.16.22' "$r/docs/upgrade-20.16-to-22.17.md"
 

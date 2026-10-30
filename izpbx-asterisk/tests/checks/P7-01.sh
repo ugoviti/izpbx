@@ -9,8 +9,8 @@
 #   compose.yml and default.env of the repository as a 20.16 deploy has them
 #   (image tag written in compose.yml, no IZPBX_VERSION in .env), with the
 #   20.16.22 fixture in data/: image switched by izpbx-deploy upgrade --major
-#   (the image under test; compose.yml of 22.17 with ${IZPBX_VERSION:-...},
-#   IZPBX_VERSION=22.17.0 in .env, the old files in *.bak), checks green, backup
+#   (the image under test; compose.yml of 22.17 with ${IZPBX_VERSION:?...},
+#   IZPBX_VERSION of default.env in .env, the old files in *.bak), checks green, backup
 #   files written, migration started and healthy, final report shown,
 #   rollback back to FreePBX 16;
 #   negative check: a failing block makes the runner fail.
@@ -51,7 +51,8 @@ awk -v dir="$work" '
   b {print > f}
   {m = 0}' "$readme"
 # izpbx-deploy of the guide runs the image under test
-sed -i "s|docker.io/izdock/izpbx-asterisk:[0-9.]* izpbx-deploy|$image izpbx-deploy|" "$work"/block-*.sh
+# (local image: no --pull always)
+sed -i -e "s|docker.io/izdock/izpbx-asterisk:[0-9.]* izpbx-deploy|$image izpbx-deploy|" -e "s| --pull always||" "$work"/block-*.sh
 blocks=$(find "$work" -maxdepth 1 -name 'block-*.sh' | wc -l)
 assert_eq 7 "$blocks" "7 marked blocks: switch, checks, backup, start, wait, report, rollback"
 
@@ -60,7 +61,7 @@ assert_cmd "20.16.22 fixture available" -- "$TESTS_DIR/fixtures/make-fixture.sh"
 
 # --- the deploy: compose.yml and default.env of the repository
 # as a 20.16 deploy: the image tag in compose.yml, no IZPBX_VERSION in .env
-sed 's|izpbx-asterisk:\${IZPBX_VERSION:-[0-9.]*}$|izpbx-asterisk:20.16.22|' "$DEPLOY_FILES/compose.yml" > "$work/compose.yml"
+sed 's|izpbx-asterisk:\${IZPBX_VERSION:?[^}]*}$|izpbx-asterisk:20.16.22|' "$DEPLOY_FILES/compose.yml" > "$work/compose.yml"
 assert_cmd "deploy as 20.16: tag in compose.yml" -- grep -q 'image: docker.io/izdock/izpbx-asterisk:20.16.22$' "$work/compose.yml"
 sed -e 's/^MYSQL_SERVER=.*/MYSQL_SERVER=db/' -e 's/^MYSQL_PASSWORD=.*/MYSQL_PASSWORD=fixture-pw/' \
   -e 's/^MYSQL_ROOT_PASSWORD=.*/MYSQL_ROOT_PASSWORD=rootpw/' -e '/^IZPBX_VERSION=/d' "$DEPLOY_FILES/default.env" > "$work/.env"
@@ -109,10 +110,11 @@ run_block() { # n timeout -> output of the block in $work/out-n
 assert_cmd "block 1 (image switch) runs" -- run_block 1 60
 assert_eq "$(cat "$DEPLOY_FILES/compose.yml")" "$(cat "$work/compose.yml")" "compose.yml: the one of 22.17 (izpbx-deploy --major)"
 assert_cmd "the 20.16 compose.yml in the backup" -- sh -c "grep -q 'izpbx-asterisk:20.16.22\$' '$work'/compose.yml.*.bak"
-assert_cmd "compose.yml: image in the 22.17 form" -- grep -qF 'image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.0}' "$work/compose.yml"
-assert_eq "IZPBX_VERSION=22.17.0" "$(grep '^IZPBX_VERSION=' "$work/.env")" ".env: IZPBX_VERSION=22.17.0, once"
+iv=$(sed -n 's/^IZPBX_VERSION=//p' "$DEPLOY_FILES/default.env")
+assert_cmd "compose.yml: image in the 22.17 form" -- grep -qF 'image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:?' "$work/compose.yml"
+assert_eq "IZPBX_VERSION=$iv" "$(grep '^IZPBX_VERSION=' "$work/.env")" ".env: IZPBX_VERSION=$iv (default.env), once"
 images() { docker run --rm -v "$work:$work" -w "$work" "$cli" docker compose -f compose.yml config --images 2>/dev/null; }
-assert_cmd "the image resolves to 22.17.0 (compose.yml alone, without the test override)" -- grep -qx 'docker.io/izdock/izpbx-asterisk:22.17.0' <<< "$(images)"
+assert_cmd "the image resolves to $iv (compose.yml alone, without the test override)" -- grep -qx "docker.io/izdock/izpbx-asterisk:$iv" <<< "$(images)"
 assert_cmd "block 2 (checks) runs: nothing blocks" -- run_block 2 600
 grep -E '^(BLOCK|RESULT)' "$work/out-2" | sed 's/^/    | /' >&2
 assert_cmd "checks: OK framework" -- grep -q '^OK framework' "$work/out-2"

@@ -22,8 +22,9 @@
 #   else   the commit subjects are used as a draft.
 # The entry is opened in $EDITOR for review (skipped with --yes).
 #
-# --commit: compose.yml and default.env (in $deploy), README.md and docs/*.md move from
-# <previous X.Y.N> to the new version (history of izpbx-deploy: tools/deploy-sync.sh), one commit "X.Y.Z release", annotated tag X.Y.Z with the CHANGELOG entry as its message ("izPBX X.Y.Z", then the entry). --push: the
+# --commit: every reference to a version X.Y.N of the series in default.env (in $deploy),
+# README.md and docs/*.md moves to the new version, checked by tools/check-versions.sh
+# (history of izpbx-deploy: tools/deploy-sync.sh), one commit "X.Y.Z release", annotated tag X.Y.Z with the CHANGELOG entry as its message ("izPBX X.Y.Z", then the entry). --push: the
 # branch and the tag go to origin, the tag starts the izpbx-release workflow
 # (Gitea registry only; Docker Hub needs izpbx-promote).
 #
@@ -50,7 +51,7 @@ while [ $# -gt 0 ]; do
     --dry-run|-n) ;;   # the default
     --no-fetch) fetch='' ;;
     --rc) rc=1 ;;
-    -h|--help) sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $1 (see --help)" ;;
   esac
   shift
@@ -291,33 +292,45 @@ fi
 # (with an Unreleased block above other entries, head stops before it: start == first)
 [ "$start" -eq "$first" ] || [ "$start" -gt "$end" ] || die "the Unreleased block of $cl is not the first entry"
 
-# --- image references of the same series, <last> -> <version>: the
-# explicit tags izpbx-asterisk:<last> (README examples), the download URLs
-# .../ugoviti/izpbx/<last>/... of the README, the default of
-# compose.yml ${IZPBX_VERSION:-<last>} and IZPBX_VERSION=<last> (default.env,
-# upgrade steps of docs/); compose.yml and default.env are in $deploy
-files=()
-if [ -n "$last" ]; then
-  for f in "$deploy/compose.yml" "$deploy/default.env" README.md docs/*.md; do
-    [ -f "$f" ] && grep -qE "izpbx-asterisk:${last//./\\.}\b|IZPBX_VERSION(:-|=)${last//./\\.}\b|ugoviti/izpbx/${last//./\\.}/" "$f" && files+=("$f")
-  done
+# --- the references to the published version, any X.Y.N of the series -> <version>
+# (also a reference left behind by an older release): images izpbx-asterisk:X.Y.N,
+# IZPBX_VERSION=X.Y.N and ${IZPBX_VERSION:-X.Y.N}, download URLs .../ugoviti/izpbx/X.Y.N/,
+# in README.md, docs/*.md and the deploy files ($deploy); release candidates
+# (X.Y.N-rcM) untouched. IZPBX_VERSION of default.env becomes <version> also for
+# the first release of a series. Elsewhere the docs use the series tag (izpbx-asterisk:X.Y)
+# or no version. tools/check-versions.sh checks the result before anything is written.
+sq=${series//./\\.}
+end='([^-0-9.]|$)'
+moves=(-E -e "s#(izpbx-asterisk:)${sq}\\.[0-9]+${end}#\\1${version}\\2#g"
+       -e "s#(IZPBX_VERSION=|IZPBX_VERSION:-)${sq}\\.[0-9]+${end}#\\1${version}\\2#g"
+       -e "s#(ugoviti/izpbx/)${sq}\\.[0-9]+/#\\1${version}/#g")
+files=("$deploy/default.env")
+for f in "$deploy/compose.yml" README.md docs/*.md; do
+  [ -f "$f" ] && grep -qE "(izpbx-asterisk:|IZPBX_VERSION=|IZPBX_VERSION:-|ugoviti/izpbx/)${sq}\\.[0-9]+" "$f" && files+=("$f")
+done
+# move FILE > stdout: the moves, and IZPBX_VERSION=<version> in default.env
+move() {
+  if [ "$1" == "$deploy/default.env" ]; then sed "${moves[@]}" -e "s#^IZPBX_VERSION=.*#IZPBX_VERSION=${version}#" "$1"
+  else sed "${moves[@]}" "$1"; fi
+}
+# the result in a copy of the checked files: no stale version may stay
+mkdir -p "$work/tree/docs" "$work/tree/$deploy"
+for f in README.md docs/*.md "$deploy/compose.yml" "$deploy/default.env"; do [ -f "$f" ] && cp "$f" "$work/tree/$f"; done
+for f in "${files[@]}"; do move "$f" > "$work/tree/$f"; done
+if [ -x izpbx-asterisk/tools/check-versions.sh ]; then
+  izpbx-asterisk/tools/check-versions.sh "$work/tree" >&2 || die "stale versions after the moves (above): fix them, then release again"
 fi
-lq=${last//./\\.}
-moves=(-e "s|izpbx-asterisk:${lq}\\b|izpbx-asterisk:$version|g"
-       -e "s|IZPBX_VERSION:-${lq}}|IZPBX_VERSION:-$version}|g"
-       -e "s|IZPBX_VERSION=${lq}\\b|IZPBX_VERSION=$version|g"
-       -e "s|ugoviti/izpbx/${lq}/|ugoviti/izpbx/$version/|g")
 
 if [ -n "$dry" ]; then
   diff -u "$cl" "$work/CHANGELOG.md" | head -40 || true
-  for f in "${files[@]}"; do sed "${moves[@]}" "$f" | diff -u "$f" - || true; done
+  for f in "${files[@]}"; do diff -u "$f" "$work/tree/$f" || true; done
   log "dry run: nothing written. To release $version from $branch:"
   log "  izpbx-asterisk/tools/make-release.sh --commit   # commit and tag here, push later"
   log "  izpbx-asterisk/tools/make-release.sh --push     # commit, tag and push (starts izpbx-release)"
   exit 0
 fi
 cp "$work/CHANGELOG.md" "$cl"
-for f in "${files[@]}"; do sed -i "${moves[@]}" "$f"; done
+for f in "${files[@]}"; do cp "$work/tree/$f" "$f"; done
 git add "$cl" "${files[@]}"
 # izpbx-deploy: the files of the previous releases (base of the upgrade) and every variable
 if [ -x izpbx-asterisk/tools/deploy-sync.sh ]; then

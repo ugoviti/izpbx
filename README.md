@@ -96,10 +96,10 @@ sudo dnf install docker-ce docker-compose-plugin -y
 sudo systemctl enable --now docker
 ```
 
-- Create the deploy directory and write `compose.yml` and `.env` in it with `izpbx-deploy`, from the image of the version you want (see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)); `.env` gets random database passwords:
+- Create the deploy directory and write `compose.yml` and `.env` in it with `izpbx-deploy` (see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)): image `22.17` is the last 22.17.x, `.env` gets its exact version and random database passwords:
 ```
 mkdir -p /opt/izpbx && cd /opt/izpbx
-docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy init
+docker run --rm --pull always -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy init
 ```
   Without `izpbx-deploy`: download `compose.yml` and `default.env` (as `.env`) of the release, see [docs/izpbx-deploy.md](docs/izpbx-deploy.md#without-izpbx-deploy).
 
@@ -120,7 +120,7 @@ Another available option is to disable `network_mode: host` and use **macvlan** 
 
 ## Customizing compose.yml
 
-The versions of the images are in `.env`: `IZPBX_VERSION` (izPBX) and `MARIADB_VERSION` (MariaDB), always explicit versions, never `latest`. `compose.yml` reads them (`izpbx-asterisk:${IZPBX_VERSION:-22.17.0}`), so a new release only changes `.env`.
+The versions of the images are in `.env`: `IZPBX_VERSION` (izPBX) and `MARIADB_VERSION` (MariaDB), always explicit versions, never `latest`. `compose.yml` reads them (`izpbx-asterisk:${IZPBX_VERSION}`, required: `izpbx-deploy` writes them), so a new release only changes `.env`.
 
 If you need to customize the default `compose.yml`, don't edit it (`izpbx-deploy upgrade` replaces it with the one of the new version: local edits are merged, a conflict stops the upgrade), but create an **override** file:
 
@@ -131,9 +131,10 @@ and specify the options you want to override, for example:
 ```
 services:
   db:
-    image: docker.io/mariadb:10.11.19
+    restart: always
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:22.17.0
+    restart: always
+    hostname: pbx.example.com
 ```
 
 and start the deploy with the same command `docker compose up -d`
@@ -142,22 +143,22 @@ and start the deploy with the same command `docker compose up -d`
 If you want to test izPBX without using docker compose command, you can use the following docker commands:
 
 1. Start MySQL:  
-`docker run --rm -ti -v ./data/db:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.11.19`
+`docker run --rm -ti -v ./data/db:/var/lib/mysql -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 --name izpbx-db mariadb:10.11`
 
 2. Start izPBX:  
-`docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ./data/izpbx:/data -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e APP_DATA=/data --name izpbx docker.io/izdock/izpbx-asterisk:22.17.0`
+`docker run --rm -ti --network=host --privileged --cap-add=NET_ADMIN -v ./data/izpbx:/data -e MYSQL_ROOT_PASSWORD=CHANGEM3 -e MYSQL_PASSWORD=CHANGEM3 -e MYSQL_SERVER=127.0.0.1 -e MYSQL_DATABASE=asterisk -e MYSQL_USER=asterisk -e APP_DATA=/data --name izpbx docker.io/izdock/izpbx-asterisk:22.17`
 
 # Upgrade izPBX
 
 > From izPBX 20.16.x (FreePBX 16) to 22.17.x (FreePBX 17) see [Upgrade from 20.16 to 22.17](docs/upgrade-20.16-to-22.17.md): it is not a plain image update.
 
-1. In the deploy directory (eg. `/opt/izpbx`), see what the new version changes in `compose.yml` and `.env` (`NEW_VERSION`: see the [releases](https://github.com/ugoviti/izpbx/releases)); nothing is written:
+1. In the deploy directory (eg. `/opt/izpbx`), see what the last 22.17.x (image `22.17`; an exact tag `22.17.N` picks another [release](https://github.com/ugoviti/izpbx/releases)) changes in `compose.yml` and `.env`; nothing is written:
 ```
-docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:NEW_VERSION izpbx-deploy upgrade
+docker run --rm --pull always -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade
 ```
-then write the changes: `IZPBX_VERSION` moves to `NEW_VERSION`, the new variables are added, your values stay, the old files are kept as `.env.YYYYmmdd-HHMMSS.bak` and `compose.yml.YYYYmmdd-HHMMSS.bak` (see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)):
+then write the changes: `IZPBX_VERSION` moves to the version of the image, the new variables are added, your values stay, the old files are kept as `.env.YYYYmmdd-HHMMSS.bak` and `compose.yml.YYYYmmdd-HHMMSS.bak` (see [docs/izpbx-deploy.md](docs/izpbx-deploy.md)):
 ```
-docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:NEW_VERSION izpbx-deploy upgrade --apply
+docker run --rm --pull always -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade --apply
 ```
 Without `izpbx-deploy`: see [docs/izpbx-deploy.md](docs/izpbx-deploy.md#without-izpbx-deploy). In a deploy made with `git clone` of this repository don't `git pull` (git would delete `compose.yml`, no longer in the repository): use `izpbx-deploy`.
 

@@ -48,7 +48,7 @@ Create the [macvlan network](#one-macvlan-network-for-all-izpbx-instances) (once
 ```
 mkdir yourgreatpbx
 cd yourgreatpbx
-docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy init
+docker run --rm --pull always -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy init
 vim compose.yml
 vim .env
 ```
@@ -71,7 +71,7 @@ networks:
 
 services:
   db:
-    image: docker.io/mariadb:10.11.19
+    image: docker.io/mariadb:${MARIADB_VERSION:?set MARIADB_VERSION in .env}
     ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
     ## source .env ; docker compose exec db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --log-warnings=1 --expire-logs-days=0
@@ -85,7 +85,7 @@ services:
 
   izpbx:
     #hostname: ${APP_FQDN}
-    image: docker.io/izdock/izpbx-asterisk:22.17.0
+    image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:?set IZPBX_VERSION in .env}
     restart: unless-stopped
     depends_on:
     - db
@@ -132,7 +132,7 @@ mkdir izpbx
 cd izpbx
 vim compose.yml
 vim db.env
-for n in 1 2 3; do docker run --rm -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17.0 izpbx-deploy init --only env --env-file izpbx$n.env; done
+for n in 1 2 3; do docker run --rm --pull always -v "$PWD:/deploy" docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy init --only env --env-file izpbx$n.env; done
 vim izpbx1.env
 vim izpbx2.env
 vim izpbx3.env
@@ -187,7 +187,8 @@ networks:
 
 x-izpbx: &izpbx
   #hostname: ${APP_FQDN}
-  image: docker.io/izdock/izpbx-asterisk:22.17.0
+  ## the series tag follows every 22.17.x release: an exact tag (22.17.N, the IZPBX_VERSION of the PBXNAME.env files) chooses when to update
+  image: docker.io/izdock/izpbx-asterisk:22.17
   restart: unless-stopped
   depends_on:
   - db
@@ -204,7 +205,7 @@ x-izpbx: &izpbx
 
 services:
   db:
-    image: docker.io/mariadb:10.11.19
+    image: docker.io/mariadb:10.11
     ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
     ## docker compose exec db mariadb-upgrade -u root -p
     command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --log-warnings=1 --expire-logs-days=0

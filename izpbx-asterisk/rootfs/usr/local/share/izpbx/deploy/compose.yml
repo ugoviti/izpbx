@@ -23,10 +23,8 @@ networks:
 services:
   # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
   db:
-    # current LTS (Long Term Support) release: the version is MARIADB_VERSION in .env
-    image: docker.io/mariadb:${MARIADB_VERSION:-10.11.19}
-    # previous LTS (Long Term Support) release
-    #image: docker.io/mariadb:10.6.14
+    # LTS (Long Term Support) release: the version is MARIADB_VERSION in .env (required)
+    image: docker.io/mariadb:${MARIADB_VERSION:?set MARIADB_VERSION in .env (izpbx-deploy upgrade adds it)}
     container_name: izpbx-db
     ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
     ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
@@ -63,11 +61,11 @@ services:
     - ${APP_PORT_MYSQL}:3306
 
   # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
-  ## NOTE: the version is IZPBX_VERSION in .env, always an explicit tag ('latest' stays on 20.16 for now).
+  ## NOTE: the version is IZPBX_VERSION in .env (required), always an explicit tag ('latest' stays on 20.16 for now).
   ##       From a 20.16 volume (FreePBX 16) the migration to FreePBX 17 is opt-in: see docs/upgrade-20.16-to-22.17.md
   ##       "Upgrade from 20.16 to 22.17"
   izpbx:
-    image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.0}
+    image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:?set IZPBX_VERSION in .env (izpbx-deploy upgrade adds it)}
     container_name: izpbx
     #entrypoint: /bin/bash -c "/bin/bash -c \"sleep 3600\""
     #hostname: ${APP_FQDN}

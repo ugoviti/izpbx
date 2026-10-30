@@ -83,6 +83,12 @@ if [ -f README.md ] && [ -x izpbx-asterisk/tools/readme-dockerhub.sh ]; then
   izpbx-asterisk/tools/readme-dockerhub.sh 22.17.0-rc99 README.md >/dev/null || rc=1
 fi
 
+# the versions written in the README, docs/ and the deploy files are the current ones
+if [ -x izpbx-asterisk/tools/check-versions.sh ] && [ -f izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env ]; then
+  echo "versions: izPBX and MariaDB references"
+  izpbx-asterisk/tools/check-versions.sh "$ROOT" || rc=1
+fi
+
 # izpbx-deploy: history of the releases and keys.txt in step with default.env and the tags
 if [ -x izpbx-asterisk/tools/deploy-sync.sh ] && [ -f izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env ]; then
   echo "deploy: izpbx-deploy history and keys"

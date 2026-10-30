@@ -19,7 +19,10 @@
 #
 # Exit code: 0 nothing to do or written, 1 error, 2 dry-run with pending
 # changes, 3 refused (compose.yml merge conflict, version series change
-# without --major).
+# without --major, image older than IZPBX_VERSION of the .env).
+#
+# The version written in IZPBX_VERSION is the one of the image (APP_VER), so the
+# series tag works: docker run --rm --pull always -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade
 #
 # IZPBX_DEPLOY_DIR (default /deploy) is the deploy directory, IZPBX_DEPLOY_SHARE
 # (default /usr/local/share/izpbx/deploy) the files of the image: compose.yml,
@@ -37,7 +40,7 @@ new_compose=$share/compose.yml
 die() { echo "izpbx-deploy: ERROR: $*" >&2; exit 1; }
 refuse() { echo "izpbx-deploy: REFUSED: $*" >&2; exit 3; }
 note() { echo "izpbx-deploy: $*"; }
-usage() { sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 cmd=${1:-}
 [ -n "$cmd" ] || usage 1
@@ -72,6 +75,22 @@ envval() {
 newver=$(envval "$new_env" IZPBX_VERSION)
 series() { local v=${1%%-*}; echo "${v%.*}"; }
 
+work='' tpl=''
+cleanup() { [ -z "$work" ] || rm -rf "$work"; [ -z "$tpl" ] || rm -f "$tpl"; }
+trap cleanup EXIT
+
+# the version of this image: APP_VER of the build (22.17.1, 22.17.1-rc1), so that
+# an image pulled by its series tag (22.17) writes its exact version; a build
+# without a version (dev) keeps IZPBX_VERSION of default.env
+if [[ "${APP_VER:-}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]] && [ "$APP_VER" != "$newver" ]; then
+  tpl=$(mktemp)
+  sed "s/^IZPBX_VERSION=.*/IZPBX_VERSION=$APP_VER/" "$new_env" > "$tpl"
+  new_env=$tpl newver=$APP_VER
+fi
+# older A B: version A comes before B (a -rcN before its X.Y.Z)
+vkey() { case "$1" in *-rc*) echo "${1%%-rc*}.0.${1##*-rc}" ;; *) echo "$1.1" ;; esac; }
+older() { [ "$(vkey "$1")" != "$(vkey "$2")" ] && [ "$(printf '%s\n%s\n' "$(vkey "$1")" "$(vkey "$2")" | sort -V | head -n 1)" == "$(vkey "$1")" ]; }
+
 randpw() { local p; p=$(LC_ALL=C tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 32) || true; echo "$p"; }
 
 # the default.env of the image with random database passwords
@@ -81,10 +100,6 @@ gen_env() {
     /^MYSQL_ROOT_PASSWORD=/ { print "MYSQL_ROOT_PASSWORD=" p2; next }
     { print }' "$new_env"
 }
-
-work=''
-cleanup() { [ -z "$work" ] || rm -rf "$work"; }
-trap cleanup EXIT
 
 case "$cmd" in
   compose) [ $# -eq 0 ] || usage 1; cat "$new_compose"; exit 0 ;;
@@ -138,6 +153,12 @@ if [ -n "$uver" ] && [ "$uver" == "$newver" ]; then
 elif [ -n "$uver" ] && [ -f "$share/history/$uver.env" ]; then
   base_env=$share/history/$uver.env
   [ ! -f "$share/history/$uver.compose.yml" ] || base_compose=$share/history/$uver.compose.yml
+fi
+
+# an image older than the deploy (e.g. a series tag 22.17 pulled long ago): never back
+if [ -n "$do_env" ] && [ -z "$keepver" ] && [ -n "$uver" ] && older "$newver" "$uver"; then
+  refuse "this image is izPBX $newver, older than IZPBX_VERSION=$uver of $envfile: pull it again
+  (docker run --pull always ...) or use the image of $uver or later; --keep-version keeps the versions of $envfile."
 fi
 
 # version series change (e.g. 20.16 -> 22.17): a migration, not an image update

@@ -8,19 +8,19 @@
 
 ```
 # first deploy, in an empty directory
-docker run --rm -v "$PWD:/deploy" izdock/izpbx-asterisk:X.Y.Z izpbx-deploy init
+docker run --rm --pull always -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17 izpbx-deploy init
 
 # upgrade: dry-run by default, prints the diff and changes nothing
-docker run --rm -v "$PWD:/deploy" izdock/izpbx-asterisk:X.Y.Z izpbx-deploy upgrade
+docker run --rm --pull always -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade
 # apply the changes (with automatic backup)
-docker run --rm -v "$PWD:/deploy" izdock/izpbx-asterisk:X.Y.Z izpbx-deploy upgrade --apply
+docker run --rm --pull always -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade --apply
 
 # stdout only, no mount
-docker run --rm izdock/izpbx-asterisk:X.Y.Z izpbx-deploy compose > compose.yml
-docker run --rm izdock/izpbx-asterisk:X.Y.Z izpbx-deploy env > .env
+docker run --rm --pull always izdock/izpbx-asterisk:22.17 izpbx-deploy compose > compose.yml
+docker run --rm --pull always izdock/izpbx-asterisk:22.17 izpbx-deploy env > .env
 ```
 
-`X.Y.Z` is the version to move to: the image used for the upgrade is the target version.
+The image is the version to move to. `22.17` is the series tag, the last 22.17.x release: `--pull always` downloads it again, a copy pulled long ago would be an older release. An exact tag (`22.17.N`) chooses a release. Either way `IZPBX_VERSION` of `.env` gets the exact version of the image (`APP_VER` of its build), so the deploy stays on that version until the next upgrade; an image older than `IZPBX_VERSION` of `.env` is refused (no downgrade).
 
 ### Subcommands
 
@@ -50,7 +50,7 @@ docker run --rm izdock/izpbx-asterisk:X.Y.Z izpbx-deploy env > .env
 | `0` | nothing to do (`upgrade` dry-run), or changes written |
 | `1` | error (missing file, unreadable `.env`, refused `init`) |
 | `2` | dry-run with pending changes |
-| `3` | refused: compose merge conflict, or version series change without `--major` |
+| `3` | refused: compose merge conflict, version series change without `--major`, image older than `IZPBX_VERSION` of `.env` |
 
 ## Without izpbx-deploy
 
@@ -134,6 +134,10 @@ A `.env` without `IZPBX_VERSION`, or with a version not in `history/`, is merged
 
 When `IZPBX_VERSION` of the `.env` and of the image differ in version series X.Y (e.g. 20.16 → 22.17), or the `.env` has no `IZPBX_VERSION` (izPBX 20.16 or older), `upgrade` refuses (exit code `3`) and points to [Upgrade from 20.16 to 22.17](upgrade-20.16-to-22.17.md): the migration of FreePBX is not a plain image update. `--major` lets it go on (also for a 22.17 deploy whose `.env` never got `IZPBX_VERSION`); `--keep-version` does not change the version, so it is not refused.
 
+When the image is older than `IZPBX_VERSION` of the `.env` (e.g. a series tag `22.17` pulled long ago), `upgrade` refuses (exit code `3`): pull the image again, or use `--keep-version`. To go back to an older release set `IZPBX_VERSION` by hand.
+
+`IZPBX_VERSION` and `MARIADB_VERSION` are required by `compose.yml` (no default): without them `docker compose` stops with "required variable IZPBX_VERSION is missing a value".
+
 When `MARIADB_VERSION` changes, the output reminds to run `mariadb-upgrade` after the restart (see `compose.yml`).
 
 ## upgrade of compose.yml
@@ -167,7 +171,7 @@ One env file per run with `--env-file`:
 
 ```
 for f in izpbx*.env; do
-  docker run --rm -v "$PWD:/deploy" izdock/izpbx-asterisk:X.Y.Z izpbx-deploy upgrade --only env --env-file "$f"
+  docker run --rm -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade --only env --env-file "$f"
 done
 ```
 

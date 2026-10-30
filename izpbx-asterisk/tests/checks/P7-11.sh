@@ -15,6 +15,8 @@
 # - compose.yml: untouched replaced, edited merged (diff3), conflict refused
 #   (exit 3, neither file written);
 # - init (random passwords, 0600, refuses existing files), compose and env on stdout;
+# - IZPBX_VERSION is the one of the image (APP_VER, rc too; default.env for dev),
+#   an image older than IZPBX_VERSION of the .env refused (rc before its release);
 # - the real files: history and keys.txt in step (tools/deploy-sync.sh --check), a .env without the variables of 22.17
 #   upgraded with --major keeps every value.
 source "$(dirname "$0")/../lib.sh"
@@ -178,6 +180,26 @@ rm -f "$d"/*.bak
 assert_contains "$(cat "$work/out")" "2-way merge" "no base: 2-way merge"
 assert_contains "$(cat "$work/out")" "differ from default.env 1.0.1, check them: CHANGED_DEFAULT KEEP" "no base: the values that differ are listed"
 assert_eq "CHANGED_DEFAULT=old IZPBX_VERSION=1.0.1 KEEP=2" "$(grep -E '^(KEEP|CHANGED_DEFAULT|IZPBX_VERSION)=' "$d/.env" | sort | xargs)" "no base: values of the .env kept, IZPBX_VERSION added"
+
+# --- the version of the image (APP_VER): a series tag (1.0) writes its exact version
+newdir
+APP_VER=1.0.5 IZPBX_DEPLOY_DIR=$d IZPBX_DEPLOY_SHARE=$share "$deploy" init >/dev/null
+assert_eq "IZPBX_VERSION=1.0.5" "$(grep '^IZPBX_VERSION=' "$d/.env")" "init: IZPBX_VERSION from APP_VER of the image"
+assert_eq "IZPBX_VERSION=1.0.1" "$(APP_VER=dev IZPBX_DEPLOY_SHARE=$share "$deploy" env | grep '^IZPBX_VERSION=')" "APP_VER dev: IZPBX_VERSION of default.env"
+newdir; user_env > "$d/.env"
+APP_VER=1.0.2-rc1 IZPBX_DEPLOY_DIR=$d IZPBX_DEPLOY_SHARE=$share "$deploy" upgrade --only env --apply --no-backup >/dev/null
+assert_eq "IZPBX_VERSION=1.0.2-rc1" "$(grep '^IZPBX_VERSION=' "$d/.env")" "upgrade: IZPBX_VERSION of a release candidate image"
+# --- no downgrade: an image older than IZPBX_VERSION of the .env
+newdir; user_env | sed 's/^IZPBX_VERSION=.*/IZPBX_VERSION=1.0.9/' > "$d/.env"
+assert_eq 3 "$(rc_of upgrade)" "image 1.0.1 older than IZPBX_VERSION=1.0.9: refused"
+assert_contains "$(cat "$work/out")" "--pull always" "downgrade refusal: pull the image again"
+assert_eq 0 "$(rc_of upgrade --only env --keep-version --apply --no-backup)" "downgrade: --keep-version goes on"
+assert_eq "IZPBX_VERSION=1.0.9" "$(grep '^IZPBX_VERSION=' "$d/.env")" "--keep-version: IZPBX_VERSION kept"
+newdir; user_env | sed 's/^IZPBX_VERSION=.*/IZPBX_VERSION=1.0.1/' > "$d/.env"
+rc=0; APP_VER=1.0.1-rc3 IZPBX_DEPLOY_DIR=$d IZPBX_DEPLOY_SHARE=$share "$deploy" upgrade >/dev/null 2>&1 || rc=$?
+assert_eq 3 "$rc" "image 1.0.1-rc3 older than 1.0.1: refused"
+user_env | sed 's/^IZPBX_VERSION=.*/IZPBX_VERSION=1.0.1-rc3/' > "$d/.env"
+assert_ne 3 "$(rc_of upgrade)" "image 1.0.1 newer than 1.0.1-rc3: not refused"
 
 # --- compose.yml edited: merge, conflict
 newdir; user_env > "$d/.env"
