@@ -3,7 +3,7 @@
 # versions.env. Needs internet (deferred). On a copy of versions.env with
 # Asterisk, pjproject and libjwt deliberately old (and, on a scratch tree, FreePBX modules): --apply brings them back to the
 # pinned versions with the same sha256 (pjproject and libjwt read from the
-# third-party/versions.mak of the Asterisk tarball), so the copy equals the
+# third-party/versions.mak of the Asterisk release tag), so the copy equals the
 # repository file; a second run reports them ok. Negative: a lookup that fails
 # (unknown Asterisk major) never writes a partial file.
 source "$(dirname "$0")/../lib.sh"
@@ -22,8 +22,8 @@ sed -e 's/^ASTERISK_VER=.*/ASTERISK_VER=22.10.1/' -e "s/^ASTERISK_SHA256=.*/ASTE
 log "apply: exit $rc"
 assert_cmd "exit code 0 (applied) or 2 (applied, other lookups unavailable)" -- test "$rc" -eq 0 -o "$rc" -eq 2
 assert_cmd "ASTERISK_VER flagged UPDATE" -- grep -qE '^ASTERISK_VER +22\.10\.1 .*UPDATE' "$work/apply.txt"
-assert_cmd "PJPROJECT_VER follows the Asterisk tarball" -- grep -qE '^PJPROJECT_VER +2\.16 .*UPDATE' "$work/apply.txt"
-assert_cmd "LIBJWT_VER follows the Asterisk tarball (a .tar.gz)" -- grep -qE '^LIBJWT_VER +1\.15\.2 .*UPDATE' "$work/apply.txt"
+assert_cmd "PJPROJECT_VER follows versions.mak of the Asterisk release" -- grep -qE '^PJPROJECT_VER +2\.16 .*UPDATE' "$work/apply.txt"
+assert_cmd "LIBJWT_VER follows versions.mak of the Asterisk release (a .tar.gz)" -- grep -qE '^LIBJWT_VER +1\.15\.2 .*UPDATE' "$work/apply.txt"
 assert_cmd "the applied lines are reported" -- grep -qE '^applied [0-9]+ line\(s\)' "$work/apply.txt"
 for k in ASTERISK_VER ASTERISK_SHA256 PJPROJECT_VER PJPROJECT_SHA256 JANSSON_VER JANSSON_SHA256 LIBJWT_VER LIBJWT_SHA256; do
   assert_eq "$(grep "^$k=" "$venv")" "$(grep "^$k=" "$work/old.env")" "$k equals the pinned value after --apply"
@@ -31,7 +31,7 @@ done
 assert_eq "$(grep -vE '^(ASTERISK|PJPROJECT|JANSSON|LIBJWT)_' "$venv")" "$(grep -vE '^(ASTERISK|PJPROJECT|JANSSON|LIBJWT)_' "$work/old.env")" \
   "the other lines and the comments are unchanged"
 "$cu" --versions "$work/old.env" > "$work/again.txt" 2>&1 || true
-assert_cmd "second run: Asterisk ok" -- grep -qE '^ASTERISK_VER +22\.[0-9.]+ +22\.[0-9.]+ +ok$' "$work/again.txt"
+assert_cmd "second run: Asterisk ok" -- grep -qE '^ASTERISK_VER +22\.[0-9.]+ +22\.[0-9.]+ +OK$' "$work/again.txt"
 
 # FreePBX modules, on a scratch copy of izpbx-asterisk (the module list belongs to
 # the versions.env of its own tree): core pinned to an old version with a wrong

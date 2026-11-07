@@ -4,11 +4,12 @@
 #   izpbx-asterisk/tools/make-updates.sh [--apply] [--versions FILE] [--no-modules]
 #
 # Prints one line per component of versions.env: current, latest, status
-# (ok | UPDATE | manual | unavailable), and for every UPDATE the new KEY=value
+# (OK | UPDATE | manual | unavailable), and for every UPDATE the new KEY=value
 # lines with the sha256 of the new files. "manual" = no automatic source,
 # "unavailable" = the upstream lookup failed (e.g. GitHub API rate limit).
-# When Asterisk has an update, pjproject and jansson follow the versions of its
-# tarball (third-party/versions.mak). With the default versions.env the FreePBX
+# When Asterisk has an update, pjproject, jansson and libjwt follow the versions
+# of its release (third-party/versions.mak of the tag on GitHub, a raw file: no
+# API request, no tarball download). With the default versions.env the FreePBX
 # modules pinned in izpbx-asterisk/build/freepbx-modules.txt are checked too (--no-modules
 # skips them: the FreePBX mirror can be slow).
 #
@@ -23,7 +24,11 @@
 #
 # Exit code: 0 all current (or, with --apply, updates applied), 10 updates
 # available, 2 incomplete (lookups unavailable), 1 error. GITHUB_TOKEN
-# (optional) raises the GitHub API rate limit (60 requests/hour without it).
+# (optional; else the token of "gh auth login", when gh is installed) raises the
+# GitHub API rate limit (60 requests/hour without it, 5000 with it): once it is
+# reached the remaining GitHub lookups are skipped, with one message.
+# On a terminal the report is colored (NO_COLOR=1 disables it); long hashes are
+# shortened to 12 characters in the table, never in the proposed lines.
 
 set -Eeuo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -51,11 +56,25 @@ unavailable=0
 proposals=()
 propose_modules=()
 
-row() { printf '%-22s %-44s %-44s %s\n' "$1" "$2" "$3" "$4"; }
+# colors only on a terminal: CI and the tests read plain text
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then B=$'\e[1m' G=$'\e[32m' Y=$'\e[33m' R=$'\e[31m' C=$'\e[36m' M=$'\e[35m' N=$'\e[0m'
+else B='' G='' Y='' R='' C='' M='' N=''; fi
+short() { # sha256 digests and commit hashes: 12 hex characters
+  case "$1" in
+    sha256:*) printf '%s' "${1:0:19}" ;;
+    *) if [[ "$1" =~ ^[0-9a-f]{40}$ ]]; then printf '%s' "${1:0:12}"; else printf '%s' "$1"; fi ;;
+  esac
+}
+row() { # component current latest status
+  local l='' s=''
+  case "$4" in OK) s=$C ;; UPDATE*) l=$G s=$B$G ;; manual*) s=$Y ;; unavailable*|ERROR*) s=$R ;; esac
+  printf '%-24s  %-19s  %s%-19s%s  %s%s%s\n' "$1" "$(short "$2")" "$l" "$(short "$3")" "${l:+$N}" "$s" "$4" "${s:+$N}"
+}
+title() { printf '%s%s%s\n' "$B" "$*" "$N"; }
 report() { # component current latest [note]   (empty latest = manual check)
   local name=$1 cur=$2 new=$3 note=${4:-}
   if [ -z "$new" ]; then row "$name" "$cur" "?" "manual${note:+ ($note)}"
-  elif [ "$cur" == "$new" ]; then row "$name" "$cur" "$new" "ok"
+  elif [ "$cur" == "$new" ]; then row "$name" "$cur" "$new" "OK"
   else row "$name" "$cur" "$new" "UPDATE${note:+ ($note)}"; updates=$((updates + 1)); return 1
   fi
 }
@@ -72,10 +91,11 @@ lookup() { # component current latest source
 # curl messages are shown only when the request fails for good, not for the
 # attempts that a retry recovers; a transfer stalled below 1 KB/s for 60 s is
 # abandoned (a slow mirror that still moves is waited for)
+curl_opts=(--connect-timeout 30 --speed-limit 1024 --speed-time 60 --retry 3 --retry-delay 2 --retry-connrefused)
 fetch() {
   local err rc=0
   err=$(mktemp)
-  curl -fsSL --connect-timeout 30 --speed-limit 1024 --speed-time 60 --retry 3 --retry-delay 2 --retry-connrefused "$@" 2>"$err" || rc=$?
+  curl -fsSL "${curl_opts[@]}" "$@" 2>"$err" || rc=$?
   [ "$rc" -eq 0 ] || tail -n 1 "$err" >&2
   rm -f "$err"
   return "$rc"
@@ -83,16 +103,35 @@ fetch() {
 # sha256 of a download; empty when the download fails (never the sha256 of an empty file)
 sha_of() { local t; t=$(mktemp); if fetch --proto '=https' -o "$t" "$1"; then sha256sum "$t" | cut -d' ' -f1; fi; rm -f "$t"; }
 
+# a 403/429 of the GitHub API is the rate limit: one message, then no more
+# GitHub requests (a marker file, since the lookups run in subshells)
+gh_limited=$(mktemp); trap 'rm -f "$gh_limited"' EXIT
+[ -n "${GITHUB_TOKEN:-}" ] || GITHUB_TOKEN=$(gh auth token 2>/dev/null || true)
 gh_api() { # path
-  fetch ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} \
-    -H 'Accept: application/vnd.github+json' "https://api.github.com/$1"
+  [ -s "$gh_limited" ] && return 1
+  local j code
+  j=$(curl -sSL "${curl_opts[@]}" -w '\n%{http_code}' ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} \
+    -H 'Accept: application/vnd.github+json' "https://api.github.com/$1") || return 1
+  code=${j##*$'\n'}; j=${j%$'\n'*}
+  case "$code" in
+    2??) printf '%s\n' "$j" ;;
+    403|429) echo 1 > "$gh_limited"
+      # reset time from /rate_limit (a request that does not count)
+      local reset hint=", set GITHUB_TOKEN or run gh auth login to raise the limit"
+      [ -z "${GITHUB_TOKEN:-}" ] || hint=" (with a token)"
+      reset=$(curl -sS --max-time 10 ${GITHUB_TOKEN:+-H "Authorization: Bearer $GITHUB_TOKEN"} https://api.github.com/rate_limit 2>/dev/null |
+              grep -m1 -oE '"reset": *[0-9]+' | grep -oE '[0-9]+$' || true)
+      [ -z "$reset" ] || hint=" until $(date -d "@$reset" +%H:%M)$hint"
+      echo "GitHub API rate limit reached: GitHub lookups skipped$hint" >&2; return 1 ;;
+    *) echo "GitHub API: HTTP $code for $1" >&2; return 1 ;;
+  esac
 }
 # responses are read whole before filtering ("curl | grep -m1" ends in SIGPIPE)
 gh_latest_release() { local j; j=$(gh_api "repos/$1/releases/latest") || return 1; grep -m1 -oE '"tag_name": *"[^"]+"' <<< "$j" | cut -d'"' -f4; }
 gh_latest_tag() { local j; j=$(gh_api "repos/$1/tags?per_page=100") || return 1; grep -oE '"name": *"[^"]+"' <<< "$j" | cut -d'"' -f4 | grep -E '^v?[0-9]+(\.[0-9]+)*$' | sort -V | tail -1; }
 gh_head() { local j; j=$(gh_api "repos/$1/commits/$2") || return 1; grep -m1 -oE '"sha": *"[0-9a-f]{40}"' <<< "$j" | cut -d'"' -f4; }
 
-row COMPONENT CURRENT LATEST STATUS
+printf '%s%-24s  %-19s  %-19s  %s%s\n' "$B" COMPONENT CURRENT LATEST STATUS "$N"
 
 # --- base image
 new=$(docker buildx imagetools inspect docker.io/library/debian:bookworm-slim 2>/dev/null | awk '/^Digest:/{print $2; exit}' || true)
@@ -126,11 +165,8 @@ elif report ASTERISK_VER "$ASTERISK_VER" "$new"; then
   report LIBJWT_VER "$LIBJWT_VER" "$LIBJWT_VER" || true
 else
   propose "ASTERISK_VER=$new" "ASTERISK_SHA256=$(fetch "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$new.sha256" | cut -d' ' -f1)"
-  # the bundled libraries follow the release: third-party/versions.mak of its tarball
-  at=$(mktemp)
-  vmak=$( { fetch --proto '=https' -o "$at" "https://downloads.asterisk.org/pub/telephony/asterisk/releases/asterisk-$new.tar.gz" &&
-            tar -xzOf "$at" "asterisk-$new/third-party/versions.mak"; } 2>/dev/null || true)
-  rm -f "$at"
+  # the bundled libraries follow the release: third-party/versions.mak of its tag
+  vmak=$(fetch --proto '=https' "https://raw.githubusercontent.com/asterisk/asterisk/$new/third-party/versions.mak" 2>/dev/null || true)
   for lib in PJPROJECT JANSSON LIBJWT; do
     cur_var="${lib}_VER"; lname=${lib,,}
     # tarball type of asterisk/third-party: libjwt is a .tar.gz, the others .tar.bz2
@@ -155,10 +191,10 @@ lookup SNGREP_VER "$SNGREP_VER" "$new" "GitHub API" || propose "SNGREP_VER=$new"
 
 # --- FreePBX: the mirror only has "17.0-latest", so compare the content
 fpbx=https://mirror.freepbx.org/modules/packages/freepbx/freepbx-${FREEPBX_VER}.0-latest.tgz
-tmp=$(mktemp); trap 'rm -f "$tmp"' EXIT
+tmp=$(mktemp); trap 'rm -f "$tmp" "$gh_limited"' EXIT
 if fetch -o "$tmp" "$fpbx"; then
   new=$(tar -xzOf "$tmp" freepbx/module.xml 2>/dev/null | grep -m1 -oE '<version>[^<]+' | cut -d'>' -f2 || true)
-  row FREEPBX_VER "$FREEPBX_VER" "$FREEPBX_VER" "ok"
+  row FREEPBX_VER "$FREEPBX_VER" "$FREEPBX_VER" "OK"
   report FREEPBX_FRAMEWORK_VER "$FREEPBX_FRAMEWORK_VER" "$new" || propose "FREEPBX_FRAMEWORK_VER=$new" "FREEPBX_SHA256=$(sha256sum "$tmp" | cut -d' ' -f1)"
 else
   # every component has its row, also when the mirror does not answer
@@ -201,7 +237,7 @@ PY
       row FREEPBX_MODULES "$nmod modules" "?" "ERROR: not on the FreePBX $FREEPBX_VER mirror:$missing"
       unavailable=$((unavailable + 1)); mod_new=()
     elif [ ${#mod_new[@]} -eq 0 ]; then
-      row FREEPBX_MODULES "$nmod modules" "$nmod modules" "ok"
+      row FREEPBX_MODULES "$nmod modules" "$nmod modules" "OK"
     else
       row FREEPBX_MODULES "$nmod modules" "${#mod_new[@]} newer" "UPDATE (izpbx-asterisk/build/freepbx-modules.txt)"
       updates=$((updates + 1))
@@ -212,11 +248,17 @@ PY
   rm -f "$mxml"
 fi
 
-# --- ionCube: the unversioned tarball holds the latest loaders; same sha256
-# as the pinned versioned tarball means no update, otherwise read the version
-# string ("version: X.Y.Z") from the PHP 8.2 loader
+# --- ionCube: the unversioned tarball holds the latest loaders. Same ETag as
+# the pinned versioned tarball (the same file on the server) means no update,
+# without downloading 30 MB; otherwise same sha256 as the pin means no update,
+# else read the version string ("version: X.Y.Z") from the PHP 8.2 loader
+icurl=https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64
+etag() { fetch -I "$1" 2>/dev/null | tr -d '\r' | grep -i '^etag:' | tail -1 | cut -d' ' -f2- || true; }
 ic=$(mktemp)
-if fetch -o "$ic" https://downloads.ioncube.com/loader_downloads/ioncube_loaders_lin_x86-64.tar.gz; then
+e=$(etag "$icurl.tar.gz")
+if [ -n "$e" ] && [ "$e" == "$(etag "${icurl}_$IONCUBE_VER.tar.gz")" ]; then
+  new=$IONCUBE_VER
+elif fetch -o "$ic" "$icurl.tar.gz"; then
   if [ "$(sha256sum "$ic" | cut -d' ' -f1)" == "$IONCUBE_SHA256_X86_64" ]; then new=$IONCUBE_VER
   else new=$(tar -xzOf "$ic" ioncube/ioncube_loader_lin_8.2.so | grep -aoE 'version: [0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d' ' -f2 || true); fi
 else
@@ -259,22 +301,22 @@ lookup ZABBIX_TEMPLATE_VER "$ZABBIX_TEMPLATE_VER" "$new" "GitHub API" || propose
 
 echo
 if [ ${#majors[@]} -gt 0 ]; then
-  echo "new major releases (a new izPBX series: not proposed, not applied):"
-  printf '%s\n' "${majors[@]}"
+  title "new major releases (a new izPBX series: not proposed, not applied):"
+  for m in "${majors[@]}"; do printf '%s%s%s\n' "$B$M" "$m" "$N"; done
   echo
 fi
 [ "$unavailable" -eq 0 ] || echo "$unavailable lookup(s) unavailable: the report is incomplete" >&2
 if [ "$updates" -eq 0 ]; then
   [ "$unavailable" -eq 0 ] || exit 2
-  echo "all components are current"
+  printf '%s%s%s\n' "$G" "all components are current" "$N"
   exit 0
 fi
 if [ ${#proposals[@]} -gt 0 ]; then
-  echo "$updates update(s) available, proposed versions.env lines:"
-  printf '  %s\n' "${proposals[@]}"
+  title "$updates update(s) available, proposed versions.env lines:"
+  for p in "${proposals[@]}"; do printf '  %s%s%s=%s\n' "$G" "${p%%=*}" "$N" "${p#*=}"; done
 fi
 if [ ${#propose_modules[@]} -gt 0 ]; then
-  echo "FreePBX modules (izpbx-asterisk/build/freepbx-modules.txt):"
+  title "FreePBX modules (izpbx-asterisk/build/freepbx-modules.txt):"
   printf '  %s\n' "${propose_modules[@]}"
 fi
 [ -n "$apply" ] || exit 10

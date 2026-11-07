@@ -13,7 +13,7 @@ cu="$REPO_DIR/izpbx-asterisk/tools/make-updates.sh"
 venv="$REPO_DIR/izpbx-asterisk/versions.env"
 
 "$cu" > "$work/current.txt" 2>"$work/current.err" && rc=0 || rc=$?
-log "current: exit $rc, $(grep -c ' ok$' "$work/current.txt" || true) ok, $(grep -c 'UPDATE' "$work/current.txt" || true) update(s), $(grep -c ' manual' "$work/current.txt" || true) manual"
+log "current: exit $rc, $(grep -c ' OK$' "$work/current.txt" || true) OK, $(grep -c 'UPDATE' "$work/current.txt" || true) update(s), $(grep -c ' manual' "$work/current.txt" || true) manual"
 assert_cmd "exit code is 0 (current), 10 (updates) or 2 (lookups unavailable), not an error" -- test "$rc" -eq 0 -o "$rc" -eq 10 -o "$rc" -eq 2
 if [ "$rc" -eq 2 ]; then
   assert_cmd "exit 2 comes with unavailable lookups in the report" -- grep -q ' unavailable (' "$work/current.txt"
@@ -23,7 +23,7 @@ for k in DEBIAN_IMAGE $(grep -oE '^[A-Z0-9_]+_VER(_[A-Z0-9]+)?=' "$venv" | tr -d
   grep -qE "^$k +" "$work/current.txt" || missing+=" $k"
 done
 assert_eq "" "$missing" "the report lists every component of versions.env"
-assert_eq "" "$(grep -vE '^(curl: \([0-9]+\).*|[0-9]+ lookup\(s\) unavailable: the report is incomplete|)$' "$work/current.err" || true)" "no errors on stderr"
+assert_eq "" "$(grep -vE '^(curl: \([0-9]+\).*|GitHub API rate limit reached: .*|[0-9]+ lookup\(s\) unavailable: the report is incomplete|)$' "$work/current.err" || true)" "no errors on stderr"
 
 # negative: old versions must be flagged and proposed with a sha256
 sed -e 's/^ASTERISK_VER=.*/ASTERISK_VER=22.0.0/' -e 's/^FOP2_VER=.*/FOP2_VER=2.31.40/' \
