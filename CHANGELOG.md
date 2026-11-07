@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Migration
+- Migration from an older izPBX 20.16 (eg. 20.16.15): a module that worked on FreePBX 16 but had no row in its module table (eg. `voicemail`) is kept, it was uninstalled after the restore and the migration stopped in maintenance mode (FreePBX table `voicemail_admin` missing, every reload failed). In 22.17.0 and 22.17.1
 
 ## [22.17.1] - 2026-11-07
 ### Changed

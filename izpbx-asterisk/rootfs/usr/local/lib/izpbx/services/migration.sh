@@ -375,15 +375,20 @@ migration_restore() {
 # - disabled on the 16 (row with enabled=0): disabled;
 # - uninstalled on the 16 (no row, the code still in its module tree):
 #   uninstalled (the files stay, it can be installed again from the GUI);
+#   but kept when every table its module.xml of the 16 declares is in the
+#   dump of the 16: an older 20.16 may lack the row of a module that works
+#   (voicemail on 20.16.15, P4-35: uninstalled, its table voicemail_admin
+#   was dropped and every fwconsole reload failed);
 # - no row and no code in the module tree of the 16 (deleted, or a module an
 #   older 20.16 did not have, eg. music on 20.16.0): kept, reported.
 # The states from the inventory of the 16 (M3); a failure is a warning (the
 # verification still accepts a module the new install adds).
 migration_modules_align() {
-  local snap inv m st done_=() fail=() kept=()
+  local snap inv m st t want have dumptables done_=() fail=() kept=() working=()
   [ "$(migration_state modules_aligned)" == "done" ] && return 0
   snap=$(migration_state snapshot_dir) inv="$IZPBX_MIGRATION_DIR/inventory-before.json"
   [ -s "$inv" ] || { log_warn "migration: no inventory of FreePBX 16, modules not aligned"; return 0; }
+  dumptables=" $(gzip -dc "$snap/db/$MYSQL_DATABASE.sql.gz" 2>/dev/null | sed -nE 's/^CREATE TABLE `([^`]+)`.*/\1/p' | tr '\n' ' ') "
   for m in $(fwconsole_as_asterisk ma list 2>/dev/null | awk -F'|' '$4 ~ /Enabled/ {gsub(/ /, "", $2); print $2}'); do
     case $m in framework|builtin|core|backup) continue ;; esac
     st=$(jq -r --arg m "$m" '.categories.modules[]? | select(startswith("module=\($m) ")) | sub("^.* enabled="; "")' "$inv" | head -1)
@@ -392,6 +397,13 @@ migration_modules_align() {
       0) fwconsole_as_asterisk ma disable "$m" >> "/tmp/migration-module-$m.log" 2>&1 || true
          if _migration_module_enabled "$m"; then fail+=("$m"); else done_+=("$m (disabled)"); fi ;;
       *) if [ -d "$snap/fs/var/www/html/admin/modules/$m" ]; then
+           # no row, but its tables of the 16 in the dump: it worked on the 16
+           want=0 have=0
+           for t in $(sed -nE 's/.*<table name="([^"]+)".*/\1/p' "$snap/fs/var/www/html/admin/modules/$m/module.xml" 2>/dev/null); do
+             want=$((want + 1))
+             [[ "$dumptables" == *" $t "* ]] && have=$((have + 1))
+           done
+           if [ "$want" -gt 0 ] && [ "$have" -eq "$want" ]; then working+=("$m"); continue; fi
            fwconsole_as_asterisk ma uninstall "$m" >> "/tmp/migration-module-$m.log" 2>&1 || true
            if _migration_module_enabled "$m"; then fail+=("$m"); else done_+=("$m (uninstalled)"); fi
          else
@@ -402,6 +414,7 @@ migration_modules_align() {
   [ ${#done_[@]} -eq 0 ] || log_info "migration: modules of the FreePBX 17 install not active in FreePBX 16, set as in FreePBX 16: ${done_[*]}"
   [ ${#fail[@]} -eq 0 ] || log_warn "migration: modules not active in FreePBX 16 left enabled (disable or uninstall failed, logs in /tmp/migration-module-<name>.log): ${fail[*]}"
   [ ${#kept[@]} -eq 0 ] || log_info "migration: modules of the FreePBX 17 install FreePBX 16 did not have, kept: ${kept[*]}"
+  [ ${#working[@]} -eq 0 ] || log_info "migration: modules without a row in FreePBX 16 but with their tables in its database (they worked), kept: ${working[*]}"
   migration_state_set modules_aligned "done"
 }
 
