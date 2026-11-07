@@ -37,7 +37,7 @@ jobs:
       count: ${{ steps.tags.outputs.count }}
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: build and push
         uses: ./.gitea/actions/build-push
@@ -85,7 +85,7 @@ jobs:
     name: migrate ${{ matrix.version }}
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: registry login
         id: login
@@ -122,7 +122,7 @@ jobs:
 
       - name: upload the result
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@c6a366c94c3e0affe28c06c8df20a878f24da3cf # v3.2.2
         with:
           name: migrate-${{ matrix.version }}
           path: result/
@@ -133,10 +133,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: download the results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@a9bc5e6ef2cb54c177f32aa5726adaa15e7e2d59 # v3.1.0
         with:
           path: results
 

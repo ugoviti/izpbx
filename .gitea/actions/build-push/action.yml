@@ -45,7 +45,7 @@ runs:
   steps:
     - name: setup qemu
       if: contains(inputs.platforms, 'arm64')
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
       with:
         platforms: arm64
 
@@ -84,7 +84,7 @@ runs:
 
     - name: build and push
       id: build
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
       with:
         context: izpbx-asterisk
         file: izpbx-asterisk/Dockerfile
