@@ -5,6 +5,10 @@
 #     with the proposed lines (released by the job "release");
 #   - the new major releases of Asterisk (LTS) and FreePBX: a new izPBX series,
 #     never proposed (repeated every week until versions.env moves to it);
+#   - the CI actions pinned in .gitea with a newer release of the same major
+#     (ACTION lines; a change of the CI, never released by the job "release":
+#     make-updates.sh --apply-actions and commit by hand); a newer major of an
+#     action is only noted in the message, it does not send one by itself;
 #   - an incomplete check (lookups unavailable) or an error.
 # All current: no message, except for a run by hand.
 # Job "release", when "check" found updates: the unattended release of
@@ -59,6 +63,8 @@ jobs:
           cat report.txt
           if [ -s report.err ]; then echo "--- stderr"; cat report.err; fi
           majors=$(grep -E '^MAJOR ' report.txt || true)
+          # actions with an update in their major (the lines with "->")
+          actions=$(grep -E '^ACTION .* -> ' report.txt || true)
           case "$rc" in
             0) status=current ;;
             10) status=updates ;;
@@ -74,23 +80,30 @@ jobs:
               echo "new major releases (a new izPBX series, not proposed):"
               sed 's/^MAJOR /  /' <<< "$majors"
             fi
+            if [ -n "$actions" ]; then
+              echo "CI actions to update (make-updates.sh --apply-actions, then commit; not released):"
+              grep -E '^ACTION ' report.txt | grep -v ': unavailable' | sed 's/^ACTION /  /'
+            fi
             if [ "$rc" -eq 10 ]; then echo "release: the job release applies them, runs the tests and releases (make-auto-release.sh)"; fi
-            if [ "$status" == current ] && [ -z "$majors" ]; then echo "all components are current"; fi
+            if [ "$status" == current ] && [ -z "$majors" ] && [ -z "$actions" ]; then echo "all components are current"; fi
           } > message.txt
           nmajors=0
           if [ -n "$majors" ]; then nmajors=$(grep -c . <<< "$majors"); fi
+          nactions=0
+          if [ -n "$actions" ]; then nactions=$(grep -c . <<< "$actions"); fi
           notify=false
-          if [ "$status" != current ] || [ -n "$majors" ] || [ "$EVENT" == workflow_dispatch ]; then notify=true; fi
+          if [ "$status" != current ] || [ -n "$majors" ] || [ -n "$actions" ] || [ "$EVENT" == workflow_dispatch ]; then notify=true; fi
           {
             echo "status=${status}"
             echo "notify=${notify}"
             echo "majors=${nmajors}"
+            echo "actions=${nactions}"
             echo "message<<IZPBX_EOF"
             head -c 3500 message.txt
             echo
             echo "IZPBX_EOF"
           } >> "$GITHUB_OUTPUT"
-          echo "result: ${status}, ${nmajors} new major(s), notify ${notify}"
+          echo "result: ${status}, ${nmajors} new major(s), ${nactions} action update(s), notify ${notify}"
           # updates and new majors are news, not a failure; an error fails the job
           [ "$status" != error ]
 
@@ -99,7 +112,7 @@ jobs:
         uses: ./.gitea/actions/matrix-notify
         with:
           # success = all current; anything else is shown with the warning icon
-          status: ${{ failure() && 'failure' || (steps.check.outputs.status == 'current' && steps.check.outputs.majors == '0') && 'success' || steps.check.outputs.status }}
+          status: ${{ failure() && 'failure' || (steps.check.outputs.status == 'current' && steps.check.outputs.majors == '0' && steps.check.outputs.actions == '0') && 'success' || steps.check.outputs.status }}
           label: component updates
           details: ${{ steps.check.outputs.message }}
           token: ${{ secrets.MATRIX_TOKEN }}

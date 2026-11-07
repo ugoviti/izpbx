@@ -60,6 +60,21 @@ scenario byhand 0 $'ASTERISK_VER  22.12.0  22.12.0  ok\n\nall components are cur
 assert_eq "0 true" "$rc $(out byhand notify)" "all current by hand: a message"
 assert_contains "$(msg byhand)" "all components are current" "all current by hand: says so"
 
+act=$'ASTERISK_VER  22.12.0  22.12.0  ok\n\nCI actions in .gitea (not counted as updates; --apply-actions rewrites the uses: lines):\nACTION actions/checkout v4.4.0 -> v4.5.0 0123456789abcdef0123456789abcdef01234567 (v7.0.1 available: a new major, by hand)\nACTION actions/upload-artifact v3.2.2 current (v7.0.2 available: a new major, by hand)\n\nall components are current\n'
+scenario actions 0 "$act" schedule && rc=0 || rc=$?
+assert_eq "0 current true 1" "$rc $(out actions status) $(out actions notify) $(out actions actions)" "action update: a message, one action, no release"
+m=$(msg actions)
+assert_contains "$m" "  actions/checkout v4.4.0 -> v4.5.0" "action update: the ACTION line"
+assert_contains "$m" "  actions/upload-artifact v3.2.2 current (v7.0.2 available" "action update: the major notes too"
+assert_contains "$m" "--apply-actions" "action update: how to apply"
+assert_cmd_fails "action update: not 'all components are current'" -- grep -q 'all components are current' <<< "$m"
+scenario actnote 0 $'ASTERISK_VER  22.12.0  22.12.0  ok\n\nACTION actions/upload-artifact v3.2.2 current (v7.0.2 available: a new major, by hand)\n\nall components are current\n' schedule && rc=0 || rc=$?
+assert_eq "0 false 0" "$rc $(out actnote notify) $(out actnote actions)" "only a newer major of an action: no message from the schedule"
+scenario actunav 2 $'ACTION a/b v1.0.0: unavailable (git ls-remote https://github.com/a/b)\n' schedule && rc=0 || rc=$?
+assert_eq "incomplete true" "$(out actunav status) $(out actunav notify)" "action lookup unavailable: incomplete, a message"
+assert_eq "1" "$(msg actunav | grep -c 'a/b')" "action lookup unavailable: listed once"
+assert_cmd "notify icon: success only without action updates" -- grep -qF "steps.check.outputs.actions == '0') && 'success'" "$wf"
+
 scenario incomplete 2 $'IZSYNTH_VER  1.0  ?  unavailable (GitHub API)\n' schedule && rc=0 || rc=$?
 assert_eq "0 incomplete true" "$rc $(out incomplete status) $(out incomplete notify)" "incomplete: notify, the job does not fail"
 assert_contains "$(msg incomplete)" "unavailable (GitHub API)" "incomplete: the unavailable rows"

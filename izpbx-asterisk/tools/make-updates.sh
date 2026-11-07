@@ -2,6 +2,7 @@
 # Compare izpbx-asterisk/versions.env with upstream and propose updates.
 #
 #   izpbx-asterisk/tools/make-updates.sh [--apply] [--versions FILE] [--no-modules]
+#   izpbx-asterisk/tools/make-updates.sh --apply-actions
 #
 # Prints one line per component of versions.env: current, latest, status
 # (OK | UPDATE | manual | unavailable), and for every UPDATE the new KEY=value
@@ -23,6 +24,17 @@
 # proposed nor applied) are listed apart, one "MAJOR <component> <version>"
 # line each, and do not change the exit code.
 #
+# CI actions: every "uses: owner/repo@<40-hex sha> # vX.Y.Z" of .gitea (and any
+# external action still on a tag such as @v4) is compared with the latest
+# release of the same major (git ls-remote, no GitHub API request), one
+# "ACTION owner/repo vOLD -> vNEW <sha>" line each, a newer major only noted.
+# They are a change of the CI, not of the image: listed apart, not counted as
+# updates (the exit code and --apply ignore them, so the unattended release of
+# make-auto-release.sh never starts for them). --apply-actions checks only the
+# actions and rewrites their "uses:" lines (sha and "# vX.Y.Z"); then review
+# the diff and commit. ACTIONS_DIR (default .gitea of the repository) and
+# ACTIONS_GIT_URL (default https://github.com) are for the tests.
+#
 # Exit code: 0 all current (or, with --apply, updates applied), 10 updates
 # available, 2 incomplete (lookups unavailable), 1 error. GITHUB_TOKEN
 # (optional; else the token of "gh auth login", when gh is installed) raises the
@@ -35,19 +47,24 @@ set -Eeuo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 img="$here/.."
 versions="$img/versions.env"
-apply='' modules=1
+apply='' modules=1 apply_actions=''
 while [ $# -gt 0 ]; do
   case "$1" in
     --apply) apply=1 ;;
+    --apply-actions) apply_actions=1 ;;
     --versions) versions=${2:?--versions FILE}; shift ;;
     --no-modules) modules= ;;
-    -h|--help) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,46p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "unknown option: $1 (see --help)" >&2; exit 1 ;;
   esac
   shift
 done
-# the FreePBX module list belongs to the repository versions.env only
-[ "$(realpath "$versions")" == "$(realpath "$img/versions.env")" ] || modules=
+# the FreePBX module list and the CI actions belong to the repository versions.env only
+repo_env=1
+[ "$(realpath "$versions")" == "$(realpath "$img/versions.env")" ] || { modules=; repo_env=; }
+: "${ACTIONS_DIR:=$(cd "$img/.." && pwd)/.gitea}"
+: "${ACTIONS_GIT_URL:=https://github.com}"
+[ -z "$apply_actions" ] || [ -z "$apply" ] || { echo "--apply and --apply-actions: one at a time" >&2; exit 1; }
 # shellcheck source=../build/lib.sh
 . "$img/build/lib.sh"
 load_versions "$versions"
@@ -82,6 +99,74 @@ report() { # component current latest [note]   (empty latest = manual check)
 propose() { proposals+=("$@"); }
 majors=()
 major() { majors+=("MAJOR $*"); }
+# --- CI actions pinned in ACTIONS_DIR
+actions=() act_apply=()   # report lines; "repo<TAB>sha<TAB>tag" to write
+# release tags of a repository: "vX.Y.Z <commit>" (annotated tags peeled), sorted
+action_tags() {
+  git ls-remote --tags "$ACTIONS_GIT_URL/$1" 2>/dev/null | awk '
+    { t = $2; sub(/^refs\/tags\//, "", t); peeled = sub(/\^\{\}$/, "", t)
+      if (t !~ /^v[0-9]+\.[0-9]+\.[0-9]+$/) next
+      if (peeled) c[t] = $1; else if (!(t in c)) c[t] = $1 }
+    END { for (t in c) print t, c[t] }' | sort -V
+}
+check_actions() {
+  [ -d "$ACTIONS_DIR" ] || return 0
+  local repo cur sha tags maj best bsha top
+  # "repo current-version current-ref", one per action (pinned: the version of the comment)
+  while read -r repo cur sha; do
+    if ! tags=$(action_tags "$repo") || [ -z "$tags" ]; then
+      actions+=("ACTION $repo $cur: unavailable (git ls-remote $ACTIONS_GIT_URL/$repo)"); unavailable=$((unavailable + 1)); continue
+    fi
+    maj=${cur%%.*}
+    read -r best bsha < <(grep -E "^${maj}\." <<< "$tags" | tail -1) || true
+    top=$(tail -1 <<< "$tags" | cut -d' ' -f1)
+    note=''
+    [ "${top%%.*}" == "$maj" ] || note=" ($top available: a new major, by hand)"
+    if [ -z "$best" ]; then
+      actions+=("ACTION $repo $cur: no release of $maj upstream$note"); continue
+    fi
+    if [[ "$sha" =~ ^[0-9a-f]{40}$ ]] && [ "$best" == "$cur" ] && [ "$bsha" == "$sha" ]; then
+      [ -z "$note" ] || actions+=("ACTION $repo $cur current$note")
+      continue
+    fi
+    if [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+      actions+=("ACTION $repo $cur -> $best $bsha$note")
+    else
+      actions+=("ACTION $repo @$sha not pinned -> $best $bsha$note")
+    fi
+    act_apply+=("$repo"$'\t'"$bsha"$'\t'"$best")
+  done < <(grep -rhoE 'uses: +[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+( +# +v[0-9]+\.[0-9]+\.[0-9]+)?' "$ACTIONS_DIR" |
+    sed -E 's/^uses: +//; s/ +# +/ /' | awk '{ split($1, a, "@"); v = $2; if (v == "") v = a[2]; print a[1], v, a[2] }' | sort -u)
+}
+print_actions() {
+  [ ${#actions[@]} -gt 0 ] || return 0
+  title "CI actions in ${ACTIONS_DIR#"$(cd "$img/.." && pwd)/"} (not counted as updates; --apply-actions rewrites the uses: lines):"
+  for a in "${actions[@]}"; do printf '%s%s%s\n' "$Y" "$a" "$N"; done
+  echo
+}
+write_actions() {
+  local line repo sha tag f n=0
+  for line in "${act_apply[@]}"; do
+    IFS=$'\t' read -r repo sha tag <<< "$line"
+    [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "apply-actions: $repo: no commit for $tag: nothing written" >&2; exit 1; }
+  done
+  for line in "${act_apply[@]}"; do
+    IFS=$'\t' read -r repo sha tag <<< "$line"
+    while IFS= read -r f; do
+      sed -i -E "s#(uses: +)${repo//./\\.}@[A-Za-z0-9_.-]+( +\# +v[0-9]+\.[0-9]+\.[0-9]+)?[[:space:]]*\$#\1${repo}@${sha} \# ${tag}#" "$f"
+    done < <(grep -rlE "uses: +${repo//./\\.}@" "$ACTIONS_DIR")
+    n=$((n + 1))
+  done
+  echo "applied $n action(s) in $ACTIONS_DIR: review the diff (git diff .gitea) and commit"
+}
+if [ -n "$apply_actions" ]; then
+  check_actions
+  print_actions
+  [ ${#act_apply[@]} -gt 0 ] && write_actions || echo "all CI actions are current"
+  [ "$unavailable" -eq 0 ] || exit 2
+  exit 0
+fi
+
 # lookup: like report, but an empty "latest" means the upstream lookup failed
 lookup() { # component current latest source
   if [ -z "$3" ]; then row "$1" "$2" "?" "unavailable ($4)"; unavailable=$((unavailable + 1)); return 0; fi
@@ -300,7 +385,9 @@ lookup IZSYNTH_VER "$IZSYNTH_VER" "$new" "GitHub API" || propose "IZSYNTH_VER=$n
 new=$(gh_head ugoviti/zabbix-templates main || true)
 lookup ZABBIX_TEMPLATE_VER "$ZABBIX_TEMPLATE_VER" "$new" "GitHub API" || propose "ZABBIX_TEMPLATE_VER=$new" "ZABBIX_TEMPLATE_SHA256=$(sha_of "https://github.com/ugoviti/zabbix-templates/archive/$new.tar.gz")"
 
+[ -z "$repo_env" ] || check_actions
 echo
+print_actions
 if [ ${#majors[@]} -gt 0 ]; then
   title "new major releases (a new izPBX series: not proposed, not applied):"
   for m in "${majors[@]}"; do printf '%s%s%s\n' "$B$M" "$m" "$N"; done
