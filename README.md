@@ -19,9 +19,6 @@ izPBX is a Turnkey Cloud Native VoIP Telephony System powered by Asterisk Engine
 * `18.15`, `18.15.X`, `18.15.X-BUILD` (Asterisk 18 LTS + FreePBX 15)
 * `16.15`, `16.15.X`, `16.15.X-BUILD` (Asterisk 16 LTS + FreePBX 15)
 
-## Development Branches:
-* Asterisk 22 LTS + FreePBX 17: `dev-22.17`
-
 ## Version notes:
 Tags format: **Z.Y.X-[BUILD]**
 
