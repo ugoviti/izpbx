@@ -5,7 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [22.17.1] - 2026-11-07
 ### Changed
+- Rebuilt on the latest `debian:bookworm-slim` base image (Debian security updates)
+- Updated PBX engine to Asterisk `22.12.0` LTS (https://downloads.asterisk.org/pub/telephony/asterisk/releases/ChangeLog-22.12.0.md)
+- Updated npm from `10.9.9` to `10.9.10`
 - `compose.yml` writes no version: `IZPBX_VERSION` and `MARIADB_VERSION` are required in `.env` (`izpbx-deploy` writes them), a `.env` without them stops `docker compose` with a clear error instead of using the version of the `compose.yml` in silence
 - `izpbx-deploy` writes in `IZPBX_VERSION` the version of the image it runs in, so the series tag works: `docker run --rm --pull always -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade` moves the deploy to the last 22.17.x; an image older than `IZPBX_VERSION` of `.env` is refused (no downgrade)
 - The docs use the series tag (`izpbx-asterisk:22.17`, `mariadb:10.11`) instead of exact versions; a release moves every reference to a 22.17.x left in the docs and the deploy files, and `izpbx-asterisk/tools/check-versions.sh` (lint, release) fails on a stale one

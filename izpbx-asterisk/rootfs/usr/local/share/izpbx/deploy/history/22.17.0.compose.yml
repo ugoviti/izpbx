@@ -1,0 +1,126 @@
+# izPBX deploy, written by izpbx-deploy (https://github.com/ugoviti/izpbx/blob/main/docs/izpbx-deploy.md)
+# NOTE: don't edit this file, put your changes in compose.override.yml: izpbx-deploy upgrade replaces it
+#       with the compose.yml of the new version (local edits are merged, a conflict stops the upgrade)
+
+networks:
+  izpbx:
+    driver: bridge
+  ## if you want run other izpbx deploy in the same docker host enable the macvlan interface driver
+  #izpbx-ext:
+    #driver: macvlan
+    #driver_opts:
+      #parent: eth0
+    #ipam:
+      #config:
+      #- subnet: 10.1.1.0/24
+
+# secrets:
+#   IZPBX_MYSQL_ROOT_PASSWORD:
+#     environment: MYSQL_ROOT_PASSWORD
+#   IZPBX_MYSQL_PASSWORD:
+#     environment: MYSQL_PASSWORD
+
+services:
+  # https://hub.docker.com/_/mariadb?tab=tags&page=1&ordering=last_updated
+  db:
+    # current LTS (Long Term Support) release: the version is MARIADB_VERSION in .env
+    image: docker.io/mariadb:${MARIADB_VERSION:-10.11.19}
+    # previous LTS (Long Term Support) release
+    #image: docker.io/mariadb:10.6.14
+    container_name: izpbx-db
+    ## WARNING: if you upgrade image tag enter the container and run mariadb-upgrade:
+    ## source .env ; docker exec -it izpbx-db mariadb-upgrade -u root -p$MYSQL_ROOT_PASSWORD
+    ## --log-warnings=1: no "Aborted connection" note for every fwconsole run (FreePBX exits without closing
+    ## its connection); --expire-logs-days=0: no binlog is written, no warning about expire_logs_days of the image
+    command: --sql-mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION --log-warnings=1 --expire-logs-days=0
+    restart: unless-stopped
+    env_file:
+    - .env
+    environment:
+    - TZ
+    - MYSQL_DATABASE
+    - MYSQL_USER
+    - MYSQL_PASSWORD
+    - MYSQL_ROOT_PASSWORD
+    ## NOTE: using secrets files need further testing
+    #- MYSQL_PASSWORD_FILE=/run/secrets/IZPBX_MYSQL_PASSWORD
+    #- MYSQL_ROOT_PASSWORD_FILE=/run/secrets/IZPBX_MYSQL_ROOT_PASSWORD
+    #- MARIADB_RANDOM_ROOT_PASSWORD=${MYSQL_RANDOM_ROOT_PASSWORD}
+    #- MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=${MYSQL_ALLOW_EMPTY_ROOT_PASSWORD}
+    #secrets:
+    #- IZPBX_MYSQL_PASSWORD
+    #- IZPBX_MYSQL_ROOT_PASSWORD
+    volumes:
+    #- /etc/localtime:/etc/localtime:ro
+    - ./data/db:/var/lib/mysql
+    ## NOTE: to avoid nat management use: 'network_mode: host'
+    #network_mode: host
+    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
+    networks:
+      izpbx:
+    ## WARNING: if not commented out, the database will be exposed outside the container
+    ports:
+    - ${APP_PORT_MYSQL}:3306
+
+  # https://hub.docker.com/r/izdock/izpbx-asterisk/tags?page=1&ordering=last_updated
+  ## NOTE: the version is IZPBX_VERSION in .env, always an explicit tag ('latest' stays on 20.16 for now).
+  ##       From a 20.16 volume (FreePBX 16) the migration to FreePBX 17 is opt-in: see docs/upgrade-20.16-to-22.17.md
+  ##       "Upgrade from 20.16 to 22.17"
+  izpbx:
+    image: docker.io/izdock/izpbx-asterisk:${IZPBX_VERSION:-22.17.0}
+    container_name: izpbx
+    #entrypoint: /bin/bash -c "/bin/bash -c \"sleep 3600\""
+    #hostname: ${APP_FQDN}
+    restart: unless-stopped
+    depends_on:
+    - db
+    env_file:
+    - .env
+    #secrets:
+    #- IZPBX_MYSQL_PASSWORD
+    #- IZPBX_MYSQL_ROOT_PASSWORD
+    volumes:
+    #- /etc/localtime:/etc/localtime:ro
+    - ./data/izpbx:/data
+    ## fail2ban need privileged mode to manage iptables
+    cap_add:
+    - NET_ADMIN
+    security_opt:
+    - apparmor=unconfined
+    #- seccomp=unconfined
+    privileged: true
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 32768
+    ## NOTE: to avoid SIP-RTP NAT issues use: 'network_mode: host'
+    network_mode: host
+    ## WARNING: if 'network_mode: host' is disabled, comment out the following lines
+    ##          ports are not needed if using 'network_mode: host' or macvlan network driver
+    ##          if you want use macvlan network driver comment out 'izpbx-ext:' too and change exposed IP according your needs
+    #networks:
+    # izpbx:
+    # izpbx-ext:
+    #   ipv4_address: 10.1.1.221
+    #ports:
+    #- ${APP_PORT_HTTP}:${APP_PORT_HTTP}
+    #- ${APP_PORT_HTTPS}:${APP_PORT_HTTPS}
+    #- ${APP_PORT_IAX}:${APP_PORT_IAX}
+    #- ${APP_PORT_IAX}:${APP_PORT_IAX}/udp
+    #- ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}
+    #- ${APP_PORT_PJSIP}:${APP_PORT_PJSIP}/udp
+    ## APP_PORT_SIP: only for the ex chan_sip trunks of a migrated 20.16
+    #- ${APP_PORT_SIP}:${APP_PORT_SIP}/udp
+    #- ${APP_PORT_SIP}:${APP_PORT_SIP}
+    #- ${APP_PORT_WEBRTC}:${APP_PORT_WEBRTC}
+    #- ${APP_PORT_UCP_HTTP}:${APP_PORT_UCP_HTTP}
+    #- ${APP_PORT_UCP_HTTPS}:${APP_PORT_UCP_HTTPS}
+    #- ${APP_PORT_AMI}:${APP_PORT_AMI}
+    #- ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}
+    #- ${APP_PORT_RTP_START}-${APP_PORT_RTP_END}:${APP_PORT_RTP_START}-${APP_PORT_RTP_END}/udp
+    #- ${APP_PORT_DHCP}:${APP_PORT_DHCP}/udp
+    #- ${APP_PORT_TFTP}:${APP_PORT_TFTP}
+    #- ${APP_PORT_TFTP}:${APP_PORT_TFTP}/udp
+    #- ${APP_PORT_NTP}:${APP_PORT_NTP}/udp
+    #- ${APP_PORT_FOP2}:${APP_PORT_FOP2}
+    #- ${APP_PORT_ZABBIX}:${APP_PORT_ZABBIX}

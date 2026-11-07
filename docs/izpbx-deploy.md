@@ -57,8 +57,8 @@ The image is the version to move to. `22.17` is the series tag, the last 22.17.x
 `compose.yml` and `default.env` are in [`izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy`](../izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy) of the repository, at the tag of every release. For a new deploy download them, `default.env` as `.env` (then change its passwords):
 
 ```
-curl -fsSL -o compose.yml https://raw.githubusercontent.com/ugoviti/izpbx/22.17.0/izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/compose.yml
-curl -fsSL -o .env https://raw.githubusercontent.com/ugoviti/izpbx/22.17.0/izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env
+curl -fsSL -o compose.yml https://raw.githubusercontent.com/ugoviti/izpbx/22.17.1/izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/compose.yml
+curl -fsSL -o .env https://raw.githubusercontent.com/ugoviti/izpbx/22.17.1/izpbx-asterisk/rootfs/usr/local/share/izpbx/deploy/default.env
 ```
 
 To upgrade by hand: set `IZPBX_VERSION` of `.env` to the new version, compare your `.env` with the `default.env` of the new release (new, changed and removed variables) and replace `compose.yml` with the new one (your changes belong in `compose.override.yml`).
