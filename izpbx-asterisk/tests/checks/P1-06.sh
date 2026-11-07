@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# P1-06: Asterisk 22.11.0 built by build/asterisk.sh. asterisk -V = 22.11.0;
+# P1-06: Asterisk ASTERISK_VER of versions.env built by build/asterisk.sh, asterisk -V;
 # the module list equals izpbx-asterisk/tests/expected/asterisk-modules[-aarch64].txt (no chan_sip.so,
 # app_macro.so, app_meetme.so; app_sla.so, res_fax_spandsp.so, codec_opus.so,
 # format_mp3.so, res_xmpp.so present); every module resolves its libraries;
@@ -10,11 +10,12 @@ work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 dir="$REPO_DIR/izpbx-asterisk"
 image=izpbx-asterisk:p1-06
+ast_ver=$(sed -n 's/^ASTERISK_VER=//p' "$REPO_DIR/izpbx-asterisk/versions.env")   # the version under test, never written here
 
 assert_cmd "image builds" -- t_build_image "$image"
 assert_cmd "builder stage builds" -- docker build -q --target builder -t "$image-builder" "$dir"
 
-assert_eq "Asterisk 22.11.0" "$(docker run --rm --entrypoint "" "$image" asterisk -V)" "asterisk -V"
+assert_eq "Asterisk $ast_ver" "$(docker run --rm --entrypoint "" "$image" asterisk -V)" "asterisk -V"
 # the expected list depends on the architecture (P1-11 runs this check on
 # arm64 with DOCKER_DEFAULT_PLATFORM): no Digium binary codecs on aarch64
 arch=$(docker run --rm --entrypoint "" "$image" uname -m)

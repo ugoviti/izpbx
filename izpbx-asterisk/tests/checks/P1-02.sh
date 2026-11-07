@@ -39,7 +39,7 @@ assert_eq "$x86" "$(bash -c ". '$blib'; load_versions '$venv'; TARGETARCH=amd64 
 assert_eq "$arm" "$(bash -c ". '$blib'; load_versions '$venv'; TARGETARCH=arm64 arch_var IONCUBE_SHA256")" "arch_var picks the aarch64 value for arm64"
 assert_cmd_fails "arch_var: unknown architecture fails" -- in_lib "load_versions '$venv'; TARGETARCH=s390x arch_var IONCUBE_SHA256"
 
-assert_eq "22.11.0" "$(bash -c ". '$blib'; load_versions '$venv'; echo \$ASTERISK_VER")" "load_versions exports the versions"
+assert_eq "$(sed -n 's/^ASTERISK_VER=//p' "$venv")" "$(bash -c ". '$blib'; load_versions '$venv'; echo \$ASTERISK_VER")" "load_versions exports the versions"
 printf 'X=$(touch %s/pwned)\n' "$work" > "$work/evil.env"
 assert_cmd_fails "load_versions rejects shell code" -- in_lib "load_versions '$work/evil.env'"
 assert_cmd_fails "shell code in versions.env is not executed" -- test -e "$work/pwned"

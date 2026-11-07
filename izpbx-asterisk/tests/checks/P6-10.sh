@@ -3,11 +3,11 @@
 # offline: the run script of the step "make-updates" executed as Gitea does
 # (bash -eo pipefail) with a fake make-updates.sh for each outcome:
 # - updates (exit 10): notify, the UPDATE rows, the proposed lines and the
-#   apply hint in the message, the job does not fail;
+#   automatic release (job release, P6-11) in the message, the job does not fail;
 # - new majors only (exit 0 with MAJOR lines): notify, the majors listed;
 # - all current: no message from the schedule, one from a run by hand;
 # - incomplete (exit 2): notify; error (exit 1): the step fails;
-# - the workflow: Monday schedule and workflow_dispatch, never --apply, the
+# - the workflow: Monday schedule and workflow_dispatch, the check never --apply, the
 #   GitHub token set explicitly (GH_READ_TOKEN), notify on news or failure.
 source "$(dirname "$0")/../lib.sh"
 
@@ -46,13 +46,13 @@ m=$(msg updates)
 assert_contains "$m" "ASTERISK_VER           22.11.0  22.12.0  UPDATE" "updates: the UPDATE rows"
 assert_contains "$m" "  ASTERISK_VER=22.12.0" "updates: the proposed lines"
 assert_contains "$m" "  ASTERISK 24.0.0 LTS" "updates: the new major"
-assert_contains "$m" "make-updates.sh --apply" "updates: how to apply"
+assert_contains "$m" "make-auto-release.sh" "updates: released by the job release"
 assert_cmd_fails "updates: the ok rows are not in the message" -- grep -q ' ok$' <<< "$m"
 
 scenario majors 0 $'ASTERISK_VER  22.12.0  22.12.0  ok\n\nnew major releases (a new izPBX series: not proposed, not applied):\nMAJOR ASTERISK 24.0.0 LTS\nMAJOR FREEPBX 18 mirror.freepbx.org\n\nall components are current\n' schedule && rc=0 || rc=$?
 assert_eq "0 current true 2" "$rc $(out majors status) $(out majors notify) $(out majors majors)" "new majors only: notify, two majors"
 assert_contains "$(msg majors)" "  FREEPBX 18 mirror.freepbx.org" "new majors only: FreePBX listed"
-assert_cmd_fails "new majors only: no apply hint" -- grep -q -- '--apply' <<< "$(msg majors)"
+assert_cmd_fails "new majors only: no release hint" -- grep -q 'make-auto-release' <<< "$(msg majors)"
 
 scenario current 0 $'ASTERISK_VER  22.12.0  22.12.0  ok\n\nall components are current\n' schedule && rc=0 || rc=$?
 assert_eq "0 current false 0" "$rc $(out current status) $(out current notify) $(out current majors)" "all current from the schedule: no message"
@@ -70,7 +70,7 @@ assert_eq "error true" "$(out error status) $(out error notify)" "error: status 
 # --- the workflow
 assert_cmd "Monday schedule" -- grep -qF "cron: '0 6 * * 1'" "$wf"
 assert_cmd "run by hand" -- grep -qE '^  workflow_dispatch:' "$wf"
-assert_cmd_fails "never --apply" -- grep -qE 'make-updates\.sh[^#]*--apply' <(grep -v '^ *#\|echo ' "$wf")
+assert_cmd_fails "the check never --apply (the job release uses make-auto-release.sh)" -- grep -qE 'make-updates\.sh[^#]*--apply' <(grep -v '^ *#\|echo ' "$wf")
 assert_cmd "GitHub token set explicitly (never the forge token)" -- grep -qF 'GITHUB_TOKEN: ${{ secrets.GH_READ_TOKEN }}' "$wf"
 assert_cmd "notify on news or failure" -- grep -qF "if: always() && (steps.check.outputs.notify == 'true' || failure())" "$wf"
 

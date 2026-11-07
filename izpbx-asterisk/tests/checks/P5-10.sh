@@ -3,7 +3,7 @@
 # container (zabbix_get 7.0.32 from the official zabbix/zabbix-agent2 image,
 # the agent version of the image). Asterisk without FreePBX with one PJSIP
 # endpoint (izpbx-asterisk/tests/fixtures/g729/pjsip.conf: anonymous).
-# - check.asterisk[*]: version (Asterisk 22.11.0), systemuptime (a number),
+# - check.asterisk[*]: version (ASTERISK_VER of versions.env), systemuptime (a number),
 #   calls.active (0), service.status (Up), pjsip.endpoints.offline (a number);
 # - discovery.asterisk[discovery.pjsip.endpoints]: JSON with {#ENDPOINT}
 #   "anonymous";
@@ -32,7 +32,8 @@ n=$(pbx other 10.255.255.1)
 assert_cmd "Asterisk starts" -- t_wait_for 120 -- docker exec "$c" asterisk -rx 'core waitfullybooted'
 assert_cmd "the agent answers" -- t_wait_for 60 -- sh -c "docker run --rm --network $net --entrypoint zabbix_get $zget_image -s pbx -k agent.ping | grep -qx 1"
 
-assert_contains "$(zget pbx 'check.asterisk[version]')" "Asterisk 22.11.0" "check.asterisk[version]"
+ast_ver=$(sed -n 's/^ASTERISK_VER=//p' "$REPO_DIR/izpbx-asterisk/versions.env")   # the version under test, never written here
+assert_contains "$(zget pbx 'check.asterisk[version]')" "Asterisk $ast_ver" "check.asterisk[version]"
 assert_cmd "check.asterisk[systemuptime] is a number" -- grep -qE '^[0-9]+$' <<< "$(zget pbx 'check.asterisk[systemuptime]')"
 assert_eq 0 "$(zget pbx 'check.asterisk[calls.active]')" "check.asterisk[calls.active]"
 assert_eq "Up" "$(zget pbx 'check.asterisk[service.status]')" "check.asterisk[service.status]"

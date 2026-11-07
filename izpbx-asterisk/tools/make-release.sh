@@ -6,7 +6,8 @@
 #   izpbx-asterisk/tools/make-release.sh --push     as --commit, then push the branch and the tag
 #   izpbx-asterisk/tools/make-release.sh --rc [--commit|--push]
 #                                                   release candidate X.Y.Z-rcN of the next version
-# other options: --version X.Y.Z, --ai, --yes (no review), --no-fetch (offline)
+# other options: --version X.Y.Z, --ai, --yes (no review), --no-fetch (offline),
+#   --auto (unattended, tools/make-auto-release.sh: --yes, no draft, HEAD may be ahead of origin)
 #
 # Version: the series X.Y comes from izpbx-asterisk/versions.env (Asterisk major,
 # FreePBX major; on release/20.16, without versions.env, from the last tag);
@@ -21,6 +22,9 @@
 #   --ai   asks Claude Code (claude -p) for a draft from the commits and the diff;
 #   else   the commit subjects are used as a draft.
 # The entry is opened in $EDITOR for review (skipped with --yes).
+# --auto: no review and no draft (neither commits nor AI): an empty Unreleased
+# block gives an entry with the component lines only, the same for the same
+# inputs; HEAD may be ahead of origin/<branch> (the push takes those commits).
 #
 # --commit: every reference to a version X.Y.N of the series in default.env (in $deploy),
 # README.md and docs/*.md moves to the new version, checked by tools/check-versions.sh
@@ -40,18 +44,19 @@ set -Eeuo pipefail
 die() { echo "release: ERROR: $*" >&2; exit 1; }
 log() { echo "release: $*" >&2; }
 
-version='' ai='' yes='' push='' dry=1 fetch=1 rc=''
+version='' ai='' yes='' push='' dry=1 fetch=1 rc='' auto=''
 while [ $# -gt 0 ]; do
   case "$1" in
     --version) version=${2:?--version X.Y.Z}; shift ;;
     --ai) ai=1 ;;
     --yes|-y) yes=1 ;;
+    --auto) auto=1 yes=1 ;;
     --commit) dry='' ;;
     --push) dry='' push=1 ;;
     --dry-run|-n) ;;   # the default
     --no-fetch) fetch='' ;;
     --rc) rc=1 ;;
-    -h|--help) sed -n '2,37p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,41p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option: $1 (see --help)" ;;
   esac
   shift
@@ -132,8 +137,12 @@ git show-ref -q --verify "refs/heads/release/$series" && want="release/$series"
 git show-ref -q --verify "refs/remotes/origin/release/$series" && want="release/$series"
 [ "$branch" == "$want" ] || die "$version is released from '$want', current branch is '$branch'"
 if [ -n "$push" ] && git show-ref -q --verify "refs/remotes/origin/$branch"; then
-  [ "$(git rev-parse HEAD)" == "$(git rev-parse "origin/$branch")" ] ||
-    die "$branch differs from origin/$branch: pull or push it first"
+  if [ -n "$auto" ]; then
+    git merge-base --is-ancestor "origin/$branch" HEAD || die "$branch is behind or diverged from origin/$branch: pull first"
+  else
+    [ "$(git rev-parse HEAD)" == "$(git rev-parse "origin/$branch")" ] ||
+      die "$branch differs from origin/$branch: pull or push it first"
+  fi
 fi
 log "version $version (previous release ${prev:-none}, last of $series: ${last:-none}), branch $branch"
 
@@ -220,7 +229,7 @@ while IFS= read -r line; do
 done < "$work/components"
 
 draft=''
-if ! grep -qE '^- ' "$work/body"; then
+if ! grep -qE '^- ' "$work/body" && [ -z "$auto" ]; then
   if [ -n "$ai" ]; then
     command -v claude >/dev/null || die "--ai needs Claude Code (claude) in PATH"
     examples=$(awk '/^## \[[0-9]/ && !/Unreleased/ {n++} n >= 1 && n <= 2' "$cl")

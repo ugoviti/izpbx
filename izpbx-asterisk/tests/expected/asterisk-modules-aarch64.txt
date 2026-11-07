@@ -1,4 +1,4 @@
-# Asterisk 22.11.0 modules on aarch64: the x86_64 list (asterisk-modules.txt)
+# Asterisk modules on aarch64: the x86_64 list (asterisk-modules.txt)
 # without the Digium binary codecs, built for x86_64 only: codec_opus,
 # codec_silk, format_ogg_opus
 app_agent_pool.so

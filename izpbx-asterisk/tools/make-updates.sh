@@ -15,7 +15,8 @@
 #
 # --apply writes the proposed lines into versions.env (only KEY=value lines
 # already present; every value checked, nothing written if one is missing or
-# invalid) and refreshes build/freepbx-modules.txt. Then: rebuild the image
+# invalid), the FROM line of the Dockerfile when DEBIAN_IMAGE changes (with the
+# repository versions.env) and refreshes build/freepbx-modules.txt. Then: rebuild the image
 # and run the tests (izpbx-asterisk/tests/run.sh all-done) before committing.
 #
 # New major releases of Asterisk (LTS only) and FreePBX (a new izPBX series, never
@@ -346,6 +347,14 @@ if [ ${#proposals[@]} -gt 0 ]; then
   chmod --reference="$versions" "$out"
   mv -f "$out" "$versions"
   echo "applied ${#proposals[@]} line(s) to $versions"
+  # the base image is pinned in the FROM line too (P1-04: equal to DEBIAN_IMAGE)
+  dimg=$(printf '%s\n' "${proposals[@]}" | sed -n 's/^DEBIAN_IMAGE=//p')
+  if [ -n "$dimg" ] && [ "$(realpath "$versions")" == "$(realpath "$img/versions.env")" ]; then
+    df="$img/Dockerfile"
+    grep -qE '^FROM [^ ]+ AS base$' "$df" || { echo "apply: no 'FROM ... AS base' line in $df" >&2; exit 1; }
+    sed -i -E "s#^FROM [^ ]+ AS base\$#FROM $dimg AS base#" "$df"
+    echo "applied DEBIAN_IMAGE to the FROM line of $df"
+  fi
 fi
 if [ ${#modline[@]} -gt 0 ]; then
   out=$(mktemp "$mlist.XXXXXX")

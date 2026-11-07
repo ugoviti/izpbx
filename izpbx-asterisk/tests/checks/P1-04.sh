@@ -40,7 +40,8 @@ assert_eq 0 "$rc" "Dockerfile structure and pinning"
 mkdir -p "$work/lint"; cp "$df" "$work/lint/Dockerfile"
 assert_cmd "hadolint is clean" -- "$TESTS_DIR/lint.sh" "$work/lint"
 assert_cmd "docker build izpbx-asterisk (no build arguments) succeeds" -- docker build -q -t izpbx-asterisk:p1-04 "$dir"
-assert_eq "Asterisk 22.11.0" "$(docker run --rm --entrypoint "" izpbx-asterisk:p1-04 asterisk -V)" "the built image runs Asterisk 22.11.0"
+ast_ver=$(sed -n 's/^ASTERISK_VER=//p' "$REPO_DIR/izpbx-asterisk/versions.env")   # the version under test, never written here
+assert_eq "Asterisk $ast_ver" "$(docker run --rm --entrypoint "" izpbx-asterisk:p1-04 asterisk -V)" "the built image runs Asterisk ASTERISK_VER of versions.env"
 
 # negatives on copies
 { cat "$df"; printf 'RUN apt-get update && \\\n    true\n'; } > "$work/chain"

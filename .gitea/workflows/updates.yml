@@ -1,17 +1,29 @@
 # izPBX component updates (Gitea Actions)
-# Every Monday at 06:00 UTC (after the weekly rebuild) and by hand: runs
-# izpbx-asterisk/tools/make-updates.sh read only (never --apply, nothing
-# committed) and sends to the Matrix room:
+# Every Monday at 06:00 UTC (after the weekly rebuild) and by hand.
+# Job "check": izpbx-asterisk/tools/make-updates.sh read only, and sends to the Matrix room:
 #   - the components of versions.env (and the FreePBX modules) with an update,
-#     with the proposed lines: apply them with make-updates.sh --apply and the tests;
+#     with the proposed lines (released by the job "release");
 #   - the new major releases of Asterisk (LTS) and FreePBX: a new izPBX series,
 #     never proposed (repeated every week until versions.env moves to it);
 #   - an incomplete check (lookups unavailable) or an error.
 # All current: no message, except for a run by hand.
+# Job "release", when "check" found updates: the unattended release of
+# izpbx-asterisk/tools/make-auto-release.sh, step by step: apply (make-updates.sh
+# --apply), build of the image (ci-updates, Gitea registry), tests
+# (izpbx-asterisk/tests/run.sh all-done in Docker-in-Docker), then the commit
+# "updates: ...", CHANGELOG.md, the commit "X.Y.Z release" and the tag X.Y.Z
+# pushed: the tag starts izpbx-release (Gitea registry). A failed step releases
+# nothing. Docker Hub is never reached: izpbx-promote stays by hand, after
+# testing the release. Result (released version or failed step) sent to Matrix.
 #
 # Optional secret:  GH_READ_TOKEN (any GitHub token: raises the GitHub API rate
 #                   limit, 60 requests/hour without it)
 # Required secrets: MATRIX_TOKEN; variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+# Job "release":    REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, and
+#                   RELEASE_PUSH_TOKEN (a Gitea token with write access to the
+#                   repository: a push with the automatic token does not start
+#                   izpbx-release); optional variables RELEASE_GIT_NAME,
+#                   RELEASE_GIT_EMAIL (author of the commits and the tag)
 
 name: izpbx-updates
 
@@ -27,6 +39,8 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.check.outputs.status }}
     steps:
       - name: checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -60,7 +74,7 @@ jobs:
               echo "new major releases (a new izPBX series, not proposed):"
               sed 's/^MAJOR /  /' <<< "$majors"
             fi
-            if [ "$rc" -eq 10 ]; then echo "apply: izpbx-asterisk/tools/make-updates.sh --apply, then the tests"; fi
+            if [ "$rc" -eq 10 ]; then echo "release: the job release applies them, runs the tests and releases (make-auto-release.sh)"; fi
             if [ "$status" == current ] && [ -z "$majors" ]; then echo "all components are current"; fi
           } > message.txt
           nmajors=0
@@ -88,6 +102,97 @@ jobs:
           status: ${{ failure() && 'failure' || (steps.check.outputs.status == 'current' && steps.check.outputs.majors == '0') && 'success' || steps.check.outputs.status }}
           label: component updates
           details: ${{ steps.check.outputs.message }}
+          token: ${{ secrets.MATRIX_TOKEN }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+
+  release:
+    needs: check
+    if: needs.check.outputs.status == 'updates'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # the tags (previous release, CHANGELOG lines) and a token whose push starts izpbx-release
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_PUSH_TOKEN }}
+
+      - name: apply
+        id: apply
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_READ_TOKEN }}
+          PUSH_TOKEN: ${{ secrets.RELEASE_PUSH_TOKEN }}
+        run: |
+          set -u
+          [ -n "$PUSH_TOKEN" ] || { echo "::error::secret RELEASE_PUSH_TOKEN missing: nothing released"; exit 1; }
+          rc=0
+          izpbx-asterisk/tools/make-auto-release.sh apply || rc=$?
+          # 3: all current again (upstream moved since the check)
+          if [ "$rc" -eq 3 ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          [ "$rc" -eq 0 ] || exit "$rc"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          git diff --stat
+
+      - name: build and push
+        if: steps.apply.outputs.changed == 'true'
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ci-updates
+          cache-tag: buildcache-ci
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: registry login
+        if: steps.apply.outputs.changed == 'true'
+        id: login
+        uses: ./.gitea/actions/registry-login
+        with:
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: tests
+        if: steps.apply.outputs.changed == 'true'
+        shell: bash
+        env:
+          IMAGE: ${{ steps.login.outputs.image }}:ci-updates
+        run: |
+          set -euo pipefail
+          docker pull -q "$IMAGE"
+          izpbx-asterisk/tests/ci/dind-run.sh "$IMAGE" -j 4 all-done
+
+      - name: release
+        if: steps.apply.outputs.changed == 'true'
+        id: release
+        shell: bash
+        env:
+          GIT_NAME: ${{ vars.RELEASE_GIT_NAME }}
+          GIT_EMAIL: ${{ vars.RELEASE_GIT_EMAIL }}
+        run: |
+          set -euo pipefail
+          git config user.name "${GIT_NAME:-izPBX updates}"
+          git config user.email "${GIT_EMAIL:-izpbx-updates@localhost}"
+          izpbx-asterisk/tools/make-auto-release.sh release --push
+          v=$(git describe --tags --exact-match HEAD)
+          {
+            echo "version=$v"
+            echo "message<<IZPBX_EOF"
+            echo "izPBX $v released (Gitea registry): $(git log -1 --format=%s HEAD~1)"
+            echo "test it, then publish it with izpbx-promote (by hand)"
+            echo "IZPBX_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: matrix notify
+        if: always() && (steps.apply.outputs.changed == 'true' || failure())
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: ${{ steps.release.outputs.version && format('auto release {0}', steps.release.outputs.version) || 'auto release' }}
+          details: ${{ steps.release.outputs.message || 'not released, see the failed step of the job release' }}
           token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}
