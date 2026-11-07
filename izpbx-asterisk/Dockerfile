@@ -7,7 +7,7 @@
 
 ## base: Debian + runtime packages + asterisk user
 # DEBIAN_IMAGE must match versions.env (checked by izpbx-asterisk/tests/checks/P1-04.sh)
-FROM docker.io/library/debian:bookworm-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS base
+FROM docker.io/library/debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS base
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG OS_UPDATE_STAMP=""
 # only what base.sh reads: other changes do not invalidate the base layer
