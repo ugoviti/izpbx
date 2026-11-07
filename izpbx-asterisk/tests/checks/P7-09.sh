@@ -91,14 +91,14 @@ rr --rc > "$work/rc3.txt" 2>&1
 assert_cmd "after 22.17.0 the next rc is 22.17.1-rc1" -- grep -qF 'release candidate 22.17.1-rc1' "$work/rc3.txt"
 
 # --- patch release with hand written entries and component updates
-sed -i 's/^ASTERISK_VER=.*/ASTERISK_VER=22.12.0/' "$r/izpbx-asterisk/versions.env"
+sed -i 's/^ASTERISK_VER=.*/ASTERISK_VER=22.99.0/' "$r/izpbx-asterisk/versions.env"
 sed -i -E 's/^(core +)[0-9.]+/\117.0.99.1/' "$r/izpbx-asterisk/build/freepbx-modules.txt"
 awk '{print} /^## \[Unreleased\]/ {print ""; print "### Fixed"; print "- Voicemail greetings kept by the migration"}' "$r/CHANGELOG.md" > "$work/c" && cp "$work/c" "$r/CHANGELOG.md"
 # references written by hand: any patch of the series (also one older or newer than the
 # last release), a release candidate and the series tag
 printf '%s\n' '```' 'docker run docker.io/izdock/izpbx-asterisk:22.17.7 izpbx-deploy init' 'IZPBX_VERSION=22.17.3' \
   'tested on izpbx-asterisk:22.17.0-rc2' 'docker run --pull always docker.io/izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade' '```' >> "$r/docs/multi-tenant.md"
-g add -A && g commit -q -m "fix voicemail greetings, Asterisk 22.12.0"
+g add -A && g commit -q -m "fix voicemail greetings, Asterisk 22.99.0 (a patch never real)"
 
 # negative: dirty tree
 echo x >> "$r/README.md"
@@ -113,7 +113,7 @@ assert_eq "$(tail -n +2 "$work/e1" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}')" "$(
 log "entry 22.17.1:"; sed 's/^/    /' "$work/e1" >&2
 assert_cmd "hand written Fixed entry kept" -- grep -qF -- '- Voicemail greetings kept by the migration' "$work/e1"
 # shellcheck disable=SC2016  # literal backticks
-assert_cmd "Asterisk component line added" -- grep -qF 'Updated PBX engine to Asterisk `22.12.0` LTS' "$work/e1"
+assert_cmd "Asterisk component line added" -- grep -qF 'Updated PBX engine to Asterisk `22.99.0` LTS' "$work/e1"
 # shellcheck disable=SC2016  # literal backticks
 assert_cmd "FreePBX modules line added" -- grep -qE 'Updated FreePBX modules: `core` [0-9.]+ → 17\.0\.99\.1' "$work/e1"
 assert_cmd "component lines under ### Changed" -- bash -c "grep -A3 '^### Changed' '$work/e1' | grep -q 'Asterisk'"

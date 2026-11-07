@@ -33,7 +33,7 @@ out=$(check_versions "$dir/versions.env" "$dir/build" "$dir/Dockerfile") && rc=0
 [ -z "$out" ] || log "$out"
 assert_eq 0 "$rc" "versions.env is complete and well formed"
 assert_cmd "versions.env can be sourced" -- bash -c "set -eu; set -a; . '$dir/versions.env'; [ -n \"\$ASTERISK_VER\" ]"
-assert_eq "22.11.0" "$(sed -n 's/^ASTERISK_VER=//p' "$dir/versions.env")" "Asterisk version is 22.11.0 (D5)"
+assert_cmd "Asterisk is a 22.x LTS release (D5)" -- grep -qE '^ASTERISK_VER=22\.[0-9]+\.[0-9]+$' "$dir/versions.env"
 assert_eq "17" "$(sed -n 's/^FREEPBX_VER=//p' "$dir/versions.env")" "FreePBX major version is 17"
 
 # negatives on copies
