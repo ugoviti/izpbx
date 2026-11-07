@@ -17,6 +17,10 @@
 # invalid) and refreshes build/freepbx-modules.txt. Then: rebuild the image
 # and run the tests (izpbx-asterisk/tests/run.sh all-done) before committing.
 #
+# New major releases of Asterisk (LTS only) and FreePBX (a new izPBX series, never
+# proposed nor applied) are listed apart, one "MAJOR <component> <version>"
+# line each, and do not change the exit code.
+#
 # Exit code: 0 all current (or, with --apply, updates applied), 10 updates
 # available, 2 incomplete (lookups unavailable), 1 error. GITHUB_TOKEN
 # (optional) raises the GitHub API rate limit (60 requests/hour without it).
@@ -56,6 +60,8 @@ report() { # component current latest [note]   (empty latest = manual check)
   fi
 }
 propose() { proposals+=("$@"); }
+majors=()
+major() { majors+=("MAJOR $*"); }
 # lookup: like report, but an empty "latest" means the upstream lookup failed
 lookup() { # component current latest source
   if [ -z "$3" ]; then row "$1" "$2" "?" "unavailable ($4)"; unavailable=$((unavailable + 1)); return 0; fi
@@ -102,7 +108,13 @@ if ! lookup S6_OVERLAY_VER "$S6_OVERLAY_VER" "$new" "GitHub API"; then
 fi
 
 # --- Asterisk 22.x (stable releases only)
-new=$(fetch https://downloads.asterisk.org/pub/telephony/asterisk/releases/ | grep -oE "asterisk-${ASTERISK_VER%%.*}\.[0-9]+\.[0-9]+\.tar\.gz\"" | tr -d '"' | sed 's/^asterisk-//; s/\.tar\.gz$//' | sort -V | tail -1 || true)
+ast_releases=$(fetch https://downloads.asterisk.org/pub/telephony/asterisk/releases/ | grep -oE 'asterisk-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz"' | tr -d '"' | sed 's/^asterisk-//; s/\.tar\.gz$//' | sort -uV || true)
+new=$(grep -E "^${ASTERISK_VER%%.*}\." <<< "$ast_releases" | tail -1 || true)
+# newer LTS majors (even numbers; izPBX follows the LTS lines only): the latest release of each
+for m in $(cut -d. -f1 <<< "$ast_releases" | sort -un); do
+  [ "$m" -gt "${ASTERISK_VER%%.*}" ] && [ $((m % 2)) -eq 0 ] || continue
+  major ASTERISK "$(grep -E "^$m\." <<< "$ast_releases" | tail -1)" LTS
+done
 if [ -z "$new" ]; then
   lookup ASTERISK_VER "$ASTERISK_VER" "" downloads.asterisk.org
   report PJPROJECT_VER "$PJPROJECT_VER" "" "follows ASTERISK_VER" || true
@@ -233,6 +245,12 @@ tags=$(fetch https://registry.npmjs.org/-/package/npm/dist-tags || true)
 new=$(grep -oE "\"next-${NPM_VER%%.*}\": *\"[^\"]+\"" <<< "$tags" | cut -d'"' -f4 || true)
 lookup NPM_VER "$NPM_VER" "$new" "registry.npmjs.org" || propose "NPM_VER=$new" "NPM_SHA256=$(sha_of "https://registry.npmjs.org/npm/-/npm-$new.tgz")"
 
+# a newer FreePBX major on the mirror (freepbx-<N>.0-latest.tgz)
+fpbx_next=$((FREEPBX_VER + 1))
+if fetch -I -o /dev/null "https://mirror.freepbx.org/modules/packages/freepbx/freepbx-${fpbx_next}.0-latest.tgz" 2>/dev/null; then
+  major FREEPBX "$fpbx_next" "mirror.freepbx.org"
+fi
+
 # --- izPBX tools
 new=$(gh_latest_tag ugoviti/izsynth || true)
 lookup IZSYNTH_VER "$IZSYNTH_VER" "$new" "GitHub API" || propose "IZSYNTH_VER=$new" "IZSYNTH_SHA256=$(sha_of "https://github.com/ugoviti/izsynth/archive/$new.tar.gz")"
@@ -240,6 +258,11 @@ new=$(gh_head ugoviti/zabbix-templates main || true)
 lookup ZABBIX_TEMPLATE_VER "$ZABBIX_TEMPLATE_VER" "$new" "GitHub API" || propose "ZABBIX_TEMPLATE_VER=$new" "ZABBIX_TEMPLATE_SHA256=$(sha_of "https://github.com/ugoviti/zabbix-templates/archive/$new.tar.gz")"
 
 echo
+if [ ${#majors[@]} -gt 0 ]; then
+  echo "new major releases (a new izPBX series: not proposed, not applied):"
+  printf '%s\n' "${majors[@]}"
+  echo
+fi
 [ "$unavailable" -eq 0 ] || echo "$unavailable lookup(s) unavailable: the report is incomplete" >&2
 if [ "$updates" -eq 0 ]; then
   [ "$unavailable" -eq 0 ] || exit 2

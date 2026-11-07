@@ -39,4 +39,16 @@ assert_cmd "new ASTERISK_SHA256 is proposed" -- grep -qE "^  ASTERISK_SHA256=[0-
 assert_cmd "new FOP2_SHA256_X86_64 is proposed" -- grep -qE "^  FOP2_SHA256_X86_64=[0-9a-f]{64}$" "$work/old.txt"
 assert_cmd "new IONCUBE_SHA256_X86_64 is proposed" -- grep -qE "^  IONCUBE_SHA256_X86_64=[0-9a-f]{64}$" "$work/old.txt"
 
+# new major releases: listed apart as "MAJOR" lines (LTS only), never proposed
+cur_major=$(sed -n 's/^ASTERISK_VER=//p' "$venv" | cut -d. -f1)
+assert_cmd_fails "current: no MAJOR line for the current Asterisk major ($cur_major)" -- grep -qE "^MAJOR ASTERISK ${cur_major}\\." "$work/current.txt"
+assert_cmd_fails "current: never a standard (odd) Asterisk major" -- grep -qE '^MAJOR ASTERISK [0-9]*[13579]\.' "$work/current.txt"
+sed -e 's/^ASTERISK_VER=.*/ASTERISK_VER=20.16.0/' -e 's/^FREEPBX_VER=.*/FREEPBX_VER=16/' "$venv" > "$work/major.env"
+"$cu" --versions "$work/major.env" > "$work/major.txt" 2>&1 && rc=0 || rc=$?
+assert_cmd "old majors: exit 10 or 2 (the MAJOR lines do not change it)" -- test "$rc" -eq 10 -o "$rc" -eq 2
+assert_cmd "old majors: Asterisk 22 listed as a new LTS major" -- grep -qE '^MAJOR ASTERISK 22\.[0-9]+\.[0-9]+ LTS$' "$work/major.txt"
+assert_cmd_fails "old majors: Asterisk 21 (standard) not listed" -- grep -qE '^MAJOR ASTERISK 21\.' "$work/major.txt"
+assert_cmd "old majors: FreePBX 17 listed as a new major" -- grep -qE '^MAJOR FREEPBX 17 ' "$work/major.txt"
+assert_cmd_fails "old majors: a new major is never proposed as a versions.env line" -- grep -qE '^  ASTERISK_VER=2[2-9]\.' "$work/major.txt"
+
 finish

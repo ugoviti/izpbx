@@ -1,0 +1,93 @@
+# izPBX component updates (Gitea Actions)
+# Every Monday at 06:00 UTC (after the weekly rebuild) and by hand: runs
+# izpbx-asterisk/tools/make-updates.sh read only (never --apply, nothing
+# committed) and sends to the Matrix room:
+#   - the components of versions.env (and the FreePBX modules) with an update,
+#     with the proposed lines: apply them with make-updates.sh --apply and the tests;
+#   - the new major releases of Asterisk (LTS) and FreePBX: a new izPBX series,
+#     never proposed (repeated every week until versions.env moves to it);
+#   - an incomplete check (lookups unavailable) or an error.
+# All current: no message, except for a run by hand.
+#
+# Optional secret:  GH_READ_TOKEN (any GitHub token: raises the GitHub API rate
+#                   limit, 60 requests/hour without it)
+# Required secrets: MATRIX_TOKEN; variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+
+name: izpbx-updates
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: izpbx-updates
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: make-updates
+        id: check
+        shell: bash
+        env:
+          # explicit: never the token of the forge sent to api.github.com
+          GITHUB_TOKEN: ${{ secrets.GH_READ_TOKEN }}
+          EVENT: ${{ gitea.event_name }}
+        run: |
+          set -u
+          rc=0
+          izpbx-asterisk/tools/make-updates.sh > report.txt 2> report.err || rc=$?
+          cat report.txt
+          if [ -s report.err ]; then echo "--- stderr"; cat report.err; fi
+          majors=$(grep -E '^MAJOR ' report.txt || true)
+          case "$rc" in
+            0) status=current ;;
+            10) status=updates ;;
+            2) status=incomplete ;;
+            *) status=error ;;
+          esac
+          # the message: the rows to update, the proposed lines, the new majors
+          {
+            grep -E ' UPDATE| unavailable|ERROR' report.txt || true
+            sed -n '/update(s) available, proposed versions.env lines:/,/^$/p' report.txt
+            sed -n '/^FreePBX modules (/,/^$/p' report.txt
+            if [ -n "$majors" ]; then
+              echo "new major releases (a new izPBX series, not proposed):"
+              sed 's/^MAJOR /  /' <<< "$majors"
+            fi
+            if [ "$rc" -eq 10 ]; then echo "apply: izpbx-asterisk/tools/make-updates.sh --apply, then the tests"; fi
+            if [ "$status" == current ] && [ -z "$majors" ]; then echo "all components are current"; fi
+          } > message.txt
+          nmajors=0
+          if [ -n "$majors" ]; then nmajors=$(grep -c . <<< "$majors"); fi
+          notify=false
+          if [ "$status" != current ] || [ -n "$majors" ] || [ "$EVENT" == workflow_dispatch ]; then notify=true; fi
+          {
+            echo "status=${status}"
+            echo "notify=${notify}"
+            echo "majors=${nmajors}"
+            echo "message<<IZPBX_EOF"
+            head -c 3500 message.txt
+            echo
+            echo "IZPBX_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "result: ${status}, ${nmajors} new major(s), notify ${notify}"
+          # updates and new majors are news, not a failure; an error fails the job
+          [ "$status" != error ]
+
+      - name: matrix notify
+        if: always() && (steps.check.outputs.notify == 'true' || failure())
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          # success = all current; anything else is shown with the warning icon
+          status: ${{ failure() && 'failure' || (steps.check.outputs.status == 'current' && steps.check.outputs.majors == '0') && 'success' || steps.check.outputs.status }}
+          label: component updates
+          details: ${{ steps.check.outputs.message }}
+          token: ${{ secrets.MATRIX_TOKEN }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
