@@ -56,12 +56,17 @@ assert_cmd "1002 registered" -- sh -c "docker exec $c asterisk -rx 'pjsip show c
 
 invites() { cat "$work"/uas_*_messages.log 2>/dev/null | grep -c '^INVITE' || true; }
 idle() { docker exec "$c" asterisk -rx 'core show channels count' | grep -q '^0 active channels'; }
-# feature NUMBER SCENARIO: one call; sets CODES and CALLED (INVITEs to 1002)
+# feature NUMBER SCENARIO: one call; sets CODES and CALLED (INVITEs to 1002).
+# Every call has its own local SIP port: a call that ends without its last
+# ACK leaves Asterisk retransmitting its 200 OK to that port, and the next
+# call on the same port read them as its own answers (7202 "401 200 200"
+# under load, its 503 lost)
+fport=5089
 feature() {
-  local before; t_wait_for 30 -- idle || log "channels still up before $1"
+  local before; fport=$((fport + 1)); t_wait_for 30 -- idle || log "channels still up before $1"
   before=$(invites)
   find "$work" -name "${2:?}_*_messages.log" -delete
-  sipp "$net" pbx:5060 -sf "/sc/$2.xml" -inf /w/call.csv -au 1001 -ap Secret1001x -s "$1" -m 1 -p 5090 -mp 7000 \
+  sipp "$net" pbx:5060 -sf "/sc/$2.xml" -inf /w/call.csv -au 1001 -ap Secret1001x -s "$1" -m 1 -p "$fport" -mp 7000 \
     -aa -timeout 40 -trace_msg >/dev/null 2>&1 || true
   CODES=$(cat "$work"/"$2"_*_messages.log 2>/dev/null | grep -E '^SIP/2.0 [0-9]+' | awk '{print $2}' | tr '\n' ' ')
   CALLED=$(( $(invites) - before ))

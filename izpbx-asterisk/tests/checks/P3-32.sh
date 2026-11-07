@@ -28,7 +28,8 @@ assert_cmd "image builds" -- t_build_image "$image"
 work=$(mktemp -d)
 t_on_cleanup "t_rmtree '$work'"
 chmod 755 "$work"
-tools="izpbx-blfmonitor izpbx-callstats izpbx-check-iax2 izpbx-enumrewrite izpbx-freepbx2ldap izpbx-hangup-stucked-calls izpbx-healthcheck izpbx-mtrstats izpbx-reboot-device izpbx-trunkrotate"
+# izpbx-dialplan-convert: new in 22.17 (P4-37), the others come from 20.16
+tools="izpbx-blfmonitor izpbx-callstats izpbx-check-iax2 izpbx-dialplan-convert izpbx-enumrewrite izpbx-freepbx2ldap izpbx-hangup-stucked-calls izpbx-healthcheck izpbx-mtrstats izpbx-reboot-device izpbx-trunkrotate"
 assert_eq "$(tr ' ' '\n' <<< "$tools" | sort | tr '\n' ' ')" \
   "$(docker run --rm --entrypoint "" "$image" sh -c 'cd /usr/local/bin && for f in izpbx-*; do [ -x "$f" ] && echo "$f"; done' | sort | tr '\n' ' ')" \
   "the izpbx-* tools in the image, executable"

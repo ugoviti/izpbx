@@ -82,7 +82,9 @@ assert_eq 0 "$(conv extensions_custom.conf | grep -c '^CHANGE ' || true)" "a sec
 
 # Asterisk 22 loads the converted file
 c=$(t_run ast "$image" -e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true)
-t_wait_for 120 -- docker exec "$c" asterisk -rx 'core show uptime' >/dev/null || die "Asterisk did not start"
+# fully booted, not only answering: under load pbx_config may still be
+# loading and "dialplan reload" would do nothing
+t_wait_for 120 -- docker exec "$c" asterisk -rx 'core waitfullybooted' >/dev/null || die "Asterisk did not start"
 docker cp "$f" "$c:/etc/asterisk/extensions.conf" >/dev/null
 docker exec "$c" asterisk -rx 'dialplan reload' >/dev/null
 show=$(docker exec "$c" asterisk -rx 'dialplan show macro-dialout-trunk-predial-hook')

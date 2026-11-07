@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# P0-01: the working branch is feature/22.17 and it descends from main.
+# P0-01: the 22.17 series is developed on main (feature/22.17 was merged and
+# removed with 22.17.0): HEAD is main, or a feature/* branch that descends
+# from main; never a branch that does not contain main.
 set -Eeuo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$branch" != "feature/22.17" ]; then
-  echo "FAIL: current branch is '$branch', expected 'feature/22.17'" >&2
-  exit 1
-fi
+case "$branch" in
+  main|feature/*) ;;
+  *) echo "FAIL: current branch is '$branch', expected main or feature/*" >&2; exit 1 ;;
+esac
 
 if ! git merge-base --is-ancestor main HEAD; then
   echo "FAIL: main is not an ancestor of HEAD" >&2
@@ -21,4 +23,4 @@ if [ "$(git rev-parse main)" != "$root" ] && git merge-base --is-ancestor main "
   exit 1
 fi
 
-echo "OK: on feature/22.17, based on main"
+echo "OK: on $branch, based on main"

@@ -11,7 +11,9 @@
 # - the FreePBX 17 data is kept aside (rollback-<ts>: database dump, state);
 # - the izPBX 20.16.22 image of the fixture starts on the volume, and the
 #   inventory (izpbx-inventory, DB + files) equals the one of the fixture,
-#   but the DUNDi secret of the astdb (Asterisk renews it at the start).
+#   but the DUNDi secret of the astdb (Asterisk renews it at the start) and the
+#   CustomDevstate keys (runtime states: a time condition writes its own as
+#   the hour of the run decides, as the migration accepts them).
 source "$(dirname "$0")/../lib.sh"
 image=izpbx-asterisk:p4-21
 fx="$TESTS_DIR/fixtures/out/20.16.22"
@@ -82,9 +84,9 @@ assert_cmd_fails "izPBX 20.16.22 does not install FreePBX again" -- \
 docker stop -t 60 "$c16" >/dev/null
 docker run --rm --entrypoint "" --network "$net" -v "$v:/data:ro" -e APP_DATA=/data -e MYSQL_SERVER=db \
   -e MYSQL_PASSWORD=fixture-pw "$image" izpbx-inventory > "$work/inv-after.json"
-printf 'astdb\t^key=/dundi/secret\t\n' > "$work/map"
+printf 'astdb\t^key=/dundi/secret\t\nastdb\t^key=/CustomDevstate/\t\n' > "$work/map"
 diff=$(docker run --rm --entrypoint "" -v "$work:/w:ro" "$image" izpbx-inventory --diff /w/inv-fixture.json /w/inv-after.json --mapping /w/map) && rc=0 || rc=$?
 log "inventory after 20.16.22: $(tail -n 1 <<< "$diff")"
 [ "$rc" == 0 ] || sed 's/^/    | /' <<< "$diff" | head -n 30 >&2
-assert_eq 0 "$rc" "the inventory after izPBX 20.16.22 equals the one of the fixture (DUNDi secret apart)"
+assert_eq 0 "$rc" "the inventory after izPBX 20.16.22 equals the one of the fixture (DUNDi secret and CustomDevstate apart)"
 finish

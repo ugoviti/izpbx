@@ -35,8 +35,9 @@ cp "$REPO_DIR/izpbx-asterisk/build/freepbx-modules.txt" "$r/izpbx-asterisk/build
 cp "$rel" "$REPO_DIR/izpbx-asterisk/tools/deploy-sync.sh" "$REPO_DIR/izpbx-asterisk/tools/check-versions.sh" "$r/izpbx-asterisk/tools/"
 # the CHANGELOG as before the first release of the series (the real one has
 # 22.17.0 dated and an empty "## [Unreleased]" on top since the release)
-# (the "## [Unreleased]" block of the real one, empty or not, is dropped)
-awk '/^## \[Unreleased\]$/ {skip = 1; next} skip && /^## \[/ {skip = 0} !skip' "$r/CHANGELOG.md" > "$work/c0" && cp "$work/c0" "$r/CHANGELOG.md"
+# (the "## [Unreleased]" block of the real one, empty or not, and the patches
+# released after it, 22.17.1 and later, are dropped)
+awk '/^## \[(Unreleased|22\.17\.[1-9][0-9]*)\]/ {skip = 1; next} skip && /^## \[/ {skip = 0} !skip' "$r/CHANGELOG.md" > "$work/c0" && cp "$work/c0" "$r/CHANGELOG.md"
 sed -i -E 's/^## \[22\.17\.0\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$/## [22.17.0] - Unreleased/' "$r/CHANGELOG.md"
 grep -qx '## \[22.17.0\] - Unreleased' "$r/CHANGELOG.md" || die "fixture: no '## [22.17.0] - Unreleased' in CHANGELOG.md"
 g() { git -C "$r" -c user.name=t -c user.email=t@t "$@"; }
@@ -48,7 +49,7 @@ rr() { (cd "$r" && GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t G
 
 # --- dry run writes nothing
 head_before=$(g rev-parse HEAD)
-rr > "$work/dry.txt" 2>&1
+rr > "$work/dry.txt" 2>&1 || { cat "$work/dry.txt" >&2; exit 1; }
 assert_cmd "dry run prints the entry 22.17.0" -- grep -qF "## [22.17.0] - $today" "$work/dry.txt"
 assert_eq "$head_before" "$(g rev-parse HEAD)" "dry run: no commit"
 assert_eq "" "$(g status --porcelain)" "dry run: no file changed"

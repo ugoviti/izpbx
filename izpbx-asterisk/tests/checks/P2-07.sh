@@ -2,8 +2,8 @@
 # P2-07 (T18): orderly stop within the docker stop timeout.
 # - docker stop (with asterisk, httpd, php-fpm, cron, fail2ban, postfix,
 #   dnsmasq, ntp, zabbix running) ends within 30 s with exit 0; the logs show
-#   Asterisk stopping cleanly (its full log) and every service stopped, no
-#   "unable to stop";
+#   Asterisk stopping cleanly (its full log) and every service stopped
+#   (with S6_VERBOSITY=2, as s6 logs it), no "unable to stop";
 # - no orphan processes: after "s6-rc -da change" (the service stop of
 #   docker stop) only the s6 tree is left running.
 # Negative: a process left behind on purpose is reported as an orphan.
@@ -15,8 +15,11 @@ on=(-e IZPBX_ENABLED=false -e ASTERISK_ENABLED=true -e POSTFIX_ENABLED=true -e D
 services="asterisk php-fpm httpd cron fail2ban postfix dnsmasq ntp zabbix"
 assert_cmd "image builds" -- t_build_image "$image"
 
-ready() { # every listed service up and Asterisk fully booted
+ready() { # every listed service up, Asterisk fully booted, the start of
+  # s6-overlay ended (rc.init holds the s6-rc lock until the last oneshot:
+  # "s6-rc -da change" during the start fails)
   local s
+  ! docker exec "$1" pgrep -x rc.init >/dev/null || return 1
   for s in $services; do
     [ "$(docker exec "$1" /command/s6-svstat -o up "/run/service/$s" 2>/dev/null)" == true ] || return 1
   done
@@ -32,7 +35,9 @@ orphans() {
 }
 
 # --- docker stop
-c=$(t_run stop "$image" "${on[@]}" -v "$TESTS_DIR/fixtures/asterisk-logger/logger.conf:/etc/asterisk/logger.conf:ro")
+# S6_VERBOSITY=2: the "service X successfully stopped" lines of s6 (the
+# image default 1 leaves them out of the container log since 22.17.0)
+c=$(t_run stop "$image" "${on[@]}" -e S6_VERBOSITY=2 -v "$TESTS_DIR/fixtures/asterisk-logger/logger.conf:/etc/asterisk/logger.conf:ro")
 t_wait_for 120 -- ready "$c" || die "services did not start"
 t0=$SECONDS; docker stop -t 30 "$c" >/dev/null; dt=$((SECONDS - t0))
 assert_cmd "docker stop ends within 30 s ($dt s)" -- test "$dt" -le 30

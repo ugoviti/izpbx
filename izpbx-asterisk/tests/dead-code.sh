@@ -4,12 +4,15 @@
 #   FreePBX 15/16 workarounds FREEPBX-21703 / FREEPBX-22983;
 # - blocks of more than 3 consecutive commented-out code lines ("#echo",
 #   "# sed ...", "#[ $? = 0 ] ..."); prose comments ("# text") do not count.
+#   Not in the deploy templates (usr/local/share/izpbx/deploy: compose.yml,
+#   default.env and their history): their commented lines are the optional
+#   settings offered to the user, not dead code.
 #   izpbx-asterisk/tests/dead-code.sh DIR
 set -uo pipefail
 dir=${1:?usage: $0 DIR}
 rc=0
 if grep -rniE 'alpine|rhel|microdnf|chan_local|FREEPBX-2(1703|2983)' "$dir"; then rc=1; fi
-blocks=$(grep -rIlZ . "$dir" | xargs -0 -r awk '
+blocks=$(grep -rIlZ . "$dir" | grep -zv '/usr/local/share/izpbx/deploy/' | xargs -0 -r awk '
   function iscode(l) {
     if (l ~ /^[ \t]*#!/ || l ~ /^[ \t]*# shellcheck/) return 0
     if (l ~ /^[ \t]*#[^ \t#]/) return 1
