@@ -13,6 +13,7 @@
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-migration-matrix
+run-name: migration to 22.17 from every 20.16.x
 
 on:
   schedule:
@@ -21,7 +22,7 @@ on:
   workflow_dispatch:
     inputs:
       break_version:
-        description: "A version to break on purpose (eg. 20.16.10): its job must fail"
+        description: "Test of the test: a 20.16.x whose migration is broken on purpose (eg. 20.16.10), its job must fail; empty for a normal run"
         default: ''
         required: false
 
@@ -31,6 +32,7 @@ concurrency:
 
 jobs:
   versions:
+    name: list the 20.16.x tags
     runs-on: ubuntu-latest
     outputs:
       list: ${{ steps.tags.outputs.list }}
@@ -57,6 +59,7 @@ jobs:
           echo "$(wc -l <<< "$tags") version(s): $(tr '\n' ' ' <<< "$tags")"
 
   build:
+    name: build the test image (Gitea registry, ci-migration)
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -128,6 +131,7 @@ jobs:
           path: result/
 
   report:
+    name: result table to Matrix
     needs: [versions, migrate]
     if: always()
     runs-on: ubuntu-latest

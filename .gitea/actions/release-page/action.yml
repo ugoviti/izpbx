@@ -2,7 +2,7 @@ name: release page
 description: >-
   Create (or update) the Gitea release page of a tag from its CHANGELOG.md
   entry (izpbx-asterisk/tools/forge-release.sh --forge gitea). Used by
-  izpbx-release (last job, after the images) and izpbx-release-page (by hand).
+  izpbx-release (last job, after the images).
   Needs a checkout with the tags (fetch-depth 0).
 
 inputs:

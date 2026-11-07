@@ -1,7 +1,7 @@
-# izPBX 22.17 tests in CI (Gitea Actions): design E3-E5.
-# On pull requests, or by hand (Repository > Actions > izpbx-tests-22.17 >
-# Run workflow); not on every push to feature/22.17 any more (to run it at
-# each push again, add back "push: branches: [feature/22.17]" under "on:").
+# izPBX tests in CI (Gitea Actions): design E3-E5.
+# On pull requests, or by hand (Repository > Actions > tests.yml > Run
+# workflow); not on every push (to run it at each push, add
+# "push: branches: [main]" under "on:").
 # - build: the image of the run, pushed to the Gitea registry as ci-22.17
 #   (build-push: buildx cache, verify image E1); never latest, never Docker Hub;
 # - e3-migration: the 20.16.22 fixture migrated with the opt-in, inventory
@@ -19,27 +19,33 @@
 #
 # Required secrets: REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN
 
-name: izpbx-tests-22.17
+name: izpbx-tests
+run-name: tests on ${{ gitea.ref_name }}
 
 on:
   pull_request:
   workflow_dispatch:
     inputs:
       all_done:
-        description: "'true': also run izpbx-asterisk/tests/run.sh all-done"
+        description: "Also run every check (izpbx-asterisk/tests/run.sh all-done, a few hours); the quick jobs migration, new install and maintenance always run"
+        type: choice
+        options: ['false', 'true']
         default: 'false'
         required: false
       break_migration:
-        description: "'true': an extension removed after the restore, e3-migration must fail"
+        description: "Test of the test: an extension is removed after the restore, so the migration job must fail (red is the expected result)"
+        type: choice
+        options: ['false', 'true']
         default: 'false'
         required: false
 
 concurrency:
-  group: izpbx-tests-22.17
+  group: izpbx-tests
   cancel-in-progress: false
 
 jobs:
   build:
+    name: build the test image (Gitea registry, ci-22.17)
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -103,6 +109,7 @@ jobs:
         run: tail -n 80 "izpbx-asterisk/tests/.logs/$CHECK.log" 2>/dev/null || echo "no log"
 
   all-done:
+    name: all-done (every check, a few hours)
     needs: build
     if: github.event_name == 'pull_request' || inputs.all_done == 'true'
     runs-on: ubuntu-latest

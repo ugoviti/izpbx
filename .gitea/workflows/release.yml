@@ -12,13 +12,15 @@
 # again afterwards.
 # Last job "page": the Gitea release page of the tag from its CHANGELOG.md
 # entry (.gitea/actions/release-page), once the images are there (rc tags as
-# pre-releases); izpbx-release-page does the same by hand for an existing tag.
+# pre-releases); to write the page again (eg. after a CHANGELOG fix in the
+# tag) run izpbx-release again on the tag.
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
 # Optional secret:    RELEASE_TOKEN (when the automatic token cannot write releases)
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-release
+run-name: release ${{ gitea.ref_name }}
 
 on:
   push:
@@ -31,6 +33,7 @@ concurrency:
 
 jobs:
   amd64:
+    name: build amd64 (Gitea registry, test it from here)
     runs-on: ubuntu-latest
     outputs:
       branch: ${{ steps.branch.outputs.branch }}
@@ -74,6 +77,7 @@ jobs:
 
   # 20.16 stays amd64 only
   arm64:
+    name: add arm64 (QEMU, ~35 min; main only)
     needs: amd64
     if: needs.amd64.outputs.branch == 'main'
     runs-on: ubuntu-latest
@@ -107,6 +111,7 @@ jobs:
 
   # the release page once the images are there (arm64 skipped for 20.16)
   page:
+    name: Gitea release page from CHANGELOG.md
     needs: [amd64, arm64]
     if: always() && needs.amd64.result == 'success' && (needs.arm64.result == 'success' || needs.arm64.result == 'skipped')
     runs-on: ubuntu-latest

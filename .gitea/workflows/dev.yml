@@ -10,6 +10,7 @@
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-dev
+run-name: dev image from ${{ gitea.ref_name }}
 
 on:
   workflow_dispatch:
@@ -25,6 +26,7 @@ concurrency:
 
 jobs:
   dev:
+    name: build the dev image (Gitea registry only)
     runs-on: ubuntu-latest
     steps:
       - name: checkout

@@ -30,6 +30,7 @@
 #                   RELEASE_GIT_EMAIL (author of the commits and the tag)
 
 name: izpbx-updates
+run-name: component updates check
 
 on:
   schedule:
@@ -42,6 +43,7 @@ concurrency:
 
 jobs:
   check:
+    name: check the component updates (make-updates.sh)
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.check.outputs.status }}
@@ -120,6 +122,7 @@ jobs:
           room-id: ${{ vars.MATRIX_ROOM_ID }}
 
   release:
+    name: apply, test and tag a release (needs RELEASE_PUSH_TOKEN)
     needs: check
     if: needs.check.outputs.status == 'updates'
     runs-on: ubuntu-latest

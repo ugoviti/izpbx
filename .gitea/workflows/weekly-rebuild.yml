@@ -18,6 +18,7 @@
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-weekly-rebuild
+run-name: weekly security rebuild of the release tags
 
 on:
   schedule:

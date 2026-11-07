@@ -4,8 +4,7 @@
 #   izpbx-asterisk/tools/forge-release.sh [--forge github|gitea] VERSION [--dry-run]
 #
 # Run in the git repository, after the tag VERSION is on the forge (GitHub:
-# izpbx-promote, step "github release"; Gitea: izpbx-release, job "release
-# page", or izpbx-release-page by hand). The text is the "## [X.Y.Z] ..." entry
+# izpbx-promote, step "github release"; Gitea: izpbx-release, job "page"). The text is the "## [X.Y.Z] ..." entry
 # of the CHANGELOG.md of the tag (for X.Y.Z-rcN the entry of X.Y.Z, usually
 # still "Unreleased"), relative links made absolute at the tag, with the image
 # and, for a major line, the link to the upgrade guide. Release candidates are

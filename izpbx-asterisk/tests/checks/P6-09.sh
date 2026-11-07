@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # P6-09: release page of a tag on GitHub (izpbx-promote, step "github
-# release") and on Gitea (izpbx-release, job "page"; izpbx-release-page by
-# hand), izpbx-asterisk/tools/forge-release.sh, offline: a test repository
+# release") and on Gitea (izpbx-release, job "page"),
+# izpbx-asterisk/tools/forge-release.sh, offline: a test repository
 # with tags and a CHANGELOG, a fake forge API on localhost.
 # - X.Y.Z: the CHANGELOG entry of the tag (up to the next "## ["), relative
 #   links absolute at the tag, Docker tags X.Y.Z, X.Y, X, the upgrade guide of
@@ -14,7 +14,7 @@
 #   make_latest, "Authorization: token", API under /api/v1;
 # - promote.yml: input github_release (default true), the step after the
 #   image copy, only with github, with GH_PUSH_TOKEN; release.yml: job page
-#   after amd64 and arm64 (arm64 skipped for 20.16), release-page.yml by hand.
+#   after amd64 and arm64 (arm64 skipped for 20.16).
 source "$(dirname "$0")/../lib.sh"
 
 tool="$REPO_DIR/izpbx-asterisk/tools/forge-release.sh"
@@ -155,17 +155,15 @@ assert_eq "GET /api/v1/repos/Org/izpbx/releases/tags/22.17.0|POST /api/v1/repos/
 assert_eq "token gt-$$" "$(jq -r .auth "$work/req.log" | sort -u)" "gitea: Authorization token"
 assert_eq "null" "$(tail -1 "$work/req.log" | jq -r '.body | fromjson | .make_latest')" "gitea: no make_latest sent"
 
-# --- release.yml and release-page.yml
+# --- release.yml
 rel="$REPO_DIR/.gitea/workflows/release.yml"
 job=$(awk '/^  page:$/ {s = 1} s {print}' "$rel")
 assert_contains "$job" "needs: [amd64, arm64]" "release.yml: page after amd64 and arm64"
 assert_contains "$job" "needs.arm64.result == 'skipped'" "release.yml: also for 20.16 (arm64 skipped)"
 assert_contains "$job" "fetch-depth: 0" "release.yml: page with the tags"
 assert_contains "$job" "uses: ./.gitea/actions/release-page" "release.yml: page by the release-page action"
-assert_contains "$(cat "$REPO_DIR/.gitea/workflows/release-page.yml")" "uses: ./.gitea/actions/release-page" "release-page.yml: by hand, same action"
 action="$REPO_DIR/.gitea/actions/release-page/action.yml"
 assert_contains "$(cat "$action")" "forge-release.sh --forge gitea" "release-page action: Gitea forge"
-assert_eq "last" "$(awk '/^      version:/ {s = 1} s && /default:/ {print $2; exit}' "$REPO_DIR/.gitea/workflows/release-page.yml")" "release-page.yml: version last by default"
 # "last" of the action: the most recent version tag (tagger date), rc included, other tags skipped
 awk '/run: \|/ {r = 1; next} r {print substr($0, 9)}' "$action" > "$work/page.sh"
 mkdir -p "$work/bin" && printf '#!/bin/sh\necho "tool $*"\n' > "$work/bin/forge-release.sh" && chmod +x "$work/bin/forge-release.sh"
