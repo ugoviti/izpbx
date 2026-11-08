@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `compose.yml` writes no version: `IZPBX_VERSION` and `MARIADB_VERSION` are required in `.env` (`izpbx-deploy` writes them), a `.env` without them stops `docker compose` with a clear error instead of using the version of the `compose.yml` in silence
 - `izpbx-deploy` writes in `IZPBX_VERSION` the version of the image it runs in, so the series tag works: `docker run --rm --pull always -v "$PWD:/deploy" izdock/izpbx-asterisk:22.17 izpbx-deploy upgrade` moves the deploy to the last 22.17.x; an image older than `IZPBX_VERSION` of `.env` is refused (no downgrade)
 - The docs use the series tag (`izpbx-asterisk:22.17`, `mariadb:10.11`) instead of exact versions; a release moves every reference to a 22.17.x left in the docs and the deploy files, and `izpbx-asterisk/tools/check-versions.sh` (lint, release) fails on a stale one
+### Fixed
+- `wget` is in the image again (as in 20.16): FreePBX uses it for the online module data when the advanced setting `MODULEADMINWGET` is true, a value kept by the migration from 20.16, and Module Admin -> Check Online failed. In 22.17.0 (https://github.com/ugoviti/izpbx/issues/104)
 ### Migration
 - Migration from an older izPBX 20.16 (eg. 20.16.15): a module that worked on FreePBX 16 but had no row in its module table (eg. `voicemail`) is kept, it was uninstalled after the restore and the migration stopped in maintenance mode (FreePBX table `voicemail_admin` missing, every reload failed). In 22.17.0
 

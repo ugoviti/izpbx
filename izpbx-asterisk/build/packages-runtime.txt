@@ -25,6 +25,10 @@ ffmpeg
 openssh-client
 rsync
 ipset
+# wget: FreePBX runs it for the online module data when MODULEADMINWGET is true
+# (a setting kept by the migration from 20.16, whose image had wget) and for
+# fwconsole validate (https://github.com/ugoviti/izpbx/issues/104)
+wget
 # the izpbx-* tools (P3-32): column for izpbx-callstats, ldapadd/ldapsearch for izpbx-freepbx2ldap
 bsdextrautils
 ldap-utils
