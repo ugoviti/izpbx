@@ -113,6 +113,8 @@ jobs:
         uses: ./.gitea/actions/gitleaks
         with:
           config: ${{ secrets.GITLEAKS_CONFIG }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: registry login
         if: steps.ver.outputs.version != ''

@@ -4,6 +4,8 @@
 #
 # Optional secret: GITLEAKS_CONFIG  private extra rules (TOML), kept out of the repo because
 #                                   it contains the private hostnames it has to detect.
+# Optional secrets: REGISTRY_USERNAME, REGISTRY_TOKEN  read the gitleaks tarball from the Gitea
+#                                   copy (izpbx-asterisk/tools/gitleaks-mirror.sh); GitHub without them
 # Failure notify:  MATRIX_TOKEN (secret), MATRIX_HOMESERVER, MATRIX_ROOM_ID (variables)
 
 name: gitleaks
@@ -27,6 +29,8 @@ jobs:
         uses: ./.gitea/actions/gitleaks
         with:
           config: ${{ secrets.GITLEAKS_CONFIG }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: matrix notify
         if: failure()

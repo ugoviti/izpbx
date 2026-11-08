@@ -8,7 +8,8 @@
 # bypass (emergency only): git commit --no-verify
 #
 # gitleaks version and checksum are read from .gitea/actions/gitleaks/action.yml (single source of truth).
-# If gitleaks is not in PATH, the pinned release is downloaded and verified into ~/.cache/gitleaks.
+# If gitleaks is not in PATH, the pinned release is downloaded (the Gitea copy, else GitHub:
+# izpbx-asterisk/tools/gitleaks-mirror.sh) and verified into ~/.cache/gitleaks.
 set -euo pipefail
 
 ROOT=$(git rev-parse --show-toplevel)
@@ -18,18 +19,14 @@ CONFIG="${GITLEAKS_IZPBX_CONFIG:-$HOME/.config/gitleaks/izpbx.toml}"
 wf_env() { sed -n "s/^ *$1: *//p" "$WORKFLOW" | head -1 | tr -d "'\" "; }
 
 find_gitleaks() {
-  local ver sha dir tgz
+  local ver dir tgz
   ver=$(wf_env GITLEAKS_VERSION)
-  sha=$(wf_env GITLEAKS_SHA256)
   dir="${XDG_CACHE_HOME:-$HOME/.cache}/gitleaks/$ver"
   if [ -x "$dir/gitleaks" ]; then echo "$dir/gitleaks"; return; fi
   if [ "$(uname -s)-$(uname -m)" = "Linux-x86_64" ]; then
-    tgz="gitleaks_${ver}_linux_x64.tar.gz"
-    mkdir -p "$dir"
-    echo "gitleaks: downloading v$ver..." >&2
-    curl -fsSL -o "$dir/$tgz" "https://github.com/gitleaks/gitleaks/releases/download/v${ver}/${tgz}"
-    echo "$sha  $dir/$tgz" | sha256sum -c --quiet - >&2
-    tar xzf "$dir/$tgz" -C "$dir" gitleaks && rm -f "$dir/$tgz"
+    # the Gitea copy, else GitHub, sha256 verified (izpbx-asterisk/tools/gitleaks-mirror.sh)
+    tgz=$("$ROOT/izpbx-asterisk/tools/gitleaks-mirror.sh" --fetch "$dir")
+    tar xzf "$tgz" -C "$dir" gitleaks && rm -f "$tgz"
     echo "$dir/gitleaks"; return
   fi
   command -v gitleaks || true

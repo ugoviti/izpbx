@@ -2,11 +2,23 @@ name: izpbx gitleaks
 description: Install the pinned gitleaks release and scan the full git history (requires checkout with fetch-depth 0)
 
 # GITLEAKS_VERSION / GITLEAKS_SHA256 below are the single source of truth,
-# also read by the local hook .githooks/pre-commit
+# also read by the local hook .githooks/pre-commit and by
+# izpbx-asterisk/tools/gitleaks-mirror.sh.
+# The release tarball is taken from the Gitea copy (generic package "gitleaks" of
+# the owner of the repository, uploaded by gitleaks-mirror.sh at every version
+# change), GitHub only when that copy is missing or cannot be read: an outage of
+# the GitHub release downloads (HTTP 504) failed izpbx-promote. Same sha256 check
+# for both.
 
 inputs:
   config:
     description: Private extra rules (TOML content, from secrets.GITLEAKS_CONFIG). Empty = default rules only
+    default: ''
+  registry-username:
+    description: User of the Gitea package registry (secrets.REGISTRY_USERNAME). Empty = download from GitHub only
+    default: ''
+  registry-token:
+    description: Token of the Gitea package registry (secrets.REGISTRY_TOKEN)
     default: ''
 
 runs:
@@ -18,12 +30,21 @@ runs:
         GITLEAKS_VERSION: 8.30.1
         GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
         PRIVATE_CONFIG: ${{ inputs.config }}
+        REGISTRY_USERNAME: ${{ inputs.registry-username }}
+        REGISTRY_TOKEN: ${{ inputs.registry-token }}
       run: |
         set -euo pipefail
         TGZ="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
         mkdir -p "$RUNNER_TEMP/gitleaks"
-        # retries: a short outage of the GitHub release downloads (HTTP 504) failed the job
-        curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/$TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TGZ}"
+        MIRROR="${GITHUB_SERVER_URL}/api/packages/${GITHUB_REPOSITORY%%/*}/generic/gitleaks/${GITLEAKS_VERSION}/${TGZ}"
+        if [ -n "$REGISTRY_USERNAME" ] && [ -n "$REGISTRY_TOKEN" ] &&
+           curl -fsSL --max-time 120 -u "${REGISTRY_USERNAME}:${REGISTRY_TOKEN}" -o "$RUNNER_TEMP/$TGZ" "$MIRROR"; then
+          echo "gitleaks ${GITLEAKS_VERSION}: Gitea copy"
+        else
+          [ -z "$REGISTRY_USERNAME" ] || echo "::warning::gitleaks ${GITLEAKS_VERSION}: no Gitea copy (run izpbx-asterisk/tools/gitleaks-mirror.sh), downloading from GitHub"
+          # retries: a short outage of the GitHub release downloads (HTTP 504)
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/$TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TGZ}"
+        fi
         echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$TGZ" | sha256sum -c -
         tar xzf "$RUNNER_TEMP/$TGZ" -C "$RUNNER_TEMP/gitleaks" gitleaks
 
