@@ -42,8 +42,14 @@ runs:
           echo "gitleaks ${GITLEAKS_VERSION}: Gitea copy"
         else
           [ -z "$REGISTRY_USERNAME" ] || echo "::warning::gitleaks ${GITLEAKS_VERSION}: no Gitea copy (run izpbx-asterisk/tools/gitleaks-mirror.sh), downloading from GitHub"
-          # retries: a short outage of the GitHub release downloads (HTTP 504)
-          curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/$TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TGZ}"
+          # the release download URL, else the same asset through the API (the download
+          # URL answered 504 for hours while the API served the asset)
+          if ! curl -fsSL --retry 2 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/$TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TGZ}"; then
+            ID=$(curl -fsSL --retry 2 "https://api.github.com/repos/gitleaks/gitleaks/releases/tags/v${GITLEAKS_VERSION}" |
+              jq -r --arg n "$TGZ" '.assets[] | select(.name == $n) | .id')
+            curl -fsSL --retry 2 --retry-all-errors --retry-delay 10 -H 'Accept: application/octet-stream' \
+              -o "$RUNNER_TEMP/$TGZ" "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/${ID}"
+          fi
         fi
         echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$TGZ" | sha256sum -c -
         tar xzf "$RUNNER_TEMP/$TGZ" -C "$RUNNER_TEMP/gitleaks" gitleaks

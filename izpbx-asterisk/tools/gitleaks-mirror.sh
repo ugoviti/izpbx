@@ -60,7 +60,16 @@ from_gitea() { # $1 = file; false without a token or a copy
   [ -n "$url" ] && [ -n "$owner" ] && [ -n "$token" ] || return 1
   curl -fsSL --max-time 120 -H "Authorization: token $token" -o "$1" "$pkg" 2>/dev/null
 }
-from_github() { curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$1" "$github"; }
+# GitHub: the release download URL, else the same asset through the API (the
+# download URL answered 504 for hours while the API served the asset)
+from_github() {
+  curl -fsSL --retry 2 --retry-all-errors --retry-delay 10 -o "$1" "$github" && return 0
+  local id
+  id=$(curl -fsSL --retry 2 "https://api.github.com/repos/gitleaks/gitleaks/releases/tags/v${ver}" |
+    jq -r --arg n "$tgz" '.assets[] | select(.name == $n) | .id') && [ -n "$id" ] || return 1
+  curl -fsSL --retry 2 --retry-all-errors --retry-delay 10 -H 'Accept: application/octet-stream' \
+    -o "$1" "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/${id}"
+}
 
 if [ -n "$fetch" ]; then
   mkdir -p "$fetch"
