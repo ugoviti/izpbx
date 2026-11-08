@@ -2,7 +2,9 @@
 # Manual only: Repository > Actions > izpbx-promote > Run workflow.
 # The ONLY way code and images leave the private infrastructure:
 #   1. gitleaks scan of the full history with the private rules (blocks everything on findings)
-#   2. pushes the git tag, and the branch up to that tag, to GitHub (fast-forward only)
+#   2. pushes the git tag, and the branch up to that tag, to GitHub (branch fast-forward only;
+#      the tag forced: a tag republished on Gitea, eg. 22.17.1 moved to a rebuild, replaces the
+#      one already on GitHub)
 #   3. copies the image already built in the Gitea registry to Docker Hub, without rebuilding
 #      (same digest you tested). Tag scheme: .gitea/actions/image-tags
 #        20.16.22    -> 20.16.22, 20.16, 20 [, latest]
@@ -149,9 +151,11 @@ jobs:
             echo "${VERSION} is not a git tag: nothing to push to GitHub"
             exit 0
           fi
-          # tag + branch fast-forwarded to the tagged commit (GitHub rejects non fast-forward)
+          # branch fast-forwarded to the tagged commit (GitHub rejects non fast-forward); tag
+          # forced (+): Gitea is the source, a tag moved there (republished release) replaces
+          # the one on GitHub, which would be rejected otherwise ("already exists")
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH}" \
-            push "$PUBLIC_REPO_URL" "${VERSION}^{commit}:refs/heads/${BRANCH}" "refs/tags/${VERSION}"
+            push "$PUBLIC_REPO_URL" "${VERSION}^{commit}:refs/heads/${BRANCH}" "+refs/tags/${VERSION}"
 
       - name: image tags
         if: steps.ver.outputs.version != '' && (inputs.dockerhub == true || inputs.dockerhub == 'true')

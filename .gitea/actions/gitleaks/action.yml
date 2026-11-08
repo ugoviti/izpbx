@@ -22,7 +22,8 @@ runs:
         set -euo pipefail
         TGZ="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
         mkdir -p "$RUNNER_TEMP/gitleaks"
-        curl -fsSL -o "$RUNNER_TEMP/$TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TGZ}"
+        # retries: a short outage of the GitHub release downloads (HTTP 504) failed the job
+        curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o "$RUNNER_TEMP/$TGZ" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${TGZ}"
         echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$TGZ" | sha256sum -c -
         tar xzf "$RUNNER_TEMP/$TGZ" -C "$RUNNER_TEMP/gitleaks" gitleaks
 
