@@ -25,7 +25,7 @@ cidlookup          17.0.1.1       3ccf8d2ddee874a5d4f008052a2af583c3073c35a40677
 contactmanager     17.0.8         acc1864b604599a76e36683af66a4db66ffccca8df2362b49ed20a71e793e50e
 daynight           17.0.1.2       1a29dbf027d55bf7870a03c565dfb8948eab195b5e0ede6709b8cfd77c3041f2
 donotdisturb       17.0.2.3       3eecadbe49db8e2bae470a4bbe82f2f56f354347f69620d13aff2c877f0ee4ce
-fax                17.0.3.5       c402c02ab3e808f05fd0c477ac60475dfd7bd383214859e59f4e1750d9493266
+fax                17.0.3.6       9ccd15f94defa6c8c7cc789f14aafdeb9c3593c112c1ab3021feaba7994afc10
 filestore          17.0.3.2       fe25250d62784449d013717e455f2a9e89960196ff70144ed97221ed4e64f971
 findmefollow       17.0.4.15      94082686e0e6c901fa7a9018c0d15db05a8a8d1000b63756ef3dc69ad07ca808
 iaxsettings        17.0.2         436f09468a1580cb3ce19b33d3e5096062a01e48097db4679abf728129a360d8
@@ -38,7 +38,7 @@ presencestate      17.0.2.4       e521d0f981eaf7f38d4d9a98ef0bb62b681f4c2f36b661
 printextensions    17.0.1.5       ffc191c640699c6cbb183fbe73f62bd8790ef105b9518c834101943e316a663b
 queues             17.0.4         3d6273b90e6d24303d0632caf2517d8deb8068e13bb21ca99c082052bb774387
 soundlang          17.0.5         8955605dd5479fd1ff85392a4a52d0e9bb82a8dc056c0398ece9abf6a2e7f9a7
-timeconditions     17.0.1.18      e406bd33264a08231ae4c0479d4123102e32ed74385bba47870e82494b1123f1
+timeconditions     17.0.1.19      c5138a14081a8710d9ba989c2c559c1501f96f345ecfbd666038f28ba4bf523c
 userman            17.0.8         d09fef9ee9ea91feaba617783d515f788d73fcb536fe00f8a0b75febfd53c58b
 ucp                17.0.10        653fb339762da812129f2cad9b8ce316ed86935f9d495036b0ebe3fbabaaf735
 bulkhandler        17.0.7.1       d23f14f2b7f5e1e49acf6a1c3ca69e81371fe00162c0ebf512fe028ca06900c8
