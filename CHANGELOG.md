@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [22.17.2] - 2026-11-17
+### Changed
+- Updated FreePBX modules: `fax` 17.0.3.5 → 17.0.3.6, `timeconditions` 17.0.1.18 → 17.0.1.19
 ### Fixed
 - FOP2 web interface: every page of `/fop2` answered `500 Internal Server Error` (Apache log: `/var/www/html/fop2/.htaccess: Invalid command 'Header'`), the `.htaccess` of FOP2 sets its cache headers with `Header set` and the Apache module `headers`, loaded by default on Rocky Linux in 20.16, was not enabled on Debian. In 22.17.0
 
