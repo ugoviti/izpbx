@@ -24,10 +24,14 @@
 #                   limit, 60 requests/hour without it)
 # Required secrets: MATRIX_TOKEN; variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
 # Job "release":    REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, and
-#                   RELEASE_PUSH_TOKEN (a Gitea token with write access to the
-#                   repository: a push with the automatic token does not start
-#                   izpbx-release); optional variables RELEASE_GIT_NAME,
-#                   RELEASE_GIT_EMAIL (author of the commits and the tag)
+#                   RELEASE_PUSH_TOKEN, or REGISTRY_TOKEN when it is missing (a
+#                   Gitea token with write access to the repository, scope
+#                   write:repository: a push with the automatic token does not
+#                   start izpbx-release), checked first with a dry-run push;
+#                   optional variables RELEASE_GIT_NAME, RELEASE_GIT_EMAIL
+#                   (author of the commits and the tag)
+# By hand with check_push_token: only that check (job "push-token"), nothing
+# applied nor released.
 
 name: izpbx-updates
 run-name: component updates check
@@ -36,14 +40,47 @@ on:
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
+    inputs:
+      check_push_token:
+        description: "Only check that the push token (RELEASE_PUSH_TOKEN, else REGISTRY_TOKEN) can push to the repository: no check of the updates, nothing released"
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+        required: false
 
 concurrency:
   group: izpbx-updates
   cancel-in-progress: false
 
 jobs:
+  # by hand with check_push_token: the check of the push token of the job release, alone
+  push-token:
+    name: check the push token of the job release
+    if: inputs.check_push_token == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          token: ${{ secrets.RELEASE_PUSH_TOKEN || secrets.REGISTRY_TOKEN }}
+
+      - name: push token
+        shell: bash
+        env:
+          WHICH: ${{ secrets.RELEASE_PUSH_TOKEN != '' && 'RELEASE_PUSH_TOKEN' || 'REGISTRY_TOKEN' }}
+        run: |
+          set -euo pipefail
+          # a dry-run push reaches the receive-pack of Gitea: refused without write access
+          # (permission of the user or scope of the token); branch protection is checked at the real push only
+          if git push --dry-run origin "HEAD:refs/heads/izpbx-push-check" 2>&1; then
+            echo "push token ${WHICH}: it can push to ${GITHUB_REPOSITORY}"
+          else
+            echo "::error::push token ${WHICH}: it cannot push to ${GITHUB_REPOSITORY} (needs write access, scope write:repository)"; exit 1
+          fi
+
   check:
     name: check the component updates (make-updates.sh)
+    if: inputs.check_push_token != 'true'
     runs-on: ubuntu-latest
     outputs:
       status: ${{ steps.check.outputs.status }}
@@ -122,7 +159,7 @@ jobs:
           room-id: ${{ vars.MATRIX_ROOM_ID }}
 
   release:
-    name: apply, test and tag a release (needs RELEASE_PUSH_TOKEN)
+    name: apply, test and tag a release (RELEASE_PUSH_TOKEN, else REGISTRY_TOKEN)
     needs: check
     if: needs.check.outputs.status == 'updates'
     runs-on: ubuntu-latest
@@ -133,17 +170,26 @@ jobs:
         with:
           # the tags (previous release, CHANGELOG lines) and a token whose push starts izpbx-release
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PUSH_TOKEN }}
+          token: ${{ secrets.RELEASE_PUSH_TOKEN || secrets.REGISTRY_TOKEN }}
+
+      # before hours of build and tests: the token can push (dry-run, see the job push-token)
+      - name: push token
+        shell: bash
+        env:
+          WHICH: ${{ secrets.RELEASE_PUSH_TOKEN != '' && 'RELEASE_PUSH_TOKEN' || 'REGISTRY_TOKEN' }}
+        run: |
+          set -euo pipefail
+          git push --dry-run origin "HEAD:refs/heads/izpbx-push-check" >/dev/null 2>&1 \
+            || { echo "::error::push token ${WHICH}: it cannot push to ${GITHUB_REPOSITORY} (needs write access, scope write:repository): nothing released"; exit 1; }
+          echo "push token ${WHICH}: it can push"
 
       - name: apply
         id: apply
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GH_READ_TOKEN }}
-          PUSH_TOKEN: ${{ secrets.RELEASE_PUSH_TOKEN }}
         run: |
           set -u
-          [ -n "$PUSH_TOKEN" ] || { echo "::error::secret RELEASE_PUSH_TOKEN missing: nothing released"; exit 1; }
           rc=0
           izpbx-asterisk/tools/make-auto-release.sh apply || rc=$?
           # 3: all current again (upstream moved since the check)
