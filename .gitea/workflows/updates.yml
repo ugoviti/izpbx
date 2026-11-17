@@ -59,6 +59,21 @@ jobs:
     if: inputs.check_push_token == 'true'
     runs-on: ubuntu-latest
     steps:
+      # before the checkout, so a token without access says why instead of a 403 of git
+      - name: push token access
+        shell: bash
+        env:
+          PUSH_TOKEN: ${{ secrets.RELEASE_PUSH_TOKEN || secrets.REGISTRY_TOKEN }}
+          WHICH: ${{ secrets.RELEASE_PUSH_TOKEN != '' && 'RELEASE_PUSH_TOKEN' || 'REGISTRY_TOKEN' }}
+        run: |
+          set -uo pipefail
+          [ -n "$PUSH_TOKEN" ] || { echo "::error::no push token: secret RELEASE_PUSH_TOKEN (or REGISTRY_TOKEN) missing, nothing released"; exit 1; }
+          out=$(mktemp)
+          code=$(curl -s --max-time 30 -o "$out" -w '%{http_code}' -H "Authorization: token ${PUSH_TOKEN}" "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}")
+          [ "$code" = 200 ] || { echo "::error::push token ${WHICH}: HTTP ${code} reading ${GITHUB_REPOSITORY}: the token needs the scope write:repository and its user access to the repository; nothing released"; exit 1; }
+          jq -e '.permissions.push == true' "$out" >/dev/null || { echo "::error::push token ${WHICH}: its user has no write access to ${GITHUB_REPOSITORY}; nothing released"; exit 1; }
+          echo "push token ${WHICH}: its user can write to ${GITHUB_REPOSITORY}"
+
       - name: checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -165,6 +180,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
+      # before the checkout, so a token without access says why instead of a 403 of git
+      - name: push token access
+        shell: bash
+        env:
+          PUSH_TOKEN: ${{ secrets.RELEASE_PUSH_TOKEN || secrets.REGISTRY_TOKEN }}
+          WHICH: ${{ secrets.RELEASE_PUSH_TOKEN != '' && 'RELEASE_PUSH_TOKEN' || 'REGISTRY_TOKEN' }}
+        run: |
+          set -uo pipefail
+          [ -n "$PUSH_TOKEN" ] || { echo "::error::no push token: secret RELEASE_PUSH_TOKEN (or REGISTRY_TOKEN) missing, nothing released"; exit 1; }
+          out=$(mktemp)
+          code=$(curl -s --max-time 30 -o "$out" -w '%{http_code}' -H "Authorization: token ${PUSH_TOKEN}" "${GITHUB_SERVER_URL}/api/v1/repos/${GITHUB_REPOSITORY}")
+          [ "$code" = 200 ] || { echo "::error::push token ${WHICH}: HTTP ${code} reading ${GITHUB_REPOSITORY}: the token needs the scope write:repository and its user access to the repository; nothing released"; exit 1; }
+          jq -e '.permissions.push == true' "$out" >/dev/null || { echo "::error::push token ${WHICH}: its user has no write access to ${GITHUB_REPOSITORY}; nothing released"; exit 1; }
+          echo "push token ${WHICH}: its user can write to ${GITHUB_REPOSITORY}"
+
       - name: checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
