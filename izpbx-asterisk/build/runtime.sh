@@ -42,8 +42,10 @@ dpkg-divert --local --rename --divert /usr/sbin/sendmail.postfix --add /usr/sbin
 # the copies of resolv.conf and friends made by its init script, unused here
 postconf -F '*/*/chroot = n'
 # Apache (Debian layout): the izPBX vhost and global conf are written at start
-# by services/httpd.sh; Debian's default site is off
-a2enmod -q rewrite ssl
+# by services/httpd.sh; Debian's default site is off. headers: the .htaccess of
+# the FOP2 web interface sets its cache headers with "Header set" (loaded by
+# default on Rocky in 20.16; without it every page of /fop2 is a 500, P3-13)
+a2enmod -q rewrite ssl headers
 # PHP through php-fpm (design H1): mpm_event + proxy_fcgi, no mod_php
 a2dismod -q mpm_prefork 2>/dev/null || true
 a2enmod -q mpm_event proxy_fcgi setenvif

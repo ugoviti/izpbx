@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- FOP2 web interface: every page of `/fop2` answered `500 Internal Server Error` (Apache log: `/var/www/html/fop2/.htaccess: Invalid command 'Header'`), the `.htaccess` of FOP2 sets its cache headers with `Header set` and the Apache module `headers`, loaded by default on Rocky Linux in 20.16, was not enabled on Debian. In 22.17.0
 
 ## [22.17.1] - 2026-11-07
 ### Changed
