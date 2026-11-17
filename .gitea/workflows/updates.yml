@@ -23,7 +23,7 @@
 # Optional secret:  GH_READ_TOKEN (any GitHub token: raises the GitHub API rate
 #                   limit, 60 requests/hour without it)
 # Required secrets: MATRIX_TOKEN; variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
-# Job "release":    REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, and
+# Job "release":    variables REGISTRY_HOST, REGISTRY_USERNAME; secret REGISTRY_TOKEN, and
 #                   RELEASE_PUSH_TOKEN, or REGISTRY_TOKEN when it is missing (a
 #                   Gitea token with write access to the repository, scope
 #                   write:repository: a push with the automatic token does not
@@ -234,8 +234,8 @@ jobs:
         with:
           version: ci-updates
           cache-tag: buildcache-ci
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: registry login
@@ -243,8 +243,8 @@ jobs:
         id: login
         uses: ./.gitea/actions/registry-login
         with:
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: tests

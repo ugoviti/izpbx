@@ -33,7 +33,7 @@ inputs:
     description: "'true': push by digest and add it to the tags already pushed by the amd64 job (same version and build-number)"
     default: 'false'
   registry-host:
-    description: Private registry host (secrets.REGISTRY_HOST)
+    description: Private registry host (vars.REGISTRY_HOST)
     required: true
   registry-username:
     required: true

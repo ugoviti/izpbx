@@ -3,7 +3,7 @@ description: Setup buildx and log in to the private registry and, optionally, Do
 
 inputs:
   registry-host:
-    description: Private registry host, from secrets.REGISTRY_HOST (a secret so it is masked in job logs)
+    description: Private registry host, from vars.REGISTRY_HOST (a variable, visible in the job logs)
     required: true
   registry-repository:
     description: Image path inside the private registry
@@ -34,7 +34,6 @@ runs:
         REGISTRY_REPOSITORY: ${{ inputs.registry-repository }}
       run: |
         set -eu
-        echo "::add-mask::${REGISTRY_HOST}"
         echo "image=${REGISTRY_HOST}/${REGISTRY_REPOSITORY}" >> "$GITHUB_OUTPUT"
 
     - name: setup buildx

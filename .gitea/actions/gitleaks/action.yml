@@ -15,7 +15,7 @@ inputs:
     description: Private extra rules (TOML content, from secrets.GITLEAKS_CONFIG). Empty = default rules only
     default: ''
   registry-username:
-    description: User of the Gitea package registry (secrets.REGISTRY_USERNAME). Empty = download from GitHub only
+    description: User of the Gitea package registry (vars.REGISTRY_USERNAME). Empty = download from GitHub only
     default: ''
   registry-token:
     description: Token of the Gitea package registry (secrets.REGISTRY_TOKEN)

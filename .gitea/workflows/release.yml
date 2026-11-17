@@ -17,9 +17,9 @@
 # pre-releases); to write the page again (eg. after a CHANGELOG fix in the
 # tag) run izpbx-release again on the tag.
 #
-# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
+# Required secrets:   REGISTRY_TOKEN, MATRIX_TOKEN
 # Optional secret:    RELEASE_TOKEN (when the automatic token cannot write releases)
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+# Required variables: REGISTRY_HOST, REGISTRY_USERNAME, MATRIX_HOMESERVER, MATRIX_ROOM_ID
 # Optional variable:  ARM64_RUNNER (eg. ubuntu-latest-arm64; empty: arm64 under QEMU)
 
 name: izpbx-release
@@ -64,8 +64,8 @@ jobs:
           build-number: ${{ gitea.run_number }}
           platforms: linux/amd64
           cache-tag: buildcache
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: matrix notify
@@ -98,8 +98,8 @@ jobs:
           platforms: linux/arm64
           append-platform: 'true'
           cache-tag: buildcache-arm64
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: matrix notify

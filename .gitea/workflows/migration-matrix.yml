@@ -9,8 +9,8 @@
 # - report: the table version -> result (izpbx-asterisk/tests/ci/migration-report.sh) in the Matrix
 #   notification; red when a version failed or has no result.
 #
-# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+# Required secrets:   REGISTRY_TOKEN, MATRIX_TOKEN
+# Required variables: REGISTRY_HOST, REGISTRY_USERNAME, MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-migration-matrix
 run-name: migration to 22.17 from every 20.16.x
@@ -70,8 +70,8 @@ jobs:
         with:
           version: ci-migration
           cache-tag: buildcache-ci
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
   migrate:
@@ -94,8 +94,8 @@ jobs:
         id: login
         uses: ./.gitea/actions/registry-login
         with:
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: migration in Docker-in-Docker

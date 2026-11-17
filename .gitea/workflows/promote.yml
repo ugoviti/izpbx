@@ -21,9 +21,8 @@
 # its README (links at main). An empty version is not branch only: Gitea runs an empty field with its
 # default (last).
 #
-# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, DOCKER_USERNAME,
-#                     DOCKER_PASSWORD, GH_PUSH_TOKEN, GITLEAKS_CONFIG, MATRIX_TOKEN
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+# Required secrets:   REGISTRY_TOKEN, DOCKER_PASSWORD, GH_PUSH_TOKEN, GITLEAKS_CONFIG, MATRIX_TOKEN
+# Required variables: REGISTRY_HOST, REGISTRY_USERNAME, DOCKER_USERNAME, MATRIX_HOMESERVER, MATRIX_ROOM_ID
 
 name: izpbx-promote
 run-name: publish a tested version to GitHub and Docker Hub
@@ -113,7 +112,7 @@ jobs:
         uses: ./.gitea/actions/gitleaks
         with:
           config: ${{ secrets.GITLEAKS_CONFIG }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: registry login
@@ -121,10 +120,10 @@ jobs:
         id: login
         uses: ./.gitea/actions/registry-login
         with:
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
-          dockerhub-username: ${{ secrets.DOCKER_USERNAME }}
+          dockerhub-username: ${{ vars.DOCKER_USERNAME }}
           dockerhub-password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: check source image
@@ -202,7 +201,7 @@ jobs:
         env:
           VERSION: ${{ steps.ver.outputs.version }}
           BRANCH: ${{ inputs.branch }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_USERNAME: ${{ vars.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: |
           set -euo pipefail

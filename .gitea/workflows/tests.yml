@@ -15,12 +15,13 @@
 #   databases unchanged (izpbx-asterisk/tests/checks/P4-04.sh);
 # - all-done: izpbx-asterisk/tests/run.sh all-done (every check of the items done), on pull
 #   requests and by hand with all_done; hours long, not on every push.
-# The image reference is built in each job from registry-login: it holds the
-# registry host, a secret, and a job output holding a secret is dropped.
+# The image reference is built in each job from registry-login (registry host of
+# the variable REGISTRY_HOST).
 # The runner runs the job in a container: the checks run in a Docker-in-Docker
 # container (izpbx-asterisk/tests/ci/dind-run.sh), where their bind mounts make sense.
 #
-# Required secrets: REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN
+# Required secrets:   REGISTRY_TOKEN
+# Required variables: REGISTRY_HOST, REGISTRY_USERNAME
 
 name: izpbx-tests
 run-name: tests on ${{ gitea.ref_name }}
@@ -59,8 +60,8 @@ jobs:
         with:
           version: ci-22.17
           cache-tag: buildcache-ci
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
   # the arm64 image added to ci-22.17, natively on the runner of ARM64_RUNNER (the
@@ -82,8 +83,8 @@ jobs:
           platforms: linux/arm64
           append-platform: 'true'
           cache-tag: buildcache-ci-arm64
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
   tests:
@@ -108,8 +109,8 @@ jobs:
         id: login
         uses: ./.gitea/actions/registry-login
         with:
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: check in Docker-in-Docker
@@ -148,8 +149,8 @@ jobs:
         id: login
         uses: ./.gitea/actions/registry-login
         with:
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: all-done in Docker-in-Docker

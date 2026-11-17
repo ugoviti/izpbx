@@ -14,8 +14,8 @@
 # The CI tooling (.gitea/actions) comes from the branch of the matrix entry (release/20.16 keeps the
 # Rocky checks), the build context (izpbx-asterisk/) from the tag.
 #
-# Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
-# Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+# Required secrets:   REGISTRY_TOKEN, MATRIX_TOKEN
+# Required variables: REGISTRY_HOST, REGISTRY_USERNAME, MATRIX_HOMESERVER, MATRIX_ROOM_ID
 # Optional variable:  ARM64_RUNNER (eg. ubuntu-latest-arm64; empty: arm64 under QEMU)
 
 name: izpbx-weekly-rebuild
@@ -95,8 +95,8 @@ jobs:
           build-args: |
             OS_UPDATE_STAMP=${{ steps.ver.outputs.stamp }}
             APP_BUILD_COMMIT=${{ steps.ver.outputs.commit }}
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: matrix notify
@@ -166,8 +166,8 @@ jobs:
           build-args: |
             OS_UPDATE_STAMP=${{ steps.ver.outputs.stamp }}
             APP_BUILD_COMMIT=${{ steps.ver.outputs.commit }}
-          registry-host: ${{ secrets.REGISTRY_HOST }}
-          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-host: ${{ vars.REGISTRY_HOST }}
+          registry-username: ${{ vars.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: matrix notify
