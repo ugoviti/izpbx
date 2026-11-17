@@ -6,8 +6,10 @@
 # release/20.16 and keep latest, the others (main, 22.17) do not until Q1
 #
 # Two jobs, one after the other: "amd64" publishes the tags (amd64 only, to
-# test right away), then "arm64" (not for 20.16) builds the arm64 image under
-# QEMU (~35 min without cache) and turns the same tags into amd64 + arm64.
+# test right away), then "arm64" (not for 20.16) builds the arm64 image and
+# turns the same tags into amd64 + arm64: natively on the runner of the
+# variable ARM64_RUNNER (label ubuntu-latest-arm64, the runners of the Mac
+# mini), under QEMU on ubuntu-latest when it is empty (~35 min without cache).
 # izpbx-promote run before "arm64" ends copies the amd64 image only: run it
 # again afterwards.
 # Last job "page": the Gitea release page of the tag from its CHANGELOG.md
@@ -18,6 +20,7 @@
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
 # Optional secret:    RELEASE_TOKEN (when the automatic token cannot write releases)
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+# Optional variable:  ARM64_RUNNER (eg. ubuntu-latest-arm64; empty: arm64 under QEMU)
 
 name: izpbx-release
 run-name: release ${{ gitea.ref_name }}
@@ -77,10 +80,10 @@ jobs:
 
   # 20.16 stays amd64 only
   arm64:
-    name: add arm64 (QEMU, ~35 min; main only)
+    name: add arm64 (main only)
     needs: amd64
     if: needs.amd64.outputs.branch == 'main'
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.ARM64_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

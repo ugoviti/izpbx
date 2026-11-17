@@ -16,6 +16,7 @@
 #
 # Required secrets:   REGISTRY_HOST, REGISTRY_USERNAME, REGISTRY_TOKEN, MATRIX_TOKEN
 # Required variables: MATRIX_HOMESERVER, MATRIX_ROOM_ID
+# Optional variable:  ARM64_RUNNER (eg. ubuntu-latest-arm64; empty: arm64 under QEMU)
 
 name: izpbx-weekly-rebuild
 run-name: weekly security rebuild of the release tags
@@ -42,13 +43,11 @@ jobs:
             line: '20.16'
             tags: '^20\.16\.[0-9]+$'
             skip_tags: '^$'
-            arm64: 'false'
           - branch: main
             line: main
             # the lines from 22 on: not 20.16 (release/20.16) nor the older ones (18.x, 16.x, EOL)
             tags: '^(2[2-9]|[3-9][0-9])\.[0-9]+\.[0-9]+$'
             skip_tags: '^$'
-            arm64: 'true'
     name: rebuild ${{ matrix.branch }}
     steps:
       - name: checkout
@@ -100,9 +99,62 @@ jobs:
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}
 
-      # main from 22.17: the arm64 image added to the same tags (emulated, after amd64)
+      - name: matrix notify
+        if: always()
+        uses: ./.gitea/actions/matrix-notify
+        with:
+          status: ${{ job.status }}
+          label: weekly rebuild ${{ matrix.branch }} tag:${{ steps.ver.outputs.tag || 'none' }} -> ${{ steps.ver.outputs.version || 'nothing to rebuild' }}
+          token: ${{ secrets.MATRIX_TOKEN }}
+          homeserver: ${{ vars.MATRIX_HOMESERVER }}
+          room-id: ${{ vars.MATRIX_ROOM_ID }}
+
+  # main from 22.17: the arm64 image added to the same tags, after the amd64 one of
+  # "rebuild main": natively on the runner of ARM64_RUNNER (label ubuntu-latest-arm64,
+  # the Mac mini), under QEMU on ubuntu-latest when it is empty. Same tag, stamp and
+  # run number as "rebuild main" (the stamp is the ISO week of the run, Monday 03:00 UTC)
+  rebuild-arm64:
+    needs: rebuild
+    if: always() && !cancelled()
+    runs-on: ${{ vars.ARM64_RUNNER || 'ubuntu-latest' }}
+    name: rebuild main arm64
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: resolve latest release
+        id: ver
+        env:
+          TAGS: '^(2[2-9]|[3-9][0-9])\.[0-9]+\.[0-9]+$'
+          SKIP_TAGS: '^$'
+          BRANCH: main
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          # latest stable X.Y.Z tag of the branch (version sort, prereleases and dev tags excluded)
+          TAG=$(git tag --list | grep -E "$TAGS" | grep -vE "$SKIP_TAGS" | sort -V | tail -1 || true)
+          if [ -z "$TAG" ]; then
+            echo "::notice::${BRANCH}: no X.Y.Z release tag yet, nothing to rebuild"
+            exit 0
+          fi
+          # build context from the tag, CI tooling from the branch
+          rm -rf izpbx-asterisk
+          git checkout "refs/tags/${TAG}" -- izpbx-asterisk
+          STAMP=$(date -u +%G-W%V)
+          {
+            echo "tag=${TAG}"
+            echo "stamp=${STAMP}"
+            echo "version=${TAG}-${STAMP}"
+            echo "commit=$(git rev-parse --short=7 "refs/tags/${TAG}^{commit}")"
+          } >> "$GITHUB_OUTPUT"
+          echo "${BRANCH}: rebuilding ${TAG} with OS_UPDATE_STAMP=${STAMP} -> ${TAG}-${STAMP}"
+
       - name: build arm64 and add it to the tags
-        if: steps.ver.outputs.tag != '' && matrix.arm64 == 'true'
+        if: steps.ver.outputs.tag != ''
         uses: ./.gitea/actions/build-push
         with:
           version: ${{ steps.ver.outputs.version }}
@@ -110,7 +162,7 @@ jobs:
           build-number: ${{ gitea.run_number }}
           platforms: linux/arm64
           append-platform: 'true'
-          cache-tag: buildcache-weekly-${{ matrix.line }}-arm64
+          cache-tag: buildcache-weekly-main-arm64
           build-args: |
             OS_UPDATE_STAMP=${{ steps.ver.outputs.stamp }}
             APP_BUILD_COMMIT=${{ steps.ver.outputs.commit }}
@@ -123,7 +175,7 @@ jobs:
         uses: ./.gitea/actions/matrix-notify
         with:
           status: ${{ job.status }}
-          label: weekly rebuild ${{ matrix.branch }} tag:${{ steps.ver.outputs.tag || 'none' }} -> ${{ steps.ver.outputs.version || 'nothing to rebuild' }}
+          label: weekly rebuild main arm64 tag:${{ steps.ver.outputs.tag || 'none' }} -> ${{ steps.ver.outputs.version || 'nothing to rebuild' }}
           token: ${{ secrets.MATRIX_TOKEN }}
           homeserver: ${{ vars.MATRIX_HOMESERVER }}
           room-id: ${{ vars.MATRIX_ROOM_ID }}

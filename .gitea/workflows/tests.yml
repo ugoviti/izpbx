@@ -4,6 +4,9 @@
 # "push: branches: [main]" under "on:").
 # - build: the image of the run, pushed to the Gitea registry as ci-22.17
 #   (build-push: buildx cache, verify image E1); never latest, never Docker Hub;
+# - build-arm64: with the variable ARM64_RUNNER set (label ubuntu-latest-arm64,
+#   the runners of the Mac mini), the arm64 image built natively and added to
+#   ci-22.17 (verify image E1 on arm64);
 # - e3-migration: the 20.16.22 fixture migrated with the opt-in, inventory
 #   diff empty (izpbx-asterisk/tests/checks/P4-08.sh); with break_migration an extension is
 #   removed after the restore and the job must fail;
@@ -56,6 +59,29 @@ jobs:
         with:
           version: ci-22.17
           cache-tag: buildcache-ci
+          registry-host: ${{ secrets.REGISTRY_HOST }}
+          registry-username: ${{ secrets.REGISTRY_USERNAME }}
+          registry-token: ${{ secrets.REGISTRY_TOKEN }}
+
+  # the arm64 image added to ci-22.17, natively on the runner of ARM64_RUNNER (the
+  # Mac mini): the arm64 build is checked at every run, not only at the release.
+  # Skipped when ARM64_RUNNER is empty (under QEMU it would take ~35 min)
+  build-arm64:
+    name: build the test image arm64 (added to ci-22.17)
+    needs: build
+    if: vars.ARM64_RUNNER != ''
+    runs-on: ${{ vars.ARM64_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: build, push and add to ci-22.17
+        uses: ./.gitea/actions/build-push
+        with:
+          version: ci-22.17
+          platforms: linux/arm64
+          append-platform: 'true'
+          cache-tag: buildcache-ci-arm64
           registry-host: ${{ secrets.REGISTRY_HOST }}
           registry-username: ${{ secrets.REGISTRY_USERNAME }}
           registry-token: ${{ secrets.REGISTRY_TOKEN }}

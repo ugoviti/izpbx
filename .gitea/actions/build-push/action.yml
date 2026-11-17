@@ -2,7 +2,7 @@ name: izpbx build & push
 description: Build izpbx-asterisk and push it to the private registry (Docker Hub is reached only through the promote workflow)
 
 # One platform per job, so the amd64 image is published without waiting for
-# the emulated arm64 build:
+# the arm64 build (native on an arm64 runner, else emulated):
 #   job 1: platforms linux/amd64                       -> the tags, amd64 only
 #   job 2: platforms linux/arm64, append-platform true -> built by digest (no
 #          tag), verified, then the same tags become amd64 + arm64
@@ -27,7 +27,7 @@ inputs:
     description: Registry tag used for the buildx cache (one per platform)
     default: buildcache
   platforms:
-    description: Platform to build; linux/arm64 is emulated with QEMU (~35 min without cache)
+    description: Platform to build; linux/arm64 is native on an arm64 runner, emulated with QEMU elsewhere (~35 min without cache)
     default: linux/amd64
   append-platform:
     description: "'true': push by digest and add it to the tags already pushed by the amd64 job (same version and build-number)"
@@ -43,8 +43,15 @@ inputs:
 runs:
   using: composite
   steps:
+    # QEMU only when the platform is not the one of the runner: on an arm64
+    # runner (vars.ARM64_RUNNER, the Mac mini) linux/arm64 is built natively
+    - name: runner architecture
+      id: arch
+      shell: bash
+      run: echo "machine=$(uname -m)" >> "$GITHUB_OUTPUT"
+
     - name: setup qemu
-      if: contains(inputs.platforms, 'arm64')
+      if: contains(inputs.platforms, 'arm64') && steps.arch.outputs.machine != 'aarch64' && steps.arch.outputs.machine != 'arm64'
       uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
       with:
         platforms: arm64
